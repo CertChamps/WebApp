@@ -1,17 +1,16 @@
-import './App.css'
+import { useState } from "react";
+import { UserContext} from "./context/UserContext";
+import AppRouter from "./Router";
 
-function App() {
+export default function App() {
+
+  const [user, setUser] = useState<any>()
 
   return (
-    <>
-      <div>
-        <h1 className='color' >Tailwind CSS</h1>
+    <UserContext.Provider value={{user, setUser}} >
+      <div className=" bg-white dark:bg-black h-screen w-screen p-5"  >
+        <AppRouter/>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </UserContext.Provider>
   )
 }
-
-export default App

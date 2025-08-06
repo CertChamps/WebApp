@@ -1,70 +1,87 @@
-@import "tailwindcss";
+/* ================== FONT & ROOT SETUP ============= */
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=Manrope:wght@200..800&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
+
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: "Manrope", sans-serif;
+  font-size: 20px;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+/* ================== TAILWIND SETUP ============= */
+@import "tailwindcss";
+
+/* Dark Theme Setup  */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Theming & Colour Pallet */ 
+@theme {
+
+  /* Light Mode */
+  --color-white: #efefef;
+  --color-black: #353535;
+  --color-blue: #27548a;
+  --color-grey: #757575;
+  --color-light-grey: #bdbdbd; /* #e0e0e0 og*/ 
+  --color-red: #f03131;
+
+  /* Dark Mode */ 
+  --color-blue-light: #74a1d8;
+
+  /* Note: Do not change these randomly below styles must follow: 
+  radius-out - radius-in = 2 * padding/margin */
+
+  /* Margin and Padding Defaults*/
+  --spacing: 5px;
+
+  /* Border Radius */
+  --radius-out: 15px; 
+  --radius-in: 5px; 
+
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+/* ================== UTILITY STYLES ============= */
+/* Commonly used styles for text, buttons etc. This will keep our app consistent
+  with dark mode pre implemented */
+
+/* Text styles */
+@utility txt-heading-colour {
+  @apply text-blue dark:text-blue-light text-lg font-black
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+@utility txt-heading {
+  @apply text-black dark:text-white text-lg font-black
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+@utility txt-bold {
+  @apply text-black dark:text-white text-base font-bold
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+@utility txt {
+  @apply text-black dark:text-white text-base 
+}
+
+@utility txt-sub {
+  @apply text-grey dark:text-light-grey text-sm font-light
+}
+
+/* Button Styles */
+@utility txtbox {
+  @apply border-2 border-light-grey dark:border-grey rounded-in 
+  px-2 py-1 dark:focus:border-blue-light focus:border-blue
+  outline-none text-grey focus:txt w-6/12 block
+}
+
+@utility blue-btn {
+  @apply bg-blue dark:bg-blue-light text-white txt rounded-in px-2 py-1 
+  outline-none hover:opacity-80 transition-all w-6/12 txt-bold block
+}
+
+@utility plain-btn {
+  @apply bg-black dark:bg-white text-white dark:text-black rounded-in px-2 py-1 
+  outline-none hover:opacity-80 transition-all w-6/12 txt-bold block
+}
+
+@utility red-btn {
+  @apply bg-red text-white rounded-in px-2 py-1 
+  outline-none hover:opacity-80 transition-all w-6/12 txt-bold block
 }
