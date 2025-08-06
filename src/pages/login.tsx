@@ -22,12 +22,12 @@ export default function Login() {
                 <input type="text" placeholder="username" className="txtbox mx-auto my-2 w-9/12" 
                     onChange={(txt:any) => {setUsername(txt)}}/>
 
-                <button className= "blue-btn mx-auto my-2 w-9/12"
-                     onClick={() => {signInWithEmail(email ?? '', password ?? '')}}>Login</button>
-                <button className= "blue-btn mx-auto my-2 w-9/12"
-                     onClick={() => {signUpWithEmail(email ?? '', username ?? '',  password ?? '')}}>Sign Up</button>
-                <button className= "red-btn mx-auto my-2 w-9/12"
-                     onClick={() => {loginWithGoogle()}}>Google</button>
+                <p className= "blue-btn mx-auto my-2 w-9/12"
+                     onClick={() => {signInWithEmail(email ?? '', password ?? '')}}>Login</p>
+                <p className= "blue-btn mx-auto my-2 w-9/12"
+                     onClick={() => {signUpWithEmail(email ?? '', username ?? '',  password ?? '')}}>Sign Up</p>
+                <p className= "red-btn mx-auto my-2 w-9/12"
+                     onClick={() => {loginWithGoogle()}}>Google</p>
             </div>
         </div>
     )
