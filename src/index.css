@@ -5,7 +5,10 @@
 :root {
   font-family: "Manrope", sans-serif;
   font-size: 20px;
-  transition: color 500ms linear
+}
+
+* {
+  transition: color 250ms linear, background-color 250ms linear;
 }
 
 /* ================== TAILWIND SETUP ============= */
