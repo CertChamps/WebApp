@@ -1,9 +1,12 @@
 import { useContext } from "react"
 import { UserContext } from "../context/UserContext"
+import { OptionsContext } from "../context/OptionsContext"
 
 export default function Questions() {
 
     const {user} = useContext(UserContext)
+    const { setOptions } = useContext(OptionsContext)
+
     return (
         <div>
             <p>Questions</p>
@@ -16,11 +19,17 @@ export default function Questions() {
             <button className=" block blue-btn m-2 " >
                 <p>Default Text</p>
             </button>
-            <button className=" block plain-btn m-2 " >
-                <p>Default Text</p>
+            <button className=" block plain-btn m-2 " onClick={() => {
+                    localStorage.setItem('THEME', 'dark')
+                    setOptions( (opt: any) => ({...opt, theme: 'dark'}) )
+                }} >
+                <p>Dark Mode</p>
             </button>
-            <button className=" block red-btn m-2" >
-                <p>Default Text</p>
+            <button className=" block red-btn m-2"  onClick={() => {
+                    localStorage.setItem('THEME', 'light')
+                    setOptions( (opt: any) => ({...opt, theme: 'light'}) )
+                }} >
+                <p>Light Mode</p>
             </button>
 
             <p>{user.email}</p>

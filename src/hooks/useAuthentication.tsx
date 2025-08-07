@@ -1,11 +1,11 @@
-import { useContext } from "react"
+import { useContext, useEffect } from "react"
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "../context/UserContext"
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
 import { setDoc, doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { db }from '../../firebase'
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword } from "firebase/auth";
+    signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase";
 
 const useAuthentication = () => {
@@ -161,8 +161,37 @@ const useAuthentication = () => {
     }
     // ======================================================================================= //
 
+    // ======================================== EXISTING USERS ======================================= //
+    useEffect(() => {
 
-  return { loginWithGoogle, signUpWithEmail, signInWithEmail, userSetup }
+        // Listen for changes in Authentication 
+        const unsubscribe = onAuthStateChanged(auth, currentUser => {
+            checkExistingUser(currentUser)
+        });
+
+        // Listener Clean Up
+        return () => unsubscribe();
+
+    }, [])
+
+    const checkExistingUser = async (user: any) => {
+
+        // if a user exists, currently logged in 
+        if (user && user.email && user.uid ) {
+            
+            // Setup the user 
+            await userSetup(user.uid, '', user.email)
+
+            // Navigate to home page 
+            navigate('/questions')
+            console.log(`User Exists ✅: ${user.uid}`)
+        } 
+
+    };
+    // ================================================================================================= //
+
+
+  return { loginWithGoogle, signUpWithEmail, signInWithEmail, userSetup}
 
 }
 
