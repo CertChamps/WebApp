@@ -1,29 +1,49 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-
-// ============ IMPORTS FOR PAGE COMPONENTS ============ //
 import Login from './pages/login';
 import Questions from './pages/questions';
 import Social from './pages/social';
+import Games from './pages/games';
+import Navbar from './components/navbar';
+import { MdOutlineGames } from 'react-icons/md';
 
-
-// ================= ROUTES ================= // 
-/* Connect a url to a component to be rendered in the app */
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <Login />,
+    element: (
+      <>
+        <Login />
+      </>
+    ),
   },
   {
-    path: '/questions',
-    element: <Questions />,
+    path: '/practice',
+    element: (
+      <>
+        <Navbar />
+        <Questions />
+      </>
+    ),
   },
   {
     path: '/social',
-    element: <Social />,
+    element: (
+      <>
+        <Navbar />
+        <Social />
+      </>
+    ),
+  },
+    {
+    path: '/games',
+    element: (
+      <>
+        <Navbar />
+        <MdOutlineGames/>
+      </>
+    ),
   },
 ]);
 
-// =============== ROUTER COMPONENT ============== // 
 export default function AppRouter() {
   return <RouterProvider router={router} />;
 }

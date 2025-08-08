@@ -3,6 +3,7 @@ import { UserContext} from "./context/UserContext";
 import { OptionsContext } from "./context/OptionsContext";
 import AppRouter from "./Router";
 
+
 export default function App() {
 
   // =================== CONTEXT SETUP ===================== //
@@ -15,10 +16,10 @@ export default function App() {
   useEffect(() => {
 
     // Initialising options 
-    const initOptions = async () => {
+    const initOptions = () => {
 
       // Retreiving preferences from local storage
-      const theme = await localStorage.getItem('THEME')
+      const theme = localStorage.getItem('THEME')
 
       // Apply context
       setOptions({theme})
@@ -32,7 +33,9 @@ export default function App() {
   return (
     <OptionsContext.Provider value={{options , setOptions}}>
     <UserContext.Provider value={{user, setUser}} >
-      <div className={`${ options.theme == 'dark' ? 'dark' : ''} bg-white dark:bg-black h-screen w-screen p-5`}  >
+      <div className={`${ options.theme == 'dark' ? 'dark' : ''} bg-white
+      dark:bg-black h-screen w-screen flex flex-row`}  >
+
         <AppRouter/>
       </div>
     </UserContext.Provider>

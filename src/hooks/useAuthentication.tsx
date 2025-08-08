@@ -8,7 +8,7 @@ import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword,
     signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase";
 
-const useAuthentication = () => {
+export default function useAuthentication () {
 
     // =============================== CONTEXT AND STATE ==================================== // 
     const { setUser } = useContext(UserContext)
@@ -91,7 +91,7 @@ const useAuthentication = () => {
         }
 
         // Go to the dashboard
-        navigate('/questions')
+        navigate('/practice')
 
     }
     // =======================================================================================//
@@ -183,7 +183,7 @@ const useAuthentication = () => {
             await userSetup(user.uid, '', user.email)
 
             // Navigate to home page 
-            navigate('/questions')
+            navigate('/practice')
             console.log(`User Exists ✅: ${user.uid}`)
         } 
 
@@ -195,4 +195,3 @@ const useAuthentication = () => {
 
 }
 
-export default useAuthentication
