@@ -29,7 +29,7 @@ export default function Navbar () {
     } 
 
     return (
-        <div className="h-full flex flex-col p-4 group transition-all duration-250 bg-light-grey/5 dark:bg-grey/5 bg-blue/50" >
+        <div className="h-full flex flex-col p-4 group transition-all duration-250 bg-light-grey/5 dark:bg-grey/5" >
 
             {/* ============================= USER CARD ================================ */}
             <div className='flex items-center justify-evenly rounded-out h-16 group-hover:bg-opaque p-2 mb-2'>

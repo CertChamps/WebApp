@@ -31,13 +31,18 @@ export default function App() {
   }, [])
 
   return (
+    // ================ CONTEXT PROVIDERS ===================== //
     <OptionsContext.Provider value={{options , setOptions}}>
     <UserContext.Provider value={{user, setUser}} >
+        
+      {/* // ================ DIV THEME WRAPPER ===================== // */}
       <div className={`${ options.theme == 'dark' ? 'dark' : ''} bg-white
       dark:bg-black h-screen w-screen flex flex-row`}  >
 
         <AppRouter/>
+
       </div>
+
     </UserContext.Provider>
     </OptionsContext.Provider>
   )

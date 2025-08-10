@@ -4,7 +4,6 @@ import Questions from './pages/questions';
 import Social from './pages/social';
 import Games from './pages/games';
 import Navbar from './components/navbar';
-import { MdOutlineGames } from 'react-icons/md';
 
 const router = createBrowserRouter([
   {
@@ -38,7 +37,7 @@ const router = createBrowserRouter([
     element: (
       <>
         <Navbar />
-        <MdOutlineGames/>
+        <Games/>
       </>
     ),
   },

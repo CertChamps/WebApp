@@ -1,7 +1,19 @@
 import { LuSearch, LuFilter } from "react-icons/lu";
+import { useState, useRef, useEffect } from "react";
+import 'mathlive';
 
 
 export default function Questions() {
+
+    const [value, setValue] = useState("");
+        const mathFieldRef = useRef<any>(null);
+
+    useEffect(() => {
+        if (mathFieldRef.current) {
+            mathFieldRef.current.value = value;
+        }
+    }, [value]);
+
     return (
         <div className="w-full h-full flex flex-col justify-items-center p-4">
 
@@ -19,7 +31,23 @@ export default function Questions() {
                 <p  className="txt-sub italic" >#Tags for the questions</p>
                 <p className="txt" >Wow so much space I actually dont know what to do with myself here</p>
                 <input type="text" className="txtbox w-full max-w-xs" placeholder="Answer"/>
-                
+                   <math-field
+                ref={mathFieldRef}
+                onInput={(evt: any) => setValue(evt.target.value)}
+                style={{
+                    display: "block",
+                    minHeight: "60px",
+                    padding: "8px",
+                    backgroundColor: "#f0f0f0",
+                    border: "2px solid #888",
+                    borderRadius: "8px",
+                    fontSize: "18px",
+                    color: "black"
+                }}
+            >
+                {value}
+            </math-field>
+            <p>Value: {value}</p>
             </div>
 
         </div>
