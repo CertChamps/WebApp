@@ -120,9 +120,16 @@
   
 }
 
-
 /* Opaque Bg Gradient */
 @utility bg-opaque {
   @apply bg-gradient-to-r from-blue/10 to-blue/5 dark:from-blue-light/10 dark:to-blue-light/5
 }
 
+/* Math Input */ 
+math-field::part(menu-toggle) {
+  display: none;
+}
+
+math-field::part(virtual-keyboard-toggle) {
+  display: none;
+}

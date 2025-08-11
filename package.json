@@ -16,6 +16,7 @@
     "@types/katex": "^0.16.7",
     "firebase": "^12.0.0",
     "katex": "^0.16.22",
+    "lottie-react": "^2.4.1",
     "mathlive": "^0.106.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
