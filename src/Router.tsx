@@ -37,7 +37,7 @@ const router = createBrowserRouter([
     element: (
       <>
         <Navbar />
-        <Games/>
+        <Games />
       </>
     ),
   },

@@ -1,0 +1,3 @@
+@utility search-box {
+    @apply flex items-center justify-between txtbox w-9/12 max-w-xs
+}

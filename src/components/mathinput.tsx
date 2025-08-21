@@ -18,7 +18,8 @@ export default function MathInput() {
         ref={mathFieldRef}  
         onInput={(evt: any) => setValue(evt.target.value)}
         className="txtbox outline-none bg-none text-grey inline-block dark:text-light-grey
-            focus:border-3 border-blue dark:border-blue-light mx-2 w-50 "
+            focus:border-3 border-blue dark:border-blue-light w-50 mx-4 shadow-blue dark:shadow-blue-light 
+            h-10 overflow-scroll"
         style={{
             background: "none", 
             outline: "none",

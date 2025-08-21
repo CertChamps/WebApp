@@ -3,7 +3,7 @@
 
 :root {
   font-family: "Manrope", sans-serif;
-  font-size: 16px;
+  font-size: 18px;
 }
 
 /* ================== TAILWIND SETUP ============= */
@@ -65,9 +65,9 @@
 
 /* Button Styles */
 @utility txtbox {
-  @apply border-2 border-light-grey dark:border-grey rounded-in 
+  @apply border-3 border-light-grey dark:border-grey rounded-in 
   px-2 py-1 dark:focus:border-blue-light focus:border-blue
-  outline-none text-grey focus:txt w-6/12 block
+  outline-none text-grey focus:txt w-6/12 block shadow-small
 }
 
 @utility blue-btn {
@@ -132,4 +132,13 @@ math-field::part(menu-toggle) {
 
 math-field::part(virtual-keyboard-toggle) {
   display: none;
+}
+
+/* Shadows */ 
+@utility shadow-small {
+  @apply shadow-[2px_2px_0px_1px] shadow-light-grey dark:shadow-grey
+}
+
+@utility shadow-big {
+  @apply shadow-[4px_4px_0px_2px] shadow-light-grey dark:shadow-grey
 }
