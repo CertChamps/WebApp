@@ -40,6 +40,17 @@
 
 }
 
+@layer components {
+
+  .sidebar-icon {
+    @apply relative flex items-center justify-center
+           h-12 w-12 mt-4 mx-auto
+           bg-blue hover:bg-blue-light
+           rounded-3xl hover:rounded-xl
+           transition-all duration-200 ease-linear
+  }
+}
+
 /* ================== UTILITY STYLES ============= */
 /* Commonly used styles for text, buttons etc. This will keep our app consistent
   with dark mode pre implemented */
@@ -147,7 +158,7 @@ math-field::part(virtual-keyboard-toggle) {
 
 /* Progress Bar */
 @utility progress-bar {
-  @apply w-[190px] h-6 rounded-2xl border-2 border-light-grey dark:border-grey overflow-hidden bg-button dark:bg-button-dark shadow-small
+  @apply w-[350px] h-6 rounded-2xl border-2 border-light-grey dark:border-grey overflow-hidden bg-button dark:bg-button-dark shadow-small
 }
 
 @utility progress-fill {
