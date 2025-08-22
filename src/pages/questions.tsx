@@ -1,9 +1,13 @@
+// React
+import { useContext } from "react";
+
 // Icons 
 import { LuSearch, LuFilter, LuChevronRight, LuMessageSquareText, LuBook } from "react-icons/lu";
 import { TbCards } from "react-icons/tb";
 
 // Hooks 
 import useQuestions from "../hooks/useQuestions";
+import { UserContext } from "../context/UserContext"
 import { useEffect, useState } from "react";
 
 // Components
@@ -11,6 +15,7 @@ import Lottie  from 'lottie-react';
 import loadingAnim from '../assets/animations/loading.json';
 import RenderMath from "../components/mathdisplay";
 import MathInput from "../components/mathinput";
+import RankBar from "../components/rankbar";
 
 // Other Imports 
 
@@ -42,6 +47,7 @@ export default function Questions() {
     const [part, setPart] = useState(0) // position of part in a question
     const { loadQuestions } = useQuestions({ setQuestions })
     const [page, setPage ]= useState<string>('practice')
+    const { user } = useContext(UserContext);
 
     //=========================================> Constants <========================================//
     const iconSize = 48
@@ -76,16 +82,23 @@ export default function Questions() {
     return (
         <div className="w-full h-full flex flex-col justify-items-center p-4">
 
-            {/* ======================================== SEARCH AND FILTER ========================================== */}
-            <div className="flex items-center justify-center w-full">
-
-                <div className="flex items-center justify-between txtbox w-9/12 max-w-xs">
-                    <input type="text" placeholder="Searchh Questions" className=" w-full p-1 outline-none border-none"/>
-                    <LuSearch className="text-grey dark:text-light-grey" size={24}/>
+            {/* ======================================== TOP PAGE INFORMATION ========================================== */}
+            <div className="flex items-center">
+                {/* ======================================== RANKBAR ========================================== */}
+                <div className="flex-shrink-0 ml-25">
+                    <RankBar rank={user.rank || 0} progress={Math.min(user.xp, 100)} />
                 </div>
 
-                <LuFilter className="text-grey dark:text-light-grey m-4"  size={24}/>
+                {/* ======================================== SEARCH AND FILTER ========================================== */}
+                <div className="flex items-center justify-center w-full mr-90">
+                    <div className="flex items-center justify-between txtbox w-9/12 max-w-xs">
+                        <input type="text" placeholder="Search Questions" className=" w-full p-1 outline-none border-none"/>
+                        <LuSearch className="text-grey dark:text-light-grey" size={24}/>
+                    </div>
 
+                    <LuFilter className="text-grey dark:text-light-grey m-4"  size={30}/>
+
+                </div>
             </div>
             {/* ===================================================================================================== */}
 
