@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 // Components
 
 import Question from "../components/question";
+import RankBar from "../components/rankbar";
 
 
 // Style Imports 
