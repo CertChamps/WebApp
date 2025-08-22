@@ -33,12 +33,9 @@ const RankBar = ({ rank, progress = 0 }: RankBarProps) => {
                 />
 
                 {/* ============================================ PROGRESS BAR ========================================== */}
-                <div className="w-[190px] h-6 rounded-2xl border-2 border-light-grey dark:border-grey border-button overflow-hidden bg-button shadow-small">
+                <div className="progress-bar">
                     <motion.div
-                        className="h-full rounded-2xl"
-                        style={{
-                            background: "linear-gradient(to right, #F56666, #FFFC2F)",
-                        }}
+                        className="progress-fill" // Can edit in index.css
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
                         transition={{ duration: 0.6, ease: "easeInOut" }}

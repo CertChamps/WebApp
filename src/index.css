@@ -22,9 +22,11 @@
   --color-grey: #757575;
   --color-light-grey: #bdbdbd; /* #e0e0e0 og*/ 
   --color-red: #f03131;
+  --color-button: #f3f4f6; /* Add this for light mode button bg */
 
   /* Dark Mode */ 
   --color-blue-light: #74a1d8;
+  --color-button-dark: #374151; /* Add this for dark mode button bg */
 
   /* Note: Do not change these randomly below styles must follow: 
   radius-out - radius-in = 2 * padding/margin */
@@ -141,4 +143,13 @@ math-field::part(virtual-keyboard-toggle) {
 
 @utility shadow-big {
   @apply shadow-[4px_4px_0px_2px] shadow-light-grey dark:shadow-grey
+}
+
+/* Progress Bar */
+@utility progress-bar {
+  @apply w-[190px] h-6 rounded-2xl border-2 border-light-grey dark:border-grey overflow-hidden bg-button dark:bg-button-dark shadow-small
+}
+
+@utility progress-fill {
+  @apply h-full rounded-2xl bg-gradient-to-r from-red to-yellow-400 dark:from-blue dark:to-blue-light
 }

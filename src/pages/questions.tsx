@@ -86,7 +86,7 @@ export default function Questions() {
             <div className="flex items-center">
                 {/* ======================================== RANKBAR ========================================== */}
                 <div className="flex-shrink-0 ml-25">
-                    <RankBar rank={user.rank || 0} progress={Math.min(user.xp, 100)} />
+                    <RankBar rank={user.rank} progress={Math.min(user.xp, 100)} />
                 </div>
 
                 {/* ======================================== SEARCH AND FILTER ========================================== */}
