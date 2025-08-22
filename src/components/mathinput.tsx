@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
+import useMaths from "../hooks/useMaths";
 import "mathlive"
 
 export default function MathInput() {
 
     const [value, setValue] = useState("");
+    const { isCorrect } = useMaths();
     const mathFieldRef = useRef<any>(null);
     
     useEffect(() => {
@@ -14,6 +16,7 @@ export default function MathInput() {
 
 
     return (
+        <div>
         <math-field
         ref={mathFieldRef}  
         onInput={(evt: any) => setValue(evt.target.value)}
@@ -27,6 +30,9 @@ export default function MathInput() {
         }} >
             {value}
         </math-field>
+        <p>{value}</p>
+        <p>{ isCorrect(value) }</p>
+        </div>
     )
 
 }

@@ -1,6 +1,7 @@
 import { useContext, useState } from 'react'
 import { UserContext } from '../context/UserContext'
 import { useNavigate } from "react-router-dom";
+import '../styles/navbar.css'
 
 // ======================= ICON IMPORTS ======================== // 
 import { LuPencil, LuSettings, LuUsers, LuGamepad2 } from "react-icons/lu";
@@ -29,17 +30,17 @@ export default function Navbar () {
     } 
 
     return (
-        <div className="h-full flex flex-col p-4 group transition-all duration-250 bg-light-grey/5 dark:bg-grey/5" >
+        <div className="container group" >
 
             {/* ============================= USER CARD ================================ */}
-            <div className='flex items-center justify-evenly rounded-out h-16 group-hover:bg-opaque p-2 mb-2'>
-                <img src={user.picture} className='rounded-full border-light-grey border-2 w-7 group-hover:w-9 transition-all duration-250' />
+            <div className='user-container'>
+                <img src={user.picture} className='user-img' />
 
-                <div className='transition-all duration-250 group-hover:ml-2'>
-                    <p className='nav-txt txt-heading-colour text-blue dark:text-blue-light' >{user.username}</p>
+                <div className='user-info'>
+                    <p className='nav-txt username' >{user.username}</p>
                     <p className='nav-txt txt-sub text-nowrap' >Rank: Elite</p> 
                 </div>
-                <LuSettings className='nav-txt group-hover:w-8 text-grey dark:text-grey-light' size={24}/>
+                <LuSettings className='nav-txt settings' size={24}/>
             </div>
 
             {/* ============================= PRACTICE ICON ================================ */}

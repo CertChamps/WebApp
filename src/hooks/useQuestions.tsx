@@ -9,7 +9,7 @@ type questionProps = {
     setQuestions: React.Dispatch<React.SetStateAction<any>>
 }
 
-export default function useQuestions( props:questionProps ) {
+export default function useQuestions( props?:questionProps ) {
 
     // ====================== HOOKS ========================= //
     const { fetchImage } = useFetch()
@@ -109,14 +109,32 @@ export default function useQuestions( props:questionProps ) {
         const question = await fetchQuestion(await getRandomQuestion('')) 
 
         // Add it into the questions array
-        props.setQuestions( (questions : any ) => [...questions, question])
+        props?.setQuestions( (questions : any ) => [...questions, question])
 
     }
     // ================================================================================================= //
 
+    // ================================= CONVERTS NUMBER TO ROMAN NUMERAL ====================================== //
+    function toRoman(n: number): string | null {
+        const map: Record<number, string> = {
+            1: "i",
+            2: "ii",
+            3: "iii",
+            4: "iv",
+            5: "v",
+            6: "vi",
+            7: "vii",
+            8: "viii",
+            9: "ix",
+            10: "x",
+        };
+    
+        return map[n] ?? null;
+    }
+    // ========================================================================================================= //
+    
 
-
-    return { getRandomQuestion, fetchQuestion, loadQuestions }
+    return { getRandomQuestion, fetchQuestion, loadQuestions, toRoman }
 
 
 }

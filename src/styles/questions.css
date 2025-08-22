@@ -1,3 +1,26 @@
-@utility search-box {
-    @apply flex items-center justify-between txtbox w-9/12 max-w-xs
+@reference '../index.css';
+
+/* ================== SEARCH BAR ===================== */
+.search-container {
+    @apply flex items-center justify-between txtbox w-9/12 max-w-xs;
+}
+
+.search-input {
+    @apply  w-full p-1 outline-none border-none;
+}
+
+.search-icon {
+    @apply text-grey dark:text-light-grey;
+}
+/* =================================================== */
+
+/* ================== QUESTION CARD ================== */
+.card-container {
+    @apply h-[85%] w-[97.5%] rounded-out m-auto border-3
+    shadow-small 
+    border-light-grey dark:border-grey;
+}
+
+.part-number {
+    @apply txt mx-2 rounded-out cursor-pointer px-3 py-1 text-grey dark:text-light-grey;
 }
