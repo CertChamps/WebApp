@@ -1,12 +1,18 @@
+// React
+import { useContext } from "react";
+
 // Icons 
 import { LuSearch, LuFilter } from "react-icons/lu";
 
 // Hooks 
 import useQuestions from "../hooks/useQuestions";
+import { UserContext } from "../context/UserContext"
 import { useEffect, useState } from "react";
 
 // Components
+
 import Question from "../components/question";
+
 
 // Style Imports 
 import '../styles/questions.css'
@@ -18,6 +24,7 @@ export default function Questions() {
     const [questions, setQuestions] = useState<any[]>([])
     const [position, setPosition] = useState(0) // position of question in the array
     const { loadQuestions } = useQuestions({ setQuestions })
+    const { user } = useContext(UserContext);
 
     //===================================> useEffect First Render <=================================//
     useEffect(() => {
@@ -47,16 +54,23 @@ export default function Questions() {
     return (
         <div className="w-h-container flex-col p-4">
 
-            {/* ======================================== SEARCH AND FILTER ========================================== */}
-            <div className="w-container">
-
-                <div className="search-container">
-                    <input type="text" placeholder="Searchh Questions" className="search-input"/>
-                    <LuSearch className="search-icon" size={24}/>
+            {/* ======================================== TOP PAGE INFORMATION ========================================== */}
+            <div className="flex items-center">
+                {/* ======================================== RANKBAR ========================================== */}
+                <div className="flex-shrink-0 ml-25">
+                    <RankBar rank={user.rank} progress={Math.min(user.xp, 100)} />
                 </div>
 
-                <LuFilter className="search-icon m-4"  size={24}/>
+                {/* ======================================== SEARCH AND FILTER ========================================== */}
+                <div className="flex items-center justify-center w-full mr-90">
+                    <div className="flex items-center justify-between txtbox w-9/12 max-w-xs">
+                        <input type="text" placeholder="Search Questions" className=" w-full p-1 outline-none border-none"/>
+                        <LuSearch className="text-grey dark:text-light-grey" size={24}/>
+                    </div>
 
+                    <LuFilter className="text-grey dark:text-light-grey m-4"  size={30}/>
+
+                </div>
             </div>
             {/* ===================================================================================================== */}
 

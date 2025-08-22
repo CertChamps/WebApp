@@ -1,42 +1,238 @@
-import { useContext } from "react"
-import { UserContext } from "../context/UserContext"
-import { OptionsContext } from "../context/OptionsContext"
+// React
+import { useContext, useEffect, useState } from "react"
+
+// Components
+import FriendsBar from "../components/social/FriendsBar"
+import PostCard from "../components/social/PostCard"
+
+// Hooks
+import { UserContext } from '../context/UserContext';
+
+// Firebase
+import { db }from '../../firebase'
+import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
+import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 
 export default function Social() {
 
-    const {user} = useContext(UserContext)
-    const { setOptions } = useContext(OptionsContext)
+    const { user, setUser } = useContext(UserContext);
+
+    const [posts, setPosts] = useState<{ id: string; [key: string]: any }[]>([]);
+    const [message, setMessage] = useState('');
+    const [userFriends, setUserFriends] = useState<any[]>([])
+
+    //==========================================SEND POST DUH=====================================================//
+    const sendPost = async () => {
+        if (!message.trim()) return; //.trim() removes whitespace so this just checks if the textbox has text in it if not it returns
+
+        try {
+            await addDoc(collection(db, 'posts'), {
+                //the follow gets added to the doc
+                userId: user.uid,
+                content: message.trim(),
+                timestamp: serverTimestamp(),
+                imageUrl: null,
+                likes: 0,
+                isFlashcard: false
+              });
+
+            setMessage(''); //reset the text box
+            console.log('Post added!');
+            } catch (error) {
+            console.error('Error sending post:', error);
+        }
+    };
+    //==============================================================================================================//
+
+    //=============================================The usual fetch from firebase======================================
+    useEffect(() => {
+        // -----------------------------------FETCHING POSTS FROM DATABASE---------------------------------------//
+        const fetchPostsWithUserData = async () => {
+            const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
+  
+            const unsubscribe = onSnapshot(q, async (snapshot) => {
+                const postData = await Promise.all(
+                    snapshot.docs.map(async (docSnap) => {
+                        const post = docSnap.data();
+                        const userId = post.userId;
+                        const postId = docSnap.id;
+  
+                        //Get user data from firebase
+                        const userQ = query(collection(db, 'user-data'), where('uid', '==', userId));
+                        const userSnap = await getDocs(userQ);
+  
+                        let username = "Unknown";
+                        let userImage = null;
+  
+                        if (!userSnap.empty) {
+                            const userData = userSnap.docs[0].data();
+                            username = userData.username;
+  
+                            try {
+                                const storage = getStorage();
+                                const imageRef = ref(storage, userData.picture);
+                                userImage = await getDownloadURL(imageRef);
+                            } catch (err) {
+                                console.warn("Image error:", err);
+                            }
+                        }
+
+                        //Get reply count for the post
+                        let repliesSnap = await getDocs(
+                            collection(db, 'posts', postId, 'replies')
+                        );
+
+                        let replyCount = repliesSnap.size;
+
+                        //We want to set replyCount to the amount of flashcard replies if its a flashcard thread
+                        if (post.flashcardId) {
+                            //If it's a flashcard, fetch the flashcard data
+                            repliesSnap = await getDocs(collection(db, 'practice-questions', post.flashcardId, 'replies', post.replyId, 'replies'));
+                            replyCount = repliesSnap.size;
+                        }
+
+                        return {
+                            id: docSnap.id,
+                            content: post.content,
+                            timestamp: post.timestamp,
+                            username,
+                            userImage,
+                            imageURL: post.imageUrl,
+                            replyCount, // Add reply count to the returned object
+                            isFlashcard: post.isFlashcard, // Add isFlashcard property
+                            flashcardId: post.flashcardId, // Add flashcardId if it exists
+                            replyId: post.replyId // Add practiceReplyId if it exists
+                        };
+                    })
+                );
+
+            setPosts(postData);
+            });
+  
+            return () => unsubscribe();
+        };
+        //-------------------------------------------------------------------------------------------------------//
+
+        //call the actual functions
+        fetchPostsWithUserData();
+    }, []);
+    
+    useEffect(() => {
+        // -----------------------------------FETCHING FRIENDS FROM DATABASE---------------------------------------//
+        const fetchFriends = async () => {
+
+            // initialise friends - avoid duplicates on refresh 
+            setUserFriends([])
+            console.log('debug')
+
+            user.friends.forEach( async (friend: string) => {
+                try {
+                    // get data for each friends
+                    const friendData = ( await getDoc(doc(db, 'user-data', friend)) ).data()
+
+                    // get url for user profile photo
+                    const storage = getStorage(); 
+                    const imageRef = ref(storage, friendData?.picture);
+                    const picture = await getDownloadURL(imageRef);
+
+                    // add to user friends 
+                    setUserFriends( prev => [...prev, {username: friendData?.username, picture, uid: friendData?.uid}])
+                }
+                catch (err) {
+                    console.log(err)
+                }
+            })
+
+        }
+        //-------------------------------------------------------------------------------------------------------//
+
+        // call the actual function 
+        fetchFriends();
+
+    }, [])
+
+    useEffect(() => {
+        // -----------------------------------LISTEN TO REAL TIME CHANGES OF USER---------------------------------------//
+        const unsubscribe = onSnapshot( doc(db, 'user-data', user.uid), (usr) => {
+
+            // get the user data 
+            const data = usr.data();
+
+            if (data) {
+                // update user context to view changes in the app immediately 
+                setUser( (prev: any) => ({
+                ...prev,
+                friends: data.friends ?? [],
+                notifications: data.notifications ?? []
+                }));
+            }
+            },
+            // Log any errors 
+            (error) => {
+                console.error("Firestore listener error:", error);
+            }
+        );
+
+        return () => unsubscribe();
+    }, []);
+    //================================================================================================================
+
+
+    //====================Random placeholders for textbox======================
+    const placeholders = [
+        "Confess your math sins.",
+        "Type like no one’s judging.",
+        "Unleash your inner genius!!!",
+        "Got wisdom? Spill it.",
+        "Your keyboard misses you.",
+        "Type away, genius!",
+        "Your thoughts matter here.",
+        "Share your brilliance.",
+        "Type it out, let’s see!",
+        "Got a thought? Type it!",
+        "Your keyboard is waiting.",
+        "Type like you mean it!",
+        "Let your thoughts flow.",
+        "Type it, we’re listening.",
+        "Your keyboard is your canvas.",
+        "Type your way to greatness.",
+        "Tell them how you love maths..."
+    ];
+      
+    const [randomPlaceholder, setRandomPlaceholder] = useState("");
+
+    //This will just pick a random placeholder whenever the screen renders
+    useEffect(() => {
+        const randomIndex = Math.floor(Math.random() * placeholders.length);
+        setRandomPlaceholder(placeholders[randomIndex]);
+    }, []);
+    //=======================================================================
 
     return (
-        <div>
-            <p>Social</p>
+        
+        <div className="flex w-full">
+            {/* Sidebar with fixed width */}
+            <div className="w-64 overflow-y-auto">
+                <FriendsBar />
+            </div>
 
-              <p className="txt-heading-colour">Default Text</p>
-            <p className="txt-heading">Default Text</p>
-            <p className="txt-bold">Default Text</p>
-            <p className="txt">Default Text</p>
-            <p className="txt-sub">Default Text</p>
-            <input type="text" className="txtbox txt" placeholder="Default Text" />
-            <button className=" block blue-btn m-2 " >
-                <p>Default Text</p>
-            </button>
-            <button className=" block plain-btn m-2 " onClick={() => {
-                    localStorage.setItem('THEME', 'dark')
-                    setOptions( (opt: any) => ({...opt, theme: 'dark'}) )
-                }} >
-                <p>Dark Mode</p>
-            </button>
-            <button className=" block red-btn m-2"  onClick={() => {
-                    localStorage.setItem('THEME', 'light')
-                    setOptions( (opt: any) => ({...opt, theme: 'light'}) )
-                }} >
-                <p>Light Mode</p>
-            </button>
-
-            <p>{user.email}</p>
-            <p>{user.uid}</p>
-            <p>{user.username}</p>
-
+            {/* Content area fills the rest */}
+            <div className="flex-1 h-screen overflow-y-auto p-4 mr-70">
+                {/* This centers the posts within the available viewport */}
+                <div className="mx-auto max-w-3xl w-full space-y-4">
+                {posts.map((post) => (
+                    <PostCard
+                        key={post.id}
+                        content={post.content}
+                        userImage={post.userImage}
+                        username={post.username}
+                        time={post.timestamp}
+                        replyCount={post.replyCount}
+                        imageURL={post.imageURL}
+                    />
+                ))}
+                </div>
+            </div>
         </div>
     )
 }
