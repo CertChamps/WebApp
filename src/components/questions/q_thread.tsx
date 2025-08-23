@@ -10,22 +10,21 @@ import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 import { UserContext } from '../../context/UserContext';
 
 // Components
-import QReplyCard from './qReplyCard';
 import SubReplies from './SubReplies';
 
 
 
 type questionType = {
     questionId: string
+    part: number
 }
 
 
 
 const QThread = (props: questionType) => {
 
-    const { user, setUser } = useContext(UserContext);
+    const { user } = useContext(UserContext);
     const [ message, setMessage ] = useState('');
-    const [ imageURL, setImageURL ] = useState('');
     const [ replyingTo, setReplyingTo ] = useState<{ id: string; username: string; type: 'question' | 'reply' } | null>(null);
 
 
@@ -99,7 +98,8 @@ const QThread = (props: questionType) => {
     //It is useful to note this will be called in the following sendPost function
     const getImage = async (): Promise<string> => {
         try {
-            const docRef = doc(db, "certchamps-questions", props.questionId);
+            const label = `q${props.part + 1}`;
+            const docRef = doc(db, "certchamps-questions", props.questionId, "content", label);
             const docSnap = await getDoc(docRef);
     
             if (docSnap.exists()) {
@@ -124,7 +124,7 @@ const QThread = (props: questionType) => {
     
         try {
             const image = await getImage(); //Need to get the image as we will put this in the doc
-            
+            console.log(image)
             //Create the reply docs conditionally
             //The replyingTo is a useState above and is changed in the handleReplyToComment function below.
             if (replyingTo && replyingTo.type === 'reply') {
@@ -143,7 +143,6 @@ const QThread = (props: questionType) => {
                     content: message.trim(),
                     timestamp: serverTimestamp(),
                 });
-                console.log('Created social post for practice reply:', practiceReplyDoc.id);
                 //We also want this to be an actual post in the social tab
                 await addDoc(collection(db, 'posts'), {
                     userId: user.uid,

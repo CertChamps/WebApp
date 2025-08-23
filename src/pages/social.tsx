@@ -215,21 +215,53 @@ export default function Social() {
                 <FriendsBar />
             </div>
 
+
             {/* Content area fills the rest */}
-            <div className="flex-1 h-screen overflow-y-auto p-4 mr-70">
-                {/* This centers the posts within the available viewport */}
-                <div className="mx-auto max-w-3xl w-full space-y-4">
-                    {posts.map((post) => (
-                        <PostCard
-                            key={post.id}
-                            content={post.content}
-                            userImage={post.userImage}
-                            username={post.username}
-                            time={post.timestamp}
-                            replyCount={post.replyCount}
-                            imageURL={post.imageURL}
-                        />
-                    ))}
+            <div className="flex-1 mr-60">
+                <div className="flex-1 h-screen overflow-y-auto p-4">
+                    {/* This centers the posts within the available viewport */}
+                    <div className="mx-auto max-w-3xl w-full space-y-4">
+                        {posts.map((post) => (
+                            <PostCard
+                                key={post.id}
+                                content={post.content}
+                                userImage={post.userImage}
+                                username={post.username}
+                                time={post.timestamp}
+                                replyCount={post.replyCount}
+                                imageURL={post.imageURL}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
+                    <textarea
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        //   onKeyDown={handleKeyDown}
+                        placeholder={randomPlaceholder}
+                        rows={3}
+                        className="w-full p-3 rounded-xl border-2 border-light-grey dark:border-grey bg-button dark:bg-button-dark text-black dark:text-white focus:outline-none resize-none"
+                    />
+            
+                    <div className="flex justify-end gap-2 mt-2">
+                        <button
+                            type="button"
+                            // onClick={cancelReply}
+                            className="px-3 py-1 txt-sub text-grey dark:text-light-grey hover:text-black dark:hover:text-white"
+                        >
+                            Clear
+                        </button>
+                        <button
+                            type="button"
+                            onClick={sendPost}
+                            disabled={!message.trim()}
+                            className="px-4 py-2 rounded-xl bg-blue text-white disabled:opacity-50 hover:bg-blue-light"
+                        >
+                            Send
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
