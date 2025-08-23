@@ -58,19 +58,20 @@ export default function Questions() {
             {/* ======================================== TOP PAGE INFORMATION ========================================== */}
             <div className="flex items-end justify-end ">
                 {/* ======================================== RANKBAR ========================================== */}
-                <div className="">
+                <div className="flex mr-20">
                     <RankBar rank={user.rank} progress={Math.min(user.xp, 100)} />
                 </div>
 
                 {/* ======================================== SEARCH AND FILTER ========================================== */}
-                <div className="flex items-center justify-center w-full">
-                    <div className="flex items-center justify-between txtbox w-9/12 max-w-xs">
+                <div className="flex items-center gap-3 w-205">
+                    <div className="flex items-center txtbox w-full max-w-xs">
                         <input type="text" placeholder="Search Questions" className=" w-full p-1 outline-none border-none"/>
                         <LuSearch className="text-grey dark:text-light-grey" size={24}/>
                     </div>
-
-                    <LuFilter className="text-grey dark:text-light-grey m-4"  size={30}/>
-
+                    
+                    <button type="button" className="p-1">
+                        <LuFilter className="text-grey dark:text-light-grey m-4"  size={30}/>
+                    </button>
                 </div>
             </div>
             {/* ===================================================================================================== */}
