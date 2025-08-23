@@ -11,6 +11,7 @@ import Lottie  from 'lottie-react';
 import loadingAnim from '../assets/animations/loading.json';
 import RenderMath from "../components/mathdisplay";
 import MathInput from "../components/mathinput";
+import QThread from "../components/questions/q_thread"
 
 // Style Imports 
 import '../styles/questions.css'
@@ -109,13 +110,19 @@ export default function Question(props: questionsProps) {
 
                 </div>
                 {/* ====================================================================================== */}
+                
 
+                <div className="border-l border-light-grey dark:border-grey h-full w-150">
+                    <QThread questionId={properties?.id ?? props.questions[props.position]?.id} />
+                </div>
+                    
+                
                 {/* ================================== QUESTION SIDEBAR ================================== */}
                 <div className="h-full rounded-r-out p-4">
                     <div className={page == 'practice' ? 'nav-item-selected mb-4 mt-0' : 'nav-item mb-4'} onClick={() => {}} >
                         <LuMessageSquareText strokeWidth={strokewidth} size={iconSize} 
                             className={page == 'practice' ? 'nav-icon-selected' : 'nav-icon'}
-                            fill={page == 'practice' ? 'currentColor' : 'none'} />
+                            fill={page == 'practice' ? 'currentColor' : 'none'} /> 
                     </div>
 
                     <div className={page == 'practicee' ? 'nav-item-selected mb-4' : 'nav-item mb-4'} onClick={() => {}} >

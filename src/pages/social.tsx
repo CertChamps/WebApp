@@ -209,7 +209,6 @@ export default function Social() {
     //=======================================================================
 
     return (
-        
         <div className="flex w-full">
             {/* Sidebar with fixed width */}
             <div className="w-64 overflow-y-auto">
@@ -220,17 +219,17 @@ export default function Social() {
             <div className="flex-1 h-screen overflow-y-auto p-4 mr-70">
                 {/* This centers the posts within the available viewport */}
                 <div className="mx-auto max-w-3xl w-full space-y-4">
-                {posts.map((post) => (
-                    <PostCard
-                        key={post.id}
-                        content={post.content}
-                        userImage={post.userImage}
-                        username={post.username}
-                        time={post.timestamp}
-                        replyCount={post.replyCount}
-                        imageURL={post.imageURL}
-                    />
-                ))}
+                    {posts.map((post) => (
+                        <PostCard
+                            key={post.id}
+                            content={post.content}
+                            userImage={post.userImage}
+                            username={post.username}
+                            time={post.timestamp}
+                            replyCount={post.replyCount}
+                            imageURL={post.imageURL}
+                        />
+                    ))}
                 </div>
             </div>
         </div>
