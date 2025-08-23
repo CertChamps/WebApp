@@ -98,7 +98,7 @@ export default function useQuestions( props?:questionProps ) {
         const content = await Promise.all(contentPromises);
 
         // Return the question
-        return { properties, content } 
+        return { id, properties, content } 
     }
     // ================================================================================================= //
 
