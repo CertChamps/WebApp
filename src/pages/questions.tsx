@@ -56,14 +56,14 @@ export default function Questions() {
         <div className="w-h-container flex-col p-4">
 
             {/* ======================================== TOP PAGE INFORMATION ========================================== */}
-            <div className="flex items-center">
+            <div className="flex items-end justify-end ">
                 {/* ======================================== RANKBAR ========================================== */}
-                <div className="flex-shrink-0 ml-25">
+                <div className="">
                     <RankBar rank={user.rank} progress={Math.min(user.xp, 100)} />
                 </div>
 
                 {/* ======================================== SEARCH AND FILTER ========================================== */}
-                <div className="flex items-center justify-center w-full mr-90">
+                <div className="flex items-center justify-center w-full">
                     <div className="flex items-center justify-between txtbox w-9/12 max-w-xs">
                         <input type="text" placeholder="Search Questions" className=" w-full p-1 outline-none border-none"/>
                         <LuSearch className="text-grey dark:text-light-grey" size={24}/>

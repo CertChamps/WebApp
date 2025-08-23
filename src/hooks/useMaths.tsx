@@ -4,96 +4,73 @@ import 'nerdamer/Calculus';
 import 'nerdamer/Solve';
 import 'nerdamer/Extra';
 
-
 export default function useMaths() {
+  const sanitizeLatex = (tex: string) =>
+    tex.replace(/\\left|\\right/g, '').replace(/\\,/g, '').trim();
 
-    // =================================== NUMERIC ====================================== // 
-    // check if numbers are equal (0.02 margin of error)
-    const numericEquality = (input: any, answer: any) => {
-        const diff = Math.abs(
-            Number(input.subtract(answer).evaluate().text())
-        )
-        if (diff <= 0.02) {
-            return true
-        }
+  const latexToExpr = (tex: string) => {
+    try {
+      const asString = nerdamer.convertFromLaTeX(sanitizeLatex(tex));
+      return nerdamer(asString); // ensures Expression, not string
+    } catch (err) {
+      console.log("Parse error:", err);
+      throw err;
     }
-    // ==================================================================================== //
+  };
 
-
-    // =================================== ALGEBRAIC ====================================== // 
-    const algebricEquality = (input: any, answer: any) => {
-        return input.eq(answer)
+  const numericEquality = (A: any, B: any) => {
+    try {
+      const diff = Math.abs(Number(A.subtract(B).evaluate().text()));
+      return diff <= 0.02;
+    } catch {
+      return false;
     }
-    // ==================================================================================== //
+  };
 
-    // =================================== CARTERSIAN ===================================== // 
-    const cartesianEquality = (input: any, answer: any) => {
+  const algebraicEquality = (A: any, B: any) => {
+    try { return A.eq(B); } catch { return false; }
+  };
 
-        try {
-            const parseCoordinate = (latex: string) => {
-                const match = latex.match(/\\left\((.*),(.*)\\right\)/)
-                if (!match) return null
-                return [
-                    nerdamer.convertFromLaTeX(match[1].trim()),
-                    nerdamer.convertFromLaTeX(match[2].trim())
-                ]
-            }
+  const cartesianEquality = (input: string, answer: string) => {
+    const clean = (s: string) => sanitizeLatex(s);
+    const extract = (s: string) => {
+      const m = clean(s).match(/\(([^)]+)\)/);
+      if (!m) throw new Error("Bad coordinate");
+      const [x, y] = m[1].split(',').map(v => v.trim());
+      return { x: nerdamer(x), y: nerdamer(y) };
+    };
 
-            const inputCoord = parseCoordinate(input)
-            const answerCoord = parseCoordinate(answer)
+    try {
+      const a = extract(input);
+      const b = extract(answer);
+      return a.x.eq(b.x) && a.y.eq(b.y);
+    } catch {
+      return false;
+    }
+  };
 
-            if (!inputCoord || !answerCoord) {
-                return false
-            }
+  const isCorrect = (inputLatex: string, answer: string) => {
 
-            const [xi, yi] = inputCoord
-            const [xa, ya] = answerCoord
-
-            // Symbolic equality first
-            if (xi.eq(xa) && yi.eq(ya)) {
-                return true
-            } else {
-                // Numeric tolerance
-                const diffX = Math.abs(Number(xi.subtract(xa).evaluate().text()))
-                const diffY = Math.abs(Number(yi.subtract(ya).evaluate().text()))
-                if (diffX <= 0.02 && diffY <= 0.02) {
-                    return true
-                }
-            }
-
-            return false
-        }
-        catch (err: any) {
-            return false
-        }
+    // coordinates
+    if (/^\s*\\?\(?[^,]+,[^)]+\)?\s*$/.test(inputLatex) || answer.includes(',')) {
+      const ok = cartesianEquality(inputLatex, answer);
+      //return `coord in: ${inputLatex}, ans: ${answer}, correct: ${ok}`;
+      return ok 
     }
 
-    const isCorrect = (input: string) => {
-        const answer = '(5,8)'
-        let correct = false
+    // scalar/algebraic
+    try {
+      const A = latexToExpr(inputLatex);
+      const B = latexToExpr(answer); // example scalar answer
 
-        try {
-
-            // First check cartesian coordinate answers 
-            if (cartesianEquality(input,answer))
-                return 'match!'
-            // Parse LaTeX into nerdamer expressions
-            const nodeInput = nerdamer.convertFromLaTeX(input) ?? input 
-            const nodeAnswer = nerdamer.convertFromLaTeX(answer) ?? answer 
-
-            // Check symbolic equality first
-            if ( numericEquality(nodeInput, nodeAnswer) ||
-                algebricEquality(nodeInput, nodeAnswer) ||
-                cartesianEquality(input, answer)
-            ) correct = true
-
-            return `input: ${nodeInput.toString()}, answer: ${nodeAnswer.toString()}, correct: ${correct}`
-        }
-        catch (err: any) {
-            return err.toString()
-        }
+      const ok = numericEquality(A, B) || algebraicEquality(A, B);
+      //return `input: ${A.toString()}, answer: ${B.toString()}, correct: ${ok}`;
+      return ok
+    } catch (err: any) {
+      //return `in: ${inputLatex}, err: ${err.message ?? err}`;
+      return false
     }
+  };
 
-
-    return { isCorrect }
+  return { isCorrect };
 }
