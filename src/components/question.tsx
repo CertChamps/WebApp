@@ -12,7 +12,6 @@ import loadingAnim from '../assets/animations/loading.json';
 import RenderMath from "../components/mathdisplay";
 import MathInput from "../components/mathinput";
 import QThread from "../components/questions/q_thread"
-import MathInput from "../components/mathinput"
 
 // Style Imports 
 import '../styles/questions.css'
@@ -32,10 +31,6 @@ export default function Question(props: questionsProps) {
     const [part, setPart] = useState(0) // position of part in a question
     const [page, setPage ]= useState<string>('practice')
     const [ showThread, setShowThread ] = useState<boolean>(false)
-    const [content, setContent] = useState<any[]>([])
-    const [properties, setProperties] = useState<any>({})
-    const [part, setPart] = useState(0)
-    const [page, setPage] = useState<string>('practice')
 
     const { toRoman } = useQuestions()
 
@@ -133,8 +128,6 @@ export default function Question(props: questionsProps) {
                         <LuMessageSquareText strokeWidth={strokewidth} size={iconSize} 
                             className={page == 'practice' ? 'nav-icon-selected' : 'nav-icon'}
                             fill={page == 'practice' ? 'currentColor' : 'none'} /> 
-                            className={page === 'practice' ? 'nav-icon-selected' : 'nav-icon'}
-                            fill={page === 'practice' ? 'currentColor' : 'none'} />
                     </div>
 
                     <div className={page === 'practicee' ? 'nav-item-selected mb-4' : 'nav-item mb-4'} >
