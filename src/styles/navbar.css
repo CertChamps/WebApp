@@ -26,7 +26,8 @@
 }
 
 .settings {
-    @apply group-hover:w-8 text-grey dark:text-light-grey;
+    @apply group-hover:w-8 text-grey dark:text-light-grey
+    hover:scale-110 transition-all duration-200;
 }
 /* ===================================================================================== */ 
 

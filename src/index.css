@@ -15,18 +15,38 @@
 /* Theming & Colour Pallet */ 
 @theme {
 
-  /* Light Mode */
+  /* Main Colour Set */
   --color-white: #efefef;
   --color-black: #353535;
   --color-blue: #27548a;
   --color-grey: #757575;
   --color-light-grey: #bdbdbd; /* #e0e0e0 og*/ 
+
+
   --color-red: #f03131;
   --color-button: #f3f4f6; /* Add this for light mode button bg */
 
   /* Dark Mode */ 
   --color-blue-light: #74a1d8;
   --color-button-dark: #374151; /* Add this for dark mode button bg */
+
+  /* Markoblank colour theme */
+  --color-markoteal: #b2d2c8;
+  --color-markored: #c13117;
+  --color-markogrey: #717977;
+  --color-markobrown: #490909;
+
+  /* Discord Colour theme */
+  --color-discordblack: #313338;
+  --color-discordblue: #5a65ea;
+  --color-discordgrey: #565861;
+  --color-discordwhite: #dcdee3;
+
+  /* Ishtar Colour Theme */ 
+  --color-ishtarblack: #202020;
+  --color-ishtarred: #91170c;
+  --color-ishtargrey: #847869;
+  --color-ishtarbeige: #fae1c3;
 
   /* Note: Do not change these randomly below styles must follow: 
   radius-out - radius-in = 2 * padding/margin */
@@ -131,11 +151,11 @@ math-field::part(virtual-keyboard-toggle) {
 
 /* ================== Shadows ================== */ 
 @utility shadow-small {
-  @apply shadow-[2px_2px_0px_1px] shadow-light-grey dark:shadow-grey
+  @apply shadow-[2px_2px_0px_1px] color-lightgrey 
 }
 
 @utility shadow-big {
-  @apply shadow-[4px_4px_0px_2px] shadow-light-grey dark:shadow-grey
+  @apply shadow-[4px_4px_0px_2px] color-lightgrey
 }
 
 /* Progress Bar */
@@ -145,4 +165,111 @@ math-field::part(virtual-keyboard-toggle) {
 
 @utility progress-fill {
   @apply h-full rounded-2xl bg-gradient-to-r from-red to-yellow-400 dark:from-blue dark:to-blue-light
+}
+
+/* ========================================= COLOUR THEMES ====================================================== */ 
+@custom-variant markoblank (&:where([data-theme="markoblank"] *));
+@custom-variant discord (&:where([data-theme="discord"] *));
+@custom-variant ishtar (&:where([data-theme="ishtar"] *));
+
+
+/*============================= TEXT PRIMARY COLOURS */
+
+/* used mostly for backgrounds */
+@utility color-white {
+  @apply 
+    text-white
+    dark:text-black
+    markoblank:text-markoteal
+    discord:text-discordblack
+    ishtar:text-ishtarblack
+}
+
+@utility background-white {
+  @apply 
+    bg-white
+    dark:bg-black
+    markoblank:bg-markoteal
+    discord:bg-discordblack
+    ishtar:bg-ishtarblack
+}
+
+/* used mostly for main text */
+@utility color-black {
+  @apply 
+    text-black
+    dark:text-white
+    markoblank:text-markored
+    discord:text-discordwhite
+    ishtar:text-ishtarred
+}
+
+
+/* used mostly for main text */
+@utility background-black {
+  @apply 
+    bg-black
+    dark:bg-white
+    markoblank:bg-markored
+    discord:bg-discordwhite
+    ishtar:bg-ishtarred
+}
+
+/* used mostly for sub text */
+@utility color-grey {
+  @apply 
+    text-grey
+    dark:text-light-grey
+    markoblank:text-markogrey
+    discord:text-discordgrey
+    ishtar:text-ishtargrey
+}
+
+/* used mostly for sub text */
+@utility background-grey {
+  @apply 
+    bg-grey
+    dark:bg-light-grey
+    markoblank:bg-markogrey
+    discord:bg-discordgrey
+    ishtar:bg-ishtargrey
+}
+
+/* used mostly for shadows */
+@utility color-lightgrey {
+  @apply 
+    text-light-grey
+    dark:text-grey
+    markoblank:text-markogrey/30
+    discord:text-discordgrey/30
+    ishtar:text-ishtargrey/30
+}
+
+/* used mostly for sub text */
+@utility background-lightgrey {
+  @apply 
+    bg-light-grey
+    dark:bg-grey
+    markoblank:bg-markogrey/30
+    discord:bg-discordgrey/30
+    ishtar:bg-ishtargrey/30
+}
+
+/* used mostly for accents eg answer boxes */
+@utility color-blue {
+  @apply 
+    text-blue
+    dark:text-blue-light
+    markoblank:text-markobrown
+    discord:text-discordblue
+    ishtar:text-ishtarbeige
+}
+
+@utility background-blue {
+  @apply 
+    bg-blue
+    dark:bg-blue-light
+    markoblank:bg-markobrown
+    discord:bg-discordblue
+    ishtar:bg-ishtarbeige
 }

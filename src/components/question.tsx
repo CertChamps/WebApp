@@ -12,7 +12,6 @@ import loadingAnim from '../assets/animations/loading.json';
 import RenderMath from "../components/mathdisplay";
 import MathInput from "../components/mathinput";
 import QThread from "../components/questions/q_thread"
-import MathInput from "../components/mathinput"
 
 // Style Imports 
 import '../styles/questions.css'
@@ -32,10 +31,6 @@ export default function Question(props: questionsProps) {
     const [part, setPart] = useState(0) // position of part in a question
     const [page, setPage ]= useState<string>('practice')
     const [ showThread, setShowThread ] = useState<boolean>(false)
-    const [content, setContent] = useState<any[]>([])
-    const [properties, setProperties] = useState<any>({})
-    const [part, setPart] = useState(0)
-    const [page, setPage] = useState<string>('practice')
 
     const { toRoman } = useQuestions()
 
@@ -73,7 +68,7 @@ export default function Question(props: questionsProps) {
                         <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
                         {   
                             
-                            content[part]?.answer.map((ans: any) => (
+                            content?.[part]?.answer.map((ans: any) => (
                                 <span className="txt-sub text-blue">{`ANS: ${ans}`}</span>
                             ))
                         }
@@ -82,7 +77,7 @@ export default function Question(props: questionsProps) {
                     
                     {/* PART NAVIGATION */}
                     <div className="flex">
-                        {content.length > 1 && content.map((_, idx) => (
+                        {content.length > 1 && content.map((_ : any, idx: number) => (
                             <div key={idx} className="flex items-center justify-center h-10"
                                 onClick={() => setPart(idx)}>
 
@@ -95,16 +90,16 @@ export default function Question(props: questionsProps) {
 
                             </div>
                         ))}
-                    </div>
+                    </div> 
 
                     {/* QUESTION CONTENT */}
                     <div className="w-2/3 m-4">
                         <RenderMath text={content[part]?.question ?? ''} className="txt text-xl" />
-                        {content[part]?.image && <img src={content[part].image} className="max-h-30 m-4 dark:invert-100"/>}
+                        {content?.[part]?.image && <img src={content[part].image} className="max-h-30 m-4 dark:invert-100"/>}
                     </div>
 
                     {/* MATH INPUT */}
-                    {content[part]?.answer?.map((ans: any, idx: number) => (
+                    {content?.[part]?.answer?.map((ans: any, idx: number) => (
                         <MathInput key={idx} answer={ans}/>
                     ))}
 
@@ -133,8 +128,7 @@ export default function Question(props: questionsProps) {
                         <LuMessageSquareText strokeWidth={strokewidth} size={iconSize} 
                             className={page == 'practice' ? 'nav-icon-selected' : 'nav-icon'}
                             fill={page == 'practice' ? 'currentColor' : 'none'} /> 
-                            className={page === 'practice' ? 'nav-icon-selected' : 'nav-icon'}
-                            fill={page === 'practice' ? 'currentColor' : 'none'} />
+
                     </div>
 
                     <div className={page === 'practicee' ? 'nav-item-selected mb-4' : 'nav-item mb-4'} >

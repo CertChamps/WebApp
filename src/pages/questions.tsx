@@ -66,10 +66,10 @@ export default function Questions() {
                 <div className="flex items-center justify-center w-full">
                     <div className="flex items-center justify-between txtbox w-9/12 max-w-xs">
                         <input type="text" placeholder="Search Questions" className=" w-full p-1 outline-none border-none"/>
-                        <LuSearch className="text-grey dark:text-light-grey" size={24}/>
+                        <LuSearch className="color-grey " size={24}/>
                     </div>
 
-                    <LuFilter className="text-grey dark:text-light-grey m-4"  size={30}/>
+                    <LuFilter className="color-grey m-4"  size={30}/>
 
                 </div>
             </div>

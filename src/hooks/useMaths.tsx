@@ -13,7 +13,7 @@ export default function useMaths() {
       const asString = nerdamer.convertFromLaTeX(sanitizeLatex(tex));
       return nerdamer(asString); // ensures Expression, not string
     } catch (err) {
-      console.log("Parse error:", err);
+      //console.log("Parse error:", err);
       throw err;
     }
   };
@@ -64,7 +64,7 @@ export default function useMaths() {
       const B = latexToExpr(answer); // example scalar answer
 
       const ok = numericEquality(A, B) || algebraicEquality(A, B);
-      //return `input: ${A.toString()}, answer: ${B.toString()}, correct: ${ok}`;
+      console.log(`input: ${A.toString()}, answer: ${B.toString()}, correct: ${ok}`)
       return ok
     } catch (err: any) {
       //return `in: ${inputLatex}, err: ${err.message ?? err}`;

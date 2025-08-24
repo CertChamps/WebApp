@@ -3,14 +3,39 @@ import "mathlive";
 import "@cortex-js/compute-engine";
 import useMaths from "../hooks/useMaths";
 
-export default function MathInput({answer} : any ) {
+export default function MathInput({ answer }: any) {
   const [latex, setLatex] = useState("");
   const { isCorrect } = useMaths();
   const mfRef = useRef<any>(null);
 
   useEffect(() => {
     if (!mfRef.current) return;
-    mfRef.current.removeExtraneousParentheses = false;
+      const mf = mfRef.current
+      mf.autocomplete = "off";   // no suggestions popup
+      mf.menuItems = [];
+      mf.suggestions = "none";
+      mf.inlineShortcuts = {
+        'sqrt': '\\sqrt{#?}',
+        'frac': '\\frac{#?}{#?}',  
+        "/": "\\frac{#@}{#?}",
+        'sin': '\\sin',
+        'cos': '\\cos',
+        'tan': '\\tan',
+
+      };   
+      mf.keybindings = [
+        // Delete operations
+        { key: '[Backspace]', command: 'deleteBackward' },
+        { key: '[Delete]', command: 'deleteForward' },
+        { key: 'shift+[Backspace]', command: 'deleteForward' },
+
+        // Navigation operations
+        { key: 'left', command: 'moveToPreviousChar' },
+        { key: 'right', command: 'moveToNextChar' },
+        { key: 'up', command: 'moveUp' },
+        { key: 'down', command: 'moveDown' },
+      ];  
+      mfRef.current.removeExtraneousParentheses = false;
   }, []);
 
   const handleInput = (evt: any) => {
@@ -45,16 +70,11 @@ export default function MathInput({answer} : any ) {
         }}
       />
       {/* <p>{latex}</p> */}
-        {
-        isCorrect(latex, answer) ? (
-            <span className="text-green-500">Correct!</span>
-        )  : (
-            <span className="text-red-500">Wrong!</span>
-        )
-        }
+      {isCorrect(latex, answer) ? (
+        <span className="text-green-500">Correct!</span>
+      ) : (
+        <span className="text-red-500">Wrong!</span>
+      )}
     </div>
   );
 }
-
-
-

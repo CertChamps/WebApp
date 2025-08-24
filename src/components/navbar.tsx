@@ -40,7 +40,7 @@ export default function Navbar () {
                     <p className='nav-txt username' >{user.username}</p>
                     <p className='nav-txt txt-sub text-nowrap' >Rank: Elite</p> 
                 </div>
-                <LuSettings className='nav-txt settings' size={24}/>
+                <LuSettings className='nav-txt settings' size={24} onClick={() => {pageNaviagte('user/settings')}}/>
             </div>
 
             {/* ============================= PRACTICE ICON ================================ */}

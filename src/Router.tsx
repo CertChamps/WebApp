@@ -4,6 +4,7 @@ import Questions from './pages/questions';
 import Social from './pages/social';
 import Games from './pages/games';
 import Navbar from './components/navbar';
+import Settings from './pages/settings';
 
 const router = createBrowserRouter([
   {
@@ -32,12 +33,21 @@ const router = createBrowserRouter([
       </>
     ),
   },
-    {
+  {
     path: '/games',
     element: (
       <>
         <Navbar />
         <Games />
+      </>
+    ),
+  },
+    {
+    path: '/user/settings',
+    element: (
+      <>
+        <Navbar />
+        <Settings />
       </>
     ),
   },
