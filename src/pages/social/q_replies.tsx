@@ -2,80 +2,106 @@ import { useContext, useEffect, useState } from "react";
 import FriendsBar from "../../components/social/FriendsBar";
 import { db, storage } from "../../../firebase";
 import {
-  addDoc,
   collection,
-  doc,
-  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp,
   where,
+  doc,
+  getDoc,
+  serverTimestamp,
+  addDoc,
 } from "firebase/firestore";
 import { getDownloadURL, ref } from "firebase/storage";
 import { useLocation } from "react-router-dom";
 import { UserContext } from "../../context/UserContext"
 
-export default function Replies() {
-  const { state } = useLocation() as { state?: { id?: string } };
-  const id = state?.id;
+export default function QReplies() {
+  const { state } = useLocation() as {
+    state?: { id?: string; flashcardId?: string; replyId?: string };
+  };
 
-  const [post, setPost] = useState<any>(null);
+  const flashcardId = state?.flashcardId;
+  const replyId = state?.replyId;
+
   const [replies, setReplies] = useState<any[]>([]);
-  const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
-  const [newReply, setNewReply] = useState('');
+  const [author, setAuthor] = useState<{
+    username: string;
+    userImage: string | null;
+  }>({
+    username: "Unknown",
+    userImage: null,
+  });
 
+  const [newReply, setNewReply] = useState('');
   const { user } = useContext(UserContext);
 
-  // Fetch original post
+  // ================= Fetch the "parent reply" to get its author =================
   useEffect(() => {
-    const fetchPost = async () => {
-      if (!id) return;
+    const fetchAuthor = async () => {
+      if (!flashcardId || !replyId) return;
 
-      const postRef = doc(db, "posts", id);
-      const postSnap = await getDoc(postRef);
-      if (!postSnap.exists()) return;
-
-      const postData = postSnap.data();
-
-      // Fetch author profile
-      let username = "Unknown";
-      let userImage: string | null = null;
       try {
-        const userQ = query(
-          collection(db, "user-data"),
-          where("uid", "==", postData.userId)
+        // Get the parent reply doc
+        const parentReplyRef = doc(
+          db,
+          "certchamps-questions",
+          flashcardId,
+          "replies",
+          replyId
         );
-        const userSnap = await getDocs(userQ);
-        if (!userSnap.empty) {
-          const u = userSnap.docs[0].data();
-          username = u.username ?? "Unknown";
-          if (u.picture) {
-            userImage = await getDownloadURL(ref(storage, u.picture));
+        const parentSnap = await getDoc(parentReplyRef);
+
+        if (parentSnap.exists()) {
+          const parentData = parentSnap.data();
+          const userId = parentData.userId;
+
+          // Fetch user profile using `id` (userId)
+          const userQ = query(
+            collection(db, "user-data"),
+            where("uid", "==", userId)
+          );
+          const userSnap = await getDocs(userQ);
+
+          if (!userSnap.empty) {
+            const u = userSnap.docs[0].data();
+            let userImage: string | null = null;
+            if (u.picture) {
+              try {
+                userImage = await getDownloadURL(ref(storage, u.picture));
+              } catch (err) {
+                console.warn("Image error:", err);
+              }
+            }
+
+            setAuthor({
+              username: u.username ?? "Unknown",
+              userImage,
+            });
           }
         }
-      } catch (e) {
-        console.warn("Failed to load author profile:", e);
+      } catch (err) {
+        console.error("Error fetching parent reply author:", err);
       }
-
-      setPost({
-        id: postSnap.id,
-        ...postData,
-        username,
-        userImage,
-      });
     };
 
-    fetchPost();
-  }, [id]);
+    fetchAuthor();
+  }, [flashcardId, replyId]);
 
-  // Fetch replies in real-time
+  // ================= Fetch nested replies in real-time =================
   useEffect(() => {
-    if (!id) return;
+    if (!flashcardId || !replyId) return;
 
     const q = query(
-      collection(db, "posts", id, "replies"),
+      collection(
+        db,
+        "certchamps-questions",
+        flashcardId,
+        "replies",
+        replyId,
+        "replies"
+      ),
       orderBy("timestamp", "asc")
     );
 
@@ -85,7 +111,7 @@ export default function Replies() {
           const reply = docSnap.data();
           const userId = reply.userId;
 
-          // Fetch reply author
+          // Fetch reply author using `id` (userId)
           const userQ = query(
             collection(db, "user-data"),
             where("uid", "==", userId)
@@ -119,27 +145,38 @@ export default function Replies() {
     });
 
     return () => unsubscribe();
-  }, [id]);
+  }, [flashcardId, replyId]);
 
 
 
-
+  //=========================SENDING THE REPLY=================================================
   const handleSendReply = async () => {
     if (!newReply.trim()) return;
-  
+
     try {
-      await addDoc(collection(db, 'posts', Array.isArray(id) ? id[0] : id, 'replies'), {
-        content: newReply.trim(),
-        timestamp: serverTimestamp(),
-        userId: user.uid,
-      });
-  
+      await addDoc(
+        collection(
+          db,
+          'certchamps-questions',
+          flashcardId!,
+          'replies',
+          replyId!,
+          'replies'
+        ),
+        {
+          content: newReply.trim(),
+          timestamp: serverTimestamp(),
+          userId: user.uid,
+        }
+      );
+
       setNewReply('');
-      console.log('Reply sent successfully!');
+      console.log('Sub-reply sent successfully!');
     } catch (error) {
-      console.error('Error sending reply:', error);
+      console.error('Error sending sub-reply:', error);
     }
   };
+  //===========================================================================================
 
   //====================Random placeholders for textbox======================
   const placeholders = [
@@ -171,9 +208,6 @@ useEffect(() => {
 }, []);
 //=======================================================================
 
-  const formattedDate =
-    post?.timestamp?.toDate?.()?.toLocaleDateString() ?? "Unknown date";
-
   return (
     <div className="flex w-full">
       <div className="w-64 overflow-y-auto">
@@ -181,30 +215,20 @@ useEffect(() => {
       </div>
 
       <div className="flex-1 p-4">
-        {/* Original Post */}
-        {post && (
-          <div className="bg-white p-4 mb-4 rounded">
-            <div className="flex items-center mb-3">
-              {post.userImage && (
-                <img
-                  src={post.userImage}
-                  alt={post.username}
-                  className="w-10 h-10 rounded-full mr-3 object-cover"
-                />
-              )}
-              <span className="font-bold">{post.username}</span>
-            </div>
-            <p className="mb-2">{post.content}</p>
-            {displayImageUrl && (
+        {/* Flashcard Question (just show ID + author info) */}
+        <div className="bg-white p-4 mb-4rounded">
+          <div className="flex items-center mb-3">
+            {author.userImage && (
               <img
-                src={displayImageUrl}
-                alt="Post content"
-                className="w-full max-w-lg rounded-lg object-cover"
+                src={author.userImage}
+                alt={author.username}
+                className="w-10 h-10 rounded-full mr-3 object-cover"
               />
             )}
-            <div className="text-sm text-gray-500">{formattedDate}</div>
+            <span className="font-bold">{author.username}</span>
           </div>
-        )}
+          <p>Flashcard Question ID: {flashcardId}</p>
+        </div>
 
         {/* Replies */}
         <h2 className="text-lg font-semibold mb-2">Replies</h2>
@@ -212,14 +236,14 @@ useEffect(() => {
           replies.map((reply) => (
             <div
               key={reply.id}
-              className="p-3 rounded mb-2"
+              className="p-3 border rounded mb-2 bg-gray-50 dark:bg-gray-800"
             >
               <div className="flex items-center mb-2">
                 {reply.userImage && (
                   <img
                     src={reply.userImage}
                     alt={reply.username}
-                    className="w-8 h-8 rounded-full mr-2 object-cover"
+                    className="w-8 h-8 rounded-full mr-2 object-cover border"
                   />
                 )}
                 <span className="font-semibold">{reply.username}</span>

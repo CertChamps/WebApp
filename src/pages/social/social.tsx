@@ -99,7 +99,7 @@ export default function Social() {
                         //We want to set replyCount to the amount of flashcard replies if its a flashcard thread
                         if (post.flashcardId) {
                             //If it's a flashcard, fetch the flashcard data
-                            repliesSnap = await getDocs(collection(db, 'practice-questions', post.flashcardId, 'replies', post.replyId, 'replies'));
+                            repliesSnap = await getDocs(collection(db, 'certchamps-questions', post.flashcardId, 'replies', post.replyId, 'replies'));
                             replyCount = repliesSnap.size;
                         }
 
@@ -243,14 +243,20 @@ export default function Social() {
                                 time={post.timestamp}
                                 replyCount={post.replyCount}
                                 imageURL={post.imageURL}
-                                onPressReplies={() =>
-                                    pageNavigate("social/replies", { state: { id: post.id } })
-                                }
+                                onPressReplies={() => {
+                                    if (post.isFlashcard) {
+                                        // For flashcards, pass both flashcardId and replyId if available
+                                        pageNavigate("social/q_replies", { state: { id: post.id, flashcardId: post.flashcardId, replyId: post.replyId } })
+                                    } else {
+                                        // For regular posts
+                                        pageNavigate("social/replies", { state: { id: post.id } })
+                                    }
+                                }}
                             />
                         ))}
                     </div>
                 </div>
-
+                
                 <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
                     <textarea
                         value={message}
