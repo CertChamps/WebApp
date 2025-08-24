@@ -1,5 +1,11 @@
+// React
 import { useContext, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+
+// Components
 import FriendsBar from "../../components/social/FriendsBar";
+
+// Firebase
 import { db, storage } from "../../../firebase";
 import {
   collection,
@@ -14,17 +20,19 @@ import {
   addDoc,
 } from "firebase/firestore";
 import { getDownloadURL, ref } from "firebase/storage";
-import { useLocation } from "react-router-dom";
+
+// Contexts
 import { UserContext } from "../../context/UserContext"
 
 export default function QReplies() {
+  // Passing between files
   const { state } = useLocation() as {
     state?: { id?: string; flashcardId?: string; replyId?: string };
   };
-
   const flashcardId = state?.flashcardId;
   const replyId = state?.replyId;
 
+  // Setup replies
   const [replies, setReplies] = useState<any[]>([]);
   const [author, setAuthor] = useState<{
     username: string;
@@ -33,8 +41,9 @@ export default function QReplies() {
     username: "Unknown",
     userImage: null,
   });
-
   const [newReply, setNewReply] = useState('');
+
+  // Contexts
   const { user } = useContext(UserContext);
 
   // ================= Fetch the "parent reply" to get its author =================
@@ -88,6 +97,8 @@ export default function QReplies() {
 
     fetchAuthor();
   }, [flashcardId, replyId]);
+  // ==============================================================================
+
 
   // ================= Fetch nested replies in real-time =================
   useEffect(() => {
@@ -146,7 +157,7 @@ export default function QReplies() {
 
     return () => unsubscribe();
   }, [flashcardId, replyId]);
-
+  // =====================================================================
 
 
   //=========================SENDING THE REPLY=================================================
@@ -198,7 +209,8 @@ export default function QReplies() {
     "Type your way to greatness.",
     "Tell them how you love maths..."
 ];
-  
+
+// State for placeholder
 const [randomPlaceholder, setRandomPlaceholder] = useState("");
 
 //This will just pick a random placeholder whenever the screen renders
@@ -256,33 +268,33 @@ useEffect(() => {
         )}
       </div>
       <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
-                    <textarea
-                        value={newReply}
-                        onChange={(e) => setNewReply(e.target.value)}
-                        //   onKeyDown={handleKeyDown}
-                        placeholder={randomPlaceholder}
-                        rows={3}
-                        className="w-full p-3 rounded-xl border-2 border-light-grey dark:border-grey bg-button dark:bg-button-dark text-black dark:text-white focus:outline-none resize-none"
-                    />
+        <textarea
+          value={newReply}
+          onChange={(e) => setNewReply(e.target.value)}
+          //   onKeyDown={handleKeyDown}
+          placeholder={randomPlaceholder}
+          rows={3}
+          className="w-full p-3 rounded-xl border-2 border-light-grey dark:border-grey bg-button dark:bg-button-dark text-black dark:text-white focus:outline-none resize-none"
+        />
             
-                    <div className="flex justify-end gap-2 mt-2">
-                        <button
-                            type="button"
-                            // onClick={cancelReply}
-                            className="px-3 py-1 txt-sub text-grey dark:text-light-grey hover:text-black dark:hover:text-white"
-                        >
-                            Clear
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleSendReply}
-                            disabled={!newReply.trim()}
-                            className="px-4 py-2 rounded-xl bg-blue text-white disabled:opacity-50 hover:bg-blue-light"
-                        >
-                            Send
-                        </button>
-                    </div>
-                </div>
+        <div className="flex justify-end gap-2 mt-2">
+          <button
+            type="button"
+            // onClick={cancelReply}
+            className="px-3 py-1 txt-sub text-grey dark:text-light-grey hover:text-black dark:hover:text-white"
+          >
+            Clear
+          </button>
+          <button
+            type="button"
+            onClick={handleSendReply}
+            disabled={!newReply.trim()}
+            className="px-4 py-2 rounded-xl bg-blue text-white disabled:opacity-50 hover:bg-blue-light"
+          >
+            Send
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

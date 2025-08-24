@@ -1,5 +1,6 @@
 // React
 import { useContext, useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom";
 
 // Components
 import FriendsBar from "../../components/social/FriendsBar"
@@ -13,15 +14,17 @@ import { db }from '../../../firebase'
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 
-// Other
-import { useNavigate } from "react-router-dom";
 
 export default function Social() {
 
+    // Contexts
     const { user, setUser } = useContext(UserContext);
 
+    // Setup posts
     const [posts, setPosts] = useState<{ id: string; [key: string]: any }[]>([]);
     const [message, setMessage] = useState('');
+
+    // Friends
     const [userFriends, setUserFriends] = useState<any[]>([])
 
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //

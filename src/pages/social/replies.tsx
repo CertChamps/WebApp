@@ -1,5 +1,11 @@
+// React
 import { useContext, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+
+// Components
 import FriendsBar from "../../components/social/FriendsBar";
+
+// Firebase
 import { db, storage } from "../../../firebase";
 import {
   addDoc,
@@ -14,21 +20,26 @@ import {
   where,
 } from "firebase/firestore";
 import { getDownloadURL, ref } from "firebase/storage";
-import { useLocation } from "react-router-dom";
+
+
+// Contexts
 import { UserContext } from "../../context/UserContext"
 
 export default function Replies() {
+  // Passing between files
   const { state } = useLocation() as { state?: { id?: string } };
   const id = state?.id;
 
+  // Setup replies
   const [post, setPost] = useState<any>(null);
   const [replies, setReplies] = useState<any[]>([]);
-  const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
   const [newReply, setNewReply] = useState('');
+  const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
 
+  // Contexts
   const { user } = useContext(UserContext);
 
-  // Fetch original post
+  //====================FETCH POST======================
   useEffect(() => {
     const fetchPost = async () => {
       if (!id) return;
@@ -69,8 +80,9 @@ export default function Replies() {
 
     fetchPost();
   }, [id]);
+  //====================================================
 
-  // Fetch replies in real-time
+  //====================FETCH REPLIES======================
   useEffect(() => {
     if (!id) return;
 
@@ -120,10 +132,9 @@ export default function Replies() {
 
     return () => unsubscribe();
   }, [id]);
+  //=======================================================
 
-
-
-
+  //====================SEND REPLY======================
   const handleSendReply = async () => {
     if (!newReply.trim()) return;
   
@@ -140,6 +151,8 @@ export default function Replies() {
       console.error('Error sending reply:', error);
     }
   };
+  //====================================================
+
 
   //====================Random placeholders for textbox======================
   const placeholders = [
@@ -161,7 +174,8 @@ export default function Replies() {
     "Type your way to greatness.",
     "Tell them how you love maths..."
 ];
-  
+
+// State for placeholder
 const [randomPlaceholder, setRandomPlaceholder] = useState("");
 
 //This will just pick a random placeholder whenever the screen renders
@@ -171,6 +185,7 @@ useEffect(() => {
 }, []);
 //=======================================================================
 
+  // Date
   const formattedDate =
     post?.timestamp?.toDate?.()?.toLocaleDateString() ?? "Unknown date";
 
@@ -232,33 +247,33 @@ useEffect(() => {
         )}
       </div>
       <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
-                    <textarea
-                        value={newReply}
-                        onChange={(e) => setNewReply(e.target.value)}
-                        //   onKeyDown={handleKeyDown}
-                        placeholder={randomPlaceholder}
-                        rows={3}
-                        className="w-full p-3 rounded-xl border-2 border-light-grey dark:border-grey bg-button dark:bg-button-dark text-black dark:text-white focus:outline-none resize-none"
-                    />
+        <textarea
+          value={newReply}
+          onChange={(e) => setNewReply(e.target.value)}
+          //   onKeyDown={handleKeyDown}
+          placeholder={randomPlaceholder}
+          rows={3}
+          className="w-full p-3 rounded-xl border-2 border-light-grey dark:border-grey bg-button dark:bg-button-dark text-black dark:text-white focus:outline-none resize-none"
+        />
             
-                    <div className="flex justify-end gap-2 mt-2">
-                        <button
-                            type="button"
-                            // onClick={cancelReply}
-                            className="px-3 py-1 txt-sub text-grey dark:text-light-grey hover:text-black dark:hover:text-white"
-                        >
-                            Clear
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleSendReply}
-                            disabled={!newReply.trim()}
-                            className="px-4 py-2 rounded-xl bg-blue text-white disabled:opacity-50 hover:bg-blue-light"
-                        >
-                            Send
-                        </button>
-                    </div>
-                </div>
+        <div className="flex justify-end gap-2 mt-2">
+          <button
+            type="button"
+            // onClick={cancelReply}
+            className="px-3 py-1 txt-sub text-grey dark:text-light-grey hover:text-black dark:hover:text-white"
+          >
+            Clear
+          </button>
+          <button
+            type="button"
+            onClick={handleSendReply}
+            disabled={!newReply.trim()}
+            className="px-4 py-2 rounded-xl bg-blue text-white disabled:opacity-50 hover:bg-blue-light"
+          >
+            Send
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
