@@ -52,7 +52,7 @@ export default function Navbar () {
             </div>
             
             {/* ============================= SOCIAL ICON ================================ */}
-            <div className={page == 'social' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('social')}}> 
+            <div className={page == 'social' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('social/social')}}> 
                 <LuUsers strokeWidth={strokewidth} size={iconSize} 
                     className={page == 'social' ? 'nav-icon-selected' : 'nav-icon'}
                     fill={page == 'social' ? 'currentColor' : 'none'} />  
