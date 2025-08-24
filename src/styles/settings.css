@@ -1,0 +1,6 @@
+@reference '../index.css';
+
+
+.theme-button {
+    @apply w-20 py-2 text-center m-2 shadow-xl rounded-in block
+}

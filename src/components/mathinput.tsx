@@ -60,8 +60,8 @@ export default function MathInput({ answer }: any) {
         ref={mfRef}
         default-mode="inline-math"
         onInput={handleInput}
-        className="txtbox outline-none bg-none text-grey inline-block dark:text-light-grey
-          focus:border-3 border-blue dark:border-blue-light w-50 mx-4 shadow-blue dark:shadow-blue-light 
+        className="txtbox outline-none bg-none color-txt-main inline-block 
+          focus:border-3 color-shadow-accent w-50 mx-4
           h-auto overflow-scroll"
         style={{
           background: "none",
@@ -71,9 +71,9 @@ export default function MathInput({ answer }: any) {
       />
       {/* <p>{latex}</p> */}
       {isCorrect(latex, answer) ? (
-        <span className="text-green-500">Correct!</span>
+        <span className="color-txt-main">Correct!</span>
       ) : (
-        <span className="text-red-500">Wrong!</span>
+        <span className="color-txt-accent">Wrong!</span>
       )}
     </div>
   );

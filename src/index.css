@@ -21,8 +21,6 @@
   --color-blue: #27548a;
   --color-grey: #757575;
   --color-light-grey: #bdbdbd; /* #e0e0e0 og*/ 
-
-
   --color-red: #f03131;
   --color-button: #f3f4f6; /* Add this for light mode button bg */
 
@@ -31,16 +29,16 @@
   --color-button-dark: #374151; /* Add this for dark mode button bg */
 
   /* Markoblank colour theme */
-  --color-markoteal: #b2d2c8;
-  --color-markored: #c13117;
-  --color-markogrey: #717977;
-  --color-markobrown: #490909;
+  --color-markoteal: #2a273f;
+  --color-markored: #c4a7e7;
+  --color-markogrey: #d5d4e9;
+  --color-markobrown: #9ccfd8;
 
   /* Discord Colour theme */
-  --color-discordblack: #313338;
-  --color-discordblue: #5a65ea;
-  --color-discordgrey: #565861;
-  --color-discordwhite: #dcdee3;
+  --color-discordblack: #272822;
+  --color-discordblue: #a6e22e;
+  --color-discordgrey: #e6db74;
+  --color-discordwhite: #e2e2dc;
 
   /* Ishtar Colour Theme */ 
   --color-ishtarblack: #202020;
@@ -94,39 +92,39 @@
 
 /* ================== Text styles ================== */
 @utility txt-heading-colour {
-  @apply text-blue dark:text-blue-light text-lg font-black
+  @apply color-txt-accent text-lg font-black
 }
 
 @utility txt-heading {
-  @apply text-black dark:text-white text-lg font-black
+  @apply color-txt-main text-lg font-black
 }
 
 @utility txt-bold {
-  @apply text-black dark:text-white text-base font-bold
+  @apply color-txt-main text-base font-bold
 }
 
 @utility txt {
-  @apply text-black dark:text-white text-base 
+  @apply color-txt-main text-base 
 }
 
 @utility txt-sub {
-  @apply text-grey dark:text-light-grey text-sm font-light
+  @apply color-txt-sub text-sm font-light
 }
 
 /* ================== Button Styles ================== */
 @utility txtbox {
-  @apply border-3 border-light-grey dark:border-grey rounded-in 
-  px-2 py-1 dark:focus:border-blue-light focus:border-blue
-  outline-none text-grey focus:txt w-6/12 block shadow-small
+  @apply border-3 rounded-in 
+  px-2 py-1 focus:color-shadow-accent
+  outline-none color-txt-sub focus:txt w-6/12 block shadow-small
 }
 
 @utility blue-btn {
-  @apply bg-blue dark:bg-blue-light text-white txt rounded-in px-2 py-1 
+  @apply color-bg-accent color-txt-main txt rounded-in px-2 py-1 
   outline-none hover:opacity-80 transition-all w-6/12 txt-bold block
 }
 
 @utility plain-btn {
-  @apply bg-black dark:bg-white text-white dark:text-black rounded-in px-2 py-1 
+  @apply color-bg color-txt-main rounded-in px-2 py-1 
   outline-none hover:opacity-80 transition-all w-6/12 txt-bold block
 }
 
@@ -151,16 +149,16 @@ math-field::part(virtual-keyboard-toggle) {
 
 /* ================== Shadows ================== */ 
 @utility shadow-small {
-  @apply shadow-[2px_2px_0px_1px] color-lightgrey 
+  @apply shadow-[2px_2px_0px_1px] color-shadow 
 }
 
 @utility shadow-big {
-  @apply shadow-[4px_4px_0px_2px] color-lightgrey
+  @apply shadow-[4px_4px_0px_2px] color-shadow
 }
 
 /* Progress Bar */
 @utility progress-bar {
-  @apply w-[350px] h-6 rounded-2xl border-2 border-light-grey dark:border-grey overflow-hidden bg-button dark:bg-button-dark shadow-small
+  @apply w-[350px] h-6 rounded-2xl border-2 color-shadow overflow-hidden color-bg shadow-small
 }
 
 @utility progress-fill {
@@ -168,55 +166,22 @@ math-field::part(virtual-keyboard-toggle) {
 }
 
 /* ========================================= COLOUR THEMES ====================================================== */ 
+@custom-variant dark (&:where([data-theme="dark"] *));
 @custom-variant markoblank (&:where([data-theme="markoblank"] *));
 @custom-variant discord (&:where([data-theme="discord"] *));
 @custom-variant ishtar (&:where([data-theme="ishtar"] *));
 
 
-/*============================= TEXT PRIMARY COLOURS */
-
-/* used mostly for backgrounds */
-@utility color-white {
-  @apply 
-    text-white
-    dark:text-black
-    markoblank:text-markoteal
-    discord:text-discordblack
-    ishtar:text-ishtarblack
-}
-
-@utility background-white {
-  @apply 
-    bg-white
-    dark:bg-black
-    markoblank:bg-markoteal
-    discord:bg-discordblack
-    ishtar:bg-ishtarblack
-}
-
-/* used mostly for main text */
-@utility color-black {
+@utility color-txt-main {
   @apply 
     text-black
     dark:text-white
-    markoblank:text-markored
+    markoblank:text-markobrown
     discord:text-discordwhite
-    ishtar:text-ishtarred
+    ishtar:text-ishtarbeige
 }
 
-
-/* used mostly for main text */
-@utility background-black {
-  @apply 
-    bg-black
-    dark:bg-white
-    markoblank:bg-markored
-    discord:bg-discordwhite
-    ishtar:bg-ishtarred
-}
-
-/* used mostly for sub text */
-@utility color-grey {
+@utility color-txt-sub {
   @apply 
     text-grey
     dark:text-light-grey
@@ -225,51 +190,59 @@ math-field::part(virtual-keyboard-toggle) {
     ishtar:text-ishtargrey
 }
 
-/* used mostly for sub text */
-@utility background-grey {
-  @apply 
-    bg-grey
-    dark:bg-light-grey
-    markoblank:bg-markogrey
-    discord:bg-discordgrey
-    ishtar:bg-ishtargrey
-}
-
-/* used mostly for shadows */
-@utility color-lightgrey {
-  @apply 
-    text-light-grey
-    dark:text-grey
-    markoblank:text-markogrey/30
-    discord:text-discordgrey/30
-    ishtar:text-ishtargrey/30
-}
-
-/* used mostly for sub text */
-@utility background-lightgrey {
-  @apply 
-    bg-light-grey
-    dark:bg-grey
-    markoblank:bg-markogrey/30
-    discord:bg-discordgrey/30
-    ishtar:bg-ishtargrey/30
-}
-
-/* used mostly for accents eg answer boxes */
-@utility color-blue {
+@utility color-txt-accent {
   @apply 
     text-blue
     dark:text-blue-light
-    markoblank:text-markobrown
+    markoblank:text-markored
     discord:text-discordblue
-    ishtar:text-ishtarbeige
+    ishtar:text-ishtarred
 }
 
-@utility background-blue {
+@utility color-bg {
+  @apply 
+    bg-white
+    dark:bg-black
+    markoblank:bg-markoteal
+    discord:bg-discordblack
+    ishtar:bg-ishtarblack
+}
+
+@utility color-bg-accent {
   @apply 
     bg-blue
     dark:bg-blue-light
-    markoblank:bg-markobrown
+    markoblank:bg-markored
     discord:bg-discordblue
-    ishtar:bg-ishtarbeige
+    ishtar:bg-ishtarred
+}
+
+@utility color-shadow {
+  @apply 
+    border-light-grey 
+    dark:border-grey
+    markoblank:border-markobrown
+    discord:border-discordgrey
+    ishtar:border-ishtargrey 
+
+    shadow-light-grey 
+    dark:shadow-grey
+    markoblank:shadow-markobrown
+    discord:shadow-discordgrey
+    ishtar:shadow-ishtargrey 
+}
+
+@utility color-shadow-accent {
+  @apply 
+    border-blue
+    dark:border-blue-light
+    markoblank:border-markored
+    discord:border-discordblue
+    ishtar:border-ishtarred
+
+    shadow-blue
+    dark:shadow-blue-light
+    markoblank:shadow-markored
+    discord:shadow-discordblue
+    ishtar:shadow-ishtarred
 }

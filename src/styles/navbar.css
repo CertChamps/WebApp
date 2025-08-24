@@ -2,7 +2,7 @@
 
 /* ====================================== NAVBAR STYLES ================================= */
 .container {
-    @apply h-container justify-start items-start flex-col p-4 transition-all duration-250 bg-light-grey/5 dark:bg-grey/5
+    @apply h-container justify-start items-start flex-col p-4 transition-all duration-250 bg-light-grey/5
     w-auto;
 }
 /* ===================================================================================== */ 
@@ -22,11 +22,11 @@
 }
 
 .username {
-    @apply txt-heading-colour text-blue dark:text-blue-light;
+    @apply txt-heading-colour color-txt-accent;
 }
 
 .settings {
-    @apply group-hover:w-8 text-grey dark:text-light-grey
+    @apply group-hover:w-8 color-txt-sub
     hover:scale-110 transition-all duration-200;
 }
 /* ===================================================================================== */ 
@@ -34,24 +34,24 @@
 
 /* ====================================== NAV ITEMS STYLES ================================= */ 
 .nav-item {
-  @apply flex items-center rounded-out hover:bg-light-grey/20 dark:hover:bg-grey/20 my-1 
+  @apply flex items-center rounded-out hover:color-bg my-1 
   cursor-pointer 
   group-hover:px-2 group-hover:justify-start w-full
   transition-all duration-250;
 }
 
 .nav-item-selected {
-  @apply flex items-center rounded-out bg-blue/5 dark:bg-blue-light/5 my-1
+  @apply flex items-center rounded-out color-bg-accent  my-1
   group-hover:px-2 group-hover:justify-start w-full
   transition-all duration-250;
 }
 
 .nav-icon {
-  @apply p-1 m-2  rounded-in text-black dark:text-white transition-all duration-250;
+  @apply p-1 m-2  rounded-in color-txt-main transition-all duration-250;
 }
 
 .nav-icon-selected {
-  @apply p-1 m-2  rounded-in text-blue dark:text-blue-light transition-all duration-250;
+  @apply p-1 m-2  rounded-in color-txt-main transition-all duration-250;
 }
 
 .nav-txt {
@@ -61,7 +61,7 @@
 }
 
 .nav-txt-selected {
-  @apply txt-bold text-blue dark:text-blue-light opacity-0 translate-x-[-24px] invisible w-0
+  @apply txt-bold color-txt-main opacity-0 translate-x-[-24px] invisible w-0
   group-hover:opacity-100 group-hover:translate-x-0 group-hover:visible group-hover:w-24
   transition-all duration-250;
   

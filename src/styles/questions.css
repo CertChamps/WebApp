@@ -10,17 +10,16 @@
 }
 
 .search-icon {
-    @apply text-grey dark:text-light-grey;
+    @apply color-txt-sub;
 }
 /* =================================================== */
 
 /* ================== QUESTION CARD ================== */
 .card-container {
     @apply h-[85%] w-[97.5%] rounded-out m-auto border-3
-    shadow-small 
-    border-light-grey dark:border-grey;
+    shadow-small color-bg;
 }
 
 .part-number {
-    @apply txt mx-2 rounded-out cursor-pointer px-3 py-1 text-grey dark:text-light-grey;
+    @apply txt mx-2 rounded-out cursor-pointer px-3 py-1 color-txt-sub;
 }

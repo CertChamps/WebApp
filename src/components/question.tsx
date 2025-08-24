@@ -64,12 +64,12 @@ export default function Question(props: questionsProps) {
                 <div className="p-8">
 
                     {/* HEADING */}
-                    <p className="txt-bold">{properties?.name}
+                    <p className="txt-bold color-txt-accent">{properties?.name}
                         <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
                         {   
                             
                             content?.[part]?.answer.map((ans: any) => (
-                                <span className="txt-sub text-blue">{`ANS: ${ans}`}</span>
+                                <span className="txt-sub">{`ANS: ${ans}`}</span>
                             ))
                         }
                         
@@ -82,11 +82,11 @@ export default function Question(props: questionsProps) {
                                 onClick={() => setPart(idx)}>
 
                                 <p className={`part-number
-                                    ${part === idx ? 'bg-light-grey/50 dark:bg-grey/50' : 'hover:bg-light-grey/25 dark:hover:bg-grey/25'}`} 
+                                    ${part === idx ? 'bg-white/5' : 'hover:bg-white/10'}`} 
                                 >{toRoman(idx + 1)}</p>
 
                                 <LuChevronRight className={`${idx + 1 === content.length ? 'invisible' : 'visible'} 
-                                    text-grey dark:text-light-grey`}/>
+                                    color-txt-sub`}/>
 
                             </div>
                         ))}
