@@ -128,8 +128,6 @@ export default function Question(props: questionsProps) {
                         <LuMessageSquareText strokeWidth={strokewidth} size={iconSize} 
                             className={page == 'practice' ? 'nav-icon-selected' : 'nav-icon'}
                             fill={page == 'practice' ? 'currentColor' : 'none'} /> 
-                            className={page === 'practice' ? 'nav-icon-selected' : 'nav-icon'}
-                            fill={page === 'practice' ? 'currentColor' : 'none'} />
                     </div>
 
                     <div className={page === 'practicee' ? 'nav-item-selected mb-4' : 'nav-item mb-4'} >
