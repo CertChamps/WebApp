@@ -2,16 +2,19 @@
 import { useContext, useEffect, useState } from "react"
 
 // Components
-import FriendsBar from "../components/social/FriendsBar"
-import PostCard from "../components/social/PostCard"
+import FriendsBar from "../../components/social/FriendsBar"
+import PostCard from "../../components/social/PostCard"
 
 // Hooks
-import { UserContext } from '../context/UserContext';
+import { UserContext } from '../../context/UserContext';
 
 // Firebase
-import { db }from '../../firebase'
+import { db }from '../../../firebase'
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
+
+// Other
+import { useNavigate } from "react-router-dom";
 
 export default function Social() {
 
@@ -20,6 +23,15 @@ export default function Social() {
     const [posts, setPosts] = useState<{ id: string; [key: string]: any }[]>([]);
     const [message, setMessage] = useState('');
     const [userFriends, setUserFriends] = useState<any[]>([])
+
+    // ============================ NAVIGATING BETWEEN PAGES ===================================== //
+    const [page, setPage ]= useState<string>('practice')
+    const navigate = useNavigate()
+
+    const pageNavigate = (page: string, options?: { state?: any }) => {
+        setPage(page);
+        navigate(`/${page}`, options); // pass state properly
+    };
 
     //==========================================SEND POST DUH=====================================================//
     const sendPost = async () => {
@@ -208,6 +220,7 @@ export default function Social() {
     }, []);
     //=======================================================================
 
+
     return (
         <div className="flex w-full">
             {/* Sidebar with fixed width */}
@@ -230,6 +243,9 @@ export default function Social() {
                                 time={post.timestamp}
                                 replyCount={post.replyCount}
                                 imageURL={post.imageURL}
+                                onPressReplies={() =>
+                                    pageNavigate("social/replies", { state: { id: post.id } })
+                                }
                             />
                         ))}
                     </div>
