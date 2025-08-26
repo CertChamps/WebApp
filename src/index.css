@@ -219,18 +219,19 @@ math-field::part(virtual-keyboard-toggle) {
 
 @utility color-shadow {
   @apply 
-    border-light-grey 
+    border-light-grey
     dark:border-grey
-    markoblank:border-markobrown
-    discord:border-discordgrey
-    ishtar:border-ishtargrey 
+    markoblank:border-markobrown/50
+    discord:border-discordgrey/50
+    ishtar:border-ishtargrey/50
 
-    shadow-light-grey 
+    shadow-light-grey
     dark:shadow-grey
-    markoblank:shadow-markobrown
-    discord:shadow-discordgrey
-    ishtar:shadow-ishtargrey 
+    markoblank:shadow-markobrown/50
+    discord:shadow-discordgrey/50
+    ishtar:shadow-ishtargrey/50
 }
+
 
 @utility color-shadow-accent {
   @apply 
