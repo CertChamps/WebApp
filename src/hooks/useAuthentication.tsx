@@ -191,7 +191,8 @@ export default function useAuthentication () {
     // ================================================================================================= //
 
 
-  return { loginWithGoogle, signUpWithEmail, signInWithEmail, userSetup}
+
+  return { loginWithGoogle, signUpWithEmail, signInWithEmail, userSetup }
 
 }
 

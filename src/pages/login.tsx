@@ -11,8 +11,8 @@ export default function Login() {
     const [username, setUsername] = useState<string>()
 
     return (
-        <div className=' h-full flex justify-center items-center ' >
-            <div className=' h-11/12 w-72 shadow-xl rounded-out border-light-grey border' >
+        <div className=' h-full flex justify-center items-center w-full' >
+            <div className=' h-11/12 w-72 shadow-small rounded-out border-3 ' >
                 <img src={crown}  className='w-34 m-auto'/>
                 <h1 className="txt-heading-colour text-center" >Log In</h1>
                 <input type="text" placeholder="email" className="txtbox mx-auto my-2 w-9/12" 

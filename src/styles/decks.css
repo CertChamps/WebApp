@@ -1,0 +1,21 @@
+@reference '../index.css';
+
+.new-deck {
+    @apply shadow-small w-full p-2 cursor-pointer  
+}
+
+.deck-txt {
+    @apply flex justify-between
+}
+
+.create-deck {
+    @apply blue-btn m-2 
+}
+
+.color-strip {
+    @apply w-2 h-full rounded-l-in absolute left-0 top-0
+}
+
+.deck {
+    @apply shadow-small my-3 py-2 px-4 relative hover:scale-[97%] duration-200 transition-all ease-in-out
+}

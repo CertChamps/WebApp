@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "mathlive";
 import "@cortex-js/compute-engine";
-import useMaths from "../hooks/useMaths";
+import useMaths from "../../hooks/useMaths";
 
 export default function MathInput({ answer }: any) {
   const [latex, setLatex] = useState("");

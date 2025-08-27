@@ -13,6 +13,7 @@ import { UserContext } from '../../context/UserContext';
 import { db }from '../../../firebase'
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
+import FriendsSearch from "../../components/social/friendsSearch";
 
 
 export default function Social() {
@@ -225,15 +226,20 @@ export default function Social() {
 
 
     return (
-        <div className="flex w-full">
+        <div className="flex  w-full">
             {/* Sidebar with fixed width */}
-            <div className="w-64 overflow-y-auto">
+            <div className="w-64 overflow-y-scroll">
                 <FriendsBar />
+            </div>
+
+            {/* Sidebar with friends search */}
+            <div className="w-auto overflow-y-scroll h-full">
+                <FriendsSearch />
             </div>
 
 
             {/* Content area fills the rest */}
-            <div className="flex-1 mr-60">
+            <div className="flex-1">
                 <div className="flex-1 h-screen overflow-y-auto p-4">
                     {/* This centers the posts within the available viewport */}
                     <div className="mx-auto max-w-3xl w-full space-y-4">

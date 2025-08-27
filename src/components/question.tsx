@@ -1,5 +1,5 @@
 // Icons 
-import { LuChevronRight, LuMessageSquareText, LuBook } from "react-icons/lu";
+import { LuChevronRight, LuMessageSquareText, LuBook, LuShare2 } from "react-icons/lu";
 import { TbCards } from "react-icons/tb";
 
 // Hooks 
@@ -9,9 +9,11 @@ import { useEffect, useState } from "react";
 // Components
 import Lottie  from 'lottie-react';
 import loadingAnim from '../assets/animations/loading.json';
-import RenderMath from "../components/mathdisplay";
-import MathInput from "../components/mathinput";
+import RenderMath from "./math/mathdisplay";
+import MathInput from "./math/mathinput";
 import QThread from "../components/questions/q_thread"
+import ViewDecks from "./viewDecks";
+import SharePanel from "./social/sharePanel";
 
 // Style Imports 
 import '../styles/questions.css'
@@ -20,7 +22,8 @@ import '../styles/navbar.css'
 
 type questionsProps = {
     questions: any[], 
-    position: number
+    position: number,
+    deckmode?: boolean
 }
 
 export default function Question(props: questionsProps) {
@@ -30,7 +33,7 @@ export default function Question(props: questionsProps) {
     const [properties, setProperties] = useState<any>()
     const [part, setPart] = useState(0) // position of part in a question
     const [page, setPage ]= useState<string>('practice')
-    const [ showThread, setShowThread ] = useState<boolean>(false)
+    const [ sideView, setSideView ] = useState<string>('')
 
     const { toRoman } = useQuestions()
 
@@ -61,7 +64,7 @@ export default function Question(props: questionsProps) {
             props.questions[props.position]? ( 
             <div className="h-container items-start justify-between">
 
-                <div className="p-8">
+                <div className="p-8 w-2/3">
 
                     {/* HEADING */}
                     <p className="txt-bold color-txt-accent">{properties?.name}
@@ -106,7 +109,7 @@ export default function Question(props: questionsProps) {
                 </div>
                 {/* ====================================================================================== */}
                 
-                {showThread ? (
+                {sideView === 'thread' ? (
                     <div className="border-l border-light-grey dark:border-grey h-full w-150">
                         <QThread
                         questionId={properties?.id ?? props.questions[props.position]?.id}
@@ -114,27 +117,67 @@ export default function Question(props: questionsProps) {
                         />
                     </div>
                 ) : null}
+
+                {sideView === 'decks' ? (
+                    <div className="border-l border-light-grey dark:border-grey h-full w-150">
+                        <ViewDecks question={properties?.id}/>
+                    </div>
+                ) : null}
+
+                {sideView === 'share' ? (
+                    <div className="border-l border-light-grey dark:border-grey h-full w-150">
+                        <SharePanel/>
+                    </div>
+                ) : null}
                     
                 
                 {/* ================================== QUESTION SIDEBAR ================================== */}
                 <div className="h-full rounded-r-out p-4">
                     <div
-                        className={page == "practice" ? "nav-item-selected mb-4 mt-0" : "nav-item mb-4"}
+                        className={sideView == 'thread' ? "nav-item-selected mb-4 mt-0" : "nav-item mb-4"}
                         onClick={() => {
-                            setPage("practice");
-                            setShowThread(v => !v);
+                            setSideView( (prev: any) => {
+                                if (prev != 'thread') return 'thread'
+                                else return '' 
+                            });
                         }}
                     >
                         <LuMessageSquareText strokeWidth={strokewidth} size={iconSize} 
-                            className={page == 'practice' ? 'nav-icon-selected' : 'nav-icon'}
-                            fill={page == 'practice' ? 'currentColor' : 'none'} /> 
+                            className={sideView == 'thread' ? 'nav-icon-selected' : 'nav-icon'}
+                            fill={sideView == 'thread' ? 'currentColor' : 'none'} /> 
                     </div>
-
-                    <div className={page === 'practicee' ? 'nav-item-selected mb-4' : 'nav-item mb-4'} >
+                    
+                    {
+                    props.deckmode ? 
+                    (
+                    <div className={sideView == 'share' ? 'nav-item-selected mb-4' : 'nav-item mb-4'} 
+                        onClick={() => {
+                            setSideView( (prev: any) => {
+                                if (prev != 'share') return 'share'
+                                else return '' 
+                            });
+                        }}
+                    >
+                        <LuShare2 strokeWidth={strokewidth} size={iconSize} 
+                            className={sideView == 'share' ? 'nav-icon-selected' : 'nav-icon'}
+                            fill={sideView == 'share' ? 'currentColor' : 'none'} />
+                    </div>
+                    ) : 
+                    (
+                    <div className={sideView == 'decks' ? 'nav-item-selected mb-4' : 'nav-item mb-4'} 
+                        onClick={() => {
+                            setSideView( (prev: any) => {
+                                if (prev != 'decks') return 'decks'
+                                else return '' 
+                            });
+                        }}
+                    >
                         <TbCards strokeWidth={strokewidth} size={iconSize} 
-                            className={page === 'practicee' ? 'nav-icon-selected' : 'nav-icon'}
-                            fill={page === 'practicee' ? 'currentColor' : 'none'} />
+                            className={sideView == 'decks' ? 'nav-icon-selected' : 'nav-icon'}
+                            fill={sideView == 'decks' ? 'currentColor' : 'none'} />
                     </div>
+                    )
+                    }   
 
                     <div className={page === 'practicee' ? 'nav-item-selected' : 'nav-item'} >
                         <LuBook strokeWidth={strokewidth} size={iconSize} 

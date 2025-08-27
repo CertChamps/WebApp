@@ -149,11 +149,11 @@ math-field::part(virtual-keyboard-toggle) {
 
 /* ================== Shadows ================== */ 
 @utility shadow-small {
-  @apply shadow-[2px_2px_0px_1px] color-shadow 
+  @apply shadow-[2px_2px_0px_1px] color-shadow border-3 rounded-in
 }
 
 @utility shadow-big {
-  @apply shadow-[4px_4px_0px_2px] color-shadow
+  @apply shadow-[4px_4px_0px_2px] color-shadow border-3
 }
 
 /* Progress Bar */

@@ -7,6 +7,8 @@ import Navbar from './components/navbar';
 import Replies from './pages/social/replies';
 import QReplies from './pages/social/q_replies';
 import Settings from './pages/settings';
+import DeckViewer from './pages/deckViewer';
+import ProfileViewer from './pages/profileViewer';
 
 const router = createBrowserRouter([
   { path: '/', element: ( <Login /> ), },
@@ -82,6 +84,18 @@ const router = createBrowserRouter([
         <Navbar />
         <Settings />
       </>
+    ),
+  },
+  {
+    path: '/decks/:userID/:id',
+    element: (
+        <DeckViewer />
+    ),
+  },
+    {
+    path: '/viewProfile/:userID',
+    element: (
+        <ProfileViewer />
     ),
   },
 ]);

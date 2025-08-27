@@ -34,7 +34,9 @@ export default function Navbar () {
 
             {/* ============================= USER CARD ================================ */}
             <div className='user-container'>
-                <img src={user.picture} className='user-img' />
+                <img src={user.picture} className='user-img' onClick={()=>{
+                    navigate(`/viewProfile/${user.uid}`)
+                }}/>
 
                 <div className='user-info'>
                     <p className='nav-txt username' >{user.username}</p>

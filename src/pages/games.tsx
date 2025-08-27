@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import RenderMath from "../components/mathdisplay";
+import RenderMath from "../components/math/mathdisplay";
 
 export default function Social() {
     const [value, setValue] = useState("");

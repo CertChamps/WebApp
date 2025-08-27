@@ -11,6 +11,7 @@ import { UserContext } from '../../context/UserContext';
 import { db }from '../../../firebase'
 import { doc, getDoc } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
+import { useNavigate } from 'react-router-dom';
 
 type Friend = {
     uid: string;
@@ -21,6 +22,7 @@ type Friend = {
 const FriendsBar = () => {
     const [userFriends, setUserFriends] = useState<Friend[]>([]);
     const { user } = useContext(UserContext);
+    const navigate = useNavigate()
 
     // ====================================== GET FRIENDS FROM DATABASE =================================== //
     useEffect (() => {
@@ -80,7 +82,7 @@ const FriendsBar = () => {
                     }
                     tooltip={friend.username}
                     onClick={() => {
-                        // go to friend profile
+                        navigate(`/viewProfile/${friend.uid}`)
                     }}
                 />
             ))}
