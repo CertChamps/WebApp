@@ -64,7 +64,7 @@ const FriendsBar = () => {
     },[user.friends]);
 
     return (
-        <div className="fixed top-0 w-16 h-screen m-0
+        <div className=" w-16 h-full m-0
                         flex flex-col
                         bg-button dark:bg-button-dark border-r-2 border-light-grey dark:border-grey
                         overflow-y-auto scrollbar-hide">

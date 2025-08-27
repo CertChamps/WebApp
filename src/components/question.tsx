@@ -24,6 +24,7 @@ type questionsProps = {
     questions: any[], 
     position: number,
     deckmode?: boolean
+    preview?: boolean 
 }
 
 export default function Question(props: questionsProps) {
@@ -102,9 +103,12 @@ export default function Question(props: questionsProps) {
                     </div>
 
                     {/* MATH INPUT */}
-                    {content?.[part]?.answer?.map((ans: any, idx: number) => (
+                    { !props.preview ? (
+                    content?.[part]?.answer?.map((ans: any, idx: number) => (
                         <MathInput key={idx} answer={ans}/>
-                    ))}
+                    ))
+                    ) :(<></>)
+                    }
 
                 </div>
                 {/* ====================================================================================== */}
@@ -132,6 +136,7 @@ export default function Question(props: questionsProps) {
                     
                 
                 {/* ================================== QUESTION SIDEBAR ================================== */}
+                { !props.preview ? (
                 <div className="h-full rounded-r-out p-4">
                     <div
                         className={sideView == 'thread' ? "nav-item-selected mb-4 mt-0" : "nav-item mb-4"}
@@ -185,7 +190,7 @@ export default function Question(props: questionsProps) {
                             fill={page === 'practicee' ? 'currentColor' : 'none'} />
                     </div>
                 </div>
-
+                ) : (<></>)}        
             </div>
             ) : (
                 <div className="w-full h-full flex justify-center items-center">

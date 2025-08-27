@@ -1,15 +1,17 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import useDeckHandler from "../hooks/useDeckHandler";
 import useQuestions from "../hooks/useQuestions";
 import Question from "../components/question";
 import { LuArrowLeft, LuTrash } from "react-icons/lu";
 import { useStopwatch } from "../hooks/useStopwatch";
+import { UserContext } from "../context/UserContext";
 
 export default function DeckViewer () {
     // ================================ HOOKS =================================== //
-    const { userID, id } = useParams()
-    const { getDeckbyID , deleteDeck, saveProgress} = useDeckHandler()
+    const { userID, id, "*": isPrev } = useParams()
+    const { user } = useContext(UserContext)
+    const { getDeckbyID , deleteDeck, saveProgress, addtoDecks} = useDeckHandler()
     const { fetchQuestion } = useQuestions()
     const navigate = useNavigate()
 
@@ -22,6 +24,11 @@ export default function DeckViewer () {
 
     // ============================ INITIALISATION ============================== //
     useEffect(() => {
+
+        // Automatically bring user to preview mode if does not own deck 
+        if (!isPrev && !user?.decks?.some( (deck:any) => deck.id === id)) {
+            navigate(`/decks/${userID}/${id}/preview`);
+        }
 
         // Initialise the Deck ========================
         const init_deck = async () => {
@@ -83,16 +90,25 @@ export default function DeckViewer () {
 
         <div>
             <LuArrowLeft className="hover:scale-110 duration-200 transition-all color-txt-main inline" 
-                onClick={() => {saveProgress([], id, secondsElapsed); navigate('/practice'); stop();}}/>
-            <span className="txt-heading-colour mx-8">{timeFormatted}</span>
+                onClick={() => {
+                    if(isPrev === "preview") 
+                        saveProgress([], id, secondsElapsed); 
+                    navigate('/practice'); stop();}}/>
+            { isPrev !== "preview" ? <span className="txt-heading-colour mx-8">{timeFormatted}</span> : <></>}
             <span className="txt-heading-colour mx-8">{deck?.name}</span>
-            <LuTrash className="hover:scale-110 duration-200 transition-all color-txt-main inline" 
-                onClick={() => {deleteDeck(id); navigate('/practice'); stop()}}/>
+            { isPrev !== "preview" ? <LuTrash className="hover:scale-110 duration-200 transition-all color-txt-main inline" 
+                onClick={() => {deleteDeck(id); navigate('/practice'); stop()}}/> : <></>}
+
 
 
         </div>
 
-        <Question questions={questions} position={position} deckmode/> 
+        <Question questions={questions} position={position} deckmode preview={isPrev === "preview"}/> 
+
+        { isPrev === "preview" ? <span className="blue-btn w-1/2 m-auto" onClick={() => {
+                addtoDecks(deck.name, deck.description, deck.questions);
+                navigate('/practice')
+        }}>Add to Decks</span> : <></>}
 
     </div>
     )

@@ -87,17 +87,18 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: '/decks/:userID/:id',
+    path: '/decks/:userID/:id/*',
     element: (
         <DeckViewer />
     ),
   },
-    {
+  {
     path: '/viewProfile/:userID',
     element: (
         <ProfileViewer />
     ),
   },
+  
 ]);
 
 export default function AppRouter() {

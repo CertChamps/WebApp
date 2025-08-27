@@ -34,7 +34,7 @@ export default function ViewDecks (props?: deckProps) {
                             </div>
                             <div className="deck-txt">
                                 <span className="txt-sub">{deck.description}</span>
-                                <span className="txt-sub">{deck.questions.length} question{deck.questions.length !== 1 ? 's' : ''}</span>
+                                <span className="txt-sub">{deck?.questions?.length} question{deck?.questions?.length !== 1 ? 's' : ''}</span>
                             </div>
                             <span className="plain-btn color-txt-main cursor-pointer my-2 bg-green-300" onClick={(e: any) => {addQuestiontoDeck([props?.question], deck.id); e.stopPropagation();}}>Add to deck</span>
                         </div>

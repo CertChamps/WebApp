@@ -14,6 +14,7 @@ import { db }from '../../../firebase'
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 import FriendsSearch from "../../components/social/friendsSearch";
+import Notifications from "../../components/notifications";
 
 
 export default function Social() {
@@ -221,6 +222,30 @@ export default function Social() {
     useEffect(() => {
         const randomIndex = Math.floor(Math.random() * placeholders.length);
         setRandomPlaceholder(placeholders[randomIndex]);
+
+        // -----------------------------------LISTEN TO REAL TIME CHANGES OF USER---------------------------------------//
+        const unsubscribe = onSnapshot( doc(db, 'user-data', user.uid), (usr) => {
+
+            // get the user data 
+            const data = usr.data();
+
+            if (data) {
+                // update user context to view changes in the app immediately 
+                setUser( (prev: any) => ({
+                ...prev,
+                friends: data.friends ?? [],
+                notifications: data.notifications ?? []
+                }));
+            }
+            },
+            // Log any errors 
+            (error) => {
+                console.error("Firestore listener error:", error);
+            }
+        );
+
+        return () => unsubscribe();
+
     }, []);
     //=======================================================================
 
@@ -228,8 +253,13 @@ export default function Social() {
     return (
         <div className="flex  w-full">
             {/* Sidebar with fixed width */}
-            <div className="w-64 overflow-y-scroll">
+            <div className="w-auto overflow-y-scroll">
                 <FriendsBar />
+            </div>
+
+            {/* Sidebar with notification */}
+            <div className="w-1/4 overflow-y-scroll h-full">
+                <Notifications />
             </div>
 
             {/* Sidebar with friends search */}
