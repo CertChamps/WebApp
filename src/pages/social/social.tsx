@@ -31,6 +31,7 @@ export default function Social() {
 
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //
     const [page, setPage ]= useState<string>('practice')
+    console.log(userFriends, page) // DELETE THIS
     const navigate = useNavigate()
 
     const pageNavigate = (page: string, options?: { state?: any }) => {

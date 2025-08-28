@@ -1,6 +1,3 @@
-// React
-import React from "react";
-
 // Animation
 import { motion } from "framer-motion";
 

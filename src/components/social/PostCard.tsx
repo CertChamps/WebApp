@@ -21,7 +21,6 @@ interface PostCardProps {
     content,
     replyCount,
     imageURL,
-    isFlashcard,
     onPressReplies
   }) => {
 
@@ -31,10 +30,10 @@ interface PostCardProps {
 
     // Format the time stamp. I thinky you would need to do a bit of
     // maths to get the whole 24hrs ago thing working, but this is a good start.
-    const formattedTime = time?.toDate?.()?.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-    }) ?? 'Just now';
+    // const formattedTime = time?.toDate?.()?.toLocaleTimeString([], {
+    //     hour: '2-digit',
+    //     minute: '2-digit'
+    // }) ?? 'Just now';
 
     const formattedDate = time?.toDate?.()?.toLocaleDateString() ?? 'Unknown date';
 

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 
 // Firebase
 import { db }from '../../../firebase'
-import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
+import { collection, getDocs, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 
 // Components
