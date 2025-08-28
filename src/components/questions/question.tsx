@@ -16,8 +16,8 @@ import ViewDecks from "./../viewDecks";
 import SharePanel from "../social/sharePanel";
 
 // Style Imports 
-import '../styles/questions.css'
-import '../styles/navbar.css'
+import '../../styles/questions.css'
+import '../../styles/navbar.css'
 
 // Component Props
 type questionsProps = {

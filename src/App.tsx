@@ -1,49 +1,40 @@
 import { useEffect, useState } from "react";
-import { UserContext} from "./context/UserContext";
+import { UserContext } from "./context/UserContext";
 import { OptionsContext } from "./context/OptionsContext";
 import AppRouter from "./Router";
 
-
 export default function App() {
-
   // =================== CONTEXT SETUP ===================== //
-  const [user, setUser] = useState<any>({})
-  const [options, setOptions] = useState<any>({
-    theme: 'light'
-  })
+  const [user, setUser] = useState<any>(() => {
+    const storedUser = localStorage.getItem("USER");
+    return storedUser ? JSON.parse(storedUser) : {}; // default empty object
+  });
 
-  // ===================== THEME SETUP ====================== // 
+  const [options, setOptions] = useState<any>(() => {
+    const storedOptions = localStorage.getItem("OPTIONS");
+    return storedOptions ? JSON.parse(storedOptions) : { theme: "light" };
+  });
+
+  // ===================== PERSISTENCE ====================== //
   useEffect(() => {
+    localStorage.setItem("USER", JSON.stringify(user));
+  }, [user]);
 
-    // Initialising options 
-    const initOptions = () => {
-
-      // Retreiving preferences from local storage
-      const theme = localStorage.getItem('THEME')
-
-      // Apply context
-      setOptions({theme})
-    }
-
-    // Run the function on first render
-    initOptions()
-
-  }, [])
+  useEffect(() => {
+    localStorage.setItem("OPTIONS", JSON.stringify(options));
+  }, [options]);
 
   return (
     // ================ CONTEXT PROVIDERS ===================== //
-    <OptionsContext.Provider value={{options , setOptions}}>
-    <UserContext.Provider value={{user, setUser}} >
-        
-      {/* // ================ DIV THEME WRAPPER ===================== // */}
-      <div data-theme={options.theme}>
-        <div className={`color-bg h-screen w-screen flex flex-row`} >
-
-          <AppRouter/>
-
+    <OptionsContext.Provider value={{ options, setOptions }}>
+      <UserContext.Provider value={{ user, setUser }}>
+        {/* // ================ DIV THEME WRAPPER ===================== // */}
+        <div data-theme={options.theme}>
+          <div className="color-bg h-screen w-screen flex flex-row">
+            <AppRouter />
+          </div>
         </div>
-      </div>
-    </UserContext.Provider>
+      </UserContext.Provider>
     </OptionsContext.Provider>
-  )
+  );
 }
