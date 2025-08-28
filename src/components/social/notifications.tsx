@@ -1,11 +1,16 @@
+// Icons 
 import { LuX } from "react-icons/lu"
-import useNotifications from "../hooks/useNotifications"
+
+// Hooks
+import useNotifications from "../../hooks/useNotifications"
 import { useNavigate } from 'react-router-dom';
 
 export default function Notifications() {
 
+    //================================= State, Hooks, and Context ================================//
     const {notis, addFriend, removeNotification} = useNotifications()
     const navigate = useNavigate()
+    //==========================================================================================//
 
     return (
     <div>
@@ -30,7 +35,9 @@ export default function Notifications() {
                     </div>
                 )
             } 
-            //============================ DECK NOTIFICATIONS =================================//s
+            //==================================================================================//
+
+            //============================ DECK NOTIFICATIONS =================================//
             else if ( noti.type == 'deck-share' ) {
 
                 return (
@@ -47,6 +54,10 @@ export default function Notifications() {
                     </div>
                 )
             } 
+            //==================================================================================//
+
+            //============================ NO NOTIFICATIONS =================================//
+
             else {
                 return (
                     <div >
@@ -54,6 +65,8 @@ export default function Notifications() {
                     </div>
                 )
             }
+            //==================================================================================//
+
             
         })
     }

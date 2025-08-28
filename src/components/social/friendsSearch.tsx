@@ -1,28 +1,46 @@
+// Icons Styles and Animation
 import { LuSearch } from "react-icons/lu"
+import loadingAnim from '../../assets/animations/loading.json';
+
+// Hooks 
 import { useState, useEffect } from "react"
 import useFriends from "../../hooks/useFriends"
+
+// Components 
 import Lottie  from 'lottie-react';
-import loadingAnim from '../../assets/animations/loading.json';
 
 export default function FriendsSearch() {
 
+    //================================= State, Hooks, and Context ================================//
     const { getSearch, sendFriendRequest } = useFriends()
-    const [search, setSearch] = useState('')
-    const [usersFound, setUsersFound] = useState<any>()
-    const [loading, setLoading] = useState(false)
 
+    const [search, setSearch] = useState<string>('')
+    const [usersFound, setUsersFound] = useState<any>()
+    const [loading, setLoading] = useState<boolean>(false)
+
+    //================================= Handling Search Update ================================//
     useEffect(() => {
+
         const runSearch = async () => {
+
+            // if the user runs a valid search 
             if (search.length > 0) {
-                setLoading(true)
+
+                setLoading(true) // start loading 
+                
+                // Get the search results and set state 
                 const result = await getSearch(search)
                 setUsersFound(result)
-                setLoading(false)
+
+                setLoading(false) // stop loading 
             }
+
         }
 
-        runSearch()
+        runSearch() // Run the start function 
+
     }, [search])
+    //==========================================================================================//
 
     return ( 
         <div>
@@ -37,41 +55,41 @@ export default function FriendsSearch() {
             {/* ===================================================================================================== */}
             {
                 !loading ? (
-                    usersFound?.length > 0 && search.length > 0 ? (
+                    usersFound?.length > 0 && search.length > 0 ? ( 
                     <div>
-                    { 
-                    usersFound?.map((user: any) => (
-                        <div className="m-4">
-                        <img 
-                            src={user.picture} 
-                            alt={user.picture}
-                            className="w-10 h-10 rounded-full object-cover inline"
-                        />
-                        <span className="txt-bold mx-4 inline">{user.username}</span>
-                    {
-
-                    <span className="blue-btn cursor-pointer inline" onClick={() => {
-                        sendFriendRequest(user.username); setSearch('')
-                        }} >Send Request</span>
+                        {/* ================================== DISPLAY SEARCH RESULTS ================================= */}
+                        { usersFound?.map((user: any) => (
+                            <div className="m-4">
+                            <img 
+                                src={user.picture} 
+                                alt={user.picture}
+                                className="w-10 h-10 rounded-full object-cover inline"
+                            />
+                            <span className="txt-bold mx-4 inline">{user.username}</span>
                         
-                    }
 
+                            <span className="blue-btn cursor-pointer inline" onClick={() => {
+                                sendFriendRequest(user.username); setSearch('')}}>
+                                    Send Request
+                            </span>
+                            </div>
+                        ))}
+                        {/* ========================================================================================== */}
 
                     </div>
-                    )) 
-                    }
-                    </div>
-                    ) 
-                    : (<span className="txt-heading">No Results</span>)
+                    ) : (<span className="txt-heading">No Results</span> /* Otherwise display no results */)
                 ) : (
-                <div className="w-full h-full flex justify-center items-center">
-                    <Lottie animationData={loadingAnim} loop={true} autoplay={true} 
-                        className="h-40 w-40" />
-                </div>
+
+                    /* ================================== LOADING ================================= */
+                    
+                    <div className="w-full h-full flex justify-center items-center">
+                        <Lottie animationData={loadingAnim} loop={true} autoplay={true} 
+                            className="h-40 w-40" />
+                    </div>
+                    /* ============================================================================ */
+
                 )
             }
-
-
         </div>
     )
 }

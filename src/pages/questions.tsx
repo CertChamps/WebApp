@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 
 // Components
 
-import Question from "../components/question";
+import Question from "../components/questions/question";
 import RankBar from "../components/rankbar";
 
 

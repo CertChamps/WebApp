@@ -14,7 +14,7 @@ import { db }from '../../../firebase'
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 import FriendsSearch from "../../components/social/friendsSearch";
-import Notifications from "../../components/notifications";
+import Notifications from "../../components/social/notifications";
 
 
 export default function Social() {

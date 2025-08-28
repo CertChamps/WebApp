@@ -1,5 +1,5 @@
 // React
-import react, { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect } from 'react';
 
 // Firebase
 import { db }from '../../../firebase'
