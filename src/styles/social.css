@@ -1,0 +1,23 @@
+@reference '../index.css';
+
+.compose-post-container {
+    @apply w-full border-t p-3
+          
+}
+
+.compose-post-text-box {
+    @apply w-full min-h-40 p-3 rounded-out
+           color-bg-grey-10
+           placeholder:color-txt-sub
+           focus:outline-none resize-none placeholder:font-bold
+}
+
+.compose-post-clear-button {
+    @apply px-3 py-1 txt-sub 
+         text-grey dark:text-light-grey hover:text-black dark:hover:text-white
+}
+
+.compose-post-send-button {
+    @apply px-4 py-2 rounded-xl 
+         bg-blue text-white disabled:opacity-50 hover:bg-blue-light
+}

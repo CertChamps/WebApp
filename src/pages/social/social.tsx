@@ -16,6 +16,8 @@ import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 import FriendsSearch from "../../components/social/friendsSearch";
 import Notifications from "../../components/social/notifications";
 
+// CSS
+import "../../styles/social.css"
 
 export default function Social() {
 
@@ -250,68 +252,106 @@ export default function Social() {
     }, []);
     //=======================================================================
 
+    // -----------------------------------LISTEN TO REAL TIME CHANGES OF USER---------------------------------------//
+    const cancelReply = () => {
+        setMessage('');
+    };
+    //=======================================================================
+
 
     return (
-        <div className="flex  w-full">
-            {/* Sidebar with fixed width */}
-            <div className="w-auto overflow-y-scroll">
-                <FriendsBar />
-            </div>
+        // <div className="flex  w-full">
+        //     {/* Sidebar with fixed width */}
+        //     <div className="w-auto overflow-y-scroll">
+        //         <FriendsBar />
+        //     </div>
 
-            {/* Sidebar with notification */}
-            <div className="w-1/4 overflow-y-scroll h-full">
-                <Notifications />
-            </div>
+        //     {/* Sidebar with notification */}
+        //     <div className="w-1/4 overflow-y-scroll h-full">
+        //         <Notifications />
+        //     </div>
 
-            {/* Sidebar with friends search */}
-            <div className="w-auto overflow-y-scroll h-full">
-                <FriendsSearch />
-            </div>
+        //     {/* Sidebar with friends search */}
+        //     <div className="w-auto overflow-y-scroll h-full">
+        //         <FriendsSearch />
+        //     </div>
 
 
-            {/* Content area fills the rest */}
-            <div className="flex-1">
-                <div className="flex-1 h-screen overflow-y-auto p-4">
-                    {/* This centers the posts within the available viewport */}
-                    <div className="mx-auto max-w-3xl w-full space-y-4">
-                        {posts.map((post) => (
-                            <PostCard
-                                key={post.id}
-                                content={post.content}
-                                userImage={post.userImage}
-                                username={post.username}
-                                time={post.timestamp}
-                                replyCount={post.replyCount}
-                                imageURL={post.imageURL}
-                                onPressReplies={() => {
-                                    if (post.isFlashcard) {
-                                        // For flashcards, pass both flashcardId and replyId if available
-                                        pageNavigate("social/q_replies", { state: { id: post.id, flashcardId: post.flashcardId, replyId: post.replyId } })
-                                    } else {
-                                        // For regular posts
-                                        pageNavigate("social/replies", { state: { id: post.id } })
-                                    }
-                                }}
-                            />
-                        ))}
-                    </div>
-                </div>
+        //     {/* Content area fills the rest */}
+        //     <div className="flex-1">
+        //         <div className="flex-1 h-screen overflow-y-auto p-4">
+        //             {/* This centers the posts within the available viewport */}
+        //             <div className="mx-auto max-w-3xl w-full space-y-4">
+        //                 {posts.map((post) => (
+        //                     <PostCard
+        //                         key={post.id}
+        //                         content={post.content}
+        //                         userImage={post.userImage}
+        //                         username={post.username}
+        //                         time={post.timestamp}
+        //                         replyCount={post.replyCount}
+        //                         imageURL={post.imageURL}
+        //                         onPressReplies={() => {
+        //                             if (post.isFlashcard) {
+        //                                 // For flashcards, pass both flashcardId and replyId if available
+        //                                 pageNavigate("social/q_replies", { state: { id: post.id, flashcardId: post.flashcardId, replyId: post.replyId } })
+        //                             } else {
+        //                                 // For regular posts
+        //                                 pageNavigate("social/replies", { state: { id: post.id } })
+        //                             }
+        //                         }}
+        //                     />
+        //                 ))}
+        //             </div>
+        //         </div>
                 
-                <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
+                // <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
+                //     <textarea
+                //         value={message}
+                //         onChange={(e) => setMessage(e.target.value)}
+                //         //   onKeyDown={handleKeyDown}
+                //         placeholder={randomPlaceholder}
+                //         rows={3}
+                //         className="w-full p-3 rounded-xl border-2 border-light-grey dark:border-grey bg-button dark:bg-button-dark text-black dark:text-white focus:outline-none resize-none"
+                //     />
+            
+                //     <div className="flex justify-end gap-2 mt-2">
+                //         <button
+                //             type="button"
+                //             // onClick={cancelReply}
+                //             className="px-3 py-1 txt-sub text-grey dark:text-light-grey hover:text-black dark:hover:text-white"
+                //         >
+                //             Clear
+                //         </button>
+                //         <button
+                //             type="button"
+                //             onClick={sendPost}
+                //             disabled={!message.trim()}
+                //             className="px-4 py-2 rounded-xl bg-blue text-white disabled:opacity-50 hover:bg-blue-light"
+                //         >
+                //             Send
+                //         </button>
+                //     </div>
+                // </div>
+        //     </div>
+        // </div>
+        <div className="w-full h-full">
+            <div className="w-2/3 h-full">
+                <div className="compose-post-container">
                     <textarea
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                         //   onKeyDown={handleKeyDown}
                         placeholder={randomPlaceholder}
                         rows={3}
-                        className="w-full p-3 rounded-xl border-2 border-light-grey dark:border-grey bg-button dark:bg-button-dark text-black dark:text-white focus:outline-none resize-none"
+                        className={"compose-post-text-box"}
                     />
             
                     <div className="flex justify-end gap-2 mt-2">
                         <button
                             type="button"
-                            // onClick={cancelReply}
-                            className="px-3 py-1 txt-sub text-grey dark:text-light-grey hover:text-black dark:hover:text-white"
+                            onClick={cancelReply}
+                            className="compose-post-clear-button"
                         >
                             Clear
                         </button>
@@ -319,12 +359,15 @@ export default function Social() {
                             type="button"
                             onClick={sendPost}
                             disabled={!message.trim()}
-                            className="px-4 py-2 rounded-xl bg-blue text-white disabled:opacity-50 hover:bg-blue-light"
+                            className="cursor-target compose-post-send-button"
                         >
                             Send
                         </button>
                     </div>
                 </div>
+            </div>
+            <div>
+
             </div>
         </div>
     )

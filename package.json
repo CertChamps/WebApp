@@ -19,6 +19,7 @@
     "framer-motion": "^12.23.12",
     "katex": "^0.16.22",
     "lottie-react": "^2.4.1",
+    "magicmouse.js": "^2.0.0",
     "mathlive": "^0.106.0",
     "nerdamer": "^1.1.13",
     "react": "^19.1.0",

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { UserContext } from "./context/UserContext";
 import { OptionsContext } from "./context/OptionsContext";
 import AppRouter from "./Router";
+import CustomCursor from "./components/CustomCursor"
 
 export default function App() {
   // =================== CONTEXT SETUP ===================== //
@@ -31,6 +32,7 @@ export default function App() {
         {/* // ================ DIV THEME WRAPPER ===================== // */}
         <div data-theme={options.theme}>
           <div className="color-bg h-screen w-screen flex flex-row">
+            <CustomCursor />
             <AppRouter />
           </div>
         </div>

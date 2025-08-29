@@ -6,6 +6,13 @@
   font-size: 18px;
 }
 
+/* Hide ALL system cursors everywhere */
+*,
+*::before,
+*::after {
+  cursor: none !important;
+}
+
 /* ================== TAILWIND SETUP ============= */
 @import "tailwindcss";
 
@@ -71,6 +78,11 @@
 
 /* ================== UTILITY STYLES ===================== */
 /* Commonly used styles for text, buttons etc. This will keep our app consistent */
+@layer utilities {
+  .cursor-target {
+    @apply relative; /* optional, just ensures it's positioned */
+  }
+}
 
 /* ================== CONTAINERS ================== */
 @utility w-h-container {
@@ -208,28 +220,46 @@ math-field::part(virtual-keyboard-toggle) {
     ishtar:bg-ishtarblack
 }
 
+@utility color-bg-grey-50 {
+  @apply 
+    bg-grey/50
+    dark:bg-light-grey/50
+    markoblank:bg-markogrey/50
+    discord:bg-discordgrey/50
+    ishtar:bg-ishtargrey/50
+}
+
+@utility color-bg-grey-10 {
+  @apply 
+    bg-grey/10
+    dark:bg-light-grey/10
+    markoblank:bg-markogrey/10
+    discord:bg-discordgrey/10
+    ishtar:bg-ishtargrey/10
+}
+
 @utility color-bg-accent {
   @apply 
-    bg-blue
-    dark:bg-blue-light
-    markoblank:bg-markored
-    discord:bg-discordblue
-    ishtar:bg-ishtarred
+    bg-blue/20
+    dark:bg-blue-light/20
+    markoblank:bg-markored/20
+    discord:bg-discordblue/20
+    ishtar:bg-ishtarred/20
 }
 
 @utility color-shadow {
   @apply 
-    border-light-grey
-    dark:border-grey
-    markoblank:border-markobrown/50
-    discord:border-discordgrey/50
-    ishtar:border-ishtargrey/50
+    border-light-grey/20
+    dark:border-grey/20
+    markoblank:border-markobrown/20
+    discord:border-discordgrey/20
+    ishtar:border-ishtargrey/20
 
-    shadow-light-grey
-    dark:shadow-grey
-    markoblank:shadow-markobrown/50
-    discord:shadow-discordgrey/50
-    ishtar:shadow-ishtargrey/50
+    shadow-light-grey/20
+    dark:shadow-grey/20
+    markoblank:shadow-markobrown/20
+    discord:shadow-discordgrey/20
+    ishtar:shadow-ishtargrey/20
 }
 
 
