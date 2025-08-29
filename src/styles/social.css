@@ -63,18 +63,26 @@
 
 /* ===================================== FRIENDS ================================== */ 
 .friends-list {
-    @apply w-16 color-bg overflow-y-auto
+    @apply flex justify-start items-start flex-col p-4
 }
 
-.friends-list-image {
-    @apply w-10 h-10 rounded-full
-}
-
-.friends-list-icon {
-    @apply flex items-center justify-center
-           h-12 w-12 mt-2 mx-auto
-           color-bg hover:color-bg-grey-10
+.friend-container {
+    @apply flex items-center justify-start
+           p-1.5 mb-1
+           color-bg hover:color-bg-grey-10 placeholder:color-txt-sub
            rounded-3xl
            transition-all duration-200 ease-linear
-  }
+}
+
+.friend-image {
+    @apply w-10 h-10 rounded-full mr-2
+}
+
+.friend-username {
+    @apply txt-bold color-txt-accent;
+}
+
+.friends-text {
+    @apply txt-bold color-txt-accent mb-1
+}
 /* ================================================================================ */ 

@@ -261,7 +261,7 @@ export default function Social() {
 
     return (
         <div className="flex w-full h-full">
-            <div className="flex-2/3 h-full">
+            <div className="flex-5/7 h-full">
                 <div className="compose-post-container">
                     <textarea
                         value={message}
@@ -317,7 +317,7 @@ export default function Social() {
                     </div>
                 </div>
             </div>
-            <div className="flex-1/3 h-full">
+            <div className="flex-1/7 h-full">
                 {/* Sidebar with notification */}
                 {/* <div className="w-1/4 overflow-y-scroll h-full">
                     <Notifications />
