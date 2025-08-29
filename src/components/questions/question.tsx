@@ -1,5 +1,5 @@
 // Icons 
-import { LuChevronRight, LuMessageSquareText, LuShare2 } from "react-icons/lu";
+import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked } from "react-icons/lu";
 import { TbCards } from "react-icons/tb";
 
 // Hooks 
@@ -14,6 +14,7 @@ import MathInput from "./../math/mathinput";
 import QThread from "../../components/questions/q_thread"
 import ViewDecks from "./../viewDecks";
 import SharePanel from "../social/sharePanel";
+import LogTables from "../../components/logtables"
 
 // Style Imports 
 import '../../styles/questions.css'
@@ -133,6 +134,12 @@ export default function Question(props: questionsProps) {
             </div>
         ) : null}
 
+        {sideView === 'logtables' ? (
+            <div className="border-l border-light-grey dark:border-grey h-full w-150">
+                <LogTables pgNumber="10"/>
+            </div>
+        ) : null}
+
         {sideView === 'decks' ? (
             <div className="border-l border-light-grey dark:border-grey h-full w-150">
                 <ViewDecks question={properties?.id}/>
@@ -165,6 +172,21 @@ export default function Question(props: questionsProps) {
                     fill={sideView == 'thread' ? 'currentColor' : 'none'} /> 
             </div>
             {/* ============================================================================ */}
+
+            {/* =============================== LOGTABLES ICON ================================= */}
+            <div className={sideView == 'logtables' ? 'nav-item-selected mb-4' : 'nav-item mb-4'} 
+                onClick={() => {
+                    setSideView( (prev: any) => {
+                        if (prev != 'logtables') return 'logtables'
+                        else return '' 
+                    });
+                }}
+            >
+                <LuBookMarked strokeWidth={strokewidth} size={iconSize} 
+                    className={sideView == 'logtables' ? 'nav-icon-selected' : 'nav-icon'}
+                    fill={sideView == 'logtables' ? 'currentColor' : 'none'} />
+            </div>
+            {/* ================================================================================ */}
             
             { props.deckmode ? (
             /* =========================== SHARE ICON (DECK ONLY) =========================== */
