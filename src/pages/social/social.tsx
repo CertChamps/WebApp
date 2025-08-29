@@ -261,7 +261,7 @@ export default function Social() {
 
     return (
         <div className="flex w-full h-full">
-            <div className="flex-2/3 h-full">
+            <div className="w-2/3 h-full overflow-y-scroll">
                 <div className="compose-post-container">
                     <textarea
                         value={message}
@@ -269,7 +269,7 @@ export default function Social() {
                         //   onKeyDown={handleKeyDown}
                         placeholder={randomPlaceholder}
                         rows={3}
-                        className={"compose-post-text-box"}
+                        className={`compose-post-text-box`}
                     />
             
                     <div className="flex justify-end gap-2 mt-2">
@@ -290,9 +290,9 @@ export default function Social() {
                         </button>
                     </div>
 
-                    <div className="flex h-screen overflow-y-auto p-4">
+                    <div className="p-4">
                         {/* This centers the posts within the available viewport */}
-                        <div className="mx-auto max-w-3xl w-full space-y-4">
+                        <div className="mx-auto w-full space-y-4">
                             {posts.map((post) => (
                                 <PostCard
                                     key={post.id}

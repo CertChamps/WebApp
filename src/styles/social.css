@@ -6,7 +6,7 @@
 }
 
 .compose-post-text-box {
-    @apply w-full min-h-40 p-3 rounded-out
+    @apply w-full min-h-30 p-3 rounded-out
            color-bg-grey-10
            placeholder:color-txt-sub
            focus:outline-none resize-none placeholder:font-bold
@@ -18,7 +18,7 @@
 }
 
 .compose-post-send-button {
-    @apply px-12 py-2 rounded-out font-bold
+    @apply px-12 py-2 rounded-out font-bold 
            color-bg-accent color-txt-accent 
 }
 /* ================================================================================ */ 
