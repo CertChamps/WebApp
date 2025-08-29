@@ -46,8 +46,8 @@ export default function FriendsSearch() {
         <div>
             {/* ======================================== SEARCH AND FILTER ========================================== */}
             <div className="flex items-center gap-3 w-full color-bg">
-                <div className="flex items-center txtbox w-full max-w-xs  color-bg">
-                    <input type="text" placeholder="Search Questions" className=" w-full p-1 outline-none border-none"
+                <div className="flex items-center txtbox w-full  color-bg">
+                    <input type="text" placeholder="Add friends +" className=" w-full p-1 outline-none border-none"
                         onChange={(txt:React.ChangeEvent<HTMLInputElement>) => {setSearch(txt.target.value);}}/>
                     <LuSearch className="color-txt-sub " size={24}/>
                 </div>
@@ -55,7 +55,7 @@ export default function FriendsSearch() {
             {/* ===================================================================================================== */}
             {
                 !loading ? (
-                    usersFound?.length > 0 && search.length > 0 ? ( 
+                    // usersFound?.length > 0 && search.length > 0 ? ( 
                     <div>
                         {/* ================================== DISPLAY SEARCH RESULTS ================================= */}
                         { usersFound?.map((user: any) => (
@@ -77,7 +77,7 @@ export default function FriendsSearch() {
                         {/* ========================================================================================== */}
 
                     </div>
-                    ) : (<span className="txt-heading">No Results</span> /* Otherwise display no results */)
+                    // ) : (<span className="txt-heading">No Results</span> /* Otherwise display no results */)
                 ) : (
 
                     /* ================================== LOADING ================================= */

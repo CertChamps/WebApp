@@ -65,6 +65,9 @@ const FriendsList = () => {
 
     return (
         <div className="friends-list">
+            <span className="friends-text">
+                Friends
+            </span>
             
             {/* ======================================== FRIENDS LIST ========================================== */}
             {userFriends.map((friend) => (
@@ -74,10 +77,11 @@ const FriendsList = () => {
                         <img 
                             src={friend.picture} 
                             alt={friend.username}
-                            className="friends-list-image"
+                            className="friend-image"
                         />
                     }
                     tooltip={friend.username}
+                    username={friend.username}
                     onClick={() => {
                         navigate(`/viewProfile/${friend.uid}`)
                     }}
@@ -90,15 +94,19 @@ const FriendsList = () => {
 
 const FriendsBarIcon: React.FC<{ 
     icon: React.ReactNode;
+    username: string;
     tooltip?: string;
     onClick?: () => void;
-}> = ({ icon, onClick }) => {
+}> = ({ username, icon, onClick }) => {
     return (
         <div 
-            className="friends-list-icon"
+            className="friend-container"
             onClick={onClick}
         >
             {icon}
+            <div className="friend-username">
+                {username}
+            </div>
         </div>
     );
 };
