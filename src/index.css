@@ -65,17 +65,6 @@
 
 }
 
-@layer components {
-
-  .sidebar-icon {
-    @apply relative flex items-center justify-center
-           h-12 w-12 mt-4 mx-auto
-           bg-blue hover:bg-blue-light
-           rounded-3xl hover:rounded-xl
-           transition-all duration-200 ease-linear
-  }
-}
-
 /* ================== UTILITY STYLES ===================== */
 /* Commonly used styles for text, buttons etc. This will keep our app consistent */
 @layer utilities {
@@ -277,3 +266,14 @@ math-field::part(virtual-keyboard-toggle) {
     discord:shadow-discordblue
     ishtar:shadow-ishtarred
 }
+
+@utility color-cursor {
+  @apply 
+    bg-blue
+    dark:bg-blue-light
+    markoblank:bg-markored
+    discord:bg-discordblue
+    ishtar:bg-ishtarred
+}
+
+

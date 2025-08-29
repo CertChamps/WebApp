@@ -19,7 +19,7 @@ type Friend = {
     picture: string;
 };
 
-const FriendsBar = () => {
+const FriendsList = () => {
     const [userFriends, setUserFriends] = useState<Friend[]>([]);
     const { user } = useContext(UserContext);
     const navigate = useNavigate()
@@ -64,10 +64,7 @@ const FriendsBar = () => {
     },[user.friends]);
 
     return (
-        <div className=" w-16 h-full m-0
-                        flex flex-col
-                        bg-button dark:bg-button-dark border-r-2 border-light-grey dark:border-grey
-                        overflow-y-auto scrollbar-hide">
+        <div className="friends-list">
             
             {/* ======================================== FRIENDS LIST ========================================== */}
             {userFriends.map((friend) => (
@@ -77,7 +74,7 @@ const FriendsBar = () => {
                         <img 
                             src={friend.picture} 
                             alt={friend.username}
-                            className="w-10 h-10 rounded-full object-cover border-2 border-light-grey dark:border-grey"
+                            className="friends-list-image"
                         />
                     }
                     tooltip={friend.username}
@@ -85,16 +82,8 @@ const FriendsBar = () => {
                         navigate(`/viewProfile/${friend.uid}`)
                     }}
                 />
+                
             ))}
-            
-            {/* ======================================== ADD FRIENDS BUTTON========================================== */}
-            <FriendsBarIcon 
-                icon={<LuUserPlus size={32}/>} 
-                tooltip="Add Friends"
-                onClick={() => {
-                    // add friend
-                }}
-            />
         </div>
     )
 }
@@ -106,7 +95,7 @@ const FriendsBarIcon: React.FC<{
 }> = ({ icon, onClick }) => {
     return (
         <div 
-            className="sidebar-icon"
+            className="friends-list-icon"
             onClick={onClick}
         >
             {icon}
@@ -114,4 +103,4 @@ const FriendsBarIcon: React.FC<{
     );
 };
 
-export default FriendsBar;
+export default FriendsList;

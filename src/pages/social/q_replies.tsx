@@ -3,7 +3,7 @@ import { useContext, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 // Components
-import FriendsBar from "../../components/social/FriendsBar";
+import FriendsBar from "../../components/social/FriendsList";
 
 // Firebase
 import { db, storage } from "../../../firebase";

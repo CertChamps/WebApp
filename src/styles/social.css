@@ -1,8 +1,8 @@
 @reference '../index.css';
 
+/* ====================================== TEXTBOX ================================= */ 
 .compose-post-container {
     @apply w-full border-t p-3
-          
 }
 
 .compose-post-text-box {
@@ -14,10 +14,67 @@
 
 .compose-post-clear-button {
     @apply px-3 py-1 txt-sub 
-         text-grey dark:text-light-grey hover:text-black dark:hover:text-white
+           color-txt-sub hover:color-txt-accent duration-500
 }
 
 .compose-post-send-button {
-    @apply px-4 py-2 rounded-xl 
-         bg-blue text-white disabled:opacity-50 hover:bg-blue-light
+    @apply px-12 py-2 rounded-out font-bold
+           color-bg-accent color-txt-accent 
 }
+/* ================================================================================ */ 
+
+/* ===================================== POSTCARD ================================= */ 
+.post-card-main {
+    @apply color-bg rounded-out shadow-small p-4
+}
+
+.post-card-user {
+    @apply flex items-center mb-3
+}
+
+.post-card-user-img {
+    @apply w-10 h-10 rounded-full mr-3
+}
+
+.post-card-user-name {
+    @apply txt-bold color-txt-accent
+}
+
+.post-card-content {
+    @apply mb-3
+}
+
+.post-card-content-txt {
+    @apply color-txt-main mb-2
+}
+
+.post-card-content-img {
+    @apply w-full max-w-lg rounded-out
+}
+
+.post-card-footer {
+    @apply flex justify-between items-center color-txt-sub font-light
+}
+
+.post-card-footer-replies {
+    @apply hover:color-txt-accent duration-500
+}
+/* ================================================================================ */ 
+
+/* ===================================== FRIENDS ================================== */ 
+.friends-list {
+    @apply w-16 color-bg overflow-y-auto
+}
+
+.friends-list-image {
+    @apply w-10 h-10 rounded-full
+}
+
+.friends-list-icon {
+    @apply flex items-center justify-center
+           h-12 w-12 mt-2 mx-auto
+           color-bg hover:color-bg-grey-10
+           rounded-3xl
+           transition-all duration-200 ease-linear
+  }
+/* ================================================================================ */ 

@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+const TRAIL_LENGTH = 5; // number of trailing dots
+
 export default function CustomCursor() {
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [hovering, setHovering] = useState(false);
   const [hoverRect, setHoverRect] = useState<DOMRect | null>(null);
   const [hoverRadius, setHoverRadius] = useState("50%");
+  const [trail, setTrail] = useState<{ x: number; y: number }[]>(
+    Array.from({ length: TRAIL_LENGTH }, () => ({ x: 0, y: 0 }))
+  );
 
   // Track mouse position
   useEffect(() => {
@@ -16,7 +21,28 @@ export default function CustomCursor() {
     return () => window.removeEventListener("mousemove", move);
   }, []);
 
-  // Attach hover listeners (and re-attach when DOM changes)
+  // Animate trail
+  useEffect(() => {
+    let frame: number;
+    const animate = () => {
+      setTrail((prev) => {
+        const newTrail = [...prev];
+        newTrail[0] = { ...pos };
+        for (let i = 1; i < TRAIL_LENGTH; i++) {
+          newTrail[i] = {
+            x: prev[i].x + (newTrail[i - 1].x - prev[i].x) * 0.25,
+            y: prev[i].y + (newTrail[i - 1].y - prev[i].y) * 0.25,
+          };
+        }
+        return newTrail;
+      });
+      frame = requestAnimationFrame(animate);
+    };
+    animate();
+    return () => cancelAnimationFrame(frame);
+  }, [pos]);
+
+  // Attach hover listeners
   useEffect(() => {
     const handleEnter = (e: Event) => {
       const target = e.currentTarget as HTMLElement;
@@ -44,10 +70,7 @@ export default function CustomCursor() {
       });
     };
 
-    // Initial bind
     bindListeners();
-
-    // 👇 Watch for new elements being added (e.g. after Router loads)
     const observer = new MutationObserver(() => bindListeners());
     observer.observe(document.body, { childList: true, subtree: true });
 
@@ -63,23 +86,56 @@ export default function CustomCursor() {
           hoverRect.top + hoverRect.height / 2
         }px) translate(-50%, -50%)`,
         borderRadius: hoverRadius,
-        backgroundColor: "rgba(59,130,246,0.15)",
-        border: "2px solid rgba(59,130,246,0.6)",
       }
     : {
-        width: "12px",
-        height: "12px",
+        width: "14px",
+        height: "14px",
         transform: `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%)`,
         borderRadius: "50%",
-        backgroundColor: "rgba(59,130,246,0.8)",
       };
 
-  const cursor = (
+  // Main cursor
+  const cursor = hovering ? (
+    // Hovering: iPadOS-style box
     <div
-      className="fixed top-0 left-0 z-[9999] pointer-events-none transition-all duration-200 ease-out"
+      className="fixed top-0 left-0 z-[9999] pointer-events-none 
+                 transition-all duration-200 ease-out 
+                 color-bg-accent border-2 color-shadow-accent"
+      style={style}
+    />
+  ) : (
+    // Idle: solid circle
+    <div
+      className="fixed top-0 left-0 z-[9999] pointer-events-none 
+                 color-cursor"
       style={style}
     />
   );
 
-  return createPortal(cursor, document.body);
+  // Trail dots (only render when NOT hovering)
+  const trailDots = !hovering
+    ? trail.map((t, i) => (
+        <div
+          key={i}
+          className="fixed top-0 left-0 z-[9998] pointer-events-none 
+                     rounded-full color-cursor"
+          style={{
+            width: `${14 - i}px`,
+            height: `${14 - i}px`,
+            transform: `translate(${t.x}px, ${t.y}px) translate(-50%, -50%)`,
+            opacity: 0.5 - i * 0.05,
+          }}
+        />
+      ))
+    : null;
+
+  // Portal into the themed wrapper
+  const root = document.getElementById("themed-root") || document.body;
+  return createPortal(
+    <>
+      {trailDots}
+      {cursor}
+    </>,
+    root
+  );
 }

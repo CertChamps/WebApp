@@ -3,7 +3,7 @@ import { useContext, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom";
 
 // Components
-import FriendsBar from "../../components/social/FriendsBar"
+import FriendsList from "../../components/social/FriendsList"
 import PostCard from "../../components/social/PostCard"
 
 // Hooks
@@ -260,83 +260,8 @@ export default function Social() {
 
 
     return (
-        // <div className="flex  w-full">
-        //     {/* Sidebar with fixed width */}
-        //     <div className="w-auto overflow-y-scroll">
-        //         <FriendsBar />
-        //     </div>
-
-        //     {/* Sidebar with notification */}
-        //     <div className="w-1/4 overflow-y-scroll h-full">
-        //         <Notifications />
-        //     </div>
-
-        //     {/* Sidebar with friends search */}
-        //     <div className="w-auto overflow-y-scroll h-full">
-        //         <FriendsSearch />
-        //     </div>
-
-
-        //     {/* Content area fills the rest */}
-        //     <div className="flex-1">
-        //         <div className="flex-1 h-screen overflow-y-auto p-4">
-        //             {/* This centers the posts within the available viewport */}
-        //             <div className="mx-auto max-w-3xl w-full space-y-4">
-        //                 {posts.map((post) => (
-        //                     <PostCard
-        //                         key={post.id}
-        //                         content={post.content}
-        //                         userImage={post.userImage}
-        //                         username={post.username}
-        //                         time={post.timestamp}
-        //                         replyCount={post.replyCount}
-        //                         imageURL={post.imageURL}
-        //                         onPressReplies={() => {
-        //                             if (post.isFlashcard) {
-        //                                 // For flashcards, pass both flashcardId and replyId if available
-        //                                 pageNavigate("social/q_replies", { state: { id: post.id, flashcardId: post.flashcardId, replyId: post.replyId } })
-        //                             } else {
-        //                                 // For regular posts
-        //                                 pageNavigate("social/replies", { state: { id: post.id } })
-        //                             }
-        //                         }}
-        //                     />
-        //                 ))}
-        //             </div>
-        //         </div>
-                
-                // <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
-                //     <textarea
-                //         value={message}
-                //         onChange={(e) => setMessage(e.target.value)}
-                //         //   onKeyDown={handleKeyDown}
-                //         placeholder={randomPlaceholder}
-                //         rows={3}
-                //         className="w-full p-3 rounded-xl border-2 border-light-grey dark:border-grey bg-button dark:bg-button-dark text-black dark:text-white focus:outline-none resize-none"
-                //     />
-            
-                //     <div className="flex justify-end gap-2 mt-2">
-                //         <button
-                //             type="button"
-                //             // onClick={cancelReply}
-                //             className="px-3 py-1 txt-sub text-grey dark:text-light-grey hover:text-black dark:hover:text-white"
-                //         >
-                //             Clear
-                //         </button>
-                //         <button
-                //             type="button"
-                //             onClick={sendPost}
-                //             disabled={!message.trim()}
-                //             className="px-4 py-2 rounded-xl bg-blue text-white disabled:opacity-50 hover:bg-blue-light"
-                //         >
-                //             Send
-                //         </button>
-                //     </div>
-                // </div>
-        //     </div>
-        // </div>
-        <div className="w-full h-full">
-            <div className="w-2/3 h-full">
+        <div className="flex w-full h-full">
+            <div className="flex-2/3 h-full">
                 <div className="compose-post-container">
                     <textarea
                         value={message}
@@ -361,13 +286,49 @@ export default function Social() {
                             disabled={!message.trim()}
                             className="cursor-target compose-post-send-button"
                         >
-                            Send
+                            Post
                         </button>
+                    </div>
+
+                    <div className="flex h-screen overflow-y-auto p-4">
+                        {/* This centers the posts within the available viewport */}
+                        <div className="mx-auto max-w-3xl w-full space-y-4">
+                            {posts.map((post) => (
+                                <PostCard
+                                    key={post.id}
+                                    content={post.content}
+                                    userImage={post.userImage}
+                                    username={post.username}
+                                    time={post.timestamp}
+                                    replyCount={post.replyCount}
+                                    imageURL={post.imageURL}
+                                    onPressReplies={() => {
+                                        if (post.isFlashcard) {
+                                            // For flashcards, pass both flashcardId and replyId if available
+                                            pageNavigate("social/q_replies", { state: { id: post.id, flashcardId: post.flashcardId, replyId: post.replyId } })
+                                        } else {
+                                            // For regular posts
+                                            pageNavigate("social/replies", { state: { id: post.id } })
+                                        }
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
-            <div>
+            <div className="flex-1/3 h-full">
+                {/* Sidebar with notification */}
+                {/* <div className="w-1/4 overflow-y-scroll h-full">
+                    <Notifications />
+                </div> */}
 
+                {/* Sidebar with friends search */}
+                <div className="w-auto overflow-y-scroll p-3">
+                    <FriendsSearch />
+                </div>
+
+                <FriendsList />
             </div>
         </div>
     )

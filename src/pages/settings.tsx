@@ -28,22 +28,22 @@ export default function Settings() {
         <div className="w-h-container" data-theme="ishtar" >        
         <div className="w-h-container background-white flex-col">
             <p className="color-black">Pick a theme</p>
-            <span className=" bg-white text-black theme-button" 
+            <span className="cursor-target bg-white text-black theme-button" 
                 onClick={() => setTheme('light')}>
                 Light</span>
-            <span className="bg-black text-white theme-button " 
+            <span className="cursor-target bg-black text-white theme-button " 
                 onClick={() => setTheme('dark')}>
                 Dark</span>
-            <span className="bg-markoteal text-markored theme-button" 
+            <span className="cursor-target bg-markoteal text-markored theme-button" 
                 onClick={() => setTheme('markoblank')}>
                 Markoblank</span>
-            <span className="bg-discordblack text-discordblue theme-button" 
+            <span className="cursor-target bg-discordblack text-discordblue theme-button" 
                 onClick={() => setTheme('discord')}>
                 Discord</span>
-            <span className="bg-ishtarblack text-ishtarred theme-button" 
+            <span className="cursor-target bg-ishtarblack text-ishtarred theme-button" 
                 onClick={() => setTheme('ishtar')}>
                 Ishtar</span>
-             <span className="color-bg-accent color-txt-main theme-button" 
+             <span className="cursor-target color-bg-accent color-txt-main theme-button" 
                 onClick={() => {logOut()}}>
                 Log Out</span>
 

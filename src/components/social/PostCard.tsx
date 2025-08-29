@@ -61,32 +61,32 @@ interface PostCardProps {
     //==========================================================================================
   
     return (
-        <div className="bg-white dark:bg-black border border-light-grey dark:border-grey rounded-lg shadow-small p-4 mb-4 w-full">
-            <div className="flex items-center mb-3">
+        <div className="post-card-main">
+            <div className="post-card-user">
                 <img 
                     src={userImage} 
                     alt={username} 
-                    className="w-10 h-10 rounded-full mr-3 object-cover border border-light-grey dark:border-grey" 
+                    className="post-card-user-img" 
                 />
-                <span className="txt-bold text-black dark:text-white">{username}</span>
+                <span className="post-card-user-name">{username}</span>
             </div>
             
-            <div className="mb-3">
-                <p className="txt text-black dark:text-white mb-2">{content}</p>
+            <div className="post-card-content">
+                <p className="post-card-content-txt">{content}</p>
                 {displayImageUrl && (
                     <img 
                         src={displayImageUrl} 
                         alt="Post content" 
-                        className="w-full max-w-lg rounded-lg object-cover border border-light-grey dark:border-grey"
+                        className="post-card-content-img"
                     />
                 )}
             </div>
             
-            <div className="flex justify-between items-center text-grey dark:text-light-grey txt-sub">
+            <div className="post-card-footer">
                 <span>{formattedDate}</span>
                 <span 
                     onClick={onPressReplies}
-                    className="cursor-pointer hover:text-blue dark:hover:text-blue-light transition-colors"
+                    className="post-card-footer-replies"
                 >
                     {replyCount} Replies
                 </span>

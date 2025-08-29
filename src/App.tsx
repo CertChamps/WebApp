@@ -30,7 +30,7 @@ export default function App() {
     <OptionsContext.Provider value={{ options, setOptions }}>
       <UserContext.Provider value={{ user, setUser }}>
         {/* // ================ DIV THEME WRAPPER ===================== // */}
-        <div data-theme={options.theme}>
+        <div id="themed-root" data-theme={options.theme}>
           <div className="color-bg h-screen w-screen flex flex-row">
             <CustomCursor />
             <AppRouter />
