@@ -136,5 +136,5 @@ export default function useNotifications() {
 
 
 
-    return {removeNotification, addFriend, notis}
+    return {removeNotification, addFriend, notis, timeAgoFormatter}
 }

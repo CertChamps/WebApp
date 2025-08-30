@@ -2,7 +2,7 @@
 
 /* ====================================== TEXTBOX ================================= */ 
 .compose-post-container {
-    @apply w-full border-t p-3
+    @apply w-full  p-3
 }
 
 .compose-post-text-box {
@@ -33,7 +33,7 @@
 }
 
 .post-card-user-img {
-    @apply w-10 h-10 rounded-full mr-3
+    @apply w-8 h-8 rounded-full mr-2
 }
 
 .post-card-user-name {

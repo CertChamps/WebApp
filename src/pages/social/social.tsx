@@ -14,7 +14,7 @@ import { db }from '../../../firebase'
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 import FriendsSearch from "../../components/social/friendsSearch";
-import Notifications from "../../components/social/notifications";
+import useNotifications from "../../hooks/useNotifications";
 
 // CSS
 import "../../styles/social.css"
@@ -30,6 +30,9 @@ export default function Social() {
 
     // Friends
     const [userFriends, setUserFriends] = useState<any[]>([])
+
+    // Time ago
+    const { timeAgoFormatter } = useNotifications()
 
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //
     const [page, setPage ]= useState<string>('practice')
@@ -290,7 +293,7 @@ export default function Social() {
                         </button>
                     </div>
 
-                    <div className="p-4">
+                    <div className="my-2">
                         {/* This centers the posts within the available viewport */}
                         <div className="mx-auto w-full space-y-4">
                             {posts.map((post) => (
@@ -299,7 +302,7 @@ export default function Social() {
                                     content={post.content}
                                     userImage={post.userImage}
                                     username={post.username}
-                                    time={post.timestamp}
+                                    time={timeAgoFormatter(post.timestamp)}
                                     replyCount={post.replyCount}
                                     imageURL={post.imageURL}
                                     onPressReplies={() => {
