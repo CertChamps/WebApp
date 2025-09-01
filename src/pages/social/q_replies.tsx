@@ -1,7 +1,7 @@
 // React
 import { useContext, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-
+import useQuestions from "../../hooks/useQuestions";
 // Components
 import '../../styles/social.css'
 
@@ -31,6 +31,10 @@ export default function QReplies() {
     userImage: null,
   });
   const [newReply, setNewReply] = useState('');
+
+  // For displaying the flashcard content
+  const { fetchQuestion} = useQuestions();
+  const [question, setQuestion] = useState<any>(null);
 
   // Contexts
   const { user } = useContext(UserContext);
@@ -84,6 +88,7 @@ export default function QReplies() {
       }
     };
 
+    setQuestion(fetchQuestion(flashcardId!));
     fetchAuthor();
   }, [flashcardId, replyId]);
   // ==============================================================================
@@ -213,8 +218,8 @@ useEffect(() => {
     <div className="flex justify-center w-full">
       <div className="w-2/3">
         {/* Flashcard Question (just show ID + author info) */}
-        <div className="bg-white p-4 mb-4rounded">
-          <div className="flex items-center mb-3">
+        <div>
+          <div >
             {author.userImage && (
               <img
                 src={author.userImage}
@@ -222,9 +227,19 @@ useEffect(() => {
                 className="w-10 h-10 rounded-full mr-3 object-cover"
               />
             )}
-            <span className="font-bold">{author.username}</span>
+            <span className="">{author.username}</span>
           </div>
           <p>Flashcard Question ID: {flashcardId}</p>
+            <div className="post-card-content">
+                <p className="post-card-content-txt">{question?.content}</p>
+                {question?.content?.image && (
+                  <img 
+                  src={question.content.image} 
+                  alt="Post content" 
+                  className="post-card-content-img"
+                  />
+                )}
+            </div>
         </div>
 
         {/* Replies */}

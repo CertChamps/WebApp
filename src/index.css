@@ -221,7 +221,7 @@ math-field::part(virtual-keyboard-toggle) {
 
 @utility color-bg-grey-5 {
   @apply 
-    bg-grey/5
+    bg-grey/15
     dark:bg-light-grey/5
     markoblank:bg-markogrey/5
     discord:bg-discordgrey/5
@@ -239,16 +239,16 @@ math-field::part(virtual-keyboard-toggle) {
 
 @utility color-bg-accent {
   @apply 
-    bg-blue/10
-    dark:bg-blue-light/10
-    markoblank:bg-markored/10
-    discord:bg-discordblue/10
-    ishtar:bg-ishtarred/10
+    bg-blue/20
+    dark:bg-blue-light/15
+    markoblank:bg-markored/15
+    discord:bg-discordblue/15
+    ishtar:bg-ishtarred/15
 }
 
 @utility color-shadow {
   @apply 
-    border-light-grey/20
+    border-light-grey/40
     dark:border-grey/20
     markoblank:border-markobrown/20
     discord:border-discordgrey/20

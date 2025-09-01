@@ -1,7 +1,15 @@
+// Hooks 
 import { useContext } from "react"
 import { useNavigate } from "react-router-dom";
+
+// Firebase Auth
 import { auth } from "../../firebase";
+
+// Contexts
 import { OptionsContext } from "../context/OptionsContext"
+
+// Styles & Icons
+import { LuArrowLeft } from "react-icons/lu";
 import '../styles/settings.css'
 
 export default function Settings() {
@@ -25,7 +33,16 @@ export default function Settings() {
 
 
     return (
-        <div className="w-h-container" data-theme="ishtar" >        
+        <div className="">        
+
+        {/* ====================================== HEADING ========================================= */}
+        <div>
+            <LuArrowLeft />
+            <h1>Settings</h1>
+        </div>
+        {/* ======================================================================================== */}
+        
+
         <div className="w-h-container background-white flex-col">
             <p className="color-black">Pick a theme</p>
             <span className="cursor-target bg-white text-black theme-button" 
@@ -45,9 +62,10 @@ export default function Settings() {
                 Ishtar</span>
              <span className="cursor-target color-bg-accent color-txt-main theme-button" 
                 onClick={() => {logOut()}}>
-                Log Out</span>
-
+                Log Out</span> 
         </div>
+
+        
         </div>
     )
 }

@@ -41,7 +41,7 @@ export default function Replies() {
 
   //====================FETCH POST======================
   useEffect(() => {
-    setDisplayImageUrl(null) // DELTE THIS 
+    setDisplayImageUrl(null) // DELTE THIS  
     const fetchPost = async () => {
       if (!id) return;
 

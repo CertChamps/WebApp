@@ -56,9 +56,12 @@ export default function useNotifications() {
 
     //======================== CALCULATING TIME SINCE NOTI =======================================//
     function timeAgoFormatter(timestamp: Timestamp): string {
-     
+        if (!timestamp) {
+            return 'just now';  // or handle it however you'd like
+        }
+
         const now = new Date(); // current date
-        const date = timestamp.toDate(); // convert timestamps to date 
+        const date = timestamp.toDate(); // convert timestamp to date 
 
         // get the difference in seconds and round down
         const seconds = Math.floor((now.getTime() - date.getTime()) / 1000); 
@@ -69,11 +72,11 @@ export default function useNotifications() {
 
         // displaying minutes 
         const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `${minutes}m` //inute${minutes === 1 ? '' : 's'} ago`;
+        if (minutes < 60) return `${minutes}m`;
 
         // displaying hours 
         const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours}h` //${hours === 1 ? '' : 's'} ago`;
+        if (hours < 24) return `${hours}h`;
 
         // displaying days
         const days = Math.floor(hours / 24);
