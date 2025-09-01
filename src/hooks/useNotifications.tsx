@@ -65,19 +65,19 @@ export default function useNotifications() {
 
         // display second 
         if (seconds < 5) return 'just now';
-        if (seconds < 60) return `${seconds} s`;
+        if (seconds < 60) return `${seconds}s`;
 
         // displaying minutes 
         const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `${minutes} m` //inute${minutes === 1 ? '' : 's'} ago`;
+        if (minutes < 60) return `${minutes}m` //inute${minutes === 1 ? '' : 's'} ago`;
 
         // displaying hours 
         const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours} h` //${hours === 1 ? '' : 's'} ago`;
+        if (hours < 24) return `${hours}h` //${hours === 1 ? '' : 's'} ago`;
 
         // displaying days
         const days = Math.floor(hours / 24);
-        return `${days} day${days === 1 ? '' : 's'} ago`;
+        return `${days}d`;
     }
     // ============================================================================================//
 

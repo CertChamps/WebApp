@@ -14,12 +14,12 @@ import { db }from '../../../firebase'
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref } from 'firebase/storage';
 import FriendsSearch from "../../components/social/friendsSearch";
-import useNotifications from "../../hooks/useNotifications";
 
 // CSS
+import { LuImage } from "react-icons/lu";
 import "../../styles/social.css"
 
-export default function Social() {
+export default function Social() { 
 
     // Contexts
     const { user, setUser } = useContext(UserContext);
@@ -31,8 +31,7 @@ export default function Social() {
     // Friends
     const [userFriends, setUserFriends] = useState<any[]>([])
 
-    // Time ago
-    const { timeAgoFormatter } = useNotifications()
+
 
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //
     const [page, setPage ]= useState<string>('practice')
@@ -86,11 +85,12 @@ export default function Social() {
   
                         let username = "Unknown";
                         let userImage = null;
+                        let rank = 0; 
   
                         if (!userSnap.empty) {
                             const userData = userSnap.docs[0].data();
                             username = userData.username;
-  
+                            rank = userData.rank;
                             try {
                                 const storage = getStorage();
                                 const imageRef = ref(storage, userData.picture);
@@ -119,6 +119,7 @@ export default function Social() {
                             content: post.content,
                             timestamp: post.timestamp,
                             username,
+                            rank,
                             userImage,
                             imageURL: post.imageUrl,
                             replyCount, // Add reply count to the returned object
@@ -233,7 +234,7 @@ export default function Social() {
         const unsubscribe = onSnapshot( doc(db, 'user-data', user.uid), (usr) => {
 
             // get the user data 
-            const data = usr.data();
+            const data = usr.data({serverTimestamps: "estimate"});
 
             if (data) {
                 // update user context to view changes in the app immediately 
@@ -266,43 +267,53 @@ export default function Social() {
         <div className="flex w-full h-full">
             <div className="w-2/3 h-full overflow-y-scroll">
                 <div className="compose-post-container">
-                    <textarea
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        //   onKeyDown={handleKeyDown}
-                        placeholder={randomPlaceholder}
-                        rows={3}
-                        className={`compose-post-text-box`}
-                    />
+                    <div className="compose-post-text-wrapper"> 
+                        <img 
+                            src={user.picture}
+                            className="compose-post-img"
+                            />
+                        <textarea
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            //   onKeyDown={handleKeyDown}
+                            placeholder={randomPlaceholder}
+                            //rows={3}
+                            className={`compose-post-text-box`}
+                        />
+                    </div>
             
-                    <div className="flex justify-end gap-2 mt-2">
-                        <button
-                            type="button"
-                            onClick={cancelReply}
-                            className="compose-post-clear-button"
-                        >
-                            Clear
-                        </button>
-                        <button
-                            type="button"
-                            onClick={sendPost}
-                            disabled={!message.trim()}
-                            className="cursor-target compose-post-send-button"
-                        >
-                            Post
-                        </button>
+                    <div className="flex justify-between items-center gap-2 mt-2">
+                        <LuImage size={32} strokeWidth={1.5} className="color-txt-sub mx-2 hover:opacity-80 cursor-pointer" />
+                        <div>
+                            <button
+                                type="button"
+                                onClick={cancelReply}
+                                className="compose-post-clear-button"
+                            >
+                                Clear
+                            </button>
+                            <button
+                                type="button"
+                                onClick={sendPost}
+                                disabled={!message.trim()}
+                                className="cursor-target compose-post-send-button"
+                            >
+                                Post
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="my-2">
+                    <div className="my-4">
                         {/* This centers the posts within the available viewport */}
                         <div className="mx-auto w-full space-y-4">
                             {posts.map((post) => (
                                 <PostCard
                                     key={post.id}
+                                    rank={post.rank}
                                     content={post.content}
                                     userImage={post.userImage}
                                     username={post.username}
-                                    time={timeAgoFormatter(post.timestamp)}
+                                    time={post.timestamp}
                                     replyCount={post.replyCount}
                                     imageURL={post.imageURL}
                                     onPressReplies={() => {
@@ -320,14 +331,9 @@ export default function Social() {
                     </div>
                 </div>
             </div>
-            <div className="flex-1/7 h-full">
-                {/* Sidebar with notification */}
-                {/* <div className="w-1/4 overflow-y-scroll h-full">
-                    <Notifications />
-                </div> */}
-
+            <div className="flex-1 h-full" >
                 {/* Sidebar with friends search */}
-                <div className="w-auto overflow-y-scroll p-3">
+                <div className="w-auto p-3">
                     <FriendsSearch />
                 </div>
 

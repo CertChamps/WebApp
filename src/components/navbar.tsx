@@ -10,7 +10,7 @@ import { LuPencil, LuSettings, LuUsers, LuGamepad2 } from "react-icons/lu";
 export default function Navbar () {
 
     // Icon Properties
-    const iconSize = 36
+    const iconSize = 32
     const strokewidth = 2
 
     // Context and State and Hooks
@@ -38,11 +38,11 @@ export default function Navbar () {
                     navigate(`/viewProfile/${user.uid}`)
                 }}/>
 
-                <div className='user-info'>
-                    <p className='nav-txt username' >{user.username}</p>
-                    <p className='nav-txt txt-sub text-nowrap' >Rank: Elite</p> 
+                <div className='user-info '>
+                    <p className='nav-txt !txt-heading-colour !color-txt-accent' >{user.username}</p>
+                    <p className='nav-txt !txt-sub !color-txt-sub text-nowrap' >Rank: {user.rank}</p> 
                 </div>
-                <LuSettings className='nav-txt settings' size={24} onClick={() => {pageNaviagte('user/settings')}}/>
+                <LuSettings className='nav-txt' id="settings" size={24} onClick={() => {pageNaviagte('user/settings')}}/>
             </div>
 
             {/* ============================= PRACTICE ICON ================================ */}
@@ -54,11 +54,11 @@ export default function Navbar () {
             </div>
             
             {/* ============================= SOCIAL ICON ================================ */}
-            <div className={page == 'social' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('social/social')}}> 
+            <div className={page == 'social/social' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('social/social')}}> 
                 <LuUsers strokeWidth={strokewidth} size={iconSize} 
-                    className={page == 'social' ? 'nav-icon-selected' : 'nav-icon'}
-                    fill={page == 'social' ? 'currentColor' : 'none'} />  
-                <p className={page == 'social' ? 'nav-txt-selected' : 'nav-txt'} >Social</p>
+                    className={page == 'social/social' ? 'nav-icon-selected' : 'nav-icon'}
+                    fill={page == 'social/social' ? 'currentColor' : 'none'} />  
+                <p className={page == 'social/social' ? 'nav-txt-selected' : 'nav-txt'} >Social</p>
             </div>
 
             {/* ============================= GAMES ICON ================================ */}

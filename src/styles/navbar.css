@@ -2,7 +2,7 @@
 
 /* ====================================== NAVBAR STYLES ================================= */
 .container {
-    @apply h-container justify-start items-start flex-col p-4 transition-all duration-250 bg-light-grey/5
+    @apply h-container justify-start items-start flex-col p-2 transition-all duration-250 bg-light-grey/5
     w-auto;
 }
 /* ===================================================================================== */ 
@@ -10,11 +10,11 @@
 
 /* ====================================== USER STYLES  ================================= */ 
 .user-container {
-    @apply flex items-center justify-evenly rounded-out h-16 group-hover:bg-opaque p-2 mb-2;
+    @apply flex items-center justify-evenly rounded-out h-16 group-hover:color-bg-accent p-2 mb-1;
 }
 
 .user-img {
-    @apply rounded-full border-light-grey border-2 w-7 group-hover:w-9 transition-all duration-250;
+    @apply rounded-full w-7 group-hover:w-9 transition-all duration-250;
 }
 
 .user-info {
@@ -25,9 +25,9 @@
     @apply txt-heading-colour color-txt-accent;
 }
 
-.settings {
-    @apply group-hover:w-8 color-txt-sub
-    hover:scale-110 transition-all duration-200;
+#settings {
+    @apply group-hover:w-16 cursor-pointer color-txt-sub
+    hover:scale-95 transition-all duration-200;
 }
 /* ===================================================================================== */ 
 
@@ -47,22 +47,22 @@
 }
 
 .nav-icon {
-  @apply p-1 m-2  rounded-in color-txt-main transition-all duration-250;
+  @apply p-1 mx-2 my-1 rounded-in color-txt-main transition-all duration-250;
 }
 
 .nav-icon-selected {
-  @apply p-1 m-2  rounded-in color-txt-main transition-all duration-250;
+  @apply p-1 mx-2 my-1 rounded-in color-txt-accent transition-all duration-250;
 }
 
 .nav-txt {
   @apply txt opacity-0 translate-x-[-24px] visible w-0
-  group-hover:opacity-100 group-hover:translate-x-0  group-hover:visible group-hover:w-24
+  group-hover:opacity-100 group-hover:translate-x-0  group-hover:visible group-hover:w-20
   transition-all duration-250;
 }
 
 .nav-txt-selected {
-  @apply txt-bold color-txt-main opacity-0 translate-x-[-24px] invisible w-0
-  group-hover:opacity-100 group-hover:translate-x-0 group-hover:visible group-hover:w-24
+  @apply txt-bold color-txt-accent opacity-0 translate-x-[-24px] invisible w-0
+  group-hover:opacity-100 group-hover:translate-x-0 group-hover:visible group-hover:w-20
   transition-all duration-250;
   
 }

@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import { storage } from "../../../firebase";
 import { getDownloadURL, ref } from "firebase/storage";
+import useNotifications from "../../hooks/useNotifications";
+
+// Styles and Icons 
+import { LuMessageCircleMore } from "react-icons/lu"
 
 interface PostCardProps {
     content: string;
+    rank?: number;
     userImage?: string;
     username?: string;
     time?: any; // Firestore Timestamp
@@ -17,6 +22,7 @@ interface PostCardProps {
   const PostCard: React.FC<PostCardProps> = ({
     userImage,
     username,
+    rank,
     time,
     content,
     replyCount,
@@ -25,7 +31,7 @@ interface PostCardProps {
   }) => {
 
     const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
-
+    const {timeAgoFormatter} = useNotifications()
 
 
     // Format the time stamp. I thinky you would need to do a bit of
@@ -34,9 +40,10 @@ interface PostCardProps {
     //     hour: '2-digit',
     //     minute: '2-digit'
     // }) ?? 'Just now';
+    // fixed this 
 
-    const formattedDate = time?.toDate?.()?.toLocaleDateString() ?? 'Unknown date';
-
+    //const formattedDate = time?.toDate?.()?.toLocaleDateString() ?? 'Unknown date';
+    const formattedDate = timeAgoFormatter(time)
 
     //======================== Fetch Image URL from Firebase Storage =========================
     useEffect(() => {
@@ -68,7 +75,11 @@ interface PostCardProps {
                     alt={username} 
                     className="post-card-user-img" 
                 />
-                <span className="post-card-user-name">{username}</span>
+                <div>
+                    <p className="post-card-user-name">{username}</p>
+                    <p className="post-card-user-rank">Level: {rank}</p> 
+                </div>
+                <span className="post-card-date">{formattedDate}</span>
             </div>
             
             <div className="post-card-content">
@@ -82,15 +93,16 @@ interface PostCardProps {
                 )}
             </div>
             
-            <div className="post-card-footer">
-                <span>{formattedDate}</span>
-                <span 
-                    onClick={onPressReplies}
-                    className="post-card-footer-replies"
+            <div className="post-card-footer" onClick={onPressReplies}>
+                <LuMessageCircleMore size={24} strokeWidth={1}/>
+                <span   
+                    className="post-card-footer-replies mx-0.5"
                 >
-                    {replyCount} Replies
+                    {replyCount} 
                 </span>
             </div>
+
+
         </div>
     );
 }

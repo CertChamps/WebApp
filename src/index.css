@@ -7,11 +7,11 @@
 }
 
 /* Hide ALL system cursors everywhere */
-*,
+/* *,
 *::before,
 *::after {
   cursor: none !important;
-}
+} */
 
 /* ================== TAILWIND SETUP ============= */
 @import "tailwindcss";
@@ -60,7 +60,7 @@
   --spacing: 5px;
 
   /* Border Radius */
-  --radius-out: 15px; 
+  --radius-out: 10px; 
   --radius-in: 5px; 
 
 }
@@ -114,9 +114,9 @@
 
 /* ================== Button Styles ================== */
 @utility txtbox {
-  @apply border-3 rounded-in 
-  px-2 py-1 focus:color-shadow-accent
-  outline-none color-txt-sub focus:txt w-6/12 block shadow-small
+  @apply border-2 rounded-in color-shadow
+  px-2 py-1 focus-within:color-shadow-accent
+  outline-none color-txt-sub focus:txt w-6/12 block
 }
 
 @utility blue-btn {
@@ -150,7 +150,7 @@ math-field::part(virtual-keyboard-toggle) {
 
 /* ================== Shadows ================== */ 
 @utility shadow-small {
-  @apply shadow-[1px_1px_0px_0.5px] color-shadow border-2 rounded-in
+  @apply shadow-[1.5px_1.5px_0px_0px] color-shadow border-2 rounded-in
 }
 
 @utility shadow-big {
@@ -209,31 +209,41 @@ math-field::part(virtual-keyboard-toggle) {
     ishtar:bg-ishtarblack
 }
 
-@utility color-bg-grey-50 {
+@utility color-txt-invert {
   @apply 
-    bg-grey/50
-    dark:bg-light-grey/50
-    markoblank:bg-markogrey/50
-    discord:bg-discordgrey/50
-    ishtar:bg-ishtargrey/50
+    text-white
+    dark:text-black
+    markoblank:text-markoteal
+    discord:text-discordblack
+    ishtar:text-ishtarblack
+}
+
+
+@utility color-bg-grey-5 {
+  @apply 
+    bg-grey/5
+    dark:bg-light-grey/5
+    markoblank:bg-markogrey/5
+    discord:bg-discordgrey/5
+    ishtar:bg-ishtargrey/5
 }
 
 @utility color-bg-grey-10 {
   @apply 
-    bg-grey/10
-    dark:bg-light-grey/10
-    markoblank:bg-markogrey/10
-    discord:bg-discordgrey/10
-    ishtar:bg-ishtargrey/10
+    bg-grey/20
+    dark:bg-light-grey/20
+    markoblank:bg-markogrey/20
+    discord:bg-discordgrey/20
+    ishtar:bg-ishtargrey/20
 }
 
 @utility color-bg-accent {
   @apply 
-    bg-blue/20
-    dark:bg-blue-light/20
-    markoblank:bg-markored/20
-    discord:bg-discordblue/20
-    ishtar:bg-ishtarred/20
+    bg-blue/10
+    dark:bg-blue-light/10
+    markoblank:bg-markored/10
+    discord:bg-discordblue/10
+    ishtar:bg-ishtarred/10
 }
 
 @utility color-shadow {

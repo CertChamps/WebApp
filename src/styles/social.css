@@ -5,31 +5,41 @@
     @apply w-full  p-3
 }
 
+.compose-post-text-wrapper {
+    @apply w-full min-h-30 p-4 rounded-out
+           color-bg-grey-5 flex
+           placeholder:color-txt-sub color-txt-main
+           focus:outline-none font-bold
+}
+
+.compose-post-img {
+    @apply  w-8 h-8 rounded-full object-cover
+}
+
 .compose-post-text-box {
-    @apply w-full min-h-30 p-3 rounded-out
-           color-bg-grey-10
-           placeholder:color-txt-sub
+    @apply flex-1 p-2 py-1.5 placeholder:color-txt-sub color-txt-main
            focus:outline-none resize-none placeholder:font-bold
 }
 
 .compose-post-clear-button {
     @apply px-3 py-1 txt-sub 
-           color-txt-sub hover:color-txt-accent duration-500
+           color-txt-sub hover:color-txt-accent duration-200
 }
 
 .compose-post-send-button {
     @apply px-12 py-2 rounded-out font-bold 
            color-bg-accent color-txt-accent 
+           cursor-pointer hover:scale-95 duration-200
 }
 /* ================================================================================ */ 
 
 /* ===================================== POSTCARD ================================= */ 
 .post-card-main {
-    @apply color-bg rounded-out shadow-small p-4
+    @apply color-bg rounded-out shadow-small p-3.5 py-3
 }
 
 .post-card-user {
-    @apply flex items-center mb-3
+    @apply flex items-center mb-1
 }
 
 .post-card-user-img {
@@ -37,52 +47,73 @@
 }
 
 .post-card-user-name {
-    @apply txt-bold color-txt-accent
+    @apply txt-bold color-txt-accent leading-tight
+}
+
+.post-card-user-rank {
+    @apply txt-sub color-txt-sub leading-tight
+}
+
+
+.post-card-date {
+    @apply ml-auto txt-sub self-start p-1
 }
 
 .post-card-content {
-    @apply mb-3
+    @apply mx-10 my-1
 }
 
 .post-card-content-txt {
-    @apply color-txt-main mb-2
+    @apply color-txt-main 
 }
 
 .post-card-content-img {
-    @apply w-full max-w-lg rounded-out
+    @apply w-full max-w-lg rounded-out my-2
 }
 
 .post-card-footer {
-    @apply flex justify-between items-center color-txt-sub font-light
+    @apply  color-txt-sub font-normal px-10 flex items-center hover:color-txt-accent duration-250 transition-all
+    cursor-pointer
 }
 
-.post-card-footer-replies {
-    @apply hover:color-txt-accent duration-500
-}
 /* ================================================================================ */ 
 
 /* ===================================== FRIENDS ================================== */ 
 .friends-list {
-    @apply flex justify-start items-start flex-col p-4
+    @apply flex justify-start items-start flex-col px-4 
 }
 
 .friend-container {
     @apply flex items-center justify-start
-           p-1.5 mb-1
-           color-bg hover:color-bg-grey-10 placeholder:color-txt-sub
-           rounded-3xl
-           transition-all duration-200 ease-linear
+           p-2 mb-2 color-bg w-full cursor-pointer
+           rounded-out hover:color-bg-grey-5
+           transition-all duration-200 
 }
 
 .friend-image {
-    @apply w-10 h-10 rounded-full mr-2
+    @apply w-10 h-10 rounded-full 
 }
 
 .friend-username {
-    @apply txt-bold color-txt-accent;
+    @apply txt-bold color-txt-accent mx-2;
 }
 
 .friends-text {
-    @apply txt-bold color-txt-accent mb-1
+    @apply txt-heading color-txt-sub
+}
+/* ================================================================================ */ 
+
+/* ===================================== SEARCH =================================== */ 
+.search-box-hidden {
+  @apply transform origin-top scale-y-0 h-[75vh] opacity-0 pointer-events-none
+         w-full rounded-out my-2 shadow-small color-shadow color-bg absolute z-10
+         duration-250 transition-all overflow-hidden;
+}
+
+.search-box-shown {
+  @apply transform origin-top scale-y-100 h-[75vh] opacity-100 pointer-events-auto
+         w-full rounded-out my-2 shadow-small color-shadow color-bg
+         absolute z-10 duration-250 transition-all
+         overflow-y-scroll;
 }
 /* ================================================================================ */ 

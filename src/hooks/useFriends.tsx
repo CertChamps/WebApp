@@ -12,32 +12,34 @@ export default function useFriends() {
     const getSearch = async (search: string) => {
         try {
             //const searchLower = search.toLowerCase() // lowercase search for non case sensitivity 
-
+            console.log(user.pendingFriends)
+            
             // Search for users on firebase and get docs 
-            const snapshot = query( collection(db, 'user-data'),  where('username', '>=', search),
-            where('username', '<=', search + '\uf8ff'), limit(20), orderBy('rank', 'desc') )
+            const excludeUids = [
+                user.uid,
+                ...user.friends.map((friend: any) => friend.uid),
+                ...user.pendingFriends
+            ].filter(Boolean);
+
+            // Firestore 'not-in' supports up to 10 elements, so slice if necessary
+            const notInUids = excludeUids.slice(0, 10);
+
+            const snapshot = query(
+                collection(db, 'user-data'),
+                where('username', '>=', search),
+                where('username', '<=', search + '\uf8ff'),
+                where('uid', 'not-in', notInUids.length ? notInUids : ['']),
+                limit(20),
+                orderBy('rank', 'desc')
+            )
             const users = await getDocs(snapshot)
 
              const userPromises = users.docs.map(async (userDoc) => {
                 const userData = userDoc.data(); // get user data 
 
-                // do not include yourself
-                if ( userData.uid == user.uid ) 
-                    return null 
-                // do not include your existing friends
-                else if ( user.friends.some( (friend: any) => friend.uid == userData.uid) )
-                    return null 
-                //do not include pending friends 
-                else if ( user.pendingFriends.some( (pendingFriend: string) => pendingFriend == userData.uid) )
-                    return null 
-                //include everyone else 
-                else {
-                     // get url of image and return user object 
-                    const imageUrl = await fetchImage(userData.picture);
-                    return { ...userData, picture: imageUrl, uid: userDoc.id, sent: false };
-                }
-
-               
+                const imageUrl = await fetchImage(userData.picture);
+                return { ...userData, picture: imageUrl, uid: userDoc.id, sent: false };
+                
             });
 
             const usersWithPics = await Promise.all(userPromises);

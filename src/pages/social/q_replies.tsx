@@ -3,22 +3,11 @@ import { useContext, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 // Components
-import FriendsBar from "../../components/social/FriendsList";
+import '../../styles/social.css'
 
 // Firebase
 import { db, storage } from "../../../firebase";
-import {
-  collection,
-  getDocs,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-  doc,
-  getDoc,
-  serverTimestamp,
-  addDoc,
-} from "firebase/firestore";
+import { collection,getDocs, onSnapshot, orderBy, query, where, doc, getDoc, serverTimestamp, addDoc,} from "firebase/firestore";
 import { getDownloadURL, ref } from "firebase/storage";
 
 // Contexts
@@ -221,12 +210,8 @@ useEffect(() => {
 //=======================================================================
 
   return (
-    <div className="flex w-full">
-      <div className="w-64 overflow-y-auto">
-        <FriendsBar />
-      </div>
-
-      <div className="flex-1 p-4">
+    <div className="flex justify-center w-full">
+      <div className="w-2/3">
         {/* Flashcard Question (just show ID + author info) */}
         <div className="bg-white p-4 mb-4rounded">
           <div className="flex items-center mb-3">
@@ -266,8 +251,8 @@ useEffect(() => {
         ) : (
           <p>No replies yet.</p>
         )}
-      </div>
-      <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
+
+              <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
         <textarea
           value={newReply}
           onChange={(e) => setNewReply(e.target.value)}
@@ -294,6 +279,8 @@ useEffect(() => {
             Send
           </button>
         </div>
+      </div>
+
       </div>
     </div>
   );

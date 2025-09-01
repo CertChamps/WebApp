@@ -192,10 +192,6 @@ useEffect(() => {
 
   return (
     <div className="flex w-full">
-      <div className="w-64 overflow-y-auto">
-        <FriendsBar />
-      </div>
-
       <div className="flex-1 p-4">
         {/* Original Post */}
         {post && (
@@ -246,8 +242,8 @@ useEffect(() => {
         ) : (
           <p>No replies yet.</p>
         )}
-      </div>
-      <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
+
+        <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
         <textarea
           value={newReply}
           onChange={(e) => setNewReply(e.target.value)}
@@ -274,6 +270,8 @@ useEffect(() => {
             Send
           </button>
         </div>
+      </div>
+      
       </div>
     </div>
   );
