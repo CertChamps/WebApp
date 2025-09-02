@@ -55,8 +55,8 @@ export default function useNotifications() {
     // ============================================================================================//
 
     //======================== CALCULATING TIME SINCE NOTI =======================================//
-    function timeAgoFormatter(timestamp: Timestamp): string {
-        if (!timestamp) {
+    function timeAgoFormatter(timestamp: any) {
+        if (!timestamp || !(timestamp instanceof Timestamp)) {
             return 'just now';  // or handle it however you'd like
         }
 

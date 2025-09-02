@@ -97,7 +97,7 @@ const router = createBrowserRouter([
     element: (
       <>
         <Navbar />
-        <PostViewer />
+        <Replies />
       </>
     ),
   },

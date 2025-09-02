@@ -2,11 +2,13 @@ import { query, collection, orderBy, onSnapshot, doc, getDoc, getDocs} from "fir
 import { useEffect, useState } from "react";
 import { db } from "../../firebase";
 import useFetch from "./useFetch";
+import useQuestions from "./useQuestions";
 
 export default function usePosts(id: string) {
 
     // Hooks 
     const { fetchUser } = useFetch()
+    const { fetchQuestion } = useQuestions()
     const [replies, setReplies] = useState<any[]>([]);
     const [post, setPost] = useState<any>()
 
@@ -27,6 +29,11 @@ export default function usePosts(id: string) {
             // Get reply count
             const repliesSnapshot = await getDocs( postData?.isFlashcard ? collection(db, "certchamps-questions", postData?.flashcardId, "replies") : collection(db, "posts", id, "replies"));
             const replyCount = repliesSnapshot.size
+
+            // Get the flashcard content 
+            if ( postData?.isFlashcard ) {
+
+            }
 
             // Fetch author profile
             const userData = await fetchUser(postData?.userId)
@@ -67,8 +74,8 @@ export default function usePosts(id: string) {
 
         // Query for all replies
         const q = post.flashcardId ? 
-        query(collection(db, "certchamps-questions", post.flashcardId, "replies"),orderBy("timestamp", "asc")) : // flashcard 
-        query(collection(db, "posts", id, "replies"),orderBy("timestamp", "asc"))   // non-flashcard
+        query(collection(db, "certchamps-questions", post.flashcardId, "replies"),orderBy("timestamp", "desc")) : // flashcard 
+        query(collection(db, "posts", id, "replies"),orderBy("timestamp", "desc"))   // non-flashcard
 
         // ============= Add an event listener for new replies =============== //
         const unsubscribe = onSnapshot(q, async (snapshot) => {
@@ -85,9 +92,13 @@ export default function usePosts(id: string) {
                         // Get user data 
                         const userData = await fetchUser(reply.userId)
 
+                        // Get nested replies
+                        const nestedReplies = await fetchNestedReplies(docSnap.id)
+
                         return {
                             ...reply,
                             ...userData,
+                            nestedReplies: nestedReplies, 
                             id: docSnap.id,
                         };
                     }
@@ -108,6 +119,45 @@ export default function usePosts(id: string) {
 
     }, [post]);
     //=========================================================================================================//
+
+    //============================================ GET NESTED REPLIES  ========================================//
+    const fetchNestedReplies = async (replyId: string ) => {
+
+        // Query for all replies
+        const snapshot = post.flashcardId ? 
+        await getDocs(query(collection(db, "certchamps-questions", post.flashcardId, "replies", replyId, "replies"), orderBy("timestamp", "desc"))) : // flashcard 
+        await getDocs(query(collection(db, "posts", id, "replies", replyId, "replies"), orderBy("timestamp", "desc")))   // non-flashcard
+
+        const replyData = await Promise.all(
+
+            snapshot.docs.map(async (docSnap) => {
+
+                try {
+                    // Get reply data 
+                    const reply = docSnap.data();
+
+                    // Get user data 
+                    const userData = await fetchUser(reply.userId)
+
+                    return {
+                        ...reply,
+                        ...userData,
+                        id: docSnap.id,
+                    };
+                }
+                catch (err) {
+                    console.log(err)
+                    return null; 
+                }
+
+            })
+
+        );
+
+     return replyData 
+    }
+    //=========================================================================================================//
+
 
     return {post, replies}
 }
