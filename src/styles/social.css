@@ -38,6 +38,10 @@
     @apply color-bg rounded-out shadow-small p-3.5 py-3
 }
 
+.reply-card-main {
+    @apply color-bg p-3
+}
+
 .post-card-user {
     @apply flex items-center mb-1
 }
@@ -61,6 +65,10 @@
 
 .post-card-content {
     @apply mx-10 my-1
+}
+
+.reply-card-content {
+    @apply px-6 border-l-2 color-shadow ml-4
 }
 
 .post-card-content-txt {

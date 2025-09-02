@@ -1,10 +1,15 @@
 // Hooks 
+import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom"
 import usePosts from "../../hooks/usePosts";
-import { useContext, useEffect, useState } from "react";
 import useNotifications from "../../hooks/useNotifications";
-import { LuImage, LuMessageCircleMore } from "react-icons/lu";
+
+// Context
 import { UserContext } from "../../context/UserContext";
+
+// Icons 
+import { LuImage, LuMessageCircleMore, LuReply } from "react-icons/lu";
+
 
 
 export default function PostViewer() {
@@ -24,10 +29,10 @@ export default function PostViewer() {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-    useEffect(() => { console.log(post) }, [post])
+    useEffect(() => { console.log(replies) }, [replies])
 
     return (
-        <div className="w-h-container p-8">
+        <div className="w-h-container p-4 pb-0">
             <div className="w-2/3 h-full overflow-y-scroll">
 
                 {/* ============================================== OG POST ============================================== */}
@@ -63,8 +68,8 @@ export default function PostViewer() {
                 {/* ===================================================================================================== */}
 
                 {/* ============================================ PLACEHOLDER============================================= */}
-                <div className="compose-post-container">
-                    <div className="compose-post-text-wrapper"> 
+                <div className="compose-post-container py-4! px-0! ">
+                    <div className="compose-post-text-wrapper min-h-15! h-16! "> 
                         <img 
                             src={user.picture}
                             className="compose-post-img"
@@ -119,24 +124,79 @@ export default function PostViewer() {
                         <div>
                             <button
                                 type="button"
-                                onClick={() => {}}
+                                onClick={() => {/* clear function */}}
                                 className="compose-post-clear-button"
                             >
                                 Clear
                             </button>
                             <button
                                 type="button"
-                                onClick={() => {}}
+                                onClick={() => { /* send a reply */}}
                                 disabled={!message.trim()}
                                 className="cursor-target compose-post-send-button"
                             >
-                                Post
+                                Reply
                             </button>
                         </div>
                     </div>
                 </div>
                 {/* ===================================================================================================== */}
 
+                {/* ============================================== REPLIES  ============================================== */}
+                { replies.map( ( reply: any) => (
+                <div>
+
+                    {/* ============================================ REPLIES ============================================= */}
+                    <div className="reply-card-main pb-0!">
+
+                        <div className="post-card-user">
+                            <img 
+                                src={reply?.picture} 
+                                alt={reply?.username} 
+                                className="post-card-user-img" 
+                            />
+                            <div>
+                                <p className="post-card-user-name">{reply?.username}</p>
+                                <p className="post-card-user-rank">Level: {reply?.rank}</p> 
+                            </div>
+                            <span className="post-card-date">{timeAgoFormatter(reply?.timestamp)}</span>
+                        </div>
+                        
+                        <div className="reply-card-content pb-3 ">
+                            <p className="post-card-content-txt">{reply?.content}</p>
+                            <div>
+                                <LuReply/>
+                            </div>
+                        </div>
+                    </div> 
+                    {/* ================================================================================================ */}
+                     
+                    {/* ======================================= NESTED REPLIES ========================================= */}
+                    {reply?.nestedReplies?.map((nestedReply: any) => (
+                        // Render nested reply here, e.g.:
+                        <div className="reply-card-main ml-7 border-l-2 color-shadow">
+                            <div className="post-card-user">
+                                <img 
+                                    src={nestedReply?.picture} 
+                                    alt={nestedReply?.username} 
+                                    className="post-card-user-img" 
+                                />
+                                <div>
+                                    <p className="post-card-user-name">{nestedReply?.username}</p>
+                                    <p className="post-card-user-rank">Level: {nestedReply?.rank}</p> 
+                                </div>
+                                <span className="post-card-date">{timeAgoFormatter(nestedReply?.timestamp)}</span>
+                            </div>
+                            <div className="post-card-content">
+                                <p className="post-card-content-txt">{nestedReply?.content}</p>
+                            </div>
+                        </div>
+                    ))}
+                    {/* ================================================================================================ */}
+
+                </div>
+                ))}
+                {/* ===================================================================================================== */}
 
 
             </div>
