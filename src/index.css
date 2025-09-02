@@ -150,7 +150,7 @@ math-field::part(virtual-keyboard-toggle) {
 
 /* ================== Shadows ================== */ 
 @utility shadow-small {
-  @apply shadow-[1.5px_1.5px_0px_0px] color-shadow border-2 rounded-in
+  @apply shadow-[2px_2px_0px_0px] color-shadow border-2 rounded-in
 }
 
 @utility shadow-big {
@@ -254,7 +254,7 @@ math-field::part(virtual-keyboard-toggle) {
     discord:border-discordgrey/20
     ishtar:border-ishtargrey/20
 
-    shadow-light-grey/20
+    shadow-light-grey/40
     dark:shadow-grey/20
     markoblank:shadow-markobrown/20
     discord:shadow-discordgrey/20
