@@ -1,6 +1,8 @@
 // Hooks
 import { useParams } from "react-router-dom";
 import { useReplies } from "../../hooks/useReplies";
+import useQuestions from "../../hooks/useQuestions";
+
 
 // Components
 import RenderMath from "../../components/math/mathdisplay";
@@ -9,9 +11,11 @@ import RenderMath from "../../components/math/mathdisplay";
 import { LuImage } from "react-icons/lu";
 import useNotifications from "../../hooks/useNotifications";
 
-export default function Replies() {
+export default function Replies(
+) {
   const { id } = useParams<{ id: string }>();
   const { timeAgoFormatter } = useNotifications()
+  const { toRoman } = useQuestions()
 
   const {
     post,
@@ -29,7 +33,7 @@ export default function Replies() {
   } = useReplies(id ?? "");
 
   return (
-    <div className="w-h-container p-4 pb-0">
+    <div className="w-h-container p-4 pb-0 items-start">
       <div className="w-full h-full overflow-y-scroll">
 
 
@@ -165,21 +169,26 @@ export default function Replies() {
             </div>
           ))
         ) : (
-          <p className="ml-2">No replies yet.</p>
+          <p className="ml-2 txt-sub">It's quiet here...</p>
         )}
         {/* ===================================================================================================== */}
       </div>
 
       {/* ============================================== FLASCHARD ============================================== */}
         {post?.isFlashcard && (
-            <div className="">
+            <div className="mx-4">
+              <div className="mx-auto w-[90%] color-bg-accent txt-heading-colour text-center py-1.5 rounded-out mb-6
+                hover:scale-95 duration-200 cursor-pointer"
+                 onClick={() => {/* Go to the question at this time */}}>
+                <p>Go To Question</p>
+              </div>
               {Array.isArray(question) &&
                 question.length > 0 &&
                 question.map((part, idx) => (
-                  <div key={part.id} className="mb-4">
-                    <p className="font-semibold">Part {idx + 1}</p>
+                  <div key={part.id} className="mb-2 mx-4">
+                    { question.length > 1 ? <p className="font-semibold txt inline">{toRoman(idx + 1)})  </p> : <></> }
                     {/* <p className="mb-2">{part.question}</p> */}
-                    <RenderMath text={part.question} />
+                    <RenderMath text={part.question} className="txt inline" />
                     {part.image && (
                       <img
                         src={part.image}
@@ -187,6 +196,7 @@ export default function Replies() {
                         className="w-full max-w-lg rounded-lg object-cover"
                       />
                     )}
+                    <div className=" h-0 border-1 color-shadow my-6"></div>
                   </div>
                 ))}
             </div>

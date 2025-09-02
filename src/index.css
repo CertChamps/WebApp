@@ -16,9 +16,6 @@
 /* ================== TAILWIND SETUP ============= */
 @import "tailwindcss";
 
-/* Dark Theme Setup  */
-@custom-variant dark (&:where(.dark, .dark *));
-
 /* Theming & Colour Pallet */ 
 @theme {
 
@@ -321,7 +318,7 @@ math-field::part(virtual-keyboard-toggle) {
     ishtar:border-ishtarred
     tangerine:border-tangerineAccent
     icebergLight:border-icebergLightAccent
-    icebergDark:border-icebergLightAccent
+    icebergDark:border-icebergDarkAccent
 
     shadow-blue
     dark:shadow-blue-light
@@ -342,7 +339,7 @@ math-field::part(virtual-keyboard-toggle) {
     ishtar:bg-ishtarred
     tangerine:bg-tangerineAccent
     icebergLight:bg-icebergLightAccent
-    icebergDark:bg-icebergDarkAccentDark
+    icebergDark:bg-icebergDarkAccent
 }
 
 
