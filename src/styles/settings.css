@@ -1,5 +1,55 @@
 @reference '../index.css';
 
+/* ================================= USER ================================ */
+.heading-text {
+    @apply txt-heading-colour mb-4
+}
+/* ======================================================================= */
+
+/* ================================= PROFILE ================================ */
+.profile-heading {
+    @apply color-txt-accent
+}
+
+.user-info-container {
+    @apply w-full flex p-4
+}
+
+.avatar {
+    @apply w-auto mr-8 
+}
+
+.avatar-img {
+    @apply w-32 h-32 rounded-full object-cover mx-auto
+}
+
+.avatar-edit {
+    @apply mx-auto text-center font-bold my-2 cursor-pointer
+           color-txt-accent 
+}
+
+.input-header {
+    @apply txt-sub mb-1
+}
+
+.update-btn {
+    @apply  color-txt-accent font-bold cursor-pointer mx-2
+}
+
+/* ======================================================================= */
+
+/* ================================= THEMES ================================ */
+
+.theme-container {
+    @apply w-64 h-10 py-2 text-center m-2 rounded-out cursor-pointer shadow-small
+}
+
+/* ======================================================================= */
+
+.line-break {
+    @apply border-1 rounded-full color-shadow flex-1 mx-4
+}
+
 
 .theme-button {
     @apply w-20 py-2 text-center m-2 shadow-xl rounded-in block
