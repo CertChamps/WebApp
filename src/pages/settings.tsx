@@ -122,6 +122,8 @@ export default function Settings() {
     };
     //================================================================
 
+
+    //========================== Change Username ============================
     const changeUsername = async (newUsername: string) => {
         const username = newUsername.trim();
 
@@ -129,6 +131,7 @@ export default function Settings() {
         await setDoc(doc(db, 'user-data', user.uid), {username: username}, {merge: true})
         setNewUsername("");
     }
+    //=======================================================================
 
 
     return (
