@@ -12,7 +12,7 @@ import { UserContext } from '../../context/UserContext';
 // Firebase
 import { db }from '../../../firebase'
 import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
-import { getDownloadURL, getStorage, ref } from 'firebase/storage';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import FriendsSearch from "../../components/social/friendsSearch";
 
 // CSS
@@ -31,7 +31,9 @@ export default function Social() {
     // Friends
     const [userFriends, setUserFriends] = useState<any[]>([])
 
-
+    // Image upload
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //
     const [page, setPage ]= useState<string>('practice')
@@ -45,20 +47,30 @@ export default function Social() {
 
     //==========================================SEND POST DUH=====================================================//
     const sendPost = async () => {
-        if (!message.trim()) return; //.trim() removes whitespace so this just checks if the textbox has text in it if not it returns
+        if (!message.trim() && !imageFile) return; //.trim() removes whitespace so this just checks if the textbox has text in it if not it returns
 
         try {
+            let uploadedUrl: string | null = null;
+            if (imageFile) {
+                const storage = getStorage();
+                const path = `user-uploads/${user.uid}/${Date.now()}-${imageFile.name}`;
+                const imageRef = ref(storage, path);
+                await uploadBytes(imageRef, imageFile);
+                uploadedUrl = await getDownloadURL(imageRef);
+            }
             await addDoc(collection(db, 'posts'), {
                 //the follow gets added to the doc
                 userId: user.uid,
                 content: message.trim(),
                 timestamp: serverTimestamp(),
-                imageUrl: null,
+                imageUrl: uploadedUrl,
                 likes: 0,
                 isFlashcard: false
-              });
+            });
 
             setMessage(''); //reset the text box
+            setImageFile(null);
+            setImagePreview(null);
             console.log('Post added!');
             } catch (error) {
             console.error('Error sending post:', error);
@@ -283,7 +295,41 @@ export default function Social() {
                     </div>
             
                     <div className="flex justify-between items-center gap-2 mt-2">
-                        <LuImage size={32} strokeWidth={1.5} className="color-txt-sub mx-2 hover:opacity-80 cursor-pointer" />
+                    <div className="flex items-center gap-3">
+                        <label className="color-txt-sub mx-2 hover:opacity-80 cursor-pointer">
+                        <LuImage size={32} strokeWidth={1.5} />
+                        <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            setImageFile(f);
+                            setImagePreview(URL.createObjectURL(f));
+                            }}
+                        />
+                        </label>
+                        {imagePreview && (
+                        <div className="flex items-center gap-2">
+                            <img
+                            src={imagePreview}
+                            alt="preview"
+                            className="w-16 h-16 rounded object-cover border"
+                            />
+                            <button
+                            type="button"
+                            onClick={() => {
+                                setImageFile(null);
+                                setImagePreview(null);
+                            }}
+                            className="px-2 py-1 rounded bg-red-500 text-white"
+                            >
+                            Remove
+                            </button>
+                        </div>
+                        )}
+                    </div>
                         <div>
                             <button
                                 type="button"
@@ -317,13 +363,8 @@ export default function Social() {
                                     replyCount={post.replyCount}
                                     imageURL={post.imageURL}
                                     onPressReplies={() => {
-                                        if (post.isFlashcard) {
-                                            // For flashcards, pass both flashcardId and replyId if available
-                                            pageNavigate("social/q_replies", { state: { id: post.id, flashcardId: post.flashcardId, replyId: post.replyId } })
-                                        } else {
-                                            // For regular posts
-                                            pageNavigate("social/replies", { state: { id: post.id } })
-                                        }
+                                        // For regular posts
+                                        pageNavigate("social/replies", { state: { id: post.id } })
                                     }}
                                 />
                             ))}

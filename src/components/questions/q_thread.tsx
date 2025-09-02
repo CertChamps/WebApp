@@ -97,23 +97,14 @@ const QThread = (props: questionType) => {
 
     //It is useful to note this will be called in the following sendPost function
     const getImage = async (): Promise<string> => {
-        try {
-            const label = `q${props.part + 1}`;
-            const docRef = doc(db, "certchamps-questions", props.questionId, "content", label);
-            const docSnap = await getDoc(docRef);
-    
-            if (docSnap.exists()) {
-                const image = docSnap.data().image;
-                console.log(image);
-                return image; // Return the image URL
-            } else {
-                console.log("Document doesn't exist!");
-                return ''; // Return an empty string if the document doesn't exist
-            }
-        } catch (error) {
-            console.error('Error fetching document:', error);
-            return ''; // Return an empty string in case of an error
-        }
+      const label = `q${props.part + 1}`;
+      const docRef = doc(db, "certchamps-questions", props.questionId, "content", label);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) return "";
+      const path = docSnap.data().image as string | undefined;
+      if (!path) return "";
+      const url = await getDownloadURL(ref(getStorage(), path));
+      return url; // store URL in posts.imageUrl
     };
     //=========================================================================================
 
