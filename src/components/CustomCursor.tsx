@@ -1,8 +1,47 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-const TRAIL_LENGTH = 5; // number of trailing shapes
-const ANGLE = -35; // pointer angle
+const TRAIL_LENGTH = 5;
+
+// Cursor Alt 2 SVG path + viewBox
+const ICON_VIEWBOX = "0 0 24 24";
+const ICON_PATH_D =
+  "M8.68602 16.288L8.10556 9.37387C7.96399 7.68752 9.85032 6.59846 11.24 7.56424L16.9375 11.524C18.6256 12.6972 17.6579 15.348 15.611 15.1577L14.8273 15.0849C13.9821 15.0063 13.1795 15.4697 12.825 16.2409L12.4962 16.9561C11.6376 18.8238 8.858 18.3365 8.68602 16.288Z";
+
+function CursorSvg({
+  x,
+  y,
+  size = 22,
+  pressed = false,
+}: {
+  x: number;
+  y: number;
+  size?: number;
+  pressed?: boolean;
+}) {
+  return (
+    <svg
+      className="fixed top-0 left-0 pointer-events-none cursor-icon"
+      width={size}
+      height={size}
+      viewBox={ICON_VIEWBOX}
+      style={{
+        transform: `translate(${x}px, ${y}px) translate(-50%, -50%)`,
+        zIndex: 9999,
+      }}
+    >
+      <path
+        d={ICON_PATH_D}
+        fill="currentColor"
+        style={{
+          transformOrigin: "50% 50%",
+          transform: `scale(${pressed ? 0.9 : 1})`,
+          transition: "transform 90ms ease-out",
+        }}
+      />
+    </svg>
+  );
+}
 
 export default function CustomCursor() {
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -14,16 +53,14 @@ export default function CustomCursor() {
     { id: number; x: number; y: number }[]
   >([]);
 
-  // Track mouse position
+  // Track mouse
   useEffect(() => {
-    const move = (e: MouseEvent) => {
-      setPos({ x: e.clientX, y: e.clientY });
-    };
+    const move = (e: MouseEvent) => setPos({ x: e.clientX, y: e.clientY });
     window.addEventListener("mousemove", move);
     return () => window.removeEventListener("mousemove", move);
   }, []);
 
-  // Animate trail
+  // Trail follow
   useEffect(() => {
     let frame: number;
     const animate = () => {
@@ -44,19 +81,19 @@ export default function CustomCursor() {
     return () => cancelAnimationFrame(frame);
   }, [pos]);
 
-  // Click animation (press + ripple)
+  // Click press + ripple
   useEffect(() => {
     const down = (e: MouseEvent) => {
       setIsDown(true);
       setPos({ x: e.clientX, y: e.clientY });
       const id = Date.now() + Math.random();
       setRipples((r) => [...r, { id, x: e.clientX, y: e.clientY }]);
-      setTimeout(() => {
-        setRipples((r) => r.filter((it) => it.id !== id));
-      }, 420);
+      setTimeout(
+        () => setRipples((r) => r.filter((it) => it.id !== id)),
+        420
+      );
     };
     const up = () => setIsDown(false);
-
     window.addEventListener("mousedown", down);
     window.addEventListener("mouseup", up);
     return () => {
@@ -65,103 +102,73 @@ export default function CustomCursor() {
     };
   }, []);
 
-  // Main triangle cursor (SVG; scales slightly on press)
-  const cursor = (
-    <div
-      className="fixed top-0 left-0 z-[9999] pointer-events-none cursor-tri"
-      style={{
-        transform: `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%) rotate(${ANGLE}deg)`,
-      }}
-    >
-      <svg
-        width={20}
-        height={20}
-        viewBox="0 0 100 100"
-        style={{
-          transform: `scale(${isDown ? 0.9 : 1})`,
-          transition: "transform 90ms ease-out",
-        }}
-      >
-        {/* Fill */}
-        <polygon points="50,2 2,98 98,98" fill="currentColor" />
-        {/* Soft outline */}
-        <polygon
-          points="50,2 2,98 98,98"
-          fill="none"
-          stroke="rgba(0,0,0,0.35)"
-          strokeWidth="6"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-      </svg>
-    </div>
-  );
+  // Main cursor
+  const cursor = <CursorSvg x={pos.x} y={pos.y} pressed={isDown} size={22} />;
 
-  // Triangle trail
+  // Trail: reuse the same SVG shape, smaller + fading
   const trailShapes = trail.map((t, i) => (
     <svg
       key={i}
-      className="fixed top-0 left-0 pointer-events-none cursor-tri"
+      className="fixed top-0 left-0 pointer-events-none cursor-icon"
       width={16 - i}
       height={16 - i}
-      viewBox="0 0 100 100"
+      viewBox={ICON_VIEWBOX}
       style={{
-        transform: `translate(${t.x}px, ${t.y}px) translate(-50%, -50%) rotate(${ANGLE}deg)`,
+        transform: `translate(${t.x}px, ${t.y}px) translate(-50%, -50%)`,
         zIndex: 9998,
-        opacity: Math.max(0, 0.45 - i * 0.07),
+        opacity: Math.max(0, 0.4 - i * 0.07),
         filter: i === 0 ? "none" : `blur(${0.25 * i}px)`,
       }}
     >
-      <polygon points="50,2 2,98 98,98" fill="currentColor" />
+      <path d={ICON_PATH_D} fill="currentColor" />
     </svg>
   ));
 
-  // Ripple burst (triangle outline scaling out)
+  // Ripple burst on click
   const ripplesSvg = ripples.map((r) => (
-    <div
+    <svg
       key={r.id}
-      className="fixed top-0 left-0 pointer-events-none"
+      className="fixed top-0 left-0 pointer-events-none cursor-icon"
+      width={30}
+      height={30}
+      viewBox={ICON_VIEWBOX}
       style={{
-        transform: `translate(${r.x}px, ${r.y}px) translate(-50%, -50%) rotate(${ANGLE}deg)`,
+        transform: `translate(${r.x}px, ${r.y}px) translate(-50%, -50%)`,
         zIndex: 9997,
       }}
     >
-      <svg width={28} height={28} viewBox="0 0 100 100" className="cursor-tri">
-        <polygon
-          points="50,2 2,98 98,98"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="6"
-          style={{
-            opacity: 0.6,
-            transformOrigin: "50% 60%",
-            animation: "cc-tri-ripple 420ms ease-out forwards",
-          }}
-        />
-      </svg>
-    </div>
+      <path
+        d={ICON_PATH_D}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        style={{
+          opacity: 0.6,
+          transformOrigin: "50% 50%",
+          animation: "cc-ripple 420ms ease-out forwards",
+        }}
+      />
+    </svg>
   ));
 
-  // Portal + keyframes + theme color
   const root = document.getElementById("themed-root") || document.body;
   return createPortal(
     <>
       <style>
         {`
-          @keyframes cc-tri-ripple {
-            0%   { transform: scale(0.6); opacity: 0.6; }
-            80%  { opacity: 0.15; }
-            100% { transform: scale(1.7); opacity: 0; }
+          @keyframes cc-ripple {
+            0%   { transform: scale(0.7); opacity: 0.6; }
+            80%  { opacity: 0.18; }
+            100% { transform: scale(1.8); opacity: 0; }
           }
-          /* Theme-following color for the cursor (uses your CSS vars) */
-          .cursor-tri { color: var(--color-blue); }
-          [data-theme="dark"] .cursor-tri { color: var(--color-blue-light); }
-          [data-theme="markoblank"] .cursor-tri { color: var(--color-markored); }
-          [data-theme="discord"] .cursor-tri { color: var(--color-discordblue); }
-          [data-theme="ishtar"] .cursor-tri { color: var(--color-ishtarred); }
-          [data-theme="tangerine"] .cursor-tri { color: var(--color-tangerineAccent); }
-          [data-theme="icebergLight"] .cursor-tri { color: var(--color-icebergLightAccent); }
-          [data-theme="icebergDark"] .cursor-tri { color: var(--color-icebergDarkAccent); }
+          .cursor-icon { color: var(--color-blue); }
+          [data-theme="dark"] .cursor-icon { color: var(--color-blue-light); }
+          [data-theme="markoblank"] .cursor-icon { color: var(--color-markored); }
+          [data-theme="discord"] .cursor-icon { color: var(--color-discordblue); }
+          [data-theme="ishtar"] .cursor-icon { color: var(--color-ishtarred); }
+          [data-theme="tangerine"] .cursor-icon { color: var(--color-tangerineAccent); }
+          [data-theme="icebergLight"] .cursor-icon { color: var(--color-icebergLightAccent); }
+          [data-theme="icebergDark"] .cursor-icon { color: var(--color-icebergDarkAccent); }
         `}
       </style>
       {trailShapes}
