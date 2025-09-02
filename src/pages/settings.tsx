@@ -7,10 +7,12 @@ import { auth } from "../../firebase";
 
 // Contexts
 import { OptionsContext } from "../context/OptionsContext"
+import { UserContext } from "../context/UserContext";
+
 
 // Styles & Icons
+import { LuLogOut } from "react-icons/lu";
 import '../styles/settings.css'
-import { UserContext } from "../context/UserContext";
 
 export default function Settings() {
 
@@ -34,7 +36,7 @@ export default function Settings() {
 
 
     return (
-        <div className="p-4 w-full h-full">        
+        <div className="p-4 w-full h-full overflow-y-scroll">        
 
         {/* ====================================== HEADING ========================================= */}
         <div>
@@ -77,39 +79,74 @@ export default function Settings() {
 
         </div>
 
+        <span className="cursor-target color-bg-accent txt-heading-colour px-4 py-2 rounded-out mb-2 hover:scale-95 duration-200
+            mx-6 cursor-pointer transition-all" 
+                onClick={() => {logOut()}}>
+                <span className="">Log Out</span>
+                <LuLogOut className="txt-heading-colour inline mx-1" strokeWidth={3}/>
+        </span> 
+
    
 
         {/* ====================================== THEMES ========================================= */}
-        <div className="flex w-full items-center ">
+        <div className="flex w-full items-center mt-4">
             <h1 className="profile-heading">Themes</h1>
             <div className="line-break"></div>
         </div>
 
-        <div className="">
+        <div className="flex flex-wrap max-w-full">
+
             <div className="cursor-target theme-container" 
                 onClick={() => setTheme('light')}>
-                <span>Light</span>
-                <div className="bg-" ></div>
-                <div></div>
-                <div></div>
-                <div></div>
-
+                <p className="theme-text">Light</p>
+                <div className="color-strip-container bg-white" >
+                    <div className="color-strip-item bg-blue" > </div> {/* ACCENT */}
+                    <div className="color-strip-item bg-black" > </div> {/* SUB */}
+                    <div className="color-strip-item bg-grey" > </div> {/* TEXT */}
+                </div>
             </div>
-            <span className="cursor-target theme-container" 
+
+            <div className="cursor-target theme-container" 
                 onClick={() => setTheme('dark')}>
-                Dark</span>
-            <span className="cursor-target bg-markoteal theme-container" 
+                <p className="theme-text">Dark</p>
+                <div className="color-strip-container bg-black" >
+                    <div className="color-strip-item bg-blue-light" > </div> {/* ACCENT */}
+                    <div className="color-strip-item bg-white" > </div> {/* SUB */}
+                    <div className="color-strip-item bg-light-grey" > </div> {/* TEXT */}
+                </div>
+            </div>
+    
+            <div className="cursor-target theme-container" 
                 onClick={() => setTheme('markoblank')}>
-                Markoblank</span>
-            <span className="cursor-target bg-discordblack text-discordblue theme-button" 
+                <p className="theme-text">Markoblank</p>
+                <div className="color-strip-container bg-markoteal" >
+                    <div className="color-strip-item bg-markored " > </div> {/* ACCENT */}
+                    <div className="color-strip-item bg-markobrown " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-markogrey " > </div> {/* TEXT */}
+                </div>
+            </div>
+
+
+            <div className="cursor-target theme-container" 
                 onClick={() => setTheme('discord')}>
-                Discord</span>
-            <span className="cursor-target bg-ishtarblack text-ishtarred theme-button" 
+                <p className="theme-text">Discord</p>
+                <div className="color-strip-container bg-discordblack " >
+                    <div className="color-strip-item bg-discordblue " > </div> {/* ACCENT */}
+                    <div className="color-strip-item bg-discordwhite " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-discordgrey " > </div> {/* TEXT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
                 onClick={() => setTheme('ishtar')}>
-                Ishtar</span>
-             <span className="cursor-target color-bg-accent color-txt-main theme-button" 
-                onClick={() => {logOut()}}>
-                Log Out</span> 
+                <p className="theme-text">Ishtar</p>
+                <div className="color-strip-container bg-ishtarblack " >
+                    <div className="color-strip-item bg-ishtarred " > </div> {/* ACCENT */}
+                    <div className="color-strip-item bg-ishtargrey " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-ishtarbeige " > </div> {/* TEXT */}
+                </div>
+            </div>
+
         </div>
 
         {/* ======================================================================================== */}

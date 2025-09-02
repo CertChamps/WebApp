@@ -1,5 +1,5 @@
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { db }from '../../firebase'
+import { db  }from '../../firebase'
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 
 export default function useFetch () {
@@ -105,8 +105,36 @@ export default function useFetch () {
     }
     // ====================================================================================== //
 
-    
+    // =============================== FIREBASE GET ALL USER DECKS ========================== //
+    const fetchPost = async (id: any) => {
 
-    return { fetchImage, fetchFriends, fetchUser, fetchDecks }
+        try {
+            // initialise post Data 
+            const postSnap = (await getDoc(doc(db, "posts", id)) )
+            let postData = null 
+
+            // Grab the post data 
+            if(postSnap.exists())
+                postData = postSnap.data();
+
+            // Fetch author profile
+            const userData = fetchUser(postData?.id)
+
+            return({
+                ...postData, 
+                ...userData,
+                id: postSnap.id, 
+            })
+        } 
+        catch ( err ) {
+            console.log(err)
+            return null;
+        }
+
+    }
+    // ====================================================================================== //
+
+
+    return { fetchImage, fetchFriends, fetchUser, fetchDecks, fetchPost }
 
 }

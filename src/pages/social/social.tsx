@@ -319,7 +319,8 @@ export default function Social() {
                                     onPressReplies={() => {
                                         if (post.isFlashcard) {
                                             // For flashcards, pass both flashcardId and replyId if available
-                                            pageNavigate("social/q_replies", { state: { id: post.id, flashcardId: post.flashcardId, replyId: post.replyId } })
+                                            //pageNavigate("social/q_replies", { state: { id: post.id, flashcardId: post.flashcardId, replyId: post.replyId } })
+                                            pageNavigate(`post/${post.id}`)
                                         } else {
                                             // For regular posts
                                             pageNavigate("social/replies", { state: { id: post.id } })

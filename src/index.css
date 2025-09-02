@@ -7,11 +7,11 @@
 }
 
 /* Hide ALL system cursors everywhere */
-*,
+/* *,
 *::before,
 *::after {
   cursor: none !important;
-}
+} */
 
 /* ================== TAILWIND SETUP ============= */
 @import "tailwindcss";
@@ -221,7 +221,7 @@ math-field::part(virtual-keyboard-toggle) {
 
 @utility color-bg-grey-5 {
   @apply 
-    bg-grey/15
+    bg-grey/7
     dark:bg-light-grey/5
     markoblank:bg-markogrey/5
     discord:bg-discordgrey/5

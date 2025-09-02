@@ -9,6 +9,7 @@ import QReplies from './pages/social/q_replies';
 import Settings from './pages/settings';
 import DeckViewer from './pages/deckViewer';
 import ProfileViewer from './pages/profileViewer';
+import PostViewer from './pages/social/postViewer';
 
 const router = createBrowserRouter([
   { path: '/', element: ( <Login /> ), },
@@ -96,6 +97,15 @@ const router = createBrowserRouter([
     path: '/viewProfile/:userID',
     element: (
         <ProfileViewer />
+    ),
+  },
+    {
+    path: '/post/:id',
+    element: (
+      <>
+        <Navbar />
+        <PostViewer />
+      </>
     ),
   },
   
