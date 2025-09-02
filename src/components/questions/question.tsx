@@ -72,9 +72,10 @@ export default function Question(props: questionsProps) {
     <div className="card-container">
     { //============================= QUESTIONS CONTAINER ====================================// 
     props.questions[props.position]? ( 
-    <div className="h-container items-start justify-between">
-        <div className="p-8 w-2/3">
+    <div className="h-container items-between justify-between">
+        <div className="p-8 w-2/3 h-full flex flex-col justify-between ">
 
+            <div>
             {/* ================================ HEADING =================================== */}
             <p className="txt-bold color-txt-accent">{properties?.name}
                 <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
@@ -105,21 +106,25 @@ export default function Question(props: questionsProps) {
 
 
             {/* ============================== QUESTION CONTENT =========================== */}
-            <div className="w-2/3 m-4">
+            <div className="w-2/3 m-4 ">
                 <RenderMath text={content[part]?.question ?? ''} className="txt text-xl" />
                 {content?.[part]?.image && <img src={content[part].image} className="max-h-30 m-4 dark:invert-100"/>}
             </div>
             {/* ============================================================================ */}
+            </div>
 
+            <div>
             {/* =============================== MATH INPUT ================================= */}
-            { !props.preview ? (
-                content?.[part]?.answer?.map((ans: any, idx: number) => (
-                    <MathInput key={idx} answer={ans}/>
-                ))
-            ) :(<></>)
-            }
+            <div className="flex">
+                { !props.preview ? (
+                    content?.[part]?.answer?.map((ans: any, idx: number) => (
+                        <MathInput key={idx} answer={ans}/>
+                    ))
+                ) :(<></>)
+                }
+            </div>
             {/* ============================================================================ */}
-
+            </div>
 
         </div>
         {/* ====================================================================================== */}
