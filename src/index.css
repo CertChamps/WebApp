@@ -195,14 +195,6 @@ math-field::part(virtual-keyboard-toggle) {
   @apply shadow-[4px_4px_0px_2px] color-shadow border-2
 }
 
-/* Progress Bar */
-@utility progress-bar {
-  @apply w-[350px] h-6 rounded-2xl border-2 color-shadow overflow-hidden color-bg shadow-small
-}
-
-@utility progress-fill {
-  @apply h-full rounded-2xl bg-gradient-to-r from-red to-yellow-400 dark:from-blue dark:to-blue-light
-}
 
 /* ========================================= COLOUR THEMES ====================================================== */ 
 @custom-variant dark (&:where([data-theme="dark"] *));
@@ -419,5 +411,3 @@ math-field::part(virtual-keyboard-toggle) {
     matchaMoccha:bg-matchaMocchaAccent
     redDragon:bg-redDragonAccent
 }
-
-

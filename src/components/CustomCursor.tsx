@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-const TRAIL_LENGTH = 5; // number of trailing dots
+const TRAIL_LENGTH = 5; // number of trailing shapes
+const ANGLE = -35; // pointer angle
 
 export default function CustomCursor() {
   const [pos, setPos] = useState({ x: 0, y: 0 });
-  const [hovering, setHovering] = useState(false);
-  const [hoverRect, setHoverRect] = useState<DOMRect | null>(null);
-  const [hoverRadius, setHoverRadius] = useState("50%");
   const [trail, setTrail] = useState<{ x: number; y: number }[]>(
     Array.from({ length: TRAIL_LENGTH }, () => ({ x: 0, y: 0 }))
   );
+  const [isDown, setIsDown] = useState(false);
+  const [ripples, setRipples] = useState<
+    { id: number; x: number; y: number }[]
+  >([]);
 
   // Track mouse position
   useEffect(() => {
@@ -26,15 +28,15 @@ export default function CustomCursor() {
     let frame: number;
     const animate = () => {
       setTrail((prev) => {
-        const newTrail = [...prev];
-        newTrail[0] = { ...pos };
+        const next = [...prev];
+        next[0] = { ...pos };
         for (let i = 1; i < TRAIL_LENGTH; i++) {
-          newTrail[i] = {
-            x: prev[i].x + (newTrail[i - 1].x - prev[i].x) * 0.25,
-            y: prev[i].y + (newTrail[i - 1].y - prev[i].y) * 0.25,
+          next[i] = {
+            x: prev[i].x + (next[i - 1].x - prev[i].x) * 0.25,
+            y: prev[i].y + (next[i - 1].y - prev[i].y) * 0.25,
           };
         }
-        return newTrail;
+        return next;
       });
       frame = requestAnimationFrame(animate);
     };
@@ -42,98 +44,128 @@ export default function CustomCursor() {
     return () => cancelAnimationFrame(frame);
   }, [pos]);
 
-  // Attach hover listeners
+  // Click animation (press + ripple)
   useEffect(() => {
-    const handleEnter = (e: Event) => {
-      const target = e.currentTarget as HTMLElement;
-      const rect = target.getBoundingClientRect();
-      const styles = window.getComputedStyle(target);
-
-      setHoverRect(rect);
-      setHoverRadius(styles.borderRadius || "12px");
-      setHovering(true);
+    const down = (e: MouseEvent) => {
+      setIsDown(true);
+      setPos({ x: e.clientX, y: e.clientY });
+      const id = Date.now() + Math.random();
+      setRipples((r) => [...r, { id, x: e.clientX, y: e.clientY }]);
+      setTimeout(() => {
+        setRipples((r) => r.filter((it) => it.id !== id));
+      }, 420);
     };
+    const up = () => setIsDown(false);
 
-    const handleLeave = () => {
-      setHovering(false);
-      setHoverRect(null);
-      setHoverRadius("50%");
+    window.addEventListener("mousedown", down);
+    window.addEventListener("mouseup", up);
+    return () => {
+      window.removeEventListener("mousedown", down);
+      window.removeEventListener("mouseup", up);
     };
-
-    const bindListeners = () => {
-      const interactiveEls = document.querySelectorAll(".cursor-target");
-      interactiveEls.forEach((el) => {
-        el.removeEventListener("mouseenter", handleEnter);
-        el.removeEventListener("mouseleave", handleLeave);
-        el.addEventListener("mouseenter", handleEnter);
-        el.addEventListener("mouseleave", handleLeave);
-      });
-    };
-
-    bindListeners();
-    const observer = new MutationObserver(() => bindListeners());
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    return () => observer.disconnect();
   }, []);
 
-  // Cursor style
-  const style = hovering && hoverRect
-    ? {
-        width: `${hoverRect.width + 12}px`,
-        height: `${hoverRect.height + 12}px`,
-        transform: `translate(${hoverRect.left + hoverRect.width / 2}px, ${
-          hoverRect.top + hoverRect.height / 2
-        }px) translate(-50%, -50%)`,
-        borderRadius: hoverRadius,
-      }
-    : {
-        width: "14px",
-        height: "14px",
-        transform: `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%)`,
-        borderRadius: "50%",
-      };
-
-  // Main cursor
-  const cursor = hovering ? (
-    // Hovering: iPadOS-style box
+  // Main triangle cursor (SVG; scales slightly on press)
+  const cursor = (
     <div
-      className="fixed top-0 left-0 z-[9999] pointer-events-none 
-                 transition-all duration-200 ease-out 
-                 color-bg-accent border-2 color-shadow-accent"
-      style={style}
-    />
-  ) : (
-    // Idle: solid circle
-    <div
-      className="fixed top-0 left-0 z-[9999] pointer-events-none 
-                 color-cursor"
-      style={style}
-    />
+      className="fixed top-0 left-0 z-[9999] pointer-events-none cursor-tri"
+      style={{
+        transform: `translate(${pos.x}px, ${pos.y}px) translate(-50%, -50%) rotate(${ANGLE}deg)`,
+      }}
+    >
+      <svg
+        width={20}
+        height={20}
+        viewBox="0 0 100 100"
+        style={{
+          transform: `scale(${isDown ? 0.9 : 1})`,
+          transition: "transform 90ms ease-out",
+        }}
+      >
+        {/* Fill */}
+        <polygon points="50,2 2,98 98,98" fill="currentColor" />
+        {/* Soft outline */}
+        <polygon
+          points="50,2 2,98 98,98"
+          fill="none"
+          stroke="rgba(0,0,0,0.35)"
+          strokeWidth="6"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      </svg>
+    </div>
   );
 
-  // Trail dots (only render when NOT hovering)
-  const trailDots = !hovering
-    ? trail.map((t, i) => (
-        <div
-          key={i}
-          className="fixed top-0 left-0 z-[9998] pointer-events-none 
-                     rounded-full color-cursor"
+  // Triangle trail
+  const trailShapes = trail.map((t, i) => (
+    <svg
+      key={i}
+      className="fixed top-0 left-0 pointer-events-none cursor-tri"
+      width={16 - i}
+      height={16 - i}
+      viewBox="0 0 100 100"
+      style={{
+        transform: `translate(${t.x}px, ${t.y}px) translate(-50%, -50%) rotate(${ANGLE}deg)`,
+        zIndex: 9998,
+        opacity: Math.max(0, 0.45 - i * 0.07),
+        filter: i === 0 ? "none" : `blur(${0.25 * i}px)`,
+      }}
+    >
+      <polygon points="50,2 2,98 98,98" fill="currentColor" />
+    </svg>
+  ));
+
+  // Ripple burst (triangle outline scaling out)
+  const ripplesSvg = ripples.map((r) => (
+    <div
+      key={r.id}
+      className="fixed top-0 left-0 pointer-events-none"
+      style={{
+        transform: `translate(${r.x}px, ${r.y}px) translate(-50%, -50%) rotate(${ANGLE}deg)`,
+        zIndex: 9997,
+      }}
+    >
+      <svg width={28} height={28} viewBox="0 0 100 100" className="cursor-tri">
+        <polygon
+          points="50,2 2,98 98,98"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="6"
           style={{
-            width: `${14 - i}px`,
-            height: `${14 - i}px`,
-            transform: `translate(${t.x}px, ${t.y}px) translate(-50%, -50%)`,
-            opacity: 0.5 - i * 0.05,
+            opacity: 0.6,
+            transformOrigin: "50% 60%",
+            animation: "cc-tri-ripple 420ms ease-out forwards",
           }}
         />
-      ))
-    : null;
+      </svg>
+    </div>
+  ));
 
-  // Portal into the themed wrapper
+  // Portal + keyframes + theme color
   const root = document.getElementById("themed-root") || document.body;
   return createPortal(
     <>
-      {trailDots}
+      <style>
+        {`
+          @keyframes cc-tri-ripple {
+            0%   { transform: scale(0.6); opacity: 0.6; }
+            80%  { opacity: 0.15; }
+            100% { transform: scale(1.7); opacity: 0; }
+          }
+          /* Theme-following color for the cursor (uses your CSS vars) */
+          .cursor-tri { color: var(--color-blue); }
+          [data-theme="dark"] .cursor-tri { color: var(--color-blue-light); }
+          [data-theme="markoblank"] .cursor-tri { color: var(--color-markored); }
+          [data-theme="discord"] .cursor-tri { color: var(--color-discordblue); }
+          [data-theme="ishtar"] .cursor-tri { color: var(--color-ishtarred); }
+          [data-theme="tangerine"] .cursor-tri { color: var(--color-tangerineAccent); }
+          [data-theme="icebergLight"] .cursor-tri { color: var(--color-icebergLightAccent); }
+          [data-theme="icebergDark"] .cursor-tri { color: var(--color-icebergDarkAccent); }
+        `}
+      </style>
+      {trailShapes}
+      {ripplesSvg}
       {cursor}
     </>,
     root

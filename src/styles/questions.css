@@ -23,3 +23,16 @@
 .part-number {
     @apply txt mx-2 rounded-out cursor-pointer px-3 py-1 color-txt-sub;
 }
+
+/* =================================================== */
+
+/* ===================== RANK BAR ==================== */
+  .progress-bar {
+    @apply w-[350px] h-6 rounded-2xl border-2 color-shadow overflow-hidden color-bg shadow-small
+  }
+  
+  .progress-fill {
+    @apply h-full rounded-2xl color-cursor transition-all
+  }
+  
+/* =================================================== */
