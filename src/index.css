@@ -7,11 +7,11 @@
 }
 
 /* Hide ALL system cursors everywhere */
-/* *,
+*,
 *::before,
 *::after {
   cursor: none !important;
-} */
+}
 
 /* ================== TAILWIND SETUP ============= */
 @import "tailwindcss";
