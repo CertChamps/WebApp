@@ -311,6 +311,46 @@ export default function Settings() {
                 </div>
             </div>
 
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('husqy')}>
+                <p className="theme-text">Husqy</p>
+                <div className="color-strip-container bg-husqyBG " >
+                    <div className="color-strip-item bg-husqyPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-husqySub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-husqyAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('shadow')}>
+                <p className="theme-text">Shadow</p>
+                <div className="color-strip-container bg-shadowBG " >
+                    <div className="color-strip-item bg-shadowPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-shadowSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-shadowAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('matchaMoccha')}>
+                <p className="theme-text">Matcha Moccha</p>
+                <div className="color-strip-container bg-matchaMocchaBG " >
+                    <div className="color-strip-item bg-matchaMocchaPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-matchaMocchaSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-matchaMocchaAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('redDragon')}>
+                <p className="theme-text">Red Dragon</p>
+                <div className="color-strip-container bg-redDragonBG " >
+                    <div className="color-strip-item bg-redDragonPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-redDragonSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-redDragonAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
         </div>
 
         {/* ======================================================================================== */}
