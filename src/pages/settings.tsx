@@ -122,6 +122,8 @@ export default function Settings() {
     };
     //================================================================
 
+
+    //========================== Change Username ============================
     const changeUsername = async (newUsername: string) => {
         const username = newUsername.trim();
 
@@ -129,6 +131,7 @@ export default function Settings() {
         await setDoc(doc(db, 'user-data', user.uid), {username: username}, {merge: true})
         setNewUsername("");
     }
+    //=======================================================================
 
 
     return (
@@ -282,6 +285,36 @@ export default function Settings() {
                     <div className="color-strip-item bg-ishtarred " > </div> {/* ACCENT */}
                     <div className="color-strip-item bg-ishtargrey " > </div> {/* SUB */}
                     <div className="color-strip-item bg-ishtarbeige " > </div> {/* TEXT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('tangerine')}>
+                <p className="theme-text">Tangerine</p>
+                <div className="color-strip-container bg-tangerineBG " >
+                    <div className="color-strip-item bg-tangerinePrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-tangerineSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-tangerineAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('icebergLight')}>
+                <p className="theme-text">Iceberg Light</p>
+                <div className="color-strip-container bg-icebergLightBG " >
+                    <div className="color-strip-item bg-icebergLightPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-icebergLightSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-icebergLightAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('icebergDark')}>
+                <p className="theme-text">Iceberg Dark</p>
+                <div className="color-strip-container bg-icebergDarkBG " >
+                    <div className="color-strip-item bg-icebergDarkPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-icebergDarkSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-icebergDarkAccent " > </div> {/* ACCENT */}
                 </div>
             </div>
 
