@@ -53,6 +53,24 @@
   --color-ishtargrey: #847869;
   --color-ishtarbeige: #fae1c3;
 
+  /* Tangerine */
+  --color-tangerineBG: #ffede0;
+  --color-tangerineAccent: #3d1705;
+  --color-tangerinePrimary:#fe5503;
+  --color-tangerineSub: #ff9562;
+
+  /* Iceberg Light */
+  --color-icebergLightBG: #e8e9ec;
+  --color-icebergLightAccent: #33374c;
+  --color-icebergLightPrimary: #2d539e;
+  --color-icebergLightSub: #adb1c4;
+
+  /* Iceberg Dark */
+  --color-icebergDarkBG: #161821;
+  --color-icebergDarkAccent: #c6c8d1;
+  --color-icebergDarkPrimary: #84a0c6;
+  --color-icebergDarkSub: #595e76;
+
   /* Note: Do not change these randomly below styles must follow: 
   radius-out - radius-in = 2 * padding/margin */
 
@@ -171,7 +189,9 @@ math-field::part(virtual-keyboard-toggle) {
 @custom-variant markoblank (&:where([data-theme="markoblank"] *));
 @custom-variant discord (&:where([data-theme="discord"] *));
 @custom-variant ishtar (&:where([data-theme="ishtar"] *));
-
+@custom-variant tangerine (&:where([data-theme="tangerine"] *));
+@custom-variant icebergLight (&:where([data-theme="icebergLight"] *));
+@custom-variant icebergDark (&:where([data-theme="icebergDark"] *));
 
 @utility color-txt-main {
   @apply 
@@ -180,6 +200,9 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:text-markobrown
     discord:text-discordwhite
     ishtar:text-ishtarbeige
+    tangerine:text-tangerinePrimary
+    icebergLight:text-icebergLightPrimary
+    icebergDark:text-icebergDarkPrimary
 }
 
 @utility color-txt-sub {
@@ -189,6 +212,9 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:text-markogrey
     discord:text-discordgrey
     ishtar:text-ishtargrey
+    tangerine:text-tangerineSub
+    icebergLight:text-icebergLightSub
+    icebergDark:text-icebergDarkSub
 }
 
 @utility color-txt-accent {
@@ -198,6 +224,9 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:text-markored
     discord:text-discordblue
     ishtar:text-ishtarred
+    tangerine:text-tangerineAccent
+    icebergLight:text-icebergLightAccent
+    icebergDark:text-icebergDarkAccent
 }
 
 @utility color-bg {
@@ -207,6 +236,9 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:bg-markoteal
     discord:bg-discordblack
     ishtar:bg-ishtarblack
+    tangerine:bg-tangerineBG
+    icebergLight:bg-icebergLightBG
+    icebergDark:bg-icebergDarkBG
 }
 
 @utility color-txt-invert {
@@ -216,6 +248,9 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:text-markoteal
     discord:text-discordblack
     ishtar:text-ishtarblack
+    tangerine:text-tangerineBG
+    icebergLight:text-icebergLightBG
+    icebergDark:text-icebergDarkBG
 }
 
 
@@ -226,6 +261,9 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:bg-markogrey/5
     discord:bg-discordgrey/5
     ishtar:bg-ishtargrey/5
+    tangerine:bg-tangerineSub/5
+    icebergLight:bg-icebergLightSub/5
+    icebergDark:bg-icebergDarkSub/5
 }
 
 @utility color-bg-grey-10 {
@@ -235,6 +273,9 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:bg-markogrey/20
     discord:bg-discordgrey/20
     ishtar:bg-ishtargrey/20
+    tangerine:bg-tangerineSub/20
+    icebergLight:bg-icebergLightSub/20
+    icebergDark:bg-icebergDarkSub/20
 }
 
 @utility color-bg-accent {
@@ -244,6 +285,9 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:bg-markored/15
     discord:bg-discordblue/15
     ishtar:bg-ishtarred/15
+    tangerine:bg-tangerineAccent/15
+    icebergLight:bg-icebergLightAccent/15
+    icebergDark:bg-icebergDarkAccent/15
 }
 
 @utility color-shadow {
@@ -253,12 +297,18 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:border-markobrown/20
     discord:border-discordgrey/20
     ishtar:border-ishtargrey/20
+    tangerine:border-tangerineSub/20
+    icebergLight:border-icebergLightSub/20
+    icebergDark:border-icebergDarkSub/20
 
     shadow-light-grey/40
     dark:shadow-grey/20
     markoblank:shadow-markobrown/20
     discord:shadow-discordgrey/20
     ishtar:shadow-ishtargrey/20
+    tangerine:shadow-tangerineSub/20
+    icebergLight:shadow-icebergLightSub/20
+    icebergDark:shadow-icebergDarkSub/20
 }
 
 
@@ -269,12 +319,18 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:border-markored
     discord:border-discordblue
     ishtar:border-ishtarred
+    tangerine:border-tangerineAccent
+    icebergLight:border-icebergLightAccent
+    icebergDark:border-icebergLightAccent
 
     shadow-blue
     dark:shadow-blue-light
     markoblank:shadow-markored
     discord:shadow-discordblue
     ishtar:shadow-ishtarred
+    tangerine:shadow-tangerineAccent
+    icebergLight:shadow-icebergLightAccent
+    icebergDark:shadow-icebergDarkAccent
 }
 
 @utility color-cursor {
@@ -284,6 +340,9 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:bg-markored
     discord:bg-discordblue
     ishtar:bg-ishtarred
+    tangerine:bg-tangerineAccent
+    icebergLight:bg-icebergLightAccent
+    icebergDark:bg-icebergDarkAccentDark
 }
 
 
