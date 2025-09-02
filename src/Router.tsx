@@ -92,7 +92,7 @@ const router = createBrowserRouter([
         <ProfileViewer />
     ),
   },
-    {
+  {
     path: '/post/:id',
     element: (
       <>

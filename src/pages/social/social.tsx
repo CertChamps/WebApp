@@ -369,7 +369,9 @@ export default function Social() {
                                             pageNavigate(`post/${post.id}`)
                                         } else {
                                             // For regular posts
-                                            pageNavigate("social/replies", { state: { id: post.id } })
+                                            //pageNavigate("social/replies", { state: { id: post.id } })
+                                            pageNavigate(`post/${post.id}`)
+
                                         }
                                     }}
                                 />

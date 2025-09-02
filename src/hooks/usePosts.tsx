@@ -1,4 +1,4 @@
-import { query, collection, orderBy, onSnapshot, doc, getDoc} from "firebase/firestore";
+import { query, collection, orderBy, onSnapshot, doc, getDoc, getDocs} from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "../../firebase";
 import useFetch from "./useFetch";
@@ -15,12 +15,18 @@ export default function usePosts(id: string) {
 
         try {
             // initialise post Data 
-            const postSnap = (await getDoc(doc(db, "posts", id)) )
+            const postSnap = await getDoc(doc(db, "posts", id));
+
             let postData = null 
 
             // Grab the post data 
             if(postSnap.exists())
                 postData = postSnap.data();
+
+
+            // Get reply count
+            const repliesSnapshot = await getDocs( postData?.isFlashcard ? collection(db, "certchamps-questions", postData?.flashcardId, "replies") : collection(db, "posts", id, "replies"));
+            const replyCount = repliesSnapshot.size
 
             // Fetch author profile
             const userData = await fetchUser(postData?.userId)
@@ -28,6 +34,7 @@ export default function usePosts(id: string) {
             return({
                 ...postData, 
                 ...userData,
+                replyCount, 
                 id: postSnap.id, 
             })
         } 
