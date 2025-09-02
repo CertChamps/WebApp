@@ -1,5 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
 import {
   addDoc,
   collection,
@@ -15,7 +14,7 @@ import {
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "../../firebase";
 import { UserContext } from "../context/UserContext";
-import useNotifications from "./useNotifications";
+
 
 type PostDoc = {
   id: string;
@@ -53,7 +52,36 @@ export function useReplies(id: string) {
   const [fcAuthor, setFcAuthor] = useState<{ username: string; userImage: string | null } | null>(null);
   const [question, setQuestion] = useState<any>(null);
 
-  const { timeAgoFormatter } = useNotifications()
+  
+    //====================Random placeholders for textbox======================
+    const placeholders = [
+        "Confess your math sins.",
+        "Type like no one’s judging.",
+        "Unleash your inner genius!!!",
+        "Got wisdom? Spill it.",
+        "Your keyboard misses you.",
+        "Type away, genius!",
+        "Your thoughts matter here.",
+        "Share your brilliance.",
+        "Type it out, let’s see!",
+        "Got a thought? Type it!",
+        "Your keyboard is waiting.",
+        "Type like you mean it!",
+        "Let your thoughts flow.",
+        "Type it, we’re listening.",
+        "Your keyboard is your canvas.",
+        "Type your way to greatness.",
+        "Tell them how you love maths..."
+    ];
+      
+    const [randomPlaceholder, setRandomPlaceholder] = useState("");
+
+    useEffect(() => {
+        const randomIndex = Math.floor(Math.random() * placeholders.length);
+        setRandomPlaceholder(placeholders[randomIndex]);
+    }, [])
+    // =========================================================================
+
 
   const fetchProfileByUid = async (uid: string) => {
     const userQ = query(collection(db, "user-data"), where("uid", "==", uid));
@@ -156,7 +184,7 @@ export function useReplies(id: string) {
           setReplies(rows);
         });
       } else {
-        const qy = query(collection(db, "posts", id, "replies"), orderBy("timestamp", "asc"));
+        const qy = query(collection(db, "posts", id, "replies"), orderBy("timestamp", "desc"));
         unsub = onSnapshot(qy, async (snapshot) => {
           const rows = await Promise.all(
             snapshot.docs.map(async (d) => {
@@ -247,5 +275,6 @@ export function useReplies(id: string) {
     handleSendReply,
     fcAuthor,
     question,
+    randomPlaceholder
   };
 }

@@ -8,7 +8,6 @@ import Replies from './pages/social/replies';
 import Settings from './pages/settings';
 import DeckViewer from './pages/deckViewer';
 import ProfileViewer from './pages/profileViewer';
-import PostViewer from './pages/social/postViewer';
 
 const router = createBrowserRouter([
   { path: '/', element: ( <Login /> ), },

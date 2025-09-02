@@ -53,6 +53,7 @@
   --color-ishtargrey: #847869;
   --color-ishtarbeige: #fae1c3;
 
+
   /* Note: Do not change these randomly below styles must follow: 
   radius-out - radius-in = 2 * padding/margin */
 
@@ -171,6 +172,7 @@ math-field::part(virtual-keyboard-toggle) {
 @custom-variant markoblank (&:where([data-theme="markoblank"] *));
 @custom-variant discord (&:where([data-theme="discord"] *));
 @custom-variant ishtar (&:where([data-theme="ishtar"] *));
+@custom-variant ishtar2 (&:where([data-theme="ishtar2"] *));
 
 
 @utility color-txt-main {
@@ -180,6 +182,7 @@ math-field::part(virtual-keyboard-toggle) {
     markoblank:text-markobrown
     discord:text-discordwhite
     ishtar:text-ishtarbeige
+ 
 }
 
 @utility color-txt-sub {
