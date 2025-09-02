@@ -206,8 +206,15 @@ export default function Settings() {
             <p className="input-header">School</p>
 
             <div className="flex items-center">
-                <input type="text" className="txtbox max-w-md" />
-                <span className="update-btn">Update</span>
+                <input type="text" className="txtbox max-w-md " />
+                <span
+                    className="update-btn"
+                    onMouseDown={e => e.currentTarget.classList.add('translate-x-20')}
+                    onMouseUp={e => e.currentTarget.classList.remove('translate-x-20')}
+                    onMouseLeave={e => e.currentTarget.classList.remove('translate-x-0')}
+                >
+                    Update
+                </span>
             </div>
         </div>
 
@@ -274,7 +281,7 @@ export default function Settings() {
             <div className="cursor-target theme-container" 
                 onClick={() => setTheme('ishtar')}>
                 <p className="theme-text">Ishtar</p>
-                <div className="color-strip-container bg-ishtarblack " >
+                <div className="color-strip-container bg-ishtarblack " >    {/* BG */}
                     <div className="color-strip-item bg-ishtarred " > </div> {/* ACCENT */}
                     <div className="color-strip-item bg-ishtargrey " > </div> {/* SUB */}
                     <div className="color-strip-item bg-ishtarbeige " > </div> {/* TEXT */}

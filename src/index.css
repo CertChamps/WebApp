@@ -16,9 +16,6 @@
 /* ================== TAILWIND SETUP ============= */
 @import "tailwindcss";
 
-/* Dark Theme Setup  */
-@custom-variant dark (&:where(.dark, .dark *));
-
 /* Theming & Colour Pallet */ 
 @theme {
 
