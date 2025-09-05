@@ -15,6 +15,7 @@ import QThread from "../../components/questions/q_thread"
 import ViewDecks from "./../viewDecks";
 import SharePanel from "../social/sharePanel";
 import LogTables from "../../components/logtables"
+import RankBar from "../../components/rankbar";
 
 // Style Imports 
 import '../../styles/questions.css'
@@ -69,14 +70,19 @@ export default function Question(props: questionsProps) {
 
 
     return (
-    <div className="card-container">
+    <div className="flex h-full w-full items-start my-4 ">
     { //============================= QUESTIONS CONTAINER ====================================// 
     props.questions[props.position]? ( 
-    <div className="h-container items-between justify-between">
-        <div className="p-8 w-2/3 h-full flex flex-col justify-between ">
+    <div className="card-container h-container items-start justify-start w-full">
+        <div className="p-8 w-full h-full flex flex-col justify-between">
 
             <div>
             {/* ================================ HEADING =================================== */}
+            {/* ======================================== RANKBAR ========================================== */}
+                <div className="flex ">
+                    <RankBar rank={2} progress={Math.min(50, 100)} />
+                </div>
+
             <p className="txt-bold color-txt-accent">{properties?.name}
                 <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
                 {       
@@ -128,7 +134,21 @@ export default function Question(props: questionsProps) {
 
         </div>
         {/* ====================================================================================== */}
-        
+
+
+    </div>
+    ) : (
+        /* =========================== LOADING ANIMATION =========================== */
+        <div className="w-full h-full flex justify-center items-center">
+            <Lottie animationData={loadingAnim} loop={true} autoplay={true} 
+                className="h-40 w-40" />
+        </div>
+        /* ============================================================================== */
+    )
+    }
+    { /* ===================================================================================== */ }
+
+            
         {/* =================================== QUESTION SIDEVIEWS ================================= */}
         {sideView === 'thread' ? (
             <div className="border-l border-light-grey dark:border-grey h-full w-150">
@@ -232,18 +252,6 @@ export default function Question(props: questionsProps) {
         ) : (<></> /* Do not show sidebar in preview mode */)
         }
         {/* ====================================================================================== */}    
-
-    </div>
-    ) : (
-        /* =========================== LOADING ANIMATION =========================== */
-        <div className="w-full h-full flex justify-center items-center">
-            <Lottie animationData={loadingAnim} loop={true} autoplay={true} 
-                className="h-40 w-40" />
-        </div>
-        /* ============================================================================== */
-    )
-    }
-    { /* ===================================================================================== */ }
     </div>
     )
 }

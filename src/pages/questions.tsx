@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 // Components
 
 import Question from "../components/questions/question";
-import RankBar from "../components/rankbar";
+
 
 
 // Style Imports 
@@ -53,15 +53,11 @@ export default function Questions() {
 
 
     return (
-        <div className="w-h-container flex-col p-4">
+        <div className="w-h-container flex-col justify-start p-4">
 
             {/* ======================================== TOP PAGE INFORMATION ========================================== */}
             <div className="flex items-end justify-end">
-                {/* ======================================== RANKBAR ========================================== */}
-                <div className="flex mr-20">
-                    <RankBar rank={user.rank} progress={Math.min(user.xp, 100)} />
-                </div>
-
+                
                 {/* ======================================== SEARCH AND FILTER ========================================== */}
                 <div className="flex items-center gap-3 w-full color-bg">
                     <div className="flex items-center txtbox w-full max-w-xs  color-bg">
@@ -69,8 +65,8 @@ export default function Questions() {
                         <LuSearch className="color-txt-sub " size={24}/>
                     </div>
                     
-                    <button type="button" className="p-1">
-                        <LuFilter className="color-txt-sub m-4"  size={30}/>
+                    <button type="button" className="px-1">
+                        <LuFilter className="color-txt-sub mx-4"  size={30}/>
                     </button>
                 </div>
             </div>

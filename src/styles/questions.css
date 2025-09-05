@@ -16,7 +16,7 @@
 
 /* ================== QUESTION CARD ================== */
 .card-container {
-    @apply h-[85%] w-[97.5%] rounded-out m-auto border-3
+    @apply h-full w-[97.5%] rounded-out m-auto border-2
     shadow-small color-bg;
 }
 
@@ -28,7 +28,7 @@
 
 /* ===================== RANK BAR ==================== */
   .progress-bar {
-    @apply w-[350px] h-6 rounded-2xl border-2 color-shadow overflow-hidden color-bg shadow-small
+    @apply w-full h-4 rounded-2xl border-2 color-shadow overflow-hidden color-bg 
   }
   
   .progress-fill {

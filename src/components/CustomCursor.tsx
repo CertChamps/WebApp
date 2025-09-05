@@ -11,7 +11,7 @@ const ICON_PATH_D =
 function CursorSvg({
   x,
   y,
-  size = 22,
+  size = 36,
   pressed = false,
 }: {
   x: number;
