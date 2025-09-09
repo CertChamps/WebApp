@@ -41,3 +41,36 @@
 .footer-txt {
     @apply flex items-center px-2 py-1 text-sm color-txt-accent
 }
+
+/* Composer */
+.composer-container {
+    @apply sticky bottom-0 left-0 color-bg p-3 z-10
+}
+
+.composer-replyTo-wrapper {
+    @apply flex items-center justify-between mb-2 px-3 py-1 rounded-full color-bg
+}
+
+.composer-replyTo-username {
+    @apply txt-sub color-txt-accent
+}
+
+.composer-replyTo-cancel {
+    @apply txt-sub color-txt-main hover:color-txt-accent
+}
+
+.composer-text-box {
+    @apply w-full p-3 rounded-xl color-bg-grey-5 color-txt-sub focus:outline-none resize-none
+}
+
+.composer-footer-wrapper {
+    @apply flex justify-end gap-2 mt-2
+}
+
+.composer-clear {
+    @apply px-3 py-1 txt-sub color-txt-main hover:color-txt-accent
+}
+
+.composer-post {
+    @apply px-4 py-2 rounded-xl color-bg-accent color-txt-accent hover:scale-95 duration-200
+}

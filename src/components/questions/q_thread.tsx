@@ -194,15 +194,15 @@ const QThread = (props: questionType) => {
           </div>
       
           {/* Composer - fixed within this column */}
-          <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
+          <div className="composer-container">
             {replyingTo && (
-              <div className="flex items-center justify-between mb-2 px-3 py-1 rounded-full bg-light-grey/40 dark:bg-grey/30">
-                <span className="txt-sub text-black dark:text-white">
+              <div className="composer-replyTo-wrapper">
+                <span className="composer-replyTo-username">
                   Replying to <span className="txt-bold">@{replyingTo.username}</span>
                 </span>
                 <button
                   onClick={cancelReply}
-                  className="txt-sub text-grey dark:text-light-grey hover:text-red"
+                  className="composer-replyTo-cancel"
                   type="button"
                 >
                   Cancel
@@ -216,14 +216,14 @@ const QThread = (props: questionType) => {
               onKeyDown={handleKeyDown}
               placeholder="Say something excuisite..."
               rows={3}
-              className="w-full p-3 rounded-xl border-2 border-light-grey dark:border-grey bg-button dark:bg-button-dark text-black dark:text-white focus:outline-none resize-none"
+              className="composer-text-box"
             />
       
-            <div className="flex justify-end gap-2 mt-2">
+            <div className="composer-footer-wrapper">
               <button
                 type="button"
                 onClick={cancelReply}
-                className="px-3 py-1 txt-sub text-grey dark:text-light-grey hover:text-black dark:hover:text-white"
+                className="composer-clear"
               >
                 Clear
               </button>
@@ -231,7 +231,7 @@ const QThread = (props: questionType) => {
                 type="button"
                 onClick={sendPost}
                 disabled={!message.trim()}
-                className="px-4 py-2 rounded-xl bg-blue text-white disabled:opacity-50 hover:bg-blue-light"
+                className="composer-post"
               >
                 Send
               </button>
