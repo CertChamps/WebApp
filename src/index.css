@@ -92,6 +92,12 @@
   --color-redDragonPrimary: #e2a528;
   --color-redDragonSub: #4a4d4e;
 
+  /* Modern Ink */
+  --color-modernInkBG: #ffffff;
+  --color-modernInkAccent: #000000;
+  --color-modernInkPrimary: #ff360d;
+  --color-modernInkSub: #b7b7b7;
+
   /* Note: Do not change these randomly below styles must follow: 
   radius-out - radius-in = 2 * padding/margin */
 
@@ -209,6 +215,7 @@ math-field::part(virtual-keyboard-toggle) {
 @custom-variant shadow (&:where([data-theme="shadow"] *));
 @custom-variant matchaMoccha (&:where([data-theme="matchaMoccha"] *));
 @custom-variant redDragon (&:where([data-theme="redDragon"] *));
+@custom-variant modernInk (&:where([data-theme="modernInk"] *));
 
 @utility color-txt-main {
   @apply 
@@ -224,6 +231,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:text-shadowPrimary
     matchaMoccha:text-matchaMocchaPrimary
     redDragon:text-redDragonPrimary
+    modernInk:text-modernInkPrimary
 }
 
 @utility color-txt-sub {
@@ -240,6 +248,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:text-shadowSub
     matchaMoccha:text-matchaMocchaSub
     redDragon:text-redDragonSub
+    modernInk:text-modernInkSub
 }
 
 @utility color-txt-accent {
@@ -256,6 +265,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:text-shadowAccent
     matchaMoccha:text-matchaMocchaAccent
     redDragon:text-redDragonAccent
+    modernInk:text-modernInkAccent
 }
 
 @utility color-bg {
@@ -272,6 +282,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:bg-shadowBG
     matchaMoccha:bg-matchaMocchaBG
     redDragon:bg-redDragonBG
+    modernInk:bg-modernInkBG
 }
 
 @utility color-txt-invert {
@@ -288,6 +299,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:text-shadowBG
     matchaMoccha:text-matchaMocchaBG
     redDragon:text-redDragonBG
+    modernInk:text-modernInkBG
 }
 
 
@@ -305,6 +317,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:bg-shadowSub/5
     matchaMoccha:bg-matchaMocchaSub/5
     redDragon:bg-redDragonSub/5
+    modernInk:bg-modernInkSub/5
 }
 
 @utility color-bg-grey-10 {
@@ -321,6 +334,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:bg-shadowSub/20
     matchaMoccha:bg-matchaMocchaSub/20
     redDragon:bg-redDragonSub/20
+    modernInk:bg-modernInkSub/20
 }
 
 @utility color-bg-accent {
@@ -337,6 +351,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:bg-shadowAccent/15
     matchaMoccha:bg-matchaMocchaAccent/15
     redDragon:bg-redDragonAccent/15
+    modernInk:bg-modernInkAccent/15
 }
 
 @utility color-shadow {
@@ -353,6 +368,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:border-shadowSub/20
     matchaMoccha:border-matchaMocchaSub/20
     redDragon:border-redDragonSub/20
+    modernInk:border-modernInkSub/20
 
     shadow-light-grey/40
     dark:shadow-grey/20
@@ -366,6 +382,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:shadow-shadowSub/20
     matchaMoccha:shadow-matchaMocchaSub/20
     redDragon:shadow-redDragonSub/20
+    modernInk:shadow-modernInkSub/20
 }
 
 @utility color-shadow-accent {
@@ -382,6 +399,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:border-shadowAccent
     matchaMoccha:border-matchaMocchaAccent
     redDragon:border-redDragonAccent
+    modernInk:border-modernInkAccent
 
     shadow-blue
     dark:shadow-blue-light
@@ -395,6 +413,7 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:shadow-shadowAccent
     matchaMoccha:shadow-matchaMocchaAccent
     redDragon:shadow-redDragonAccent
+    modernInk:shadow-modernInkAccent
 }
 
 @utility color-cursor {
@@ -411,4 +430,5 @@ math-field::part(virtual-keyboard-toggle) {
     shadow:bg-shadowAccent
     matchaMoccha:bg-matchaMocchaAccent
     redDragon:bg-redDragonAccent
+    modernInk:bg-modernInkAccent
 }

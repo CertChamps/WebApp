@@ -358,6 +358,16 @@ export default function Settings() {
                 </div>
             </div>
 
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('modernInk')}>
+                <p className="theme-text">Modern Ink</p>
+                <div className="color-strip-container bg-modernInkBG " >
+                    <div className="color-strip-item bg-modernInkPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-modernInkSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-modernInkAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
         </div>
 
         {/* ======================================================================================== */}

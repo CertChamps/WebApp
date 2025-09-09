@@ -169,6 +169,10 @@ export default function CustomCursor() {
           [data-theme="tangerine"] .cursor-icon { color: var(--color-tangerineAccent); }
           [data-theme="icebergLight"] .cursor-icon { color: var(--color-icebergLightAccent); }
           [data-theme="icebergDark"] .cursor-icon { color: var(--color-icebergDarkAccent); }
+          [data-theme="shadow"] .cursor-icon { color: var(--color-shadowAccent); }
+          [data-theme="matchaMoccha"] .cursor-icon { color: var(--color-matchaMocchaAccent); }
+          [data-theme="redDragon"] .cursor-icon { color: var(--color-redDragonAccent); }
+          [data-theme="modernInk"] .cursor-icon { color: var(--color-modernInkAccent); }
         `}
       </style>
       {trailShapes}
