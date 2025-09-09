@@ -1,1 +1,43 @@
 @reference '../index.css';
+
+/*============THESE WILL BE FOR THE qReplyCard============*/
+.reply-container {
+    @apply color-bg rounded-lg p-4 w-full
+}
+
+/* Header */
+.header-wrapper {
+    @apply flex items-center mt-2 mb-3
+}
+
+.header-img {
+    @apply w-7 h-7 rounded-full mr-3 object-cover
+}
+
+.header-text-wrapper {
+    @apply flex-1 flex items-center justify-between
+}
+
+.header-username {
+    @apply txt-bold color-txt-accent leading-tight
+}
+
+.header-time {
+    @apply txt-sub color-txt-sub leading-tight
+}
+
+.content-img {
+    @apply w-full h-[200px] object-cover rounded-lg my-3
+}
+
+.content-text {
+    @apply color-txt-main text-[20px] mb-6
+}
+
+.footer-wrapper {
+    @apply flex items-center gap-4 mb-1
+}
+
+.footer-txt {
+    @apply flex items-center px-2 py-1 text-sm color-txt-accent
+}
