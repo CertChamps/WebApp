@@ -10,8 +10,8 @@ import { UserContext } from "../context/UserContext"
 import { useEffect, useState } from "react";
 
 // Components
-
 import Question from "../components/questions/question";
+import SearchandFilter from "../components/searchandfilter";
 
 
 
@@ -59,18 +59,12 @@ export default function Questions() {
             <div className="flex items-end justify-end">
                 
                 {/* ======================================== SEARCH AND FILTER ========================================== */}
-                <div className="flex items-center gap-3 w-full color-bg">
-                    <div className="flex items-center txtbox w-full max-w-xs  color-bg">
-                        <input type="text" placeholder="Search Questions" className=" w-full p-1 outline-none border-none"/>
-                        <LuSearch className="color-txt-sub " size={24}/>
-                    </div>
-                    
-                    <button type="button" className="px-1">
-                        <LuFilter className="color-txt-sub mx-4"  size={30}/>
-                    </button>
-                </div>
+            
+                    <SearchandFilter />
             </div>
             {/* ===================================================================================================== */}
+
+
 
 
             <Question questions={questions} position={position} />

@@ -1,0 +1,40 @@
+@reference '../index.css';
+
+.filter-container-shown {
+    @apply w-11/12 h-auto rounded-out border-2  color-shadow absolute top-[120%] color-bg
+    z-100 p-2 max-h-[80vh] overflow-y-scroll 
+    transform origin-top scale-y-100  opacity-100 pointer-events-auto
+    duration-250 transition-all;
+}
+
+.filter-container-hidden {
+    @apply w-11/12 h-auto rounded-out border-2  color-shadow absolute top-[120%] color-bg
+    z-100 p-2 max-h-[80vh] overflow-y-scroll 
+    transform origin-top scale-y-0 opacity-0 pointer-events-none 
+    duration-250 transition-all overflow-hidden
+}
+
+
+.filter-header {
+    @apply txt-sub font-bold m-2 color-txt-accent
+}
+
+.selection-container {
+    @apply flex flex-wrap w-full 
+}
+
+.selected {
+    @apply flex color-bg-accent rounded-out color-txt-accent justify-center items-center font-bold px-2 py-1 m-0.5
+}
+
+.unselected {
+    @apply color-bg-grey-5 rounded-out color-txt-sub text-center inline px-2 py-1 m-0.5 opacity-55
+}
+
+.apply {
+    @apply blue-btn ml-auto text-center hover:opacity-100 hover:scale-95 mt-2
+}
+
+.filler {
+    @apply text-center txt-sub my-4
+}
