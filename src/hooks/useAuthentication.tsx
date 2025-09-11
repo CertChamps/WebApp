@@ -1,4 +1,4 @@
-import { useContext, useEffect } from "react"
+import { useContext, useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "../context/UserContext"
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
@@ -12,6 +12,9 @@ export default function useAuthentication () {
 
     // =============================== CONTEXT AND STATE ==================================== // 
     const { setUser } = useContext(UserContext)
+    const [error, setError] = useState<any>({}) // object that holds all errors 
+
+    useEffect(() => {console.log(error)}, [error])
 
     // Initialise storage & router
     const storage = getStorage()
@@ -45,7 +48,7 @@ export default function useAuthentication () {
         })
 
         // Go to the dashboard
-        navigate('/questions')
+        navigate('/practice')
     }
     // =======================================================================================//
 
@@ -119,12 +122,34 @@ export default function useAuthentication () {
         // Log any errors
         catch (error) {
             console.log(error)
+            setError((prevError: any) => ({
+                ...prevError,
+                general: "Something went wrong. Please try again"
+            }));
         }
     };
     // ======================================================================================= //
 
     // ======================================== SIGN UP ======================================= //
     const signUpWithEmail = async (username: string, email: string, password: string) => {
+        // Clear previous errors
+        setError({})
+
+        // Validate username length
+        if (username.length < 2) {
+            setError((prevError: any) => ({
+            ...prevError,
+            username: "Username is too short. Min 2 char."
+            }))
+            return
+        }
+        if (username.length > 10) {
+            setError((prevError: any) => ({
+            ...prevError,
+            username: "Username is too long. Max 10 char."
+            }))
+            return
+        }
 
         try {
             // Sign up with email and password 
@@ -136,29 +161,97 @@ export default function useAuthentication () {
                 createUser(user.uid, username, email)
             }
         }
-        catch (err) {
-            console.log(err)
-        }
+        catch (err: any) {
+            // Handle Firebase errors (e.g., weak password, invalid email)
+            const errorCode = err.code;
+            const errorMessage = err.message;
 
+            // Firebase error codes
+            if (errorCode === 'auth/email-already-in-use') {
+                setError((prevError: any) => ({
+                    ...prevError,
+                    email: "This email is already in use."
+                }));
+            } else if (errorCode === 'auth/invalid-email') {
+                setError((prevError: any) => ({
+                    ...prevError,
+                    email: "The email address is not valid."
+                }));
+            } else if (errorCode === 'auth/weak-password') {
+                setError((prevError: any) => ({
+                    ...prevError,
+                    password: "Password too short. Min 6 chars"
+                }));
+            } else if (errorMessage === 'Firebase: Error (auth/missing-password).') {
+                setError((prevError: any) => ({
+                    ...prevError,
+                    password: "Please enter a password"
+                }));
+            } else {
+                setError((prevError: any) => ({
+                    ...prevError,
+                    general: "Something went wrong. Please try again"
+                }));
+            }
+        }
     }
     // ======================================================================================= //
 
     // ======================================== SIGN IN ======================================= //
     const signInWithEmail = async (email: string, password: string) => {
-        try{ 
-            // Sign up with email and password 
+        // Clear previous errors
+        setError({})
+
+        try {
+            // Sign in with email and password 
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user
+            const user = userCredential.user;
             
-            // Set the user on our system
-            if ( user ) {
+            // Setup the user on our system
+            if (user) {
                 userSetup(user.uid, '', email)
             }
-        }
-        catch (err) {
-            console.log(err)
+        } catch (err: any) {
+            // Handle Firebase errors (e.g., incorrect email/password)
+            const errorCode = err.code;
+            const errorMessage = err.message;
+
+            // Firebase error codes
+            if (errorCode === 'auth/user-not-found') {
+                setError((prevError: any) => ({
+                    ...prevError,
+                    email: "No account found with this email address."
+                }));
+            } else if (errorCode === 'auth/wrong-password') {
+                setError((prevError: any) => ({
+                    ...prevError,
+                    password: "Incorrect password. Please try again."
+                }));
+            } else if (errorCode === 'auth/invalid-email') {
+                setError((prevError: any) => ({
+                    ...prevError,
+                    email: "The email address is not valid."
+                }));
+            } else if (errorMessage === 'Firebase: Error (auth/missing-password).') {
+                setError((prevError: any) => ({
+                    ...prevError,
+                    password: "Please enter a password."
+                }));
+            } else if (errorCode === 'auth/invalid-credential') {
+                setError((prevError: any) => ({
+                    ...prevError,
+                    email: "User not found"
+                }));
+            } else {
+                console.log(errorCode)
+                setError((prevError: any) => ({
+                    ...prevError,
+                    general: "Something went wrong. Please try again."
+                }));
+            }
         }
     }
+    // ======================================================================================= //
     // ======================================================================================= //
 
     // ======================================== EXISTING USERS ======================================= //
@@ -190,9 +283,6 @@ export default function useAuthentication () {
     };
     // ================================================================================================= //
 
-
-
-  return { loginWithGoogle, signUpWithEmail, signInWithEmail, userSetup }
+  return { loginWithGoogle, signUpWithEmail, signInWithEmail, userSetup, error }
 
 }
-

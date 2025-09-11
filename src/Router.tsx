@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Login from './pages/login';
+import SignUp from './pages/signup';
 import Questions from './pages/questions';
 import Social from './pages/social/social';
 import Games from './pages/games';
@@ -10,7 +11,8 @@ import DeckViewer from './pages/deckViewer';
 import ProfileViewer from './pages/profileViewer';
 
 const router = createBrowserRouter([
-  { path: '/', element: ( <Login /> ), },
+  { path: '/', element: ( <SignUp /> ), },
+  { path: '/login', element: ( <Login /> ), },
   { path: '/practice', element: (
     <>
       <Navbar />

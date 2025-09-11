@@ -165,7 +165,7 @@
 }
 
 @utility blue-btn {
-  @apply color-bg-accent color-txt-main txt rounded-in px-2 py-1 
+  @apply color-bg-accent color-txt-accent txt rounded-in px-2 py-1 
   outline-none hover:opacity-80 transition-all w-6/12 txt-bold block cursor-pointer
 }
 
