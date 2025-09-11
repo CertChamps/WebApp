@@ -62,12 +62,12 @@ export default function Navbar () {
             </div>
 
             {/* ============================= GAMES ICON ================================ */}
-            <div className={page == 'games' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('games')}}> 
+            {/* <div className={page == 'games' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('games')}}> 
                 <LuGamepad2 strokeWidth={strokewidth} size={iconSize} 
                     className={page == 'games' ? 'nav-icon-selected' : 'nav-icon'}
                     fill={page == 'games' ? 'currentColor' : 'none'} />  
                 <p className={page == 'games' ? 'nav-txt-selected' : 'nav-txt'} >Games</p>
-            </div>
+            </div> */}
             
         </div>
     )

@@ -7,6 +7,7 @@ import useFetch from './useFetch'
 // Props Type 
 type questionProps = {
     setQuestions: React.Dispatch<React.SetStateAction<any>>
+    filters: any[]
 }
 
 export default function useQuestions( props?:questionProps ) {
@@ -41,28 +42,56 @@ export default function useQuestions( props?:questionProps ) {
     const getRandomQuestion = async (idExclude: string) => {
 
         // Get number of questions in database
-        const questionsSnapshot = query(collection(db, 'certchamps-questions'));
-        const questionCount = await getCountFromServer(questionsSnapshot);
+        let questionSnapshot = query(collection(db, 'certchamps-questions'));
+        const questionCount = await getCountFromServer(questionSnapshot);
 
         // Generate an ID at random 
         const randomID = generateID(questionCount.data().count) 
-    
-        // Query and retrive the question with the generated ID ( search up the database for questions )
-        let questionSnapshot = query(collection(db, 'certchamps-questions'), 
-        where('id', '<=', randomID), // search DOWN the database by id 
-        where('id', '!=', idExclude), // do not include previous id 
-        orderBy('id', 'desc'), limit(1), // grab the first closest result 
-        );
         
-        // in the case no result is found search up the database
-        if ( (await getDocs(questionSnapshot)).empty ) {
+        // -- QUERYING WITH FILTERS INVOLVED -- //
+        if ( props?.filters && props?.filters.length > 0) {
+            console.log(props.filters)
+            // Query and retrive the question with the generated ID ( search up the database for questions )
+            questionSnapshot = query(collection(db, 'certchamps-questions'), 
+            where('id', '<=', randomID), // search DOWN the database by id 
+            where('id', '!=', idExclude), // do not include ceratin id 
+            where('tags', 'array-contains-any', props.filters), // abide to filters
+            orderBy('id', 'desc'), limit(1) // only grab the bottom result 
+            );
+        
+
+            // in the case no result is found search up the database
+            if ((await getDocs(questionSnapshot)).empty) {
+            
             questionSnapshot = query(collection(db, 'certchamps-questions'), 
             where('id', '>=', randomID), // search UP the database by id 
-            where('id', '!=', idExclude), // do not include previous id 
-            orderBy('id', 'asc'), limit(1) // grab the first closest result 
+            where('id', '!=', idExclude), // do not include ceratin id 
+            where('tags', 'array-contains-any', props.filters), // abide to filters
+            orderBy('id', 'asc'), limit(1) // only grab the bottom result 
             );
+
+            }
         } 
+
+        // -- QUERYING WITHOUT FILTERS INVOLVED -- //
+        else {
+            // Query and retrive the question with the generated ID ( search up the database for questions )
+            questionSnapshot = query(collection(db, 'certchamps-questions'), 
+            where('id', '<=', randomID), // search DOWN the database by id 
+            where('id', '!=', idExclude), // do not include ceratin id 
+            orderBy('id', 'desc'), limit(1) // only grab the bottom result 
+            );
         
+            // in the case no result is found search up the database
+            if ( (await getDocs(questionSnapshot)).empty ) {
+            questionSnapshot = query(collection(db, 'certchamps-questions'), 
+            where('id', '>=', randomID), // search UP the database by id 
+            where('id', '!=', idExclude), // do not include ceratin id 
+            orderBy('id', 'asc'), limit(1) // only grab the bottom result 
+            );
+            }
+        } 
+                
         // Return the ID of that question
         return ( (await getDocs(questionSnapshot)).docs[0].id )
 

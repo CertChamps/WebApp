@@ -23,10 +23,15 @@ export default function Questions() {
 
     //=================================> State, Hooks, and Context <================================//
     const [questions, setQuestions] = useState<any[]>([])
+    const [filters, setFilters] = useState<any[]>([])
     const [position, setPosition] = useState(0) // position of question in the array
-    const { loadQuestions } = useQuestions({ setQuestions })
+    const { loadQuestions } = useQuestions({ setQuestions, filters })
     const { user } = useContext(UserContext);
 
+    useEffect(() => {
+        setQuestions([]) // reset questions 
+        loadQuestions() // load new question in 
+    }, [filters])
     //===================================> useEffect First Render <=================================//
     useEffect(() => {
   
@@ -60,7 +65,7 @@ export default function Questions() {
                 
                 {/* ======================================== SEARCH AND FILTER ========================================== */}
             
-                    <SearchandFilter />
+                    <SearchandFilter setFilters={setFilters} />
             </div>
             {/* ===================================================================================================== */}
 

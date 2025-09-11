@@ -8,7 +8,7 @@ export default function useFilters() {
         { key: 3, topic: 'Calculus', subTopics: ['Differentiation', 'Functions', 'Integration'] },
         { key: 4, topic: 'Complex Numbers', subTopics: [] },
         { key: 5, topic: 'Financial Maths', subTopics: [] },
-        { key: 6, topic: 'Geometry', subTopics: [] },
+        { key: 6, topic: 'Coordinate Geometry', subTopics: ['Area of a Triangle'] },
         { key: 7, topic: 'Probability', subTopics: [] },
         { key: 8, topic: 'Sequences & Series', subTopics: [] },
         { key: 9, topic: 'Statistics', subTopics: ['Descriptive Statistics', 'Inferential Statistics', 'ZScores'] },

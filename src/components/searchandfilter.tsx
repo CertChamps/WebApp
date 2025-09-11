@@ -7,20 +7,31 @@ import { LuSearch, LuFilter } from "react-icons/lu";
 import '../styles/filters.css';
 import { useEffect, useRef, useState } from 'react';
 
-export default function SearchandFilter() {
+
+type filterProps = {
+  setFilters: React.Dispatch<React.SetStateAction<any>>;
+}
+export default function SearchandFilter(props: filterProps) {
   const {
     selectTopic,
     unselectTopic,
     selectSubTopic,
     unselectSubTopic,
     selectedTopics,
-    unselectedTopics,
+    unselectedTopics, 
     selectedSubTopics,
     unselectedSubTopics,
     localFilters,
   } = useFilters();
 
   const [viewFilter, setViewFilter] = useState<boolean>(false);
+
+  // applying filters 
+  const applyFilter = () => {
+    props.setFilters(localFilters);
+    setViewFilter(false);
+  } 
+  
 
   // ref for the whole search + filter area (input + dropdown)
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -42,6 +53,8 @@ export default function SearchandFilter() {
       document.removeEventListener('focusin', handleOutside);
     };
   }, []);
+
+  // Set filters 
 
   return (
     <div ref={containerRef}>
@@ -126,8 +139,7 @@ export default function SearchandFilter() {
           <p
             className="apply"
             onClick={() => {
-              // optionally apply and close — adjust behavior as needed
-              setViewFilter(false);
+              applyFilter()
             }}
           >
             Apply
