@@ -37,7 +37,7 @@ export default function FriendsSearch() {
     };
 
     runSearch();
-  }, [search, getSearch]);
+  }, [search]);
 
   // Close dropdowns when clicking or focusing outside the component
   useEffect(() => {
