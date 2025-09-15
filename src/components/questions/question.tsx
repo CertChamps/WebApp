@@ -80,13 +80,11 @@ export default function Question(props: questionsProps) {
     const { user, setUser } = useContext(UserContext)
 
     const [displayedXP, setDisplayedXP] = useState(user?.xp ?? 0);
-    const [pendingPips, setPendingPips] = useState(0);
 
     // Keep displayedXP in sync when user.xp changes from context (e.g. on page load)
     useEffect(() => {
-        // Only snap to server/user XP when no animation is running
-        if (pendingPips === 0) setDisplayedXP(user?.xp ?? 0);
-    }, [user?.xp, pendingPips]);
+    setDisplayedXP(user?.xp ?? 0);
+    }, [user?.xp]);
 
     //=========================================== Constants =====================================//
     const iconSize = 48
@@ -252,8 +250,6 @@ export default function Question(props: questionsProps) {
                 pitchIndex: chunks,
               });
             }
-            const total = chunks + (rem > 0 ? 1 : 0);
-            setPendingPips((p) => p + total);
             setXpFlyers((prev) => [...prev, ...newPips]);
           }
     //==========================================================================================//
@@ -272,7 +268,6 @@ export default function Question(props: questionsProps) {
             pitchIndex={fly.pitchIndex}
             onDone={(chunk) => {
                 setDisplayedXP(prev => prev + chunk);
-                setPendingPips((p) => Math.max(0, p - 1));
                 setXpFlyers(prev => prev.filter(f => f.id !== fly.id));
             }}
         />
