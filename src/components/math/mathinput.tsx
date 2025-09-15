@@ -1,11 +1,9 @@
 import { useEffect, useRef } from "react";
-import "mathlive";
-import "@cortex-js/compute-engine";
-import React from "react";
 
 type inputProps = {
   index: number;
   setInputs: React.Dispatch<React.SetStateAction<string[]>>;
+  onEnter?: () => void; // NEW: parent-supplied handler
 };
 
 export default function MathInput(props: inputProps) {
@@ -13,36 +11,43 @@ export default function MathInput(props: inputProps) {
 
   useEffect(() => {
     if (!mfRef.current) return;
-      const mf = mfRef.current
-      mf.autocomplete = "off";   // no suggestions popup
-      mf.menuItems = [];
-      mf.suggestions = "none";
-      mf.inlineShortcuts = {
-        'sqrt': '\\sqrt{#?}',
-        'frac': '\\frac{#?}{#?}',  
-        "/": "\\frac{#@}{#?}",
-        'sin': '\\sin',
-        'cos': '\\cos',
-        'tan': '\\tan',
+    const mf = mfRef.current;
 
-      };   
-      mf.keybindings = [
-        // Delete operations
-        { key: '[Backspace]', command: 'deleteBackward' },
-        { key: '[Delete]', command: 'deleteForward' },
-        { key: 'shift+[Backspace]', command: 'deleteForward' },
+    mf.autocomplete = "off";
+    mf.menuItems = [];
+    mf.suggestions = "none";
+    mf.inlineShortcuts = {
+      sqrt: "\\sqrt{#?}",
+      frac: "\\frac{#?}{#?}",
+      "/": "\\frac{#@}{#?}",
+      sin: "\\sin",
+      cos: "\\cos",
+      tan: "\\tan",
+    };
+    mf.keybindings = [
+      { key: "[Backspace]", command: "deleteBackward" },
+      { key: "[Delete]", command: "deleteForward" },
+      { key: "shift+[Backspace]", command: "deleteForward" },
+      { key: "left", command: "moveToPreviousChar" },
+      { key: "right", command: "moveToNextChar" },
+      { key: "up", command: "moveUp" },
+      { key: "down", command: "moveDown" },
+    ];
+    mf.removeExtraneousParentheses = false;
 
-        // Navigation operations
-        { key: 'left', command: 'moveToPreviousChar' },
-        { key: 'right', command: 'moveToNextChar' },
-        { key: 'up', command: 'moveUp' },
-        { key: 'down', command: 'moveDown' },
-      ];  
-      mfRef.current.removeExtraneousParentheses = false;
-  }, []);
+    // Intercept Enter and call onEnter
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        props.onEnter?.();
+      }
+    };
+    mf.addEventListener("keydown", onKeyDown);
+    return () => mf.removeEventListener("keydown", onKeyDown);
+  }, [props]);
 
   const handleInput = (evt: any) => {
-    console.log("key", props.index)
     const mf = evt.target as any;
     const rawLatex: string = mf.value;
 
@@ -50,38 +55,40 @@ export default function MathInput(props: inputProps) {
     if (ce) {
       const expr = ce.parse(rawLatex, { canonical: false });
       const normalized = expr.toLatex({
-        fractionStyle: () => "quotient", // ensures \frac{...}{...}
+        fractionStyle: () => "quotient",
       });
       props.setInputs((prev: string[]) => {
-        const newInputs = [...prev];
-        newInputs[props.index] = normalized;
-        return newInputs;
+        const next = [...prev];
+        next[props.index] = normalized;
+        return next;
       });
     } else {
       props.setInputs((prev: string[]) => {
-        const newInputs = [...prev];
-        newInputs[props.index] = rawLatex;
-        return newInputs;
+        const next = [...prev];
+        next[props.index] = rawLatex;
+        return next;
       });
     }
   };
 
   return (
     <div>
-      <math-field
-        ref={mfRef}
-        default-mode="inline-math"
-        onInput={handleInput}
-        className="txtbox outline-none bg-none color-txt-main inline-block 
-          focus:border-3 color-shadow-accent w-50 mx-4
-          h-auto overflow-scroll"
-        style={{
-          background: "none",
-          outline: "none",
-          fontSize: 24,
-        }}
-      />
-      {/* <p>{latex}</p> */}
+      <div>
+        <math-field
+          ref={mfRef}
+          default-mode="inline-math"
+          onInput={handleInput}
+          className="txtbox outline-none bg-none color-txt-main inline-block 
+            focus:border-3 color-shadow-accent w-50 mx-4
+            h-auto overflow-scroll"
+          style={{
+            background: "none",
+            outline: "none",
+            fontSize: 24,
+          }}
+        />
+        {/* <p>{latex}</p> */}
+      </div>
     </div>
   );
 }

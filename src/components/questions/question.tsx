@@ -23,13 +23,19 @@ import '../../styles/questions.css'
 import '../../styles/navbar.css'
 import useMaths from "../../hooks/useMaths";
 
+// Sounds
+import correctSound from "../../assets/sounds/Click-Bounce_Success.wav";
+import incorrectSound from "../../assets/sounds/Click-Bounce_Failure.wav";
+
 // Component Props
 type questionsProps = {
-    questions: any[], 
-    position: number,
-    deckmode?: boolean
-    preview?: boolean 
-}
+    questions: any[];
+    position: number;
+    setPosition?: (n: number | ((p: number) => number)) => void;
+    nextQuestion?: () => Promise<void> | void;
+    deckmode?: boolean;
+    preview?: boolean;
+};
 
 export default function Question(props: questionsProps) {
 
@@ -47,7 +53,12 @@ export default function Question(props: questionsProps) {
     const [ sideView, setSideView ] = useState<string>('')
 
     const { toRoman } = useQuestions()
-    const { isCorrect } = useMaths()
+    const { isCorrect } = useMaths();
+
+    const [isRight, setIsRight] = useState(false);   // result of last check
+    const [showNoti, setShowNoti] = useState(false); // controls AnswerNoti
+
+    
 
     //=========================================== Constants =====================================//
     const iconSize = 48
@@ -77,10 +88,84 @@ export default function Question(props: questionsProps) {
     }, [props.position, props.questions])
     //==========================================================================================//
 
+    //===================================== Answer checking ===================================//
+    function onCheck() {
+        const answers = content?.[part]?.answer ?? [];
+        const ready =
+            Array.isArray(inputs) &&
+            inputs.length === answers.length &&
+            inputs.every((v) => (v ?? "").toString().trim().length > 0);
+          
+        const ok = ready ? isCorrect(inputs, answers) : false;
+          
+        if (ok) {
+            playCorrectSound();   // 🔊 play sound when correct
+        } else {
+            playInorrectSound(); // 🔊 play sound when incorrect
+        }
+          
+        setIsRight(ok);
+        setShowNoti(true);
+    }
+
+    function goNextFromNoti() {
+        setShowNoti(false);
+        setIsRight(false);
+        setInputs([]);
+      
+        // Next part if available
+        if ((content?.length ?? 0) > part + 1) {
+          setPart((p) => p + 1);
+          return;
+        }
+      
+        // Otherwise ask parent to move to the next question
+        if (props.nextQuestion) {
+          props.nextQuestion();
+        } else if (props.setPosition) {
+          // fallback if parent didn’t pass nextQuestion
+          props.setPosition((p) => Math.min(p + 1, (props.questions?.length ?? 1) - 1));
+        }
+    }
+
+    function playCorrectSound() {
+        try {
+          const audio = new Audio(correctSound);
+          audio.volume = 0.6; // tweak volume as you like
+          audio.play().catch(() => {});
+        } catch (err) {
+          console.error("Could not play sound", err);
+        }
+    }
+
+    function playInorrectSound() {
+        try {
+          const audio = new Audio(incorrectSound);
+          audio.volume = 0.6; // tweak volume as you like
+          audio.play().catch(() => {});
+        } catch (err) {
+          console.error("Could not play sound", err);
+        }
+    }
+
+    useEffect(() => {
+        setInputs([]);
+        setIsRight(false);
+        setShowNoti(false);
+    }, [part]);
+      
+    useEffect(() => {
+        setPart(0);
+        setInputs([]);
+        setIsRight(false);
+        setShowNoti(false);
+    }, [props.position, props.questions]);
+    //==========================================================================================//
+
 
     return (
     <div className="flex h-full w-full items-start my-4 ">
-    <AnswerNoti />
+    <AnswerNoti visible={showNoti && isRight} onNext={goNextFromNoti} />
     { //============================= QUESTIONS CONTAINER ====================================// 
     props.questions[props.position]? ( 
     <div className="card-container h-container items-start justify-start w-full">
@@ -134,14 +219,22 @@ export default function Question(props: questionsProps) {
             <div className="flex">
                 { !props.preview ? (
                     content?.[part]?.answer?.map((_: any, idx: number) => (
-                        <MathInput key={idx} index={idx} setInputs={setInputs }/>
+                        <MathInput
+                            key={idx}
+                            index={idx}
+                            setInputs={setInputs}
+                            onEnter={onCheck}   // <- Enter now checks
+                        />
                     ))
                 ) :(<></>)
                 }
                 
-                <div className="h-10 w-10 rounded-full color-bg-accent flex items-center justify-center">
-                    <LuCheck strokeWidth={3} size={30} 
-                        className="color-txt-accent" />
+                <div
+                    className="h-10 w-10 rounded-full color-bg-accent flex items-center justify-center cursor-pointer hover:opacity-90"
+                    onClick={onCheck}
+                    title="Check"
+                >
+                    <LuCheck strokeWidth={3} size={30} className="color-txt-accent" />
                 </div>
 
             </div>

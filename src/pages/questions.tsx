@@ -28,6 +28,7 @@ export default function Questions() {
     const { loadQuestions } = useQuestions({ setQuestions, filters })
     const { user } = useContext(UserContext);
 
+
     useEffect(() => {
         setQuestions([]) // reset questions 
         loadQuestions() // load new question in 
@@ -38,23 +39,17 @@ export default function Questions() {
         // load questions 
         loadQuestions()
 
-        // key press functionality
-        const onKeyDown = (e: any) => {
-
-            // manually going to next question
-            if(e.which === 13){
-                loadQuestions(); 
-                setPosition(prev => prev + 1); 
-            }
-                
-        }
-
-        // key press event listening
-        window.addEventListener('keydown', onKeyDown)
-        return () => window.removeEventListener('keydown', onKeyDown)
 
     }, [])
     //===============================================================================================//
+
+    const nextQuestion = async () => {
+        // If we’re at the end of the loaded array, load one more first
+        if (position + 1 >= questions.length) {
+          await loadQuestions();
+        }
+        setPosition((p) => p + 1);
+    };
 
 
     return (
@@ -72,7 +67,12 @@ export default function Questions() {
 
 
 
-            <Question questions={questions} position={position} />
+            <Question
+                questions={questions}
+                position={position}
+                setPosition={setPosition}    // optional but handy
+                nextQuestion={nextQuestion}  // <-- pass this
+            />
 
         </div>
     )
