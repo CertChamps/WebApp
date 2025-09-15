@@ -89,7 +89,7 @@ export default function Question(props: questionsProps) {
     //=========================================== Constants =====================================//
     const iconSize = 48
     const strokewidth = 2
-    const XP_PER_RANK = 1000
+    const XP_PER_RANK = 10000
 
     const getRankInfo = (xp: number) => {
         const safe = Math.max(0, xp || 0)

@@ -368,6 +368,26 @@ export default function Settings() {
                 </div>
             </div>
 
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('gruvbox')}>
+                <p className="theme-text">Gruvbox</p>
+                <div className="color-strip-container bg-gruvboxBG " >
+                    <div className="color-strip-item bg-gruvboxPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-gruvboxSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-gruvboxAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('magicGirl')}>
+                <p className="theme-text">Magic Girl</p>
+                <div className="color-strip-container bg-magicGirlBG " >
+                    <div className="color-strip-item bg-magicGirlPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-magicGirlSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-magicGirlAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
         </div>
 
         {/* ======================================================================================== */}
