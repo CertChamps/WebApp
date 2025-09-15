@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
 
+import 'mathlive';
+// Try one of these CSS imports depending on your MathLive version:
+import 'mathlive/static.css';            // v0.92+
+///
+
 type inputProps = {
   index: number;
   setInputs: React.Dispatch<React.SetStateAction<string[]>>;

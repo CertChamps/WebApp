@@ -4,7 +4,7 @@ import { TbCards } from "react-icons/tb";
 
 // Hooks 
 import useQuestions from "../../hooks/useQuestions";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Components
 import Lottie  from 'lottie-react';
@@ -26,6 +26,13 @@ import useMaths from "../../hooks/useMaths";
 // Sounds
 import correctSound from "../../assets/sounds/Click-Bounce_Success.wav";
 import incorrectSound from "../../assets/sounds/Click-Bounce_Failure.wav";
+import XPFly from "./XPFly";
+
+// User Context
+import { useContext } from "react";
+import { UserContext } from "../../context/UserContext";
+import { db } from "../../../firebase";
+import { doc, increment, setDoc, updateDoc } from "firebase/firestore";
 
 // Component Props
 type questionsProps = {
@@ -58,11 +65,40 @@ export default function Question(props: questionsProps) {
     const [isRight, setIsRight] = useState(false);   // result of last check
     const [showNoti, setShowNoti] = useState(false); // controls AnswerNoti
 
-    
+    const [xpFlyers, setXpFlyers] = useState<
+        {
+            id: number;
+            to: { x: number; y: number };
+            amount: number;      // chunk size, e.g., 10
+            delay: number;       // stagger start
+            pitchIndex: number;  // for sound ladder
+        }[]
+    >([]);
+
+    const rankRef = useRef<HTMLDivElement>(null);
+
+    const { user, setUser } = useContext(UserContext)
+
+    const [displayedXP, setDisplayedXP] = useState(user?.xp ?? 0);
+    const [pendingPips, setPendingPips] = useState(0);
+
+    // Keep displayedXP in sync when user.xp changes from context (e.g. on page load)
+    useEffect(() => {
+        // Only snap to server/user XP when no animation is running
+        if (pendingPips === 0) setDisplayedXP(user?.xp ?? 0);
+    }, [user?.xp, pendingPips]);
 
     //=========================================== Constants =====================================//
     const iconSize = 48
     const strokewidth = 2
+    const XP_PER_RANK = 1000
+
+    const getRankInfo = (xp: number) => {
+        const safe = Math.max(0, xp || 0)
+        const rank = Math.floor(safe / XP_PER_RANK) + 1
+        const progress = Math.min(100, Math.round(((safe % XP_PER_RANK) / XP_PER_RANK) * 100))
+        return { rank, progress }
+    }
 
     //===================================== Question handling ===================================//
     useEffect(() => {
@@ -88,8 +124,10 @@ export default function Question(props: questionsProps) {
     }, [props.position, props.questions])
     //==========================================================================================//
 
+    
+
     //===================================== Answer checking ===================================//
-    function onCheck() {
+    async function onCheck() {
         const answers = content?.[part]?.answer ?? [];
         const ready =
             Array.isArray(inputs) &&
@@ -97,11 +135,27 @@ export default function Question(props: questionsProps) {
             inputs.every((v) => (v ?? "").toString().trim().length > 0);
           
         const ok = ready ? isCorrect(inputs, answers) : false;
+        const reward = 500;
           
         if (ok) {
-            playCorrectSound();   // 🔊 play sound when correct
+            playCorrectSound();
+            awardXP(reward, document.getElementById("check-btn"));
+
+            // Optimistic local update so RankBar updates immediately
+            setUser((prev: any) => prev ? { ...prev, xp: (prev.xp ?? 0) + reward } : prev);
+
+            // Persist atomically
+            if (user?.uid) {
+                try {
+                    await updateDoc(doc(db, 'user-data', user.uid), { xp: increment(reward) });
+                } catch (e) {
+                    // Optional: rollback on failure
+                    setUser((prev: any) => prev ? { ...prev, xp: Math.max(0, (prev.xp ?? 0) - reward) } : prev);
+                    console.error("XP update failed", e);
+                }
+            }
         } else {
-            playInorrectSound(); // 🔊 play sound when incorrect
+            playInorrectSound();
         }
           
         setIsRight(ok);
@@ -162,10 +216,67 @@ export default function Question(props: questionsProps) {
     }, [props.position, props.questions]);
     //==========================================================================================//
 
+    //====================================== XP Animation ======================================//
+    function awardXP(amount: number, originEl?: HTMLElement | null) {
+            if (!rankRef.current) return;
+            const targetBox = rankRef.current.getBoundingClientRect();
+            const to = {
+              x: targetBox.left + targetBox.width / 2,
+              y: targetBox.top + 10,
+            };
+        
+            // split into 10‑XP pips + optional remainder pip
+            const chunkSize = 10;
+            const chunks = Math.floor(amount / chunkSize);
+            const rem = amount % chunkSize;
+        
+            const baseDelay = 0.05; // seconds between pips
+            const now = Date.now();
+        
+            const newPips: typeof xpFlyers = [];
+            for (let i = 0; i < chunks; i++) {
+              newPips.push({
+                id: now + i,
+                to,
+            amount: chunkSize,
+               delay: i * baseDelay,
+                pitchIndex: i, // ladder up
+          });
+            }
+            if (rem > 0) {
+              newPips.push({
+                id: now + chunks,
+                to,
+                amount: rem,
+                delay: chunks * baseDelay,
+                pitchIndex: chunks,
+              });
+            }
+            const total = chunks + (rem > 0 ? 1 : 0);
+            setPendingPips((p) => p + total);
+            setXpFlyers((prev) => [...prev, ...newPips]);
+          }
+    //==========================================================================================//
+
 
     return (
     <div className="flex h-full w-full items-start my-4 ">
     <AnswerNoti visible={showNoti && isRight} onNext={goNextFromNoti} />
+
+    {xpFlyers.map((fly) => (
+        <XPFly
+            key={fly.id}
+            amount={fly.amount}
+            to={fly.to}
+            delay={fly.delay}
+            pitchIndex={fly.pitchIndex}
+            onDone={(chunk) => {
+                setDisplayedXP(prev => prev + chunk);
+                setPendingPips((p) => Math.max(0, p - 1));
+                setXpFlyers(prev => prev.filter(f => f.id !== fly.id));
+            }}
+        />
+    ))}
     { //============================= QUESTIONS CONTAINER ====================================// 
     props.questions[props.position]? ( 
     <div className="card-container h-container items-start justify-start w-full">
@@ -174,9 +285,12 @@ export default function Question(props: questionsProps) {
             <div>
             {/* ================================ HEADING =================================== */}
             {/* ======================================== RANKBAR ========================================== */}
-                <div className="flex ">
-                    <RankBar rank={2} progress={Math.min(50, 100)} />
-                </div>
+            <div className="flex" ref={rankRef}>
+                {(() => {
+                    const { rank, progress } = getRankInfo(displayedXP); 
+                    return <RankBar rank={rank} progress={progress} />;
+                })()}
+            </div>
 
             <p className="txt-bold color-txt-accent">{properties?.name}
                 <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
@@ -230,6 +344,7 @@ export default function Question(props: questionsProps) {
                 }
                 
                 <div
+                    id="check-btn"
                     className="h-10 w-10 rounded-full color-bg-accent flex items-center justify-center cursor-pointer hover:opacity-90"
                     onClick={onCheck}
                     title="Check"
@@ -357,6 +472,7 @@ export default function Question(props: questionsProps) {
 
             )
             }   
+            
         </div>
         ) : (<></> /* Do not show sidebar in preview mode */)
         }
