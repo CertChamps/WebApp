@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import "mathlive";
 import "@cortex-js/compute-engine";
-import useMaths from "../../hooks/useMaths";
+import React from "react";
 
-export default function MathInput({ answer }: any) {
-  const [latex, setLatex] = useState("");
-  const { isCorrect } = useMaths();
+type inputProps = {
+  index: number;
+  setInputs: React.Dispatch<React.SetStateAction<string[]>>;
+};
+
+export default function MathInput(props: inputProps) {
   const mfRef = useRef<any>(null);
 
   useEffect(() => {
@@ -39,6 +42,7 @@ export default function MathInput({ answer }: any) {
   }, []);
 
   const handleInput = (evt: any) => {
+    console.log("key", props.index)
     const mf = evt.target as any;
     const rawLatex: string = mf.value;
 
@@ -48,9 +52,17 @@ export default function MathInput({ answer }: any) {
       const normalized = expr.toLatex({
         fractionStyle: () => "quotient", // ensures \frac{...}{...}
       });
-      setLatex(normalized);
+      props.setInputs((prev: string[]) => {
+        const newInputs = [...prev];
+        newInputs[props.index] = normalized;
+        return newInputs;
+      });
     } else {
-      setLatex(rawLatex);
+      props.setInputs((prev: string[]) => {
+        const newInputs = [...prev];
+        newInputs[props.index] = rawLatex;
+        return newInputs;
+      });
     }
   };
 
@@ -70,11 +82,6 @@ export default function MathInput({ answer }: any) {
         }}
       />
       {/* <p>{latex}</p> */}
-      {isCorrect(latex, answer) ? (
-        <span className="color-txt-main">Correct!</span>
-      ) : (
-        <span className="color-txt-accent">Wrong!</span>
-      )}
     </div>
   );
 }

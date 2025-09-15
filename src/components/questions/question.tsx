@@ -1,5 +1,5 @@
 // Icons 
-import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked } from "react-icons/lu";
+import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck } from "react-icons/lu";
 import { TbCards } from "react-icons/tb";
 
 // Hooks 
@@ -16,10 +16,12 @@ import ViewDecks from "./../viewDecks";
 import SharePanel from "../social/sharePanel";
 import LogTables from "../../components/logtables"
 import RankBar from "../../components/rankbar";
+import AnswerNoti from "../math/answerNoti";
 
 // Style Imports 
 import '../../styles/questions.css'
 import '../../styles/navbar.css'
+import useMaths from "../../hooks/useMaths";
 
 // Component Props
 type questionsProps = {
@@ -35,10 +37,17 @@ export default function Question(props: questionsProps) {
     const [content, setContent] = useState<any>()
     const [properties, setProperties] = useState<any>()
     const [part, setPart] = useState<number>(0) 
+    const [inputs, setInputs] = useState<any[]>([])
+    useEffect(() => {
+        console.log("inputs: ", inputs)
+        console.log("answers: ",content?.[part]?.answer)
+        console.log(isCorrect(inputs, content?.[part]?.answer))
+    }, [inputs])
 
     const [ sideView, setSideView ] = useState<string>('')
 
     const { toRoman } = useQuestions()
+    const { isCorrect } = useMaths()
 
     //=========================================== Constants =====================================//
     const iconSize = 48
@@ -71,6 +80,7 @@ export default function Question(props: questionsProps) {
 
     return (
     <div className="flex h-full w-full items-start my-4 ">
+    <AnswerNoti />
     { //============================= QUESTIONS CONTAINER ====================================// 
     props.questions[props.position]? ( 
     <div className="card-container h-container items-start justify-start w-full">
@@ -97,7 +107,7 @@ export default function Question(props: questionsProps) {
             {/* ============================= PART NAVIGATION ===============================*/}
             <div className="flex">
                 {content.length > 1 && content.map((_ : any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-center h-10" onClick={() => setPart(idx)}>
+                    <div key={idx} className="flex items-center justify-center h-10" onClick={() => {setPart(idx); setInputs([])}}>
 
                         <p className={`part-number ${part === idx ? 'bg-white/5' : 'hover:bg-white/10'}`} >
                             {toRoman(idx + 1)}
@@ -123,11 +133,17 @@ export default function Question(props: questionsProps) {
             {/* =============================== MATH INPUT ================================= */}
             <div className="flex">
                 { !props.preview ? (
-                    content?.[part]?.answer?.map((ans: any, idx: number) => (
-                        <MathInput key={idx} answer={ans}/>
+                    content?.[part]?.answer?.map((_: any, idx: number) => (
+                        <MathInput key={idx} index={idx} setInputs={setInputs }/>
                     ))
                 ) :(<></>)
                 }
+                
+                <div className="h-10 w-10 rounded-full color-bg-accent flex items-center justify-center">
+                    <LuCheck strokeWidth={3} size={30} 
+                        className="color-txt-accent" />
+                </div>
+
             </div>
             {/* ============================================================================ */}
             </div>

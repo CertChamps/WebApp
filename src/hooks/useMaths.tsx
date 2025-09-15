@@ -49,28 +49,67 @@ export default function useMaths() {
     }
   };
 
-  const isCorrect = (inputLatex: string, answer: string) => {
+// Replace your original isCorrect with these functions
 
-    // coordinates
-    if (/^\s*\\?\(?[^,]+,[^)]+\)?\s*$/.test(inputLatex) || answer.includes(',')) {
-      const ok = cartesianEquality(inputLatex, answer);
-      //return `coord in: ${inputLatex}, ans: ${answer}, correct: ${ok}`;
-      return ok 
+const isCorrectSingle = (inputLatex: string, answer: string): boolean => {
+  // guard against null/undefined
+  inputLatex = (inputLatex ?? "").trim()
+  answer = (answer ?? "").trim()
+
+  // coordinates (either input looks like coordinates or answer contains a comma)
+  if (/^\s*\\?\(?[^,]+,[^)]+\)?\s*$/.test(inputLatex) || answer.includes(",")) {
+    return cartesianEquality(inputLatex, answer)
+  }
+
+  // scalar/algebraic
+  try {
+    const A = latexToExpr(inputLatex)
+    const B = latexToExpr(answer)
+
+    return numericEquality(A, B) || algebraicEquality(A, B)
+  } catch (err: any) {
+    return false
+  }
+}
+
+/**
+ * Check arrays of inputs and answers. Returns true if for every answer
+ * there exists a distinct input that matches it. Order does not matter.
+ *
+ * @param inputs array of input LaTeX strings
+ * @param answers array of answer LaTeX strings (same length as inputs)
+ */
+const isCorrect = (inputs: string[], answers: string[]): boolean => {
+  if (!Array.isArray(inputs) || !Array.isArray(answers)) return false
+  if (inputs.length !== answers.length) return false
+
+  // track which inputs have been used/matched
+  const used = new Array<boolean>(inputs.length).fill(false)
+
+  // For each answer, find an unused input that matches it
+  for (let i = 0; i < answers.length; i++) {
+    const ans = answers[i]
+    let matched = false
+
+    for (let j = 0; j < inputs.length; j++) {
+      if (used[j]) continue
+
+      if (isCorrectSingle(inputs[j], ans)) {
+        used[j] = true
+        matched = true
+        break
+      }
     }
 
-    // scalar/algebraic
-    try {
-      const A = latexToExpr(inputLatex);
-      const B = latexToExpr(answer); // example scalar answer
-
-      const ok = numericEquality(A, B) || algebraicEquality(A, B);
-      console.log(`input: ${A.toString()}, answer: ${B.toString()}, correct: ${ok}`)
-      return ok
-    } catch (err: any) {
-      //return `in: ${inputLatex}, err: ${err.message ?? err}`;
+    if (!matched) {
+      // no available input matched this answer
       return false
     }
-  };
+  }
+
+  // every answer found a unique matching input
+  return true
+}
 
   return { isCorrect };
 }
