@@ -101,6 +101,9 @@ export default function CustomCursor() {
           [data-theme="matchaMoccha"] .cursor-icon { color: var(--color-matchaMocchaAccent); }
           [data-theme="redDragon"] .cursor-icon { color: var(--color-redDragonAccent); }
           [data-theme="modernInk"] .cursor-icon { color: var(--color-modernInkAccent); }
+          [data-theme="gruvbox"] .cursor-icon { color: var(--color-gruvboxAccent); }
+          [data-theme="magicGirl"] .cursor-icon { color: var(--color-magicGirlAccent); }
+          [data-theme="tronOrange"] .cursor-icon { color: var(--color-tronOrangeAccent); }
         `}
       </style>
       {/* {trailShapes} */}

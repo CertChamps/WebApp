@@ -110,6 +110,12 @@
   --color-magicGirlPrimary: #f5b1cc;
   --color-magicGirlSub: #93e8d3;
 
+  /* Tron Orange */
+  --color-tronOrangeBG: #0d1c1c;
+  --color-tronOrangeAccent: #ffffff;
+  --color-tronOrangePrimary: #f0e800;
+  --color-tronOrangeSub: #ff6600;
+
   /* Note: Do not change these randomly below styles must follow: 
   radius-out - radius-in = 2 * padding/margin */
 
@@ -230,6 +236,7 @@ math-field::part(virtual-keyboard-toggle) {
 @custom-variant modernInk (&:where([data-theme="modernInk"] *));
 @custom-variant gruvbox (&:where([data-theme="gruvbox"] *));
 @custom-variant magicGirl (&:where([data-theme="magicGirl"] *));
+@custom-variant tronOrange (&:where([data-theme="tronOrange"] *));
 
 @utility color-txt-main {
   @apply 
@@ -248,6 +255,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:text-modernInkPrimary
     gruvbox:text-gruvboxPrimary
     magicGirl:text-magicGirlPrimary
+    tronOrange:text-tronOrangePrimary
 }
 
 @utility color-txt-sub {
@@ -267,6 +275,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:text-modernInkSub
     gruvbox:text-gruvboxSub
     magicGirl:text-magicGirlSub
+    tronOrange:text-tronOrangeSub
 }
 
 @utility color-txt-accent {
@@ -286,6 +295,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:text-modernInkAccent
     gruvbox:text-gruvboxAccent
     magicGirl:text-magicGirlAccent
+    tronOrange:text-tronOrangeAccent
 }
 
 @utility color-bg {
@@ -305,6 +315,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:bg-modernInkBG
     gruvbox:bg-gruvboxBG
     magicGirl:bg-magicGirlBG
+    tronOrange:bg-tronOrangeBG
 }
 
 @utility color-txt-invert {
@@ -324,6 +335,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:text-modernInkBG
     gruvbox:text-gruvboxBG
     magicGirl:text-magicGirlBG
+    tronOrange:text-tronOrangeBG
 }
 
 
@@ -344,6 +356,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:bg-modernInkSub/5
     gruvbox:bg-gruvboxSub/5
     magicGirl:bg-magicGirlSub/5
+    tronOrange:bg-tronOrangeSub/5
 }
 
 @utility color-bg-grey-10 {
@@ -363,6 +376,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:bg-modernInkSub/20
     gruvbox:bg-gruvboxSub/20
     magicGirl:bg-magicGirlSub/20
+    tronOrange:bg-tronOrangeSub/20
 }
 
 @utility color-bg-accent {
@@ -382,6 +396,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:bg-modernInkAccent/15
     gruvbox:bg-gruvboxAccent/15
     magicGirl:bg-magicGirlAccent/15
+    tronOrange:bg-tronOrangeAccent/15
 }
 
 @utility color-shadow {
@@ -401,6 +416,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:border-modernInkSub/20
     gruvbox:border-gruvboxSub/20
     magicGirl:border-magicGirlSub/20
+    tronOrange:border-tronOrangeSub/20
 
     shadow-light-grey/40
     dark:shadow-grey/20
@@ -417,6 +433,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:shadow-modernInkSub/20
     gruvbox:shadow-gruvboxSub/20
     magicGirl:shadow-magicGirlSub/20
+    tronOrange:shadow-tronOrangeSub/20
 }
 
 @utility color-shadow-accent {
@@ -436,6 +453,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:border-modernInkAccent
     gruvbox:border-gruvboxAccent
     magicGirl:border-magicGirlAccent
+    tronOrange:border-tronOrangeAccent
 
     shadow-blue
     dark:shadow-blue-light
@@ -452,6 +470,7 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:shadow-modernInkAccent
     gruvbox:shadow-gruvboxAccent
     magicGirl:shadow-magicGirlAccent
+    tronOrange:shadow-tronOrangeAccent
 }
 
 @utility color-cursor {
@@ -471,4 +490,5 @@ math-field::part(virtual-keyboard-toggle) {
     modernInk:bg-modernInkAccent
     gruvbox:bg-gruvboxAccent
     magicGirl:bg-magicGirlAccent
+    tronOrange:bg-tronOrangeAccent
 }

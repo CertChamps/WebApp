@@ -388,6 +388,15 @@ export default function Settings() {
                 </div>
             </div>
 
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('tronOrange')}>
+                <p className="theme-text">Tron Orange</p>
+                <div className="color-strip-container bg-tronOrangeBG " >
+                    <div className="color-strip-item bg-tronOrangePrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-tronOrangeSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-tronOrangeAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
         </div>
 
         {/* ======================================================================================== */}
