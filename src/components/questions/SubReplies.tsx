@@ -63,9 +63,9 @@ const ReplyThread: React.FC<ReplyThreadProps> = ({ reply, questionId, onReply })
                     })
                 );
                 setNestedReplies(nestedData);
-                if (nestedData.length > 0) {
-                    setShowNested(true);
-                }
+                // if (nestedData.length > 0) {
+                //     setShowNested(true);
+                // }
             });
 
             return () => unsubscribe();
@@ -75,7 +75,7 @@ const ReplyThread: React.FC<ReplyThreadProps> = ({ reply, questionId, onReply })
     }, [reply.id, questionId]);
 
     return (
-        <div>
+        <div className='mt-4'>
             <QReplyCard
                 content={reply.content}
                 userImage={reply.userImage}
@@ -87,7 +87,7 @@ const ReplyThread: React.FC<ReplyThreadProps> = ({ reply, questionId, onReply })
             />
             
             {showNested && nestedReplies.length > 0 && (
-                <div className="ml-6 pl-4 border-l-2 border-light-grey dark:border-grey space-y-3">
+                <div className="ml-3.5 pl-4 border-l-2 color-shadow pt-2">
                     {nestedReplies.map((nestedReply) => (
                         <div key={nestedReply.id}>
                             <QReplyCard

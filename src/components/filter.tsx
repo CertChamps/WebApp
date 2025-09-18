@@ -3,15 +3,16 @@ import useFilters from '../hooks/useFilters';
 
 // Styles & Icons
 import { HiOutlineX } from "react-icons/hi";
-import { LuSearch, LuFilter } from "react-icons/lu";
 import '../styles/filters.css';
 import { useEffect, useRef, useState } from 'react';
 
-
 type filterProps = {
-  setFilters: React.Dispatch<React.SetStateAction<any>>;
+  setFilters: React.Dispatch<React.SetStateAction<any>>,
+  viewFilter: boolean,
+  setViewFilter: React.Dispatch<React.SetStateAction<any>>
 }
-export default function SearchandFilter(props: filterProps) {
+
+export default function Filter(props: filterProps) {
   const {
     selectTopic,
     unselectTopic,
@@ -24,65 +25,40 @@ export default function SearchandFilter(props: filterProps) {
     localFilters,
   } = useFilters();
 
-  const [viewFilter, setViewFilter] = useState<boolean>(false);
-
-  // applying filters 
-  const applyFilter = () => {
-    props.setFilters(localFilters);
-    setViewFilter(false);
-  } 
-  
-
   // ref for the whole search + filter area (input + dropdown)
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Close dropdown when clicking or focusing outside the component
+  // Close dropdown when clicking outside the component
   useEffect(() => {
-    function handleOutside(e: MouseEvent | FocusEvent) {
+    function handleOutside(e: MouseEvent) {
       const target = e.target as Node | null;
+      // Only close if clicking outside the filter container
       if (containerRef.current && !containerRef.current.contains(target)) {
-        setViewFilter(false);
+        props.setViewFilter(false);
       }
     }
 
     document.addEventListener('mousedown', handleOutside);
-    document.addEventListener('focusin', handleOutside);
 
     return () => {
       document.removeEventListener('mousedown', handleOutside);
-      document.removeEventListener('focusin', handleOutside);
     };
-  }, []);
+  }, [props.setViewFilter]);
 
+  // Remove the focusin event listener as it's causing issues with filter interactions
+
+  // applying filters 
+  const applyFilter = () => {
+    props.setFilters(localFilters);
+    props.setViewFilter(false);
+  } 
+  
   // Set filters 
 
   return (
     <div ref={containerRef}>
-      {/* ======================================== SEARCH AND FILTER ========================================== */}
-      <div className="flex items-center gap-3 w-full color-bg relative">
-        <div className="flex items-center txtbox w-full max-w-xs color-bg">
-          <input
-            type="text"
-            placeholder="Search Questions"
-            className="w-full p-1 outline-none border-none"
-          />
-          <LuSearch className="color-txt-sub" size={24} />
-        </div>
-
-        <button
-          type="button"
-          className="px-1"
-          onClick={() => setViewFilter((v) => !v)}
-        >
-          <LuFilter
-            className="color-txt-sub mx-4"
-            size={30}
-            fill={ viewFilter ? 'currentColor' : 'none'}
-          />
-        </button>
-
-        {/* DROPDOWN */}
-        <div className={viewFilter ? 'filter-container-shown' : 'filter-container-hidden'}>
+        {/* DROPDOWN (or dropup in this case haha) */}
+        <div className={props.viewFilter ? 'filter-container-shown' : 'filter-container-hidden'}>
           <p className="filter-header">topic</p>
           <div className="selection-container">
             {selectedTopics.map((topic) => (
@@ -131,8 +107,7 @@ export default function SearchandFilter(props: filterProps) {
             </div>
           ) : (
             <p className="filler">
-              select a topic to see subtopics <br /> (actual filtering in
-              progress)
+              select a topic to see subtopics <br /> 
             </p>
           )}
 
@@ -146,6 +121,5 @@ export default function SearchandFilter(props: filterProps) {
           </p>
         </div>
       </div>
-    </div>
   );
 }

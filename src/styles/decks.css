@@ -17,5 +17,5 @@
 }
 
 .deck {
-    @apply shadow-small my-3 py-2 px-4 relative hover:scale-[97%] duration-200 transition-all ease-in-out
+    @apply shadow-small mb-3 py-2 px-4 relative hover:scale-[97%] duration-200 transition-all ease-in-out
 }

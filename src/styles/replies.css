@@ -2,12 +2,12 @@
 
 /*============THESE WILL BE FOR THE qReplyCard============*/
 .reply-container {
-    @apply color-bg rounded-lg p-4 w-full
+    @apply color-bg rounded-lg w-full
 }
 
 /* Header */
 .header-wrapper {
-    @apply flex items-center mt-2 mb-3
+    @apply flex items-center 
 }
 
 .header-img {
@@ -31,20 +31,20 @@
 }
 
 .content-text {
-    @apply color-txt-main text-[20px] mb-6
+    @apply color-txt-main ml-3 py-1
 }
 
 .footer-wrapper {
-    @apply flex items-center gap-4 mb-1
+    @apply flex items-center ml-2 
 }
 
 .footer-txt {
-    @apply flex items-center px-2 py-1 text-sm color-txt-accent
+    @apply flex items-center p-1 text-sm color-txt-accent
 }
 
 /* Composer */
 .composer-container {
-    @apply sticky bottom-0 left-0 color-bg p-3 z-10
+    @apply sticky bottom-0 left-0  px-3 z-10
 }
 
 .composer-replyTo-wrapper {

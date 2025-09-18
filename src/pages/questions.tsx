@@ -1,5 +1,6 @@
 // React
 import { useContext } from "react";
+import { useParams } from "react-router-dom";
 
 // Icons 
 import { LuSearch, LuFilter } from "react-icons/lu";
@@ -11,9 +12,6 @@ import { useEffect, useState } from "react";
 
 // Components
 import Question from "../components/questions/question";
-import SearchandFilter from "../components/searchandfilter";
-
-
 
 // Style Imports 
 import '../styles/questions.css'
@@ -27,6 +25,7 @@ export default function Questions() {
     const [position, setPosition] = useState(0) // position of question in the array
     const { loadQuestions } = useQuestions({ setQuestions, filters })
     const { user } = useContext(UserContext);
+    const { id } = useParams()
 
 
     useEffect(() => {
@@ -37,7 +36,10 @@ export default function Questions() {
     useEffect(() => {
   
         // load questions 
-        loadQuestions()
+        if ( id )
+            loadQuestions(id) 
+        else 
+            loadQuestions()
 
 
     }, [])
@@ -53,14 +55,14 @@ export default function Questions() {
 
 
     return (
-        <div className="w-h-container flex-col justify-start p-4">
+        <div className="w-h-container flex-col justify-end items-center">
 
             {/* ======================================== TOP PAGE INFORMATION ========================================== */}
             <div className="flex items-end justify-end">
                 
                 {/* ======================================== SEARCH AND FILTER ========================================== */}
             
-                    <SearchandFilter setFilters={setFilters} />
+                    {/* <SearchandFilter setFilters={setFilters} /> */}
             </div>
             {/* ===================================================================================================== */}
 
@@ -72,6 +74,7 @@ export default function Questions() {
                 position={position}
                 setPosition={setPosition}    // optional but handy
                 nextQuestion={nextQuestion}  // <-- pass this
+                setFilters={setFilters}
             />
 
         </div>

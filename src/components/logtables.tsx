@@ -12,7 +12,7 @@ const LogTables = ({ pgNumber }: QuestionType) => {
   const [numPages, setNumPages] = useState<number>(0);
 
   return (
-    <div className="flex flex-col items-start p-4">
+    <div className="flex flex-col items-start">
         <p className="mt-2 color-txt-accent font-bold mb-2">
             Recommended page: {pgNumber}
         </p>

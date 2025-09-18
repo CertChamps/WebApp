@@ -1,5 +1,5 @@
 // Icons 
-import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck } from "react-icons/lu";
+import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuChevronLeft, LuArrowLeft, LuArrowRight, LuSearch } from "react-icons/lu";
 import { TbCards } from "react-icons/tb";
 
 // Hooks 
@@ -15,6 +15,7 @@ import QThread from "../../components/questions/q_thread"
 import ViewDecks from "./../viewDecks";
 import SharePanel from "../social/sharePanel";
 import LogTables from "../../components/logtables"
+import QSearch from "./qSearch";
 import RankBar from "../../components/rankbar";
 import AnswerNoti from "../math/answerNoti";
 
@@ -33,15 +34,17 @@ import { useContext } from "react";
 import { UserContext } from "../../context/UserContext";
 import { db } from "../../../firebase";
 import { doc, increment, setDoc, updateDoc } from "firebase/firestore";
+import Filter from "../filter";
 
 // Component Props
 type questionsProps = {
     questions: any[];
     position: number;
-    setPosition?: (n: number | ((p: number) => number)) => void;
-    nextQuestion?: () => Promise<void> | void;
+    setPosition: (n: number | ((p: number) => number)) => void;
+    nextQuestion: () => Promise<void> | void;
     deckmode?: boolean;
     preview?: boolean;
+    setFilters: React.Dispatch<React.SetStateAction<any>>;
 };
 
 export default function Question(props: questionsProps) {
@@ -58,9 +61,12 @@ export default function Question(props: questionsProps) {
     }, [inputs])
 
     const [ sideView, setSideView ] = useState<string>('')
+    const [ showSearch, setShowSearch ] = useState<boolean>(false)
 
     const { toRoman } = useQuestions()
     const { isCorrect } = useMaths();
+
+    const [ viewFilter, setViewFilter ] = useState(false)
 
     const [isRight, setIsRight] = useState(false);   // result of last check
     const [showNoti, setShowNoti] = useState(false); // controls AnswerNoti
@@ -87,8 +93,8 @@ export default function Question(props: questionsProps) {
     }, [user?.xp]);
 
     //=========================================== Constants =====================================//
-    const iconSize = 48
-    const strokewidth = 2
+    const iconSize = 40
+    const strokewidth = 1.75
     const XP_PER_RANK = 10000
 
     const getRankInfo = (xp: number) => {
@@ -256,14 +262,14 @@ export default function Question(props: questionsProps) {
 
 
     return (
-    <div className="flex h-full w-full items-start my-4 ">
+    <div className="flex flex-col h-full w-full items-end justify-end p-4">
     <AnswerNoti visible={showNoti && isRight} onNext={goNextFromNoti} />
 
     {xpFlyers.map((fly) => (
         <XPFly
             key={fly.id}
             amount={fly.amount}
-            to={fly.to}
+            to={fly.to} 
             delay={fly.delay}
             pitchIndex={fly.pitchIndex}
             onDone={(chunk) => {
@@ -272,12 +278,16 @@ export default function Question(props: questionsProps) {
             }}
         />
     ))}
+    <div className="flex justify-start items-end w-full h-[90%]">
     { //============================= QUESTIONS CONTAINER ====================================// 
     props.questions[props.position]? ( 
-    <div className="card-container h-container items-start justify-start w-full">
-        <div className="p-8 w-full h-full flex flex-col justify-between">
+    <div className={`card-container h-full items-end justify-start ${ (sideView == '' || sideView == 'filters') ? 'w-full' : 'w-7/12'}  
+        transition-all duration-250 shrink-0 self-start justify-self-start origin-left`}>
+        <div className="p-8 flex flex-1 flex-col justify-between h-full">
+            { showSearch ? <QSearch  setShowSearch={setShowSearch} 
+                questions={props.questions} position={props.position} setPosition={props.setPosition ?? null} /> : <></> } 
 
-            <div>
+            <div className="h-full">
             {/* ================================ HEADING =================================== */}
             {/* ======================================== RANKBAR ========================================== */}
             <div className="flex" ref={rankRef}>
@@ -367,58 +377,69 @@ export default function Question(props: questionsProps) {
     }
     { /* ===================================================================================== */ }
 
-            
+        <div className="flex-1"></div>  
         {/* =================================== QUESTION SIDEVIEWS ================================= */}
         {sideView === 'thread' ? (
-            <div className="border-l border-light-grey dark:border-grey h-full w-150">
+            <div className="h-full w-5/12">
                 <QThread
                     questionId={properties?.id ?? props.questions[props.position]?.id}
-                    part={part}
+                    part={part} 
                 />
             </div>
         ) : null}
 
         {sideView === 'logtables' ? (
-            <div className="border-l border-light-grey dark:border-grey h-full w-150">
+            <div className="h-full w-5/12">
                 <LogTables pgNumber="10"/>
             </div>
         ) : null}
 
         {sideView === 'decks' ? (
-            <div className="border-l border-light-grey dark:border-grey h-full w-150">
+            <div className="h-full w-5/12">
                 <ViewDecks question={properties?.id}/>
             </div>
         ) : null}
 
         {sideView === 'share' ? (
-            <div className="border-l border-light-grey dark:border-grey h-full w-150">
+            <div className="h-full w-5/12">
                 <SharePanel/>
             </div>
         ) : null}
         {/* ====================================================================================== */}    
-        
+        </div>
+
         {/* ================================== QUESTION SIDEBAR ================================== */}
         { !props.preview ? (
-        <div className="h-full rounded-r-out p-4">
+        <div className="flex w-full justify-center items-center rounded-r-out h-auto z">
 
+            <div className="color-bg-grey-5 mx-4 w-10 h-10 flex items-center group relative 
+                justify-center rounded-full hover:scale-95 duration-250 transition-all">
+                <LuArrowLeft strokeWidth={strokewidth} size={32} className="color-txt-sub"/>
+
+                <span className="tooltip">previous</span>
+            </div>
+
+            <div className="border-2 color-shadow color-bg-grey-5 flex my-2 px-3 rounded-full">
             {/* =============================== THREADS ICON ================================= */}
             <div
-                className={sideView == 'thread' ? "nav-item-selected mb-4 mt-0" : "nav-item mb-4"}
+                className={sideView == 'thread' ? "sidebar-selected group" : "sidebar group"}
                 onClick={() => {
                     setSideView( (prev: any) => {
                         if (prev != 'thread') return 'thread'
-                        else return '' 
+                        else return ''
                     });
                 }}
             >
                 <LuMessageSquareText strokeWidth={strokewidth} size={iconSize} 
-                    className={sideView == 'thread' ? 'nav-icon-selected' : 'nav-icon'}
+                    className={sideView == 'thread' ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
                     fill={sideView == 'thread' ? 'currentColor' : 'none'} /> 
+
+                <span className="tooltip">threads</span>
             </div>
             {/* ============================================================================ */}
 
             {/* =============================== LOGTABLES ICON ================================= */}
-            <div className={sideView == 'logtables' ? 'nav-item-selected mb-4' : 'nav-item mb-4'} 
+            <div className={sideView == 'logtables' ? 'sidebar-selected group' : 'sidebar group'} 
                 onClick={() => {
                     setSideView( (prev: any) => {
                         if (prev != 'logtables') return 'logtables'
@@ -427,31 +448,35 @@ export default function Question(props: questionsProps) {
                 }}
             >
                 <LuBookMarked strokeWidth={strokewidth} size={iconSize} 
-                    className={sideView == 'logtables' ? 'nav-icon-selected' : 'nav-icon'}
+                    className={sideView == 'logtables' ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
                     fill={sideView == 'logtables' ? 'currentColor' : 'none'} />
+
+                 <span className="tooltip">logbook</span>
             </div>
             {/* ================================================================================ */}
             
             { props.deckmode ? (
             /* =========================== SHARE ICON (DECK ONLY) =========================== */
-            <div className={sideView == 'share' ? 'nav-item-selected mb-4' : 'nav-item mb-4'} 
+            <div className={sideView == 'share' ? 'sidebar-selected  group' : 'sidebar group'} 
                 onClick={() => {
                     setSideView( (prev: any) => {
                         if (prev != 'share') return 'share'
                         else return '' 
-                    });
+                    }); 
                 }}
             >
                 <LuShare2 strokeWidth={strokewidth} size={iconSize} 
-                    className={sideView == 'share' ? 'nav-icon-selected' : 'nav-icon'}
+                    className={sideView == 'share' ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
                     fill={sideView == 'share' ? 'currentColor' : 'none'} />
+                
+                 <span className="tooltip">share</span>
             </div>
             /* ============================================================================== */
 
             ) : (
 
             /* ================================ DECKS ICON ================================= */
-            <div className={sideView == 'decks' ? 'nav-item-selected mb-4' : 'nav-item mb-4'} 
+            <div className={sideView == 'decks' ? 'sidebar-selected  group' : 'sidebar  group'} 
                 onClick={() => {
                     setSideView( (prev: any) => {
                         if (prev != 'decks') return 'decks'
@@ -460,14 +485,67 @@ export default function Question(props: questionsProps) {
                 }}
             >
                 <TbCards strokeWidth={strokewidth} size={iconSize} 
-                    className={sideView == 'decks' ? 'nav-icon-selected' : 'nav-icon'}
+                    className={sideView == 'decks' ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
                     fill={sideView == 'decks' ? 'currentColor' : 'none'} />
+
+                 <span className="tooltip">decks</span>
+                 
             </div>
             /* ============================================================================== */
 
             )
             }   
-            
+            {/* =============================== FILTER ICON ================================= */}
+            <div className={viewFilter ? 'sidebar-selected group' : 'sidebar group'} 
+                onClick={() => {
+                    if (!viewFilter )
+                        setViewFilter(true)
+                }}
+
+            >
+                <LuFilter strokeWidth={strokewidth} size={iconSize} 
+                    className={viewFilter ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
+                    fill={viewFilter ? 'currentColor' : 'none'} />
+
+                 <span className="tooltip">filter</span>
+                 <Filter  viewFilter={viewFilter} setViewFilter={setViewFilter} setFilters={props.setFilters}/>
+            </div>
+            {/* ================================================================================ */}
+
+            {/* =============================== SEARCH ICON ================================= */}
+            <div className={showSearch ? 'sidebar-selected group' : 'sidebar group'} 
+                onClick={() => {
+                    setShowSearch( v => !v)
+                }}
+            >
+                <LuSearch strokeWidth={strokewidth} size={iconSize} 
+                    className={showSearch ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
+                    fill={showSearch ? 'currentColor' : 'none'} />
+
+                 <span className="tooltip">search</span>
+            </div>
+            {/* ================================================================================ */}
+            </div>
+
+            <div className="color-bg-grey-5 mx-4 w-10 h-10 flex items-center group relative 
+                justify-center rounded-full hover:scale-95 duration-250 transition-all"
+                onClick={() => { setInputs([]);
+      
+                    // Next part if available
+                    if ((content?.length ?? 0) > part + 1) {
+                    setPart((p) => p + 1);
+                    return;
+                    }
+                
+                    // Otherwise ask parent to move to the next question
+                    
+                    props.nextQuestion();
+                }}
+                >
+                <LuArrowRight strokeWidth={strokewidth} size={32} className="color-txt-sub"/>
+
+                <span className="tooltip">next</span>
+            </div>
         </div>
         ) : (<></> /* Do not show sidebar in preview mode */)
         }

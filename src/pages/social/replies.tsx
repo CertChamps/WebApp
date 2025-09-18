@@ -1,5 +1,5 @@
 // Hooks
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useReplies } from "../../hooks/useReplies";
 import useQuestions from "../../hooks/useQuestions";
 
@@ -16,6 +16,7 @@ export default function Replies(
   const { id } = useParams<{ id: string }>();
   const { timeAgoFormatter } = useNotifications()
   const { toRoman } = useQuestions()
+  const navigate = useNavigate()
 
   const {
     post,
@@ -179,7 +180,7 @@ export default function Replies(
             <div className="mx-4">
               <div className="mx-auto w-[90%] color-bg-accent txt-heading-colour text-center py-1.5 rounded-out mb-6
                 hover:scale-95 duration-200 cursor-pointer"
-                 onClick={() => {/* Go to the question at this time */}}>
+                 onClick={() => {navigate(`/practice/${post.flashcardId}`)}}>
                 <p>Go To Question</p>
               </div>
               {Array.isArray(question) &&

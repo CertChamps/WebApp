@@ -16,7 +16,7 @@
 
 /* ================== QUESTION CARD ================== */
 .card-container {
-    @apply h-full w-[97.5%] rounded-out m-auto border-2
+    @apply h-full rounded-out m-auto border-2
     shadow-small color-bg;
 }
 

@@ -19,6 +19,12 @@ const router = createBrowserRouter([
       <Questions />
     </>
   ),},
+  { path: '/practice/:id', element: (
+    <>
+      <Navbar />
+      <Questions />
+    </>
+  ),},
   { path: '/social/social', element: (
     <>
       <Navbar />

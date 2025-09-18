@@ -32,7 +32,7 @@ export default function ViewDecks (props?: deckProps) {
     //==========================================================================================//
 
     return (
-    <div className="h-container items-start w-full overflow-y-scroll p-4">
+    <div className="h-container items-start w-full overflow-y-scroll px-4">
         {
             //==================================== VIEW USER DECKS ===================================//
             view === 'decks' ? (
@@ -54,7 +54,7 @@ export default function ViewDecks (props?: deckProps) {
                                 <span className="txt-sub">{deck?.questions?.length} question{deck?.questions?.length !== 1 ? 's' : ''}</span>
                             </div>
 
-                            <span className="cursor-target plain-btn color-txt-main cursor-pointer my-2 bg-green-300" onClick={(e: any) => {addQuestiontoDeck([props?.question], deck.id); e.stopPropagation();}}>Add to deck</span>
+                            <span className="cursor-target blue-btn cursor-pointer my-2" onClick={(e: any) => {addQuestiontoDeck([props?.question], deck.id); e.stopPropagation();}}>Add to deck</span>
 
                         </div>
                     ))

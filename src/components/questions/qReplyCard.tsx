@@ -45,7 +45,7 @@ const QReplyCard: React.FC<QReplyCardProps> = ({
             className="header-img"
           />
         ) : (
-          <div className="w-7 h-7 rounded-full mr-3 bg-light-grey dark:bg-grey" />
+          <div className="w-7 h-7 rounded-full mr-3" />
         )}
         <div className="header-text-wrapper">
           <span className="header-username">{username}</span>
@@ -54,15 +54,16 @@ const QReplyCard: React.FC<QReplyCardProps> = ({
       </div>
 
       {/* Body */}
-      {displayImageUrl && (
-        <img
-          src={displayImageUrl}
-          alt="Post"
-          className="content-img"
-        />
-      )}
-      <p className="content-text">{content}</p>
-
+      <div className="border-l-2 color-shadow px-3 ml-3.5">
+        {displayImageUrl && (
+          <img
+            src={displayImageUrl}
+            alt="Post"
+            className="content-img"
+          />
+        )}
+        <p className="content-text">{content}</p>
+      
       {/* Footer */}
       {(onPressReply || (replyCount > 0 && onPressReplies)) && (
         <div className="footer-wrapper">
@@ -86,6 +87,7 @@ const QReplyCard: React.FC<QReplyCardProps> = ({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };

@@ -3,6 +3,8 @@ import { collection, getCountFromServer, getDocs, doc,
 import { db }from '../../firebase'
 import React from 'react'
 import useFetch from './useFetch'
+import Fuse from 'fuse.js'
+import { useState } from 'react'
 
 // Props Type 
 type questionProps = {
@@ -14,6 +16,7 @@ export default function useQuestions( props?:questionProps ) {
 
     // ====================== HOOKS ========================= //
     const { fetchImage } = useFetch()
+    const [allQuestions, setAllQuestions] = useState<any[]>([])
 
     // ====================== RETURN RANDOM NUMBER IN GIVEN RANGE ========================= //
     const getRandom = (range: number) => {
@@ -132,14 +135,45 @@ export default function useQuestions( props?:questionProps ) {
     // ================================================================================================= //
 
     // ====================================== LOAD QUESTIONS =========================================== //
-    const loadQuestions = async () => {
+    const loadQuestions = async (id?: string) => {
         
+        let question = null; 
         // Load in a questions
-        const question = await fetchQuestion(await getRandomQuestion('')) 
+        if (id)
+            question = await fetchQuestion(id) 
+        else 
+            question = await fetchQuestion(await getRandomQuestion('')) 
 
         // Add it into the questions array
         props?.setQuestions( (questions : any ) => [...questions, question])
 
+    }
+    // ================================================================================================= //
+
+    // ====================================== FETCH ALL QUESTIONS =========================================== //
+    const fetchAllQuestions = async () => {
+        // Fetch all questions from the main collection
+        const questionsSnap = await getDocs(collection(db, "certchamps-questions"));
+
+        const questions = await Promise.all(
+
+            questionsSnap.docs.map(async (docSnap) => {
+                const id = docSnap.id;
+                const properties = docSnap.data();
+
+                // Fetch subcollection "content" for each question
+                const contentSnap = await getDocs(collection(db, "certchamps-questions", id, "content"));
+                const contentPromises = contentSnap.docs.map(async (contentDoc: any) => {
+                    const data = contentDoc.data();
+                    return data;
+                });
+                const content = await Promise.all(contentPromises);
+
+                return { id, properties, content };
+            })
+        );
+        setAllQuestions(questions);
+        return questions;
     }
     // ================================================================================================= //
 
@@ -163,7 +197,7 @@ export default function useQuestions( props?:questionProps ) {
     // ========================================================================================================= //
     
 
-    return { getRandomQuestion, fetchQuestion, loadQuestions, toRoman }
+    return { getRandomQuestion, fetchQuestion, loadQuestions, toRoman, fetchAllQuestions }
 
 
 }
