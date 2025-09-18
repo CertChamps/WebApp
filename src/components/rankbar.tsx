@@ -25,9 +25,9 @@ const RankBar = ({ rank, progress = 0 }: RankBarProps) => {
             <div className="flex w-full items-center px-0">
                 {/* ============================================ RANK IMAGE ========================================== */}
                 <img
-                src={images[rank] || images[0]}
-                alt={`Rank ${rank}`}
-                className="w-12 mr-2 object-contain"
+                    src={images[rank] || images[5]}
+                    alt={`Rank ${rank}`}
+                    className="w-12 mr-2 object-contain"
                 />
 
                 {/* ============================================ PROGRESS BAR ========================================== */}

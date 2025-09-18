@@ -17,6 +17,7 @@ import SharePanel from "../social/sharePanel";
 import LogTables from "../../components/logtables"
 import RankBar from "../../components/rankbar";
 import AnswerNoti from "../math/answerNoti";
+import StreakDisplay from "../streakDisplay";
 
 // Style Imports 
 import '../../styles/questions.css'
@@ -80,23 +81,65 @@ export default function Question(props: questionsProps) {
     const { user, setUser } = useContext(UserContext)
 
     const [displayedXP, setDisplayedXP] = useState(user?.xp ?? 0);
+    const [streak, setStreak] = useState<number>(user?.streak ?? 0);
 
     // Keep displayedXP in sync when user.xp changes from context (e.g. on page load)
     useEffect(() => {
-    setDisplayedXP(user?.xp ?? 0);
+        setDisplayedXP(user?.xp ?? 0);
     }, [user?.xp]);
 
     //=========================================== Constants =====================================//
     const iconSize = 48
     const strokewidth = 2
-    const XP_PER_RANK = 1000
 
-    const getRankInfo = (xp: number) => {
-        const safe = Math.max(0, xp || 0)
-        const rank = Math.floor(safe / XP_PER_RANK) + 1
-        const progress = Math.min(100, Math.round(((safe % XP_PER_RANK) / XP_PER_RANK) * 100))
-        return { rank, progress }
+    //============================== Rank check for xp etc ======================================//
+    // Given total XP, figure out current rank + how far they are inside that rank
+    function getRankFromXP(xp: number) {
+        const thresholds = [100, 300, 1000, 5000, 10000, 100000]; // XP required to finish each rank
+        let rank = 0;
+        let remainingXP = xp;
+    
+        for (let i = 0; i < thresholds.length; i++) {
+            // threshold[i] is how much XP is needed to finish THIS rank
+            if (remainingXP < thresholds[i]) {
+                // We're still leveling INSIDE this rank
+                const progress = (remainingXP / thresholds[i]) * 100;
+                return { rank, progress, xpIntoRank: remainingXP, neededForNext: thresholds[i] };
+            }
+            // Otherwise: we leveled up, subtract it
+            remainingXP -= thresholds[i];
+            rank++;
+        }
+    
+        // If we exceed max array, clamp at last rank
+        return {
+            rank: thresholds.length,
+            progress: 100,
+            xpIntoRank: thresholds[thresholds.length - 1],
+            neededForNext: thresholds[thresholds.length - 1],
+        };
     }
+
+    const { rank, progress } = getRankFromXP(displayedXP);
+
+    const getTotalXP = (rank: number) => {
+        if (rank == 0) {
+            return 100;
+        } else if (rank == 1) {
+            return 300;
+        } else if (rank == 2) {
+            return 1000;
+        } else if (rank == 3) {
+            return 5000;
+        } else if (rank == 4) {
+            return 10000;
+        } else {
+            return 100000;
+        }
+    } 
+
+    const XP_PER_RANK = getTotalXP(rank);
+    //==========================================================================================//
 
     //===================================== Question handling ===================================//
     useEffect(() => {
@@ -133,27 +176,51 @@ export default function Question(props: questionsProps) {
             inputs.every((v) => (v ?? "").toString().trim().length > 0);
           
         const ok = ready ? isCorrect(inputs, answers) : false;
-        const reward = 500;
+        const reward = 10;
           
+        // inside onCheck()
         if (ok) {
             playCorrectSound();
-            awardXP(reward, document.getElementById("check-btn"));
-
-            // Optimistic local update so RankBar updates immediately
-            setUser((prev: any) => prev ? { ...prev, xp: (prev.xp ?? 0) + reward } : prev);
-
-            // Persist atomically
+          
+            setStreak((prev) => {
+              const safePrev = prev ?? 0;
+              const newStreak = safePrev + 1;
+              const reward = newStreak * 10;
+          
+              awardXP(reward);
+          
+              setUser((prevU: any) => {
+                if (!prevU) return prevU;
+                return {
+                  ...prevU,
+                  xp: (prevU.xp ?? 0) + reward,
+                  streak: newStreak,
+                };
+              });
+          
+              // Persist to Firestore safely
+              if (user?.uid) {
+                updateDoc(doc(db, "user-data", user.uid), {
+                  xp: increment(reward),
+                  streak: newStreak,
+                }).catch((e) => console.error("XP update failed", e));
+              }
+          
+              return newStreak;
+            });
+          } else {
+            playIncorrectSound();
+            setStreak(0);
+          
             if (user?.uid) {
-                try {
-                    await updateDoc(doc(db, 'user-data', user.uid), { xp: increment(reward) });
-                } catch (e) {
-                    // Optional: rollback on failure
-                    setUser((prev: any) => prev ? { ...prev, xp: Math.max(0, (prev.xp ?? 0) - reward) } : prev);
-                    console.error("XP update failed", e);
-                }
+              updateDoc(doc(db, "user-data", user.uid), {
+                streak: 0,
+              }).catch((e) => console.error("Failed to reset streak", e));
             }
-        } else {
-            playInorrectSound();
+          
+            setUser((prevU: any) =>
+              prevU ? { ...prevU, streak: 0 } : prevU
+            );
         }
           
         setIsRight(ok);
@@ -190,7 +257,7 @@ export default function Question(props: questionsProps) {
         }
     }
 
-    function playInorrectSound() {
+    function playIncorrectSound() {
         try {
           const audio = new Audio(incorrectSound);
           audio.volume = 0.6; // tweak volume as you like
@@ -281,10 +348,8 @@ export default function Question(props: questionsProps) {
             {/* ================================ HEADING =================================== */}
             {/* ======================================== RANKBAR ========================================== */}
             <div className="flex" ref={rankRef}>
-                {(() => {
-                    const { rank, progress } = getRankInfo(displayedXP); 
-                    return <RankBar rank={rank} progress={progress} />;
-                })()}
+                <RankBar rank={rank} progress={progress} />
+                <StreakDisplay streak={streak}/>
             </div>
 
             <p className="txt-bold color-txt-accent">{properties?.name}
