@@ -10,6 +10,7 @@ import RenderMath from "../../components/math/mathdisplay";
 // Icons
 import { LuImage } from "react-icons/lu";
 import useNotifications from "../../hooks/useNotifications";
+import { useEffect, useState } from "react";
 
 export default function Replies(
 ) {
@@ -31,6 +32,30 @@ export default function Replies(
     randomPlaceholder, 
     question,
   } = useReplies(id ?? "");
+
+  const placeholders = [
+          "Is no one locked in?...",
+          "It's quiet here...",
+          "Maybe go make some friends lol...",
+          "Is everyone AFK?...",
+          "Maybe replying was the friends we made along the way...",
+          "Chat is this thread on airplane mode?...",
+          "Damn CertChamps needs more users...",
+          "Does this thread need a passcode to reply or something?...",
+          "Is this thread my dating life?...",
+          "Even my calculator gets more use than this thread...",
+          "Maybe just ask your teacher...",
+          "Remember when people used to talk?...",
+          "CONGRATULATIONS you found the deadest thread on the platform!!!...",
+      ];
+        
+      const [replyPlaceholder, setReplyPlaceholder] = useState("");
+  
+      //This will just pick a random placeholder whenever the screen renders
+      useEffect(() => {
+          const randomIndex = Math.floor(Math.random() * placeholders.length);
+          setReplyPlaceholder(placeholders[randomIndex]);
+      }, []);
 
   return (
     <div className="w-h-container p-4 pb-0 items-start">
@@ -169,7 +194,7 @@ export default function Replies(
             </div>
           ))
         ) : (
-          <p className="ml-2 txt-sub">It's quiet here...</p>
+          <p className="ml-2 txt-sub">{replyPlaceholder}</p>
         )}
         {/* ===================================================================================================== */}
       </div>
