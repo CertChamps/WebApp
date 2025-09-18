@@ -89,7 +89,7 @@ export default function Question(props: questionsProps) {
     //=========================================== Constants =====================================//
     const iconSize = 48
     const strokewidth = 2
-    const XP_PER_RANK = 10000
+    const XP_PER_RANK = 1000
 
     const getRankInfo = (xp: number) => {
         const safe = Math.max(0, xp || 0)
@@ -228,7 +228,7 @@ export default function Question(props: questionsProps) {
             const chunks = Math.floor(amount / chunkSize);
             const rem = amount % chunkSize;
         
-            const baseDelay = 0.05; // seconds between pips
+            const baseDelay = 0.08; // seconds between pips
             const now = Date.now();
         
             const newPips: typeof xpFlyers = [];

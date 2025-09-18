@@ -104,6 +104,14 @@ export default function CustomCursor() {
           [data-theme="gruvbox"] .cursor-icon { color: var(--color-gruvboxAccent); }
           [data-theme="magicGirl"] .cursor-icon { color: var(--color-magicGirlAccent); }
           [data-theme="tronOrange"] .cursor-icon { color: var(--color-tronOrangeAccent); }
+          [data-theme="menthol"] .cursor-icon { color: var(--color-mentholAccent); }
+          [data-theme="lavendar"] .cursor-icon { color: var(--color-lavendarAccent); }
+          [data-theme="diner"] .cursor-icon { color: var(--color-dinerAccent); }
+          [data-theme="airplane"] .cursor-icon { color: var(--color-airplaneAccent); }
+          [data-theme="nordLight"] .cursor-icon { color: var(--color-nordLightAccent); }
+          [data-theme="sewingTinLight"] .cursor-icon { color: var(--color-sewingTinLightAccent); }
+          [data-theme="camping"] .cursor-icon { color: var(--color-campingAccent); }
+          [data-theme="paper"] .cursor-icon { color: var(--color-paperAccent); }
         `}
       </style>
       {/* {trailShapes} */}

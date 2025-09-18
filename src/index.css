@@ -116,6 +116,54 @@
   --color-tronOrangePrimary: #f0e800;
   --color-tronOrangeSub: #ff6600;
 
+  /* Menthol */
+  --color-mentholBG: #00c18c;
+  --color-mentholAccent: #ffffff;
+  --color-mentholPrimary: #ffffff;
+  --color-mentholSub: #186544;
+
+  /* Lavendar */
+  --color-lavendarBG: #EBE1EF;
+  --color-lavendarAccent: #212B43;
+  --color-lavendarPrimary: #8A5BD6;
+  --color-lavendarSub: #A28DB8;
+  
+  /* Diner */
+  --color-dinerBG: #537997;
+  --color-dinerAccent: #DFDBC8;
+  --color-dinerPrimary: #C3AF5B;
+  --color-dinerSub: #445C7F;
+
+  /* Airplane */
+  --color-airplaneBG: #E0F7FA;
+  --color-airplaneAccent: #006064;
+  --color-airplanePrimary: #004D40;
+  --color-airplaneSub: #26A69A;
+
+  /* Nord Light */
+  --color-nordLightBG: #ECEFF4;
+  --color-nordLightAccent: #8FBCBB;
+  --color-nordLightPrimary: #8FBCBB;
+  --color-nordLightSub: #6A7791;
+
+  /* Sewing Tin Light */
+  --color-sewingTinLightBG: #FFFFFF;
+  --color-sewingTinLightAccent: #2D2076;
+  --color-sewingTinLightPrimary: #2D2076;
+  --color-sewingTinLightSub: #385ECA;
+
+  /* Camping */
+  --color-campingBG: #FAF1E4;
+  --color-campingAccent: #3C403B;
+  --color-campingPrimary: #618C56;
+  --color-campingSub: #C2B8AA;
+
+  /* Paper */
+  --color-paperBG: #EEEEEE;
+  --color-paperAccent: #444444;
+  --color-paperPrimary: #444444;
+  --color-paperSub: #B2B2B2;
+
   /* Note: Do not change these randomly below styles must follow: 
   radius-out - radius-in = 2 * padding/margin */
 
@@ -237,6 +285,14 @@ math-field::part(virtual-keyboard-toggle) {
 @custom-variant gruvbox (&:where([data-theme="gruvbox"] *));
 @custom-variant magicGirl (&:where([data-theme="magicGirl"] *));
 @custom-variant tronOrange (&:where([data-theme="tronOrange"] *));
+@custom-variant menthol (&:where([data-theme="menthol"] *));
+@custom-variant lavendar (&:where([data-theme="lavendar"] *));
+@custom-variant diner (&:where([data-theme="diner"] *));
+@custom-variant airplane (&:where([data-theme="airplane"] *));
+@custom-variant nordLight (&:where([data-theme="nordLight"] *));
+@custom-variant sewingTinLight (&:where([data-theme="sewingTinLight"] *));
+@custom-variant camping (&:where([data-theme="camping"] *));
+@custom-variant paper (&:where([data-theme="paper"] *));
 
 @utility color-txt-main {
   @apply 
@@ -256,6 +312,14 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:text-gruvboxPrimary
     magicGirl:text-magicGirlPrimary
     tronOrange:text-tronOrangePrimary
+    menthol:text-mentholPrimary
+    lavendar:text-lavendarPrimary
+    diner:text-dinerPrimary
+    airplane:text-airplanePrimary
+    nordLight:text-nordLightPrimary
+    sewingTinLight:text-sewingTinLightPrimary
+    camping:text-campingPrimary
+    paper:text-paperPrimary
 }
 
 @utility color-txt-sub {
@@ -276,6 +340,14 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:text-gruvboxSub
     magicGirl:text-magicGirlSub
     tronOrange:text-tronOrangeSub
+    menthol:text-mentholSub
+    lavendar:text-lavendarSub
+    diner:text-dinerSub
+    airplane:text-airplaneSub
+    nordLight:text-nordLightSub
+    sewingTinLight:text-sewingTinLightSub
+    camping:text-campingSub
+    paper:text-paperSub
 }
 
 @utility color-txt-accent {
@@ -296,6 +368,14 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:text-gruvboxAccent
     magicGirl:text-magicGirlAccent
     tronOrange:text-tronOrangeAccent
+    menthol:text-mentholAccent
+    lavendar:text-lavendarAccent
+    diner:text-dinerAccent
+    airplane:text-airplaneAccent
+    nordLight:text-nordLightAccent
+    sewingTinLight:text-sewingTinLightAccent
+    camping:text-campingAccent
+    paper:text-paperAccent
 }
 
 @utility color-bg {
@@ -316,6 +396,14 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:bg-gruvboxBG
     magicGirl:bg-magicGirlBG
     tronOrange:bg-tronOrangeBG
+    menthol:bg-mentholBG
+    lavendar:bg-lavendarBG
+    diner:bg-dinerBG
+    airplane:bg-airplaneBG
+    nordLight:bg-nordLightBG
+    sewingTinLight:bg-sewingTinLightBG
+    camping:bg-campingBG
+    paper:bg-paperBG
 }
 
 @utility color-txt-invert {
@@ -336,6 +424,14 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:text-gruvboxBG
     magicGirl:text-magicGirlBG
     tronOrange:text-tronOrangeBG
+    menthol:text-mentholBG
+    lavendar:text-lavendarBG
+    diner:text-dinerBG
+    airplane:text-airplaneBG
+    nordLight:text-nordLightBG
+    sewingTinLight:text-sewingTinLightBG
+    camping:text-campingBG
+    paper:text-paperBG
 }
 
 
@@ -357,6 +453,14 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:bg-gruvboxSub/5
     magicGirl:bg-magicGirlSub/5
     tronOrange:bg-tronOrangeSub/5
+    menthol:bg-mentholSub/5
+    lavendar:bg-lavendarSub/5
+    diner:bg-dinerSub/5
+    airplane:bg-airplaneSub/5
+    nordLight:bg-nordLightSub/5
+    sewingTinLight:bg-sewingTinLightSub/5
+    camping:bg-campingSub/5
+    paper:bg-paperSub/5
 }
 
 @utility color-bg-grey-10 {
@@ -377,6 +481,14 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:bg-gruvboxSub/20
     magicGirl:bg-magicGirlSub/20
     tronOrange:bg-tronOrangeSub/20
+    menthol:bg-mentholSub/20
+    lavendar:bg-lavendarSub/20
+    diner:bg-dinerSub/20
+    airplane:bg-airplaneSub/20
+    nordLight:bg-nordLightSub/20
+    sewingTinLight:bg-sewingTinLightSub/20
+    camping:bg-campingSub/20
+    paper:bg-paperSub/20
 }
 
 @utility color-bg-accent {
@@ -397,6 +509,14 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:bg-gruvboxAccent/15
     magicGirl:bg-magicGirlAccent/15
     tronOrange:bg-tronOrangeAccent/15
+    menthol:bg-mentholAccent/15
+    lavendar:bg-lavendarAccent/15
+    diner:bg-dinerAccent/15
+    airplane:bg-airplaneAccent/15
+    nordLight:bg-nordLightAccent/15
+    sewingTinLight:bg-sewingTinLightAccent/15
+    camping:bg-campingAccent/15
+    paper:bg-paperAccent/15
 }
 
 @utility color-shadow {
@@ -417,6 +537,14 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:border-gruvboxSub/20
     magicGirl:border-magicGirlSub/20
     tronOrange:border-tronOrangeSub/20
+    menthol:border-mentholSub/20
+    lavendar:border-lavendarSub/20
+    diner:border-dinerSub/20
+    airplane:border-airplaneSub/20
+    nordLight:border-nordLightSub/20
+    sewingTinLight:border-sewingTinLightSub/20
+    camping:border-campingSub/20
+    paper:border-paperSub/20
 
     shadow-light-grey/40
     dark:shadow-grey/20
@@ -431,9 +559,17 @@ math-field::part(virtual-keyboard-toggle) {
     matchaMoccha:shadow-matchaMocchaSub/20
     redDragon:shadow-redDragonSub/20
     modernInk:shadow-modernInkSub/20
-    gruvbox:shadow-gruvboxSub/20
+    gruvbox:shadow-gruvboxSub/20  
     magicGirl:shadow-magicGirlSub/20
     tronOrange:shadow-tronOrangeSub/20
+    menthol:shadow-mentholSub/20
+    lavendar:shadow-lavendarSub/20
+    diner:shadow-dinerSub/20
+    airplane:shadow-airplaneSub/20
+    nordLight:shadow-nordLightSub/20
+    sewingTinLight:shadow-sewingTinLightSub/20
+    camping:shadow-campingSub/20
+    paper:shadow-paperSub/20
 }
 
 @utility color-shadow-accent {
@@ -454,6 +590,14 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:border-gruvboxAccent
     magicGirl:border-magicGirlAccent
     tronOrange:border-tronOrangeAccent
+    menthol:border-mentholAccent
+    lavendar:border-lavendarAccent  
+    diner:border-dinerAccent
+    airplane:border-airplaneAccent
+    nordLight:border-nordLightAccent
+    sewingTinLight:border-sewingTinLightAccent
+    camping:border-campingAccent
+    paper:border-paperAccent
 
     shadow-blue
     dark:shadow-blue-light
@@ -471,6 +615,14 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:shadow-gruvboxAccent
     magicGirl:shadow-magicGirlAccent
     tronOrange:shadow-tronOrangeAccent
+    menthol:shadow-mentholAccent
+    lavendar:shadow-lavendarAccent
+    diner:shadow-dinerAccent
+    airplane:shadow-airplaneAccent
+    nordLight:shadow-nordLightAccent
+    sewingTinLight:shadow-sewingTinLightAccent
+    camping:shadow-campingAccent
+    paper:shadow-paperAccent
 }
 
 @utility color-cursor {
@@ -491,4 +643,12 @@ math-field::part(virtual-keyboard-toggle) {
     gruvbox:bg-gruvboxAccent
     magicGirl:bg-magicGirlAccent
     tronOrange:bg-tronOrangeAccent
+    menthol:bg-mentholAccent
+    lavendar:bg-lavendarAccent
+    diner:bg-dinerAccent
+    airplane:bg-airplaneAccent
+    nordLight:bg-nordLightAccent
+    sewingTinLight:bg-sewingTinLightAccent
+    camping:bg-campingAccent
+    paper:bg-paperAccent
 }

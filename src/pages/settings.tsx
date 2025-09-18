@@ -397,6 +397,86 @@ export default function Settings() {
                     <div className="color-strip-item bg-tronOrangeAccent " > </div> {/* ACCENT */}
                 </div>
             </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('menthol')}>
+                <p className="theme-text">Menthol</p>
+                <div className="color-strip-container bg-mentholBG " >
+                    <div className="color-strip-item bg-mentholPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-mentholSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-mentholAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('lavendar')}>
+                <p className="theme-text">Lavendar</p>
+                <div className="color-strip-container bg-lavendarBG " >
+                    <div className="color-strip-item bg-lavendarPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-lavendarSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-lavendarAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('diner')}>
+                <p className="theme-text">Diner</p>
+                <div className="color-strip-container bg-dinerBG " >
+                    <div className="color-strip-item bg-dinerPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-dinerSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-dinerAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container"
+                onClick={() => setTheme('airplane')}>
+                <p className="theme-text">Airplane</p>
+                <div className="color-strip-container bg-airplaneBG " >
+                    <div className="color-strip-item bg-airplanePrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-airplaneSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-airplaneAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container"
+                onClick={() => setTheme('nordLight')}>
+                <p className="theme-text">Nord Light</p>
+                <div className="color-strip-container bg-nordLightBG " >
+                    <div className="color-strip-item bg-nordLightPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-nordLightSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-nordLightAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container"
+                onClick={() => setTheme('sewingTinLight')}>
+                <p className="theme-text">Sewing Tin Light</p>
+                <div className="color-strip-container bg-sewingTinLightBG " >
+                    <div className="color-strip-item bg-sewingTinLightPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-sewingTinLightSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-sewingTinLightAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container"
+                onClick={() => setTheme('camping')}>
+                <p className="theme-text">Camping</p>
+                <div className="color-strip-container bg-campingBG " >
+                    <div className="color-strip-item bg-campingPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-campingSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-campingAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container"
+                onClick={() => setTheme('paper')}>
+                <p className="theme-text">Paper</p>
+                <div className="color-strip-container bg-paperBG " >
+                    <div className="color-strip-item bg-paperPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-paperSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-paperAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
         </div>
 
         {/* ======================================================================================== */}

@@ -32,12 +32,16 @@ const RankBar = ({ rank, progress = 0 }: RankBarProps) => {
 
                 {/* ============================================ PROGRESS BAR ========================================== */}
                 <div className="progress-bar">
-                    <motion.div
-                        className="progress-fill" // Can edit in index.css
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ duration: 0.6, ease: "easeInOut" }}
-                    />
+                <motion.div
+                    className="progress-fill"
+                    animate={{ width: `${progress}%` }} // Changed from initial/animate for simpler updates
+                    transition={{ 
+                        duration: 0.8, // Slightly longer for noticeable "bumps" on small adds
+                        ease: "easeOut", // Softer easing for incremental feels
+                        type: "spring", // Optional: Makes it bouncy like "adding a bit"
+                        stiffness: 100, // Tune for less/more bounce
+                    }}
+                />
                 </div>
             </div>
         </div>

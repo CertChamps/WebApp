@@ -24,11 +24,6 @@ export default function XPFly({ amount, to, delay=0, pitchIndex = 0, onDone }: X
   const count = Math.max(1, Math.floor(amount / 10));
   const flyers = Array.from({ length: count }, (_, i) => i);
 
-    useEffect(() => {
-        const t = setTimeout(() => onDone?.(amount), 2500 + delay * 1000);
-        return () => clearTimeout(t);
-    }, [onDone, amount, delay]);
-
   async function loadBuffer() {
     if (soundBuffer) return soundBuffer;
     if (!audioCtx) {
