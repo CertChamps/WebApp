@@ -45,6 +45,8 @@ export default function Settings() {
     // ======================================== EXISTING USERS ======================================= //
     const logOut = async () => {
         await auth.signOut()
+        localStorage.setItem("USER", "")
+        setUser(null)
         navigate('/')
     }
     // =============================================================================================== //
@@ -478,7 +480,19 @@ export default function Settings() {
                     <div className="color-strip-item bg-paperAccent " > </div> {/* ACCENT */}
                 </div>
             </div>
+
+            <div className="cursor-target theme-container"
+                onClick={() => setTheme('aurora')}>
+                <p className="theme-text">Aurora</p>
+                <div className="color-strip-container bg-auroraBG " >
+                    <div className="color-strip-item bg-auroraPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-gradient-to-r from-auroraSub1 to-auroraSub2 " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-gradient-to-r from-auroraAccent1 to-auroraAccent2 " > </div> {/* ACCENT */}
+                </div>
+            </div>
         </div>
+
+        
 
         {/* ======================================================================================== */}
         

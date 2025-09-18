@@ -8,6 +8,7 @@ export default function Login() {
 
     // ====================================== REACT HOOKS =================================== //
     const navigate = useNavigate()
+    
 
     const {signInWithEmail, loginWithGoogle, error } = useAuthentication()
     const [email, setEmail] = useState<string>()

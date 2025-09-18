@@ -164,6 +164,14 @@
   --color-paperPrimary: #444444;
   --color-paperSub: #B2B2B2;
 
+  /* Aurora */
+  --color-auroraBG: #282C34;
+  --color-auroraAccent1: #61DAFB;
+  --color-auroraAccent2: #8A2BE2;
+  --color-auroraPrimary: #E06C75;
+  --color-auroraSub1: #ABB2BF;
+  --color-auroraSub2: #FFD700;
+
   /* Note: Do not change these randomly below styles must follow: 
   radius-out - radius-in = 2 * padding/margin */
 
@@ -304,6 +312,7 @@ math-field::part(virtual-keyboard-toggle) {
 @custom-variant sewingTinLight (&:where([data-theme="sewingTinLight"] *));
 @custom-variant camping (&:where([data-theme="camping"] *));
 @custom-variant paper (&:where([data-theme="paper"] *));
+@custom-variant aurora (&:where([data-theme="aurora"] *));
 
 @utility color-txt-main {
   @apply 
@@ -331,6 +340,7 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:text-sewingTinLightPrimary
     camping:text-campingPrimary
     paper:text-paperPrimary
+    aurora:text-auroraPrimary
 }
 
 @utility color-txt-sub {
@@ -359,6 +369,7 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:text-sewingTinLightSub
     camping:text-campingSub
     paper:text-paperSub
+    aurora:text-auroraSub1
 }
 
 @utility color-txt-accent {
@@ -387,6 +398,7 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:text-sewingTinLightAccent
     camping:text-campingAccent
     paper:text-paperAccent
+    aurora:text-auroraAccent1
 }
 
 @utility color-bg {
@@ -415,6 +427,7 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:bg-sewingTinLightBG
     camping:bg-campingBG
     paper:bg-paperBG
+    aurora:bg-auroraBG
 }
 
 @utility color-txt-invert {
@@ -443,6 +456,7 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:text-sewingTinLightBG
     camping:text-campingBG
     paper:text-paperBG
+    aurora:text-auroraBG
 }
 
 
@@ -472,6 +486,8 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:bg-sewingTinLightSub/5
     camping:bg-campingSub/5
     paper:bg-paperSub/5
+    aurora:bg-auroraSub1/5
+  
 }
 
 @utility color-bg-grey-10 {
@@ -500,6 +516,8 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:bg-sewingTinLightSub/20
     camping:bg-campingSub/20
     paper:bg-paperSub/20
+    aurora:bg-auroraSub1/20
+
 }
 
 @utility color-bg-accent {
@@ -528,6 +546,7 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:bg-sewingTinLightAccent/15
     camping:bg-campingAccent/15
     paper:bg-paperAccent/15
+    aurora:bg-auroraAccent1/15
 }
 
 @utility color-shadow {
@@ -556,6 +575,7 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:border-sewingTinLightSub/20
     camping:border-campingSub/20
     paper:border-paperSub/20
+    aurora:border-auroraSub1/20
 
     shadow-light-grey/40
     dark:shadow-grey/20
@@ -581,6 +601,8 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:shadow-sewingTinLightSub/20
     camping:shadow-campingSub/20
     paper:shadow-paperSub/20
+    aurora:shadow-auroraSub1/20
+  
 }
 
 @utility color-shadow-accent {
@@ -609,7 +631,9 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:border-sewingTinLightAccent
     camping:border-campingAccent
     paper:border-paperAccent
-
+    aurora:border-auroraAccent1; 
+    
+    @apply
     shadow-blue
     dark:shadow-blue-light
     markoblank:shadow-markored
@@ -634,6 +658,8 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:shadow-sewingTinLightAccent
     camping:shadow-campingAccent
     paper:shadow-paperAccent
+    aurora:shadow-auroraAccent1
+    
 }
 
 @utility color-cursor {
@@ -662,4 +688,5 @@ math-field::part(virtual-keyboard-toggle) {
     sewingTinLight:bg-sewingTinLightAccent
     camping:bg-campingAccent
     paper:bg-paperAccent
+    aurora:bg-auroraBG
 }

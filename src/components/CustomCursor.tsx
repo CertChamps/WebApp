@@ -112,6 +112,7 @@ export default function CustomCursor() {
           [data-theme="sewingTinLight"] .cursor-icon { color: var(--color-sewingTinLightAccent); }
           [data-theme="camping"] .cursor-icon { color: var(--color-campingAccent); }
           [data-theme="paper"] .cursor-icon { color: var(--color-paperAccent); }
+          [data-theme="aurora"] .cursor-icon { color: var(--color-auroraAccent1); }
         `}
       </style>
       {/* {trailShapes} */}

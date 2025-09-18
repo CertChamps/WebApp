@@ -8,7 +8,11 @@ import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword,
     signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase";
 
-export default function useAuthentication () {
+type authprops = {
+    prevRoute?: string
+}
+
+export default function useAuthentication (props?: authprops) {
 
     // =============================== CONTEXT AND STATE ==================================== // 
     const { setUser } = useContext(UserContext)
@@ -47,8 +51,8 @@ export default function useAuthentication () {
             savedQuestions: [],
         })
 
-        // Go to the dashboard
-        navigate('/practice')
+        // Go to the dashboard or previous route if it exists
+            props?.prevRoute ? navigate(`${props.prevRoute}`) : navigate('/practice')
     }
     // =======================================================================================//
 
@@ -93,8 +97,8 @@ export default function useAuthentication () {
             console.log(err)
         }
 
-        // Go to the dashboard
-        navigate('/practice')
+        // Go to the dashboard or previous route if it exists
+        props?.prevRoute ? navigate(`${props.prevRoute}`) : navigate('/practice')
 
     }
     // =======================================================================================//
@@ -275,8 +279,8 @@ export default function useAuthentication () {
             // Setup the user 
             await userSetup(user.uid, '', user.email)
 
-            // Navigate to home page 
-            navigate('/practice')
+            // Navigate to home page or previous route if it exists
+            props?.prevRoute ? navigate(`${props.prevRoute}`) : navigate('/practice')
             console.log(`User Exists ✅: ${user.uid}`)
         } 
 
