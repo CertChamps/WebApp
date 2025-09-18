@@ -10,6 +10,7 @@ type QuestionType = {
 
 const LogTables = ({ pgNumber }: QuestionType) => {
   const [numPages, setNumPages] = useState<number>(0);
+  console.log(numPages) //unused
 
   return (
     <div className="flex flex-col items-start">

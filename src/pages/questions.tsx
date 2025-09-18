@@ -1,13 +1,8 @@
 // React
-import { useContext } from "react";
 import { useParams } from "react-router-dom";
-
-// Icons 
-import { LuSearch, LuFilter } from "react-icons/lu";
 
 // Hooks 
 import useQuestions from "../hooks/useQuestions";
-import { UserContext } from "../context/UserContext"
 import { useEffect, useState } from "react";
 
 // Components
@@ -24,7 +19,6 @@ export default function Questions() {
     const [filters, setFilters] = useState<any[]>([])
     const [position, setPosition] = useState(0) // position of question in the array
     const { loadQuestions } = useQuestions({ setQuestions, filters })
-    const { user } = useContext(UserContext);
     const { id } = useParams()
 
 

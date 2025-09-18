@@ -1,5 +1,5 @@
 // Icons 
-import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuChevronLeft, LuArrowLeft, LuArrowRight, LuSearch } from "react-icons/lu";
+import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuArrowLeft, LuArrowRight, LuSearch } from "react-icons/lu";
 import { TbCards } from "react-icons/tb";
 
 // Hooks 
@@ -34,7 +34,7 @@ import XPFly from "./XPFly";
 import { useContext } from "react";
 import { UserContext } from "../../context/UserContext";
 import { db } from "../../../firebase";
-import { doc, increment, setDoc, updateDoc } from "firebase/firestore";
+import { doc, increment, updateDoc } from "firebase/firestore";
 import Filter from "../filter";
 
 // Component Props
@@ -145,6 +145,7 @@ export default function Question(props: questionsProps) {
     } 
 
     const XP_PER_RANK = getTotalXP(rank);
+    console.log(XP_PER_RANK) // just delete this 
     //==========================================================================================//
 
     //===================================== Question handling ===================================//
@@ -182,7 +183,7 @@ export default function Question(props: questionsProps) {
             inputs.every((v) => (v ?? "").toString().trim().length > 0);
           
         const ok = ready ? isCorrect(inputs, answers) : false;
-        const reward = 10;
+        // const reward = 10; unused
           
         // inside onCheck()
         if (ok) {
@@ -288,7 +289,7 @@ export default function Question(props: questionsProps) {
     //==========================================================================================//
 
     //====================================== XP Animation ======================================//
-    function awardXP(amount: number, originEl?: HTMLElement | null) {
+    function awardXP(amount: number, /* originEl?: HTMLElement | null unused */ ) {
             if (!rankRef.current) return;
             const targetBox = rankRef.current.getBoundingClientRect();
             const to = {

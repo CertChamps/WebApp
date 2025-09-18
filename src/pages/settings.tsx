@@ -25,6 +25,7 @@ export default function Settings() {
 
     // These are all just for cropping
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    console.log(selectedFile) //unused
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);

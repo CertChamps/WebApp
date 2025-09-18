@@ -121,7 +121,15 @@ export default function DeckViewer () {
         { /* ====================================================================================== */ }
 
         { /* ======================================= QUESTION ==================================== */ }
-        <Question questions={questions} position={position} deckmode preview={isPrev === "preview"}/> 
+        <Question
+            questions={questions}
+            position={position}
+            setPosition={setPosition}
+            nextQuestion={() => setPosition(prev => (prev < questions.length - 1 ? prev + 1 : 0))}
+            setFilters={() => {}}
+            deckmode
+            preview={isPrev === "preview"}
+        /> 
         { /* ====================================================================================== */ }
 
         { /* ======================= ADD TO DECKS BUTTON (Preview) ================================ */ }

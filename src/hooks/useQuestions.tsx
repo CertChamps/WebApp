@@ -3,7 +3,6 @@ import { collection, getCountFromServer, getDocs, doc,
 import { db }from '../../firebase'
 import React from 'react'
 import useFetch from './useFetch'
-import Fuse from 'fuse.js'
 import { useState } from 'react'
 
 // Props Type 
@@ -17,6 +16,7 @@ export default function useQuestions( props?:questionProps ) {
     // ====================== HOOKS ========================= //
     const { fetchImage } = useFetch()
     const [allQuestions, setAllQuestions] = useState<any[]>([])
+    console.log(allQuestions) // unused
 
     // ====================== RETURN RANDOM NUMBER IN GIVEN RANGE ========================= //
     const getRandom = (range: number) => {

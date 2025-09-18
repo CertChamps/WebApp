@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createHashRouter, RouterProvider } from 'react-router-dom';
 import Login from './pages/login';
 import SignUp from './pages/signup';
 import Questions from './pages/questions';
@@ -10,7 +10,7 @@ import Settings from './pages/settings';
 import DeckViewer from './pages/deckViewer';
 import ProfileViewer from './pages/profileViewer';
 
-const router = createBrowserRouter([
+const router = createHashRouter([
   { path: '/', element: ( <SignUp /> ), },
   { path: '/login', element: ( <Login /> ), },
   { path: '/practice', element: (

@@ -51,6 +51,7 @@ export default function Replies(
       ];
         
       const [replyPlaceholder, setReplyPlaceholder] = useState("");
+      console.log(fcAuthor) //unused
   
       //This will just pick a random placeholder whenever the screen renders
       useEffect(() => {
