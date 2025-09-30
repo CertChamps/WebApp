@@ -16,8 +16,8 @@ let soundBuffer: AudioBuffer | null = null;
 
 export default function XPFly({ amount, to, delay=0, pitchIndex = 0, onDone }: XPFlyProps) {
   const center = {
-    x: window.innerWidth / 2 - 180,
-    y: window.innerHeight / 2 - 50,
+    x: 0,
+    y: 0,
   };
 
   const count = Math.max(1, Math.floor(amount / 10));
@@ -69,12 +69,12 @@ export default function XPFly({ amount, to, delay=0, pitchIndex = 0, onDone }: X
 
   return (
     <motion.div
-        className="fixed pointer-events-none text-1xl font-bold color-txt-accent"
+        className="absolute pointer-events-none text-1xl font-bold color-txt-accent z-200 w-20 flex justify-center items-center"
         initial={{ x: center.x, y: center.y, opacity: 0, scale: 0.8 }}
         animate={{
             // 3 phases: quick fade-in at center -> pause -> fly to bar
-            x: [center.x, center.x, center.x, to.x - 160],
-            y: [center.y, center.y, center.y, to.y - 80],
+            x: [center.x, center.x, center.x, to.x - 0],
+            y: [center.y, center.y, center.y, to.y - 0],
             opacity: [0, 1, 1, 1],
             scale: [0.8, 1, 1, 1],
         }}
@@ -87,6 +87,7 @@ export default function XPFly({ amount, to, delay=0, pitchIndex = 0, onDone }: X
         onAnimationComplete={() => {
             playLandSound(pitchIndex);
             onDone?.(amount);
+            // progress 
         }}
           style={{ transform: "translate(-50%, -50%)" }}
         >

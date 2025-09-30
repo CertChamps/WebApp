@@ -394,7 +394,11 @@ export default function Question(props: questionsProps) {
             {/* ============================== QUESTION CONTENT =========================== */}
             <div className="w-2/3 m-4 ">
                 <RenderMath text={content[part]?.question ?? ''} className="txt text-xl" />
-                {content?.[part]?.image && <img src={content[part].image} className="max-h-30 m-4 dark:invert-100"/>}
+                {content?.[part]?.image &&
+                <div className="w-100 h-auto relative">
+                    <img src={content[part].image} className="max-h-30 invert brightness-0"/>
+                </div>
+                }
             </div>
             {/* ============================================================================ */}
             </div>

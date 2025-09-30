@@ -37,7 +37,7 @@ export default function useAuthentication (props?: authprops) {
             friends: [], pendingFriends: [],
             notifications: [],
             rank: 0, xp: 0,
-            questionStreak: 0,
+            streak: 0,
             savedQuestions: [], decks: [], 
         })
 
@@ -47,7 +47,7 @@ export default function useAuthentication (props?: authprops) {
             friends: [], pendingFriends: [],
             notifications: [],
             rank: 0, xp: 0,
-            questionStreak: 0,
+            streak: 0,
             savedQuestions: [],
         })
 
@@ -82,7 +82,7 @@ export default function useAuthentication (props?: authprops) {
                     friends: user.data().friends, pendingFriends: user.data().pendingFriends,
                     notifications: user.data().notifications,
                     rank: user.data().rank, xp: user.data().xp,
-                    questionStreak: user.data().questionStreak,
+                    streak: user.data().streak,
                     savedQuestions: user.data().savedQuestions, decks: decks,
                 })     
             }

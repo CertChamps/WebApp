@@ -5,14 +5,15 @@ export default function useFilters() {
     const [ unselectedTopics, setUnselectedTopics ] = useState<{key: number, topic: string, subTopics: string[]}[]>([
         { key: 1, topic: 'Algebra', subTopics: ['Cubics', 'Expressions & Factorising', 'Indices & Logs', 'Inequalities', 'Quadratics', 'Simultaneous Equations', 'Solving Equations'] },
         { key: 2, topic: 'Area & Volume', subTopics: []},
-        { key: 3, topic: 'Calculus', subTopics: ['Differentiation', 'Functions', 'Integration'] },
+        { key: 3, topic: 'Calculus', subTopics: ['Differentiation', 'Applications of Differentiation', 'Functions', 'Integration'] },
         { key: 4, topic: 'Complex Numbers', subTopics: [] },
         { key: 5, topic: 'Financial Maths', subTopics: [] },
-        { key: 6, topic: 'Coordinate Geometry', subTopics: ['Area of a Triangle'] },
+        { key: 6, topic: 'Coordinate Geometry', subTopics: ['Line', 'Circle'] },
         { key: 7, topic: 'Probability', subTopics: [] },
         { key: 8, topic: 'Sequences & Series', subTopics: [] },
-        { key: 9, topic: 'Statistics', subTopics: ['Descriptive Statistics', 'Inferential Statistics', 'ZScores'] },
+        { key: 9, topic: 'Statistics', subTopics: ['Descriptive', 'Inferential', 'ZScores'] },
         { key: 10, topic: 'Trigonometry', subTopics: ['Functions & Identities', 'Triangles'] },
+        { key: 11, topic: 'Geometry', subTopics: [] },
     ])
     const [ selectedTopics, setSelectedTopics ] = useState<{key: number, topic: string, subTopics: string[]}[]>([])
     const [ unselectedSubTopics, setUnselectedSubTopics  ] = useState<{parent: string, key: number, topic: string}[]>([])

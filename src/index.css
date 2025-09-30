@@ -690,3 +690,8 @@ math-field::part(virtual-keyboard-toggle) {
     paper:bg-paperAccent
     aurora:bg-auroraBG
 }
+
+@utility color-filter {
+  @apply 
+    filter [filter:"brightness(0) saturate(100%) invert(70%) sepia(61%) saturate(416%) hue-rotate(155deg) brightness(98%) contrast(101%)
+}

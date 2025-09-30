@@ -69,8 +69,11 @@ export default function RenderMath({
 
     const parts = tokens.map((t) => {
       if (t.type === "text") {
-        // escape plain text to avoid HTML injection
-        return escapeHtml(t.content);
+        return escapeHtml(t.content)
+          // real newline characters
+          .replace(/\n/g, "<br/>")
+          // literal "\n" text
+          .replace(/\\n/g, "<br/>");
       }
 
       try {
