@@ -15,6 +15,7 @@ import QThread from "../../components/questions/q_thread"
 import ViewDecks from "./../viewDecks";
 import SharePanel from "../social/sharePanel";
 import LogTables from "../../components/logtables"
+import MarkingScheme from "../../components/marking_scheme"
 import QSearch from "./qSearch";
 import RankBar from "../../components/rankbar";
 import AnswerNoti from "../math/answerNoti";
@@ -165,7 +166,7 @@ export default function Question(props: questionsProps) {
             answer:   Array.isArray(p?.answer)   ? p.answer   : [],
             prefix:   Array.isArray(p?.prefix)   ? p.prefix   : [],   // <-- add
             orderMatters: p?.ordermatters,                    // <-- optional
-            image:    p?.image ?? ''
+            image:    p?.image ?? '',
         }));
 
         // Set the question state 
@@ -468,6 +469,12 @@ export default function Question(props: questionsProps) {
             </div>
         ) : null}
 
+        {sideView === 'marking_scheme' ? (
+            <div className="h-full w-5/12">
+                <MarkingScheme year="25" pgNumber="1"/>
+            </div>
+        ) : null}
+
         {sideView === 'decks' ? (
             <div className="h-full w-5/12">
                 <ViewDecks question={properties?.id}/>
@@ -528,6 +535,21 @@ export default function Question(props: questionsProps) {
                  <span className="tooltip">logbook</span>
             </div>
             {/* ================================================================================ */}
+
+            <div className={sideView == 'marking_scheme' ? 'sidebar-selected group' : 'sidebar group'} 
+                onClick={() => {
+                    setSideView( (prev: any) => {
+                        if (prev != 'marking_scheme') return 'marking_scheme'
+                        else return '' 
+                    });
+                }}
+            >
+                <LuBookMarked strokeWidth={strokewidth} size={iconSize} 
+                    className={sideView == 'marking_scheme' ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
+                    fill={sideView == 'marking_scheme' ? 'currentColor' : 'none'} />
+
+                 <span className="tooltip">Marking Scheme</span>
+            </div>
             
             { props.deckmode ? (
             /* =========================== SHARE ICON (DECK ONLY) =========================== */
@@ -599,6 +621,7 @@ export default function Question(props: questionsProps) {
                  <span className="tooltip">search</span>
             </div>
             {/* ================================================================================ */}
+            
             </div>
 
             <div className="color-bg-grey-5 mx-4 w-10 h-10 flex items-center group relative 

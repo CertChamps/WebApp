@@ -5,10 +5,11 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker?url";
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 type QuestionType = {
+  year: string;
   pgNumber: string;
 };
 
-const LogTables = ({ pgNumber }: QuestionType) => {
+const MarkingScheme = ({ year, pgNumber }: QuestionType) => {
   const [numPages, setNumPages] = useState<number>(0);
   const [pagesRendered, setPagesRendered] = useState(0); // ✅ track when pages render
   const pageRefs = useRef<React.RefObject<HTMLDivElement>[]>([]);
@@ -38,7 +39,7 @@ const LogTables = ({ pgNumber }: QuestionType) => {
       style={{ height: "80vh", width: "650px" }}
     >
       <Document
-        file={`/assets/log_tables.pdf`}
+        file={`/assets/marking_schemes/${year}.pdf`}
         onLoadSuccess={({ numPages }) => {
           setNumPages(numPages);
           setPagesRendered(0); // reset render tracker
@@ -67,4 +68,4 @@ const LogTables = ({ pgNumber }: QuestionType) => {
   );
 };
 
-export default LogTables;
+export default MarkingScheme;
