@@ -8,7 +8,11 @@ import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword,
     signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase";
 
-export default function useAuthentication () {
+type authprops = {
+    prevRoute?: string
+}
+
+export default function useAuthentication (props?: authprops) {
 
     // =============================== CONTEXT AND STATE ==================================== // 
     const { setUser } = useContext(UserContext)
@@ -33,7 +37,7 @@ export default function useAuthentication () {
             friends: [], pendingFriends: [],
             notifications: [],
             rank: 0, xp: 0,
-            questionStreak: 0,
+            streak: 0,
             savedQuestions: [], decks: [], 
         })
 
@@ -43,12 +47,12 @@ export default function useAuthentication () {
             friends: [], pendingFriends: [],
             notifications: [],
             rank: 0, xp: 0,
-            questionStreak: 0,
+            streak: 0,
             savedQuestions: [],
         })
 
-        // Go to the dashboard
-        navigate('/practice')
+        // Go to the dashboard or previous route if it exists
+            props?.prevRoute ? navigate(`${props.prevRoute}`) : navigate('/practice')
     }
     // =======================================================================================//
 
@@ -78,7 +82,7 @@ export default function useAuthentication () {
                     friends: user.data().friends, pendingFriends: user.data().pendingFriends,
                     notifications: user.data().notifications,
                     rank: user.data().rank, xp: user.data().xp,
-                    questionStreak: user.data().questionStreak,
+                    streak: user.data().streak,
                     savedQuestions: user.data().savedQuestions, decks: decks,
                 })     
             }
@@ -93,8 +97,8 @@ export default function useAuthentication () {
             console.log(err)
         }
 
-        // Go to the dashboard
-        navigate('/practice')
+        // Go to the dashboard or previous route if it exists
+        props?.prevRoute ? navigate(`${props.prevRoute}`) : navigate('/practice')
 
     }
     // =======================================================================================//
@@ -275,8 +279,8 @@ export default function useAuthentication () {
             // Setup the user 
             await userSetup(user.uid, '', user.email)
 
-            // Navigate to home page 
-            navigate('/practice')
+            // Navigate to home page or previous route if it exists
+            props?.prevRoute ? navigate(`${props.prevRoute}`) : navigate('/practice')
             console.log(`User Exists ✅: ${user.uid}`)
         } 
 

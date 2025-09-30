@@ -8,7 +8,6 @@ import Rank3 from "../assets/images/Ranks/Rank3.png";
 import Rank4 from "../assets/images/Ranks/Rank4.png";
 import Rank5 from "../assets/images/Ranks/Rank5.png";
 import Rank6 from "../assets/images/Ranks/Rank6.png";
-import { useRef } from "react";
 
 type RankBarProps = {
   rank: number;

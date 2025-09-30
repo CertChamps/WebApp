@@ -4,7 +4,7 @@ import useFilters from '../hooks/useFilters';
 // Styles & Icons
 import { HiOutlineX } from "react-icons/hi";
 import '../styles/filters.css';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 type filterProps = {
   setFilters: React.Dispatch<React.SetStateAction<any>>,

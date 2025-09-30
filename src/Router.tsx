@@ -1,116 +1,122 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import Login from './pages/login';
-import SignUp from './pages/signup';
-import Questions from './pages/questions';
-import Social from './pages/social/social';
-import Games from './pages/games';
-import Navbar from './components/navbar';
-import Replies from './pages/social/replies';
-import Settings from './pages/settings';
-import DeckViewer from './pages/deckViewer';
-import ProfileViewer from './pages/profileViewer';
+// src/AppRouter.tsx
+import { createHashRouter, RouterProvider } from "react-router-dom";
+import Login from "./pages/login";
+import SignUp from "./pages/signup";
+import Questions from "./pages/questions";
+import Social from "./pages/social/social";
+import Games from "./pages/games";
+import Navbar from "./components/navbar";
+import Replies from "./pages/social/replies";
+import Settings from "./pages/settings";
+import DeckViewer from "./pages/deckViewer";
+import ProfileViewer from "./pages/profileViewer";
+import { ProtectedRoute } from "./components/protectedRoute";
 
-const router = createBrowserRouter([
-  { path: '/', element: ( <SignUp /> ), },
-  { path: '/login', element: ( <Login /> ), },
-  { path: '/practice', element: (
-    <>
-      <Navbar />
-      <Questions />
-    </>
-  ),},
-  { path: '/practice/:id', element: (
-    <>
-      <Navbar />
-      <Questions />
-    </>
-  ),},
-  { path: '/social/social', element: (
-    <>
-      <Navbar />
-      <Social />
-    </>
-  ),},
-  { path: '/social/replies', element: (
-    <>
-      <Navbar />
-      <Replies />
-    </>
-  ),},
-  { path: '/games', element: (
-    <>
-      <Navbar />
-      <Games />
-    </>
-  ),},
+const router = createHashRouter([
+  { path: "/", element: <SignUp /> },
+  { path: "/login", element: <Login /> },
+
+  // Protected routes
   {
-    path: '/',
+    path: "/practice",
     element: (
-      <>
-        <Login />
-      </>
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <Questions />
+        </>
+      </ProtectedRoute>
     ),
   },
   {
-    path: '/practice',
+    path: "/practice/:id",
     element: (
-      <>
-        <Navbar />
-        <Questions />
-      </>
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <Questions />
+        </>
+      </ProtectedRoute>
     ),
   },
   {
-    path: '/social',
+    path: "/social/social",
     element: (
-      <>
-        <Navbar />
-        <Social />
-      </>
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <Social />
+        </>
+      </ProtectedRoute>
     ),
   },
   {
-    path: '/games',
+    path: "/social/replies",
     element: (
-      <>
-        <Navbar />
-        <Games />
-      </>
-    ),
-  },
-    {
-    path: '/user/settings',
-    element: (
-      <>
-        <Navbar />
-        <Settings />
-      </>
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <Replies />
+        </>
+      </ProtectedRoute>
     ),
   },
   {
-    path: '/decks/:userID/:id/*',
+    path: "/games",
     element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <Games />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/user/settings",
+    element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <Settings />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/decks/:userID/:id/*",
+    element: (
+      <ProtectedRoute>
         <DeckViewer />
+      </ProtectedRoute>
     ),
   },
   {
-    path: '/viewProfile/:userID',
+    path: "/viewProfile/:userID",
     element: (
+      <ProtectedRoute>
         <ProfileViewer />
+      </ProtectedRoute>
     ),
   },
   {
-    path: '/post/:id',
+    path: "/post/:id",
     element: (
-      <>
-        <Navbar />
-        <Replies />
-      </>
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <Replies />
+        </>
+      </ProtectedRoute>
     ),
   },
-  
+
+  // If you also want a root login page instead of SignUp, keep one root route only.
+  // Remove duplicates from your original file to avoid conflicts.
 ]);
 
 export default function AppRouter() {
-  return <RouterProvider router={router} />;
+  return (
+      <RouterProvider router={router} />
+  );
 }

@@ -16,6 +16,8 @@ export default function App() {
     return storedOptions ? JSON.parse(storedOptions) : { theme: "light" };
   });
 
+  
+
   // ===================== PERSISTENCE ====================== //
   useEffect(() => {
     localStorage.setItem("USER", JSON.stringify(user));

@@ -1,8 +1,6 @@
 // React
 import React, { useState, useEffect, useContext } from 'react';
 
-// Icons
-import { LuUserPlus } from "react-icons/lu";
 
 // Hooks
 import { UserContext } from '../../context/UserContext';

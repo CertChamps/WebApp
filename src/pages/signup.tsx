@@ -1,18 +1,26 @@
-import { useState } from 'react'
-import crown from '../assets/logo.png'
+import { useEffect, useState } from 'react'
+import crown from '../assets/crown.png'
 import { FaGoogle } from 'react-icons/fa'
 import useAuthentication from '../hooks/useAuthentication'
 import { useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 
 export default function SignUp() {
 
     // ====================================== REACT HOOKS =================================== //
     const navigate = useNavigate()
 
-    const {signUpWithEmail, loginWithGoogle, error } = useAuthentication()
+    const location = useLocation()
+    const prevRoute = location.state?.prevRoute
+    useEffect(() => {
+    console.log("Previous Route: ", prevRoute) 
+    }, [prevRoute])
+
+    const {signUpWithEmail, loginWithGoogle, error } = useAuthentication({ prevRoute })
     const [email, setEmail] = useState<string>()
     const [password, setPassword] = useState<string>()
     const [username, setUsername] = useState<string>()
+
 
     const heading_style = "txt-sub text-xs font-bold w-9/12 mx-auto mb-1"
 

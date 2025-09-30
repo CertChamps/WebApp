@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import '../styles/navbar.css'
 
 // ======================= ICON IMPORTS ======================== // 
-import { LuPencil, LuSettings, LuUsers, LuGamepad2 } from "react-icons/lu";
+import { LuPencil, LuSettings, LuUsers } from "react-icons/lu";
 
 
 export default function Navbar () {
