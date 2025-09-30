@@ -71,9 +71,9 @@ export default function RenderMath({
       if (t.type === "text") {
         return escapeHtml(t.content)
           // real newline characters
-          .replace(/\n/g, "<br/>")
+          .replace(/\n/g, '<span style="display:block; margin-top:0px; heigt: 0px;"></span><br/>')
           // literal "\n" text
-          .replace(/\\n/g, "<br/>");
+          .replace(/\\n/g, '<span style="display:block; margin-top:0px; heigt: 0px;"></span><br/>');
       }
 
       try {

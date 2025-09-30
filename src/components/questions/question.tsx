@@ -144,8 +144,8 @@ export default function Question(props: questionsProps) {
         }
     } 
 
-    const XP_PER_RANK = getTotalXP(rank);
-    console.log(XP_PER_RANK) // just delete this 
+    // const XP_PER_RANK = getTotalXP(rank);
+    // console.log(XP_PER_RANK) // just delete this 
     //==========================================================================================//
 
     //===================================== Question handling ===================================//
@@ -158,12 +158,15 @@ export default function Question(props: questionsProps) {
         const questions = Array.isArray(props.questions) ? props.questions : []
         const q = questions[props.position] ?? {}
 
+        
         // Ensure content array is never null and each part has defaults
         const safeContent = (q.content ?? []).map((p: any) => ({
             question: p?.question ?? '',
-            answer: Array.isArray(p?.answer) ? p.answer : [],
-            image: p?.image ?? ''
-        }))
+            answer:   Array.isArray(p?.answer)   ? p.answer   : [],
+            prefix:   Array.isArray(p?.prefix)   ? p.prefix   : [],   // <-- add
+            orderMatters: p?.ordermatters,                    // <-- optional
+            image:    p?.image ?? ''
+        }));
 
         // Set the question state 
         setContent(safeContent)
@@ -181,8 +184,8 @@ export default function Question(props: questionsProps) {
             Array.isArray(inputs) &&
             inputs.length === answers.length &&
             inputs.every((v) => (v ?? "").toString().trim().length > 0);
-          
-        const ok = ready ? isCorrect(inputs, answers) : false;
+        console.log("ORDERRR", content?.[part].orderMatters)
+        const ok = ready ? isCorrect(inputs, answers, content?.[part]?.orderMatters) : false;
         // const reward = 10; unused
           
         // inside onCheck()
@@ -411,6 +414,7 @@ export default function Question(props: questionsProps) {
                         <MathInput
                             key={idx}
                             index={idx}
+                            prefix={content?.[part]?.prefix[idx] ?? '' }
                             setInputs={setInputs}
                             onEnter={onCheck}   // <- Enter now checks
                         />

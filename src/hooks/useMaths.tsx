@@ -5,8 +5,17 @@ import 'nerdamer/Solve';
 import 'nerdamer/Extra';
 
 export default function useMaths() {
+  /** Expand shorthand \frac34 → \frac{3}{4}  (also \frac a b etc.) */
+  const expandFracShorthand = (s: string) =>
+    s.replace(/\\frac\s*([^{}\s])\s*([^{}\s])/g, '\\frac{$1}{$2}');
+
+  /** Full sanitise + expansion */
   const sanitizeLatex = (tex: string) =>
-    tex.replace(/\\left|\\right/g, '').replace(/\\,/g, '').trim();
+    expandFracShorthand(tex)
+      .replace(/\\left|\\right/g, '')
+      .replace(/\\,/g, '')
+      .trim();
+  // ---------------------------
 
   const latexToExpr = (tex: string) => {
     try {
@@ -79,37 +88,42 @@ const isCorrectSingle = (inputLatex: string, answer: string): boolean => {
  * @param inputs array of input LaTeX strings
  * @param answers array of answer LaTeX strings (same length as inputs)
  */
-const isCorrect = (inputs: string[], answers: string[]): boolean => {
-  if (!Array.isArray(inputs) || !Array.isArray(answers)) return false
-  if (inputs.length !== answers.length) return false
+/**
+ * Check arrays of inputs and answers.
+ * @param inputs       array of input LaTeX strings
+ * @param answers      array of answer LaTeX strings (same length as inputs)
+ * @param orderMatters if true, inputs[i] must match answers[i] exactly.
+ */
+const isCorrect = (
+  inputs: string[],
+  answers: string[],
+  orderMatters?: boolean
+): boolean => {
+  if (!Array.isArray(inputs) || !Array.isArray(answers)) return false;
+  if (inputs.length !== answers.length) return false;
 
-  // track which inputs have been used/matched
-  const used = new Array<boolean>(inputs.length).fill(false)
-
-  // For each answer, find an unused input that matches it
-  for (let i = 0; i < answers.length; i++) {
-    const ans = answers[i]
-    let matched = false
-
-    for (let j = 0; j < inputs.length; j++) {
-      if (used[j]) continue
-
-      if (isCorrectSingle(inputs[j], ans)) {
-        used[j] = true
-        matched = true
-        break
-      }
-    }
-
-    if (!matched) {
-      // no available input matched this answer
-      return false
-    }
+  /* ----- ORDERED MODE ----- */
+  if (orderMatters) {
+    return inputs.every((inp, i) => isCorrectSingle(inp, answers[i]));
   }
 
-  // every answer found a unique matching input
-  return true
-}
+  /* ----- UN-ORDERED MODE (existing behaviour) ----- */
+  const used = new Array<boolean>(inputs.length).fill(false);
+
+  for (const ans of answers) {
+    let matched = false;
+    for (let j = 0; j < inputs.length; j++) {
+      if (used[j]) continue;
+      if (isCorrectSingle(inputs[j], ans)) {
+        used[j] = true;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) return false;
+  }
+  return true;
+};
 
   return { isCorrect };
 }

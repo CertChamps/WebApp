@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-
+import RenderMath from "./mathdisplay";
 import 'mathlive';
 // Try one of these CSS imports depending on your MathLive version:
 import 'mathlive/static.css';            // v0.92+
@@ -7,6 +7,7 @@ import 'mathlive/static.css';            // v0.92+
 
 type inputProps = {
   index: number;
+  prefix: any; 
   setInputs: React.Dispatch<React.SetStateAction<string[]>>;
   onEnter?: () => void; // NEW: parent-supplied handler
 };
@@ -15,6 +16,7 @@ export default function MathInput(props: inputProps) {
   const mfRef = useRef<any>(null);
 
   useEffect(() => {
+    console.log("prefix:", props.prefix)
     if (!mfRef.current) return;
     const mf = mfRef.current;
 
@@ -78,13 +80,16 @@ export default function MathInput(props: inputProps) {
 
   return (
     <div>
-      <div>
+      <div className="flex items-center">
+        <div>
+        <RenderMath text={props.prefix ? `$${props.prefix}$` : ''}/>
+        </div>
         <math-field
           ref={mfRef}
           default-mode="inline-math"
           onInput={handleInput}
           className="txtbox outline-none bg-none color-txt-main inline-block 
-            focus:border-3 color-shadow-accent w-50 mx-4
+            focus:border-3 color-shadow-accent w-50 mx-2
             h-auto overflow-scroll"
           style={{
             background: "none",

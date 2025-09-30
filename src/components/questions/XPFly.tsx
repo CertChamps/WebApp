@@ -20,9 +20,9 @@ export default function XPFly({ amount, to, delay=0, pitchIndex = 0, onDone }: X
     y: 0,
   };
 
-  const count = Math.max(1, Math.floor(amount / 10));
-  const flyers = Array.from({ length: count }, (_, i) => i);
-  console.log(flyers) //unused
+  // const count = Math.max(1, Math.floor(amount / 10));
+  // const flyers = Array.from({ length: count }, (_, i) => i);
+  // console.log(flyers) //unused
 
   async function loadBuffer() {
     if (soundBuffer) return soundBuffer;
