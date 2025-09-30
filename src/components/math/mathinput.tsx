@@ -82,7 +82,7 @@ export default function MathInput(props: inputProps) {
     <div>
       <div className="flex items-center">
         <div>
-        <RenderMath text={props.prefix ? `$${props.prefix}$` : ''}/>
+        <RenderMath text={props.prefix ? `$${props.prefix}$` : ''} className="txt text-lg"/>
         </div>
         <math-field
           ref={mfRef}
