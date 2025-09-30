@@ -71,9 +71,11 @@ export default function RenderMath({
       if (t.type === "text") {
         return escapeHtml(t.content)
           // real newline characters
-          .replace(/\n/g, '<span style="display:block; margin-top:0px; heigt: 0px;"></span><br/>')
-          // literal "\n" text
-          .replace(/\\n/g, '<span style="display:block; margin-top:0px; heigt: 0px;"></span><br/>');
+        .replace(/\n/g, '<br style="line-height:50px; margin:0; padding:0;" />')
+        .replace(/\\n/g, '<br style="line-height:50px; margin:0; padding:0;" />')
+        .replace(/\t/g, '<span style="display:inline-block; width:2em;"></span>')   // real tab
+        .replace(/\\t/g, '<span style="display:inline-block; width:2em;"></span>') // literal "\t"
+
       }
 
       try {
