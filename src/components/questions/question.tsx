@@ -5,6 +5,7 @@ import { TbCards } from "react-icons/tb";
 // Hooks 
 import useQuestions from "../../hooks/useQuestions";
 import { useEffect, useRef, useState } from "react";
+import useRank from "../../hooks/useRank"
 
 // Components
 import Lottie  from 'lottie-react';
@@ -34,9 +35,8 @@ import XPFly from "./XPFly";
 // User Context
 import { useContext } from "react";
 import { UserContext } from "../../context/UserContext";
-import { db } from "../../../firebase";
-import { doc, increment, updateDoc } from "firebase/firestore";
 import Filter from "../filter";
+import { FcAnswers } from "react-icons/fc";
 
 // Component Props
 type questionsProps = {
@@ -56,6 +56,7 @@ export default function Question(props: questionsProps) {
     const [properties, setProperties] = useState<any>()
     const [part, setPart] = useState<number>(0) 
     const [inputs, setInputs] = useState<any[]>([])
+
     useEffect(() => {
         console.log("inputs: ", inputs)
         console.log("answers: ",content?.[part]?.answer)
@@ -84,70 +85,41 @@ export default function Question(props: questionsProps) {
     >([]);
 
     const rankRef = useRef<HTMLDivElement>(null);
+    const { rank, progress, setProgress, xp, streak, onCheck } = useRank({rankRef, setIsRight, setShowNoti, xpFlyers, setXpFlyers});
 
     const { user, setUser } = useContext(UserContext)
 
     const [displayedXP, setDisplayedXP] = useState(user?.xp ?? 0);
-    const [streak, setStreak] = useState<number>(user?.streak ?? 0);
 
     // Keep displayedXP in sync when user.xp changes from context (e.g. on page load)
     useEffect(() => {
         setDisplayedXP(user?.xp ?? 0);
+        console.log(user.xp)
     }, [user?.xp]);
 
     //=========================================== Constants =====================================//
     const iconSize = 40
     const strokewidth = 1.75
 
-    //============================== Rank check for xp etc ======================================//
-    // Given total XP, figure out current rank + how far they are inside that rank
-    function getRankFromXP(xp: number) {
-        const thresholds = [100, 300, 1000, 5000, 10000, 100000]; // XP required to finish each rank
-        let rank = 0;
-        let remainingXP = xp;
-    
-        for (let i = 0; i < thresholds.length; i++) {
-            // threshold[i] is how much XP is needed to finish THIS rank
-            if (remainingXP < thresholds[i]) {
-                // We're still leveling INSIDE this rank
-                const progress = (remainingXP / thresholds[i]) * 100;
-                return { rank, progress, xpIntoRank: remainingXP, neededForNext: thresholds[i] };
-            }
-            // Otherwise: we leveled up, subtract it
-            remainingXP -= thresholds[i];
-            rank++;
+    function goNextFromNoti() {
+        setShowNoti(false);
+        setIsRight(false);
+        setInputs([]);
+      
+        // Next part if available
+        if ((content?.length ?? 0) > part + 1) {
+          setPart((p) => p + 1);
+          return;
         }
-    
-        // If we exceed max array, clamp at last rank
-        return {
-            rank: thresholds.length,
-            progress: 100,
-            xpIntoRank: thresholds[thresholds.length - 1],
-            neededForNext: thresholds[thresholds.length - 1],
-        };
+      
+        // Otherwise ask parent to move to the next question
+        if (props.nextQuestion) {
+          props.nextQuestion();
+        } else if (props.setPosition) {
+          // fallback if parent didn’t pass nextQuestion
+          props.setPosition((p) => Math.min(p + 1, (props.questions?.length ?? 1) - 1));
+        }
     }
-
-    const { rank, progress } = getRankFromXP(displayedXP);
-
-    // const getTotalXP = (rank: number) => {
-    //     if (rank == 0) {
-    //         return 100;
-    //     } else if (rank == 1) {
-    //         return 300;
-    //     } else if (rank == 2) {
-    //         return 1000;
-    //     } else if (rank == 3) {
-    //         return 5000;
-    //     } else if (rank == 4) {
-    //         return 10000;
-    //     } else {
-    //         return 100000;
-    //     }
-    // } 
-
-    // const XP_PER_RANK = getTotalXP(rank);
-    // console.log(XP_PER_RANK) // just delete this 
-    //==========================================================================================//
 
     //===================================== Question handling ===================================//
     useEffect(() => {
@@ -177,107 +149,6 @@ export default function Question(props: questionsProps) {
     }, [props.position, props.questions])
     //==========================================================================================//
 
-    
-
-    //===================================== Answer checking ===================================//
-    async function onCheck() {
-        const answers = content?.[part]?.answer ?? [];
-        const ready =
-            Array.isArray(inputs) &&
-            inputs.length === answers.length &&
-            inputs.every((v) => (v ?? "").toString().trim().length > 0);
-        console.log("ORDERRR", content?.[part].orderMatters)
-        const ok = ready ? isCorrect(inputs, answers, content?.[part]?.orderMatters) : false;
-        // const reward = 10; unused
-          
-        // inside onCheck()
-        if (ok) {
-            playCorrectSound();
-          
-            setStreak((prev) => {
-              const safePrev = prev ?? 0;
-              const newStreak = safePrev + 1;
-              const reward = newStreak * 10;
-          
-              awardXP(reward);
-          
-              setUser((prevU: any) => {
-                if (!prevU) return prevU;
-                return {
-                  ...prevU,
-                  xp: (prevU.xp ?? 0) + reward,
-                  streak: newStreak,
-                };
-              });
-          
-              // Persist to Firestore safely
-              if (user?.uid) {
-                updateDoc(doc(db, "user-data", user.uid), {
-                  xp: increment(reward),
-                  streak: newStreak,
-                }).catch((e) => console.error("XP update failed", e));
-              }
-          
-              return newStreak;
-            });
-          } else {
-            playIncorrectSound();
-            setStreak(0);
-          
-            if (user?.uid) {
-              updateDoc(doc(db, "user-data", user.uid), {
-                streak: 0,
-              }).catch((e) => console.error("Failed to reset streak", e));
-            }
-          
-            setUser((prevU: any) =>
-              prevU ? { ...prevU, streak: 0 } : prevU
-            );
-        }
-          
-        setIsRight(ok);
-        setShowNoti(true);
-    }
-
-    function goNextFromNoti() {
-        setShowNoti(false);
-        setIsRight(false);
-        setInputs([]);
-      
-        // Next part if available
-        if ((content?.length ?? 0) > part + 1) {
-          setPart((p) => p + 1);
-          return;
-        }
-      
-        // Otherwise ask parent to move to the next question
-        if (props.nextQuestion) {
-          props.nextQuestion();
-        } else if (props.setPosition) {
-          // fallback if parent didn’t pass nextQuestion
-          props.setPosition((p) => Math.min(p + 1, (props.questions?.length ?? 1) - 1));
-        }
-    }
-
-    function playCorrectSound() {
-        try {
-          const audio = new Audio(correctSound);
-          audio.volume = 0.6; // tweak volume as you like
-          audio.play().catch(() => {});
-        } catch (err) {
-          console.error("Could not play sound", err);
-        }
-    }
-
-    function playIncorrectSound() {
-        try {
-          const audio = new Audio(incorrectSound);
-          audio.volume = 0.6; // tweak volume as you like
-          audio.play().catch(() => {});
-        } catch (err) {
-          console.error("Could not play sound", err);
-        }
-    }
 
     useEffect(() => {
         setInputs([]);
@@ -293,69 +164,33 @@ export default function Question(props: questionsProps) {
     }, [props.position, props.questions]);
     //==========================================================================================//
 
-    //====================================== XP Animation ======================================//
-    function awardXP(amount: number, /* originEl?: HTMLElement | null unused */ ) {
-            if (!rankRef.current) return;
-            const targetBox = rankRef.current.getBoundingClientRect();
-            const to = {
-              x: targetBox.left + targetBox.width / 2,
-              y: targetBox.top + 10,
-            };
-        
-            // split into 10‑XP pips + optional remainder pip
-            const chunkSize = 10;
-            const chunks = Math.floor(amount / chunkSize);
-            const rem = amount % chunkSize;
-        
-            const baseDelay = 0.08; // seconds between pips
-            const now = Date.now();
-        
-            const newPips: typeof xpFlyers = [];
-            for (let i = 0; i < chunks; i++) {
-              newPips.push({
-                id: now + i,
-                to,
-            amount: chunkSize,
-               delay: i * baseDelay,
-                pitchIndex: i, // ladder up
-          });
-            }
-            if (rem > 0) {
-              newPips.push({
-                id: now + chunks,
-                to,
-                amount: rem,
-                delay: chunks * baseDelay,
-                pitchIndex: chunks,
-              });
-            }
-            setXpFlyers((prev) => [...prev, ...newPips]);
-          }
-    //==========================================================================================//
-
 
     return (
     <div className="flex flex-col h-full w-full items-end justify-end p-4">
     <AnswerNoti visible={showNoti && isRight} onNext={goNextFromNoti} />
 
-    {xpFlyers.map((fly) => (
-        <XPFly
-            key={fly.id}
-            amount={fly.amount}
-            to={fly.to} 
-            delay={fly.delay}
-            pitchIndex={fly.pitchIndex}
-            onDone={(chunk) => {
-                setDisplayedXP(prev => prev + chunk);
-                setXpFlyers(prev => prev.filter(f => f.id !== fly.id));
-            }}
-        />
-    ))}
     <div className="flex justify-start items-end w-full h-[90%]">
     { //============================= QUESTIONS CONTAINER ====================================// 
     props.questions[props.position]? ( 
     <div className={`card-container h-full items-end justify-start ${ (sideView == '' || sideView == 'filters') ? 'w-full' : 'w-7/12'}  
-        transition-all duration-250 shrink-0 self-start justify-self-start origin-left`}>
+        transition-all duration-250 shrink-0 self-start justify-self-start origin-left relative`}>
+                {/* ================================= XP FLYER OVERLAY ================================ */}
+    <div className="pointer-events-none h-full w-full absolute flex justify-center items-center z-[300]">
+    {xpFlyers.map((fly) => (
+        <XPFly
+        key={fly.id}
+        amount={fly.amount}
+        to={fly.to}          // viewport coords
+        delay={fly.delay}
+        pitchIndex={fly.pitchIndex}
+        onDone={(chunk) => {
+            setDisplayedXP((prev) => prev + chunk);
+            setXpFlyers((prev) => prev.filter((f) => f.id !== fly.id));
+        }}
+        // ⬇️ you can still pass jitter or custom colors if needed
+        />
+    ))}
+    </div>
         <div className="p-8 flex flex-1 flex-col justify-between h-full">
             { showSearch ? <QSearch  setShowSearch={setShowSearch} 
                 questions={props.questions} position={props.position} setPosition={props.setPosition ?? null} /> : <></> } 
@@ -370,26 +205,23 @@ export default function Question(props: questionsProps) {
 
             <p className="txt-bold color-txt-accent">{properties?.name}
                 <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
-                {       
-                    content?.[part]?.answer.map((ans: any) => (
-                        <span className="txt-sub">{`ANS: ${ans}`}</span>
+                {content?.[part]?.answer?.length ? (
+                    content?.[part].answer.map((ans: any) => (
+                         <span key={ans} className="txt-sub">{`ANS: ${ans}`}</span>
                     ))
-                }
+                ) : null}
             </p>
             {/* ============================================================================ */}
 
             
             {/* ============================= PART NAVIGATION ===============================*/}
             <div className="flex">
-                {content.length > 1 && content.map((_ : any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-center h-10" onClick={() => {setPart(idx); setInputs([])}}>
-
-                        <p className={`part-number ${part === idx ? 'bg-white/5' : 'hover:bg-white/10'}`} >
+                {Array.isArray(content) && content?.length > 1 && content?.map((_: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-center h-10" onClick={() => { setPart(idx); setInputs([]) }}>
+                        <p className={`part-number ${part === idx ? 'bg-white/5' : 'hover:bg-white/10'}`}>
                             {toRoman(idx + 1)}
                         </p>
-
-                        <LuChevronRight className={`${idx + 1 === content.length ? 'invisible' : 'visible'} color-txt-sub`}/>
-
+                        <LuChevronRight className={`${idx + 1 === content?.length ? 'invisible' : 'visible'} color-txt-sub`} />
                     </div>
                 ))}
             </div> 
@@ -398,10 +230,10 @@ export default function Question(props: questionsProps) {
 
             {/* ============================== QUESTION CONTENT =========================== */}
             <div className="w-2/3 m-4 ">
-                <RenderMath text={content[part]?.question ?? ''} className="txt text-xl" />
+                <RenderMath text={content?.[part]?.question ?? ''} className="txt text-xl" />
                 {content?.[part]?.image &&
                 <div className="w-100 h-auto relative">
-                    <img src={content[part].image} className="max-h-30 invert brightness-0"/>
+                    <img src={content?.[part].image} className="max-h-30 invert brightness-0"/>
                 </div>
                 }
             </div>
@@ -418,7 +250,7 @@ export default function Question(props: questionsProps) {
                             index={idx}
                             prefix={content?.[part]?.prefix[idx] ?? '' }
                             setInputs={setInputs}
-                            onEnter={onCheck}   // <- Enter now checks
+                            onEnter={() => onCheck(inputs, content?.[part]?.answer)}   // <- Enter now checks
                         />
                     ))
                 ) :(<></>)
@@ -429,13 +261,13 @@ export default function Question(props: questionsProps) {
                     <div
                         id="check-btn"
                         className="h-10 w-10 rounded-full color-bg-accent flex items-center justify-center cursor-pointer hover:opacity-90"
-                        onClick={onCheck}
+                        onClick={() => onCheck(inputs, content?.[part]?.answer)}
                         title="Check"
                     >
                         <LuCheck strokeWidth={3} size={30} className="color-txt-accent" />
                     </div>
                         
-                    ) : (<></>)
+                    ) : (<></>) 
                 }
            
 

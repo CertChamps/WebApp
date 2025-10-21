@@ -41,7 +41,7 @@ export default function useRank(props: rankProps) {
 
         // update on firebase when any of these change
         if (user) {
-            const userRef = doc(db, 'users', user.uid);
+            const userRef = doc(db, 'user-data', user.uid);
             updateDoc(userRef, {
                 rank,
                 progress,
@@ -53,38 +53,41 @@ export default function useRank(props: rankProps) {
 
     // Update progress when xp changes 
     useEffect(() => {
-        calculateProgress();
+        setTimeout(() => {
+            calculateProgress();
+        }, 1000);
     }, [xp]);
     
 
     // ============================ CALCULATE RANK PROGRESS ============================ //
     const calculateProgress = () => { 
-    console.log(xp, progress, 'fffffffffffffff')
-    const thresholds = [100, 300, 1000, 5000, 10000, 100000];
-    let remainingXP = xp;
-    let newRank = 0;
+        console.log(xp, progress, 'fffffffffffffff')
+        const thresholds = [100, 300, 1000, 5000, 10000, 100000];
+        let remainingXP = xp;
+        let newRank = 0;
 
-    for (let i = 0; i < thresholds.length; i++) {
-        if (remainingXP < thresholds[i]) {
-        const prog = (remainingXP / thresholds[i]) * 100;
-        setRank(i + 1);   // 1-based
-        setProgress(prog);
-        return;
+        for (let i = 0; i < thresholds.length; i++) {
+            if (remainingXP < thresholds[i]) {
+            const prog = (remainingXP / thresholds[i]) * 100;
+            setRank(i + 1);   // 1-based
+            setProgress(prog);
+            return;
+            }
+            remainingXP -= thresholds[i];
+            newRank++;
         }
-        remainingXP -= thresholds[i];
-        newRank++;
-    }
 
-    // max rank
-    setRank(thresholds.length);
-    setProgress(100);
+        // max rank
+        setRank(thresholds.length);
+        setProgress(100);
+
     };
     // ================================================================================= //
 
     // ===================================== ADD XP ==================================== //
     async function syncUserData(newState: Partial<typeof user>) {
         if (!user) return;
-        const userRef = doc(db, 'users', user.uid);
+        const userRef = doc(db, 'user-data', user.uid);
         await updateDoc(userRef, newState);
         setUser({ ...user, ...newState });
     }
@@ -105,7 +108,7 @@ export default function useRank(props: rankProps) {
         // target coordinate based on parent height/position
         const to = {
             x: 0,
-            y: -parentHeight / 2 ,
+            y: -parentHeight / 2 , // adjust 20 for padding
         };
 
         // split into 10‑XP pips + optional remainder pip
@@ -151,33 +154,26 @@ export default function useRank(props: rankProps) {
     async function onCheck(inputs: any, answers: any) {
           
         const ok = isCorrect(inputs, answers);
-          
+        
         // inside onCheck()
         if (ok) {
             playCorrectSound();
-            
-            // initialise reward and newStreak
-            let reward = 0;
-            let newStreak = 0;
-
-            setStreak((prev:number) => {
-
-              newStreak = prev + 1;
-              reward = newStreak * 10;
-
-              return newStreak;
-
-            });
-
-            setXp(prev => {
-                const updatedXp = (prev ?? 0) + reward;
+          
+            setStreak((prevStreak: number) => {
+              const newStreak = prevStreak + 1;
+              const reward = newStreak * 10;
+          
+              // Update XP right here — using function form ensures both are in sync
+              setXp((prevXp) => {
+                const updatedXp = prevXp + reward;
                 syncUserData({ xp: updatedXp, streak: newStreak });
+                awardXP(reward);
                 return updatedXp;
+              });
+          
+              return newStreak;
             });
-            
-            awardXP(reward);
-
-        } else {
+          } else {
 
             playIncorrectSound();
             setStreak(0);

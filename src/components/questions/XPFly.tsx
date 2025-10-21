@@ -1,35 +1,29 @@
 import { motion } from "framer-motion";
-
 import landSound from "../../assets/sounds/ding.mp3";
 
 type XPFlyProps = {
-    amount: number;  // total xp represented by this flyer
-    to: { x: number; y: number };
-    delay?: number;
-    pitchIndex?: number; // for sound pitching
-    onDone?: (chunk: number) => void; 
-  };
+  amount: number;
+  to: { x: number; y: number };
+  delay?: number;
+  pitchIndex?: number;
+  onDone?: (chunk: number) => void;
+};
 
-// global audio context so it's reused
 let audioCtx: AudioContext | null = null;
 let soundBuffer: AudioBuffer | null = null;
 
-export default function XPFly({ amount, to, delay=0, pitchIndex = 0, onDone }: XPFlyProps) {
-  const center = {
-    x: 0,
-    y: 0,
-  };
-
-  // const count = Math.max(1, Math.floor(amount / 10));
-  // const flyers = Array.from({ length: count }, (_, i) => i);
-  // console.log(flyers) //unused
+export default function XPFly({
+  amount,
+  to,
+  delay = 0,
+  pitchIndex = 0,
+  onDone,
+}: XPFlyProps) {
 
   async function loadBuffer() {
     if (soundBuffer) return soundBuffer;
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
-    }
+    audioCtx ??= new (window.AudioContext ||
+      (window as any).webkitAudioContext)();
     const resp = await fetch(landSound);
     const arr = await resp.arrayBuffer();
     soundBuffer = await audioCtx.decodeAudioData(arr);
@@ -38,60 +32,52 @@ export default function XPFly({ amount, to, delay=0, pitchIndex = 0, onDone }: X
 
   async function playLandSound(index: number) {
     try {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext ||
-          (window as any).webkitAudioContext)();
-      }
+      audioCtx ??= new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
       const ctx = audioCtx;
       const buffer = await loadBuffer();
-
       const src = ctx.createBufferSource();
       src.buffer = buffer;
 
-      // Pitching
-      const step = 5; // 2 semitones per hit
-      const maxDetune = 2400; // 24 semitones (2 octaves)
+      const step = 5;
+      const maxDetune = 2400;
       src.detune.value = Math.min(index * step, maxDetune);
 
-      // Add a gain node to control volume
-      const gainNode = ctx.createGain();
-      gainNode.gain.value = 0.35; // half original volume
-
-      src.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
+      const gain = ctx.createGain();
+      gain.gain.value = 0.35;
+      src.connect(gain);
+      gain.connect(ctx.destination);
       src.start();
-      src.stop(ctx.currentTime + 0.2); // trim tail to avoid swoosh
-    } catch (err) {
-      console.error("Could not play pitched sound", err);
-    }
+      src.stop(ctx.currentTime + 0.18);
+    } catch {}
   }
 
   return (
     <motion.div
-        className="absolute pointer-events-none text-1xl font-bold color-txt-accent z-200 w-20 flex justify-center items-center"
-        initial={{ x: center.x, y: center.y, opacity: 0, scale: 0.8 }}
-        animate={{
-            // 3 phases: quick fade-in at center -> pause -> fly to bar
-            x: [center.x, center.x, center.x, to.x - 0],
-            y: [center.y, center.y, center.y, to.y - 0],
-            opacity: [0, 1, 1, 1],
-            scale: [0.8, 1, 1, 1],
-        }}
-        transition={{
-            duration: 1.4,
-            times: [0, 0.15, 0.55, 1], // 0-0.15 fade, 0.15-0.55 pause, 0.55-1 fly
-            ease: ["easeOut", "linear", "easeIn"],
-            delay, // per-pip stagger from parent
-        }}
-        onAnimationComplete={() => {
-            playLandSound(pitchIndex);
-            onDone?.(amount);
-            // progress 
-        }}
-          style={{ transform: "translate(-50%, -50%)" }}
-        >
-          +{amount} XP
-        </motion.div>
-    );
+      className="absolute color-txt-accent left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none text-xl font-bold text-accent w-50 h-50 flex justify-center items-center"
+      initial={{
+      x: 0,
+      y: 0,
+      opacity: 1,
+      scale: 0,
+      }}
+      animate={{
+      x: to.x,
+      y: to.y,
+      opacity: [1, 1, 1, 1, 1, 1],
+      scale: [0, 1],
+      }}
+      transition={{
+      duration: 1,
+      ease: "easeIn",
+      delay,
+      }}
+      onAnimationComplete={() => {
+      playLandSound(pitchIndex);
+      onDone?.(amount);
+      }}
+    >
+      +{amount} XP
+    </motion.div>
+  );
 }
