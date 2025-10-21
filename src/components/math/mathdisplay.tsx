@@ -9,6 +9,7 @@ type RenderMathProps = {
 };
 
 const ESCAPED_DOLLAR = "__ESCAPED_DOLLAR__";
+const ESCAPED_EURO = "__ESCAPED_EURO__";
 
 /** Escape HTML special chars for safe text insertion (no external lib) */
 function escapeHtml(s: string) {
@@ -22,10 +23,15 @@ function escapeHtml(s: string) {
 
 /**
  * Tokenize input into plain text and single-dollar inline math segments.
- * Supports escaped dollars (\$) which are preserved as literal $ in text.
+ * Supports escaped dollars (\$) and euros (\€), which are preserved as literal characters.
  */
-function tokenizeSingleDollar(input: string) {
-  const pre = input.replace(/\\\$/g, ESCAPED_DOLLAR);
+function tokenizeSingleDollar(input: any) {
+  if (typeof input !== "string") input = String(input ?? "");
+
+  // Temporarily replace escaped $ and €
+  const pre = input
+    .replace(/\\\$/g, ESCAPED_DOLLAR)
+    .replace(/\\€/g, ESCAPED_EURO);
 
   const tokens: { type: "text" | "math"; content: string }[] = [];
   const re = /\$([\s\S]+?)\$/g;
@@ -39,13 +45,16 @@ function tokenizeSingleDollar(input: string) {
     tokens.push({ type: "math", content: m[1] });
     last = re.lastIndex;
   }
+
   if (last < pre.length) {
     tokens.push({ type: "text", content: pre.slice(last) });
   }
 
   return tokens.map((t) => ({
     ...t,
-    content: t.content.replace(new RegExp(ESCAPED_DOLLAR, "g"), "$"),
+    content: t.content
+      .replace(new RegExp(ESCAPED_DOLLAR, "g"), "$")
+      .replace(new RegExp(ESCAPED_EURO, "g"), "€"),
   }));
 }
 
@@ -65,17 +74,16 @@ export default function RenderMath({
       ...katexOptions,
     };
 
-    const tokens = tokenizeSingleDollar(text);
+    const safeText = typeof text === "string" ? text : String(text ?? "");
+    const tokens = tokenizeSingleDollar(safeText);
 
     const parts = tokens.map((t) => {
       if (t.type === "text") {
         return escapeHtml(t.content)
-          // real newline characters
-        .replace(/\n/g, '<br style="line-height:50px; margin:0; padding:0;" />')
-        .replace(/\\n/g, '<br style="line-height:50px; margin:0; padding:0;" />')
-        .replace(/\t/g, '<span style="display:inline-block; width:2em;"></span>')   // real tab
-        .replace(/\\t/g, '<span style="display:inline-block; width:2em;"></span>') // literal "\t"
-
+          .replace(/\n/g, '<br style="line-height:50px; margin:0; padding:0;" />')
+          .replace(/\\n/g, '<br style="line-height:50px; margin:0; padding:0;" />')
+          .replace(/\t/g, '<span style="display:inline-block; width:2em;"></span>')
+          .replace(/\\t/g, '<span style="display:inline-block; width:2em;"></span>');
       }
 
       try {
@@ -87,7 +95,6 @@ export default function RenderMath({
       }
     });
 
-    // Join and set innerHTML (we've escaped text parts)
     ref.current.innerHTML = parts.join("");
   }, [text, katexOptions]);
 

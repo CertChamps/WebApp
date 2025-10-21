@@ -22,7 +22,7 @@ export default function QSearch(props: searchProps) {
 
     const searchOptions = {
         keys: [
-            "content.question", 
+            //"content.question", 
             "properties.name"
         ], 
         isCaseSensitive: false
@@ -38,7 +38,10 @@ export default function QSearch(props: searchProps) {
 
             // set up fuse 
             fuse.current = new Fuse(q, searchOptions)
-            console.log(q[0])
+            q.forEach(question => {
+                console.log(question.id, question.content[0].question)
+
+            })
         }
 
         init()

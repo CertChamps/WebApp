@@ -129,21 +129,21 @@ export default function Question(props: questionsProps) {
 
     const { rank, progress } = getRankFromXP(displayedXP);
 
-    const getTotalXP = (rank: number) => {
-        if (rank == 0) {
-            return 100;
-        } else if (rank == 1) {
-            return 300;
-        } else if (rank == 2) {
-            return 1000;
-        } else if (rank == 3) {
-            return 5000;
-        } else if (rank == 4) {
-            return 10000;
-        } else {
-            return 100000;
-        }
-    } 
+    // const getTotalXP = (rank: number) => {
+    //     if (rank == 0) {
+    //         return 100;
+    //     } else if (rank == 1) {
+    //         return 300;
+    //     } else if (rank == 2) {
+    //         return 1000;
+    //     } else if (rank == 3) {
+    //         return 5000;
+    //     } else if (rank == 4) {
+    //         return 10000;
+    //     } else {
+    //         return 100000;
+    //     }
+    // } 
 
     // const XP_PER_RANK = getTotalXP(rank);
     // console.log(XP_PER_RANK) // just delete this 
@@ -167,6 +167,7 @@ export default function Question(props: questionsProps) {
             prefix:   Array.isArray(p?.prefix)   ? p.prefix   : [],   // <-- add
             orderMatters: p?.ordermatters,                    // <-- optional
             image:    p?.image ?? '',
+            logtables: p?.logTables ? p.logTables : 1
         }));
 
         // Set the question state 
@@ -422,15 +423,21 @@ export default function Question(props: questionsProps) {
                     ))
                 ) :(<></>)
                 }
-                
-                <div
-                    id="check-btn"
-                    className="h-10 w-10 rounded-full color-bg-accent flex items-center justify-center cursor-pointer hover:opacity-90"
-                    onClick={onCheck}
-                    title="Check"
-                >
-                    <LuCheck strokeWidth={3} size={30} className="color-txt-accent" />
-                </div>
+                {
+                    content?.[part]?.answer.length > 0 ? (
+
+                    <div
+                        id="check-btn"
+                        className="h-10 w-10 rounded-full color-bg-accent flex items-center justify-center cursor-pointer hover:opacity-90"
+                        onClick={onCheck}
+                        title="Check"
+                    >
+                        <LuCheck strokeWidth={3} size={30} className="color-txt-accent" />
+                    </div>
+                        
+                    ) : (<></>)
+                }
+           
 
             </div>
             {/* ============================================================================ */}
@@ -465,7 +472,7 @@ export default function Question(props: questionsProps) {
 
         {sideView === 'logtables' ? (
             <div className="h-full w-5/12">
-                <LogTables pgNumber="10"/>
+                <LogTables pgNumber={(parseInt(content?.[part].logtables) + 0).toString()}/>
             </div>
         ) : null}
 
