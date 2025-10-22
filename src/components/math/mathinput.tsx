@@ -78,11 +78,19 @@ export default function MathInput(props: inputProps) {
     }
   };
 
+  console.log("Rendering MathInput with prefix:", props.prefix);
+
+  // Support string or [before, after]
+  const toArray = (v?: string | string[]) => Array.isArray(v) ? v : (v ? [v] : []);
+  const prefixArr = toArray(props.prefix);
+  const before = prefixArr[0];
+  const after = prefixArr[1];
+
   return (
     <div>
       <div className="flex items-center">
         <div>
-        <RenderMath text={props.prefix ? `$${props.prefix}$` : ''} className="txt text-lg"/>
+          <RenderMath text={before ? `$${before}$` : ''} className="txt text-lg"/>
         </div>
         <math-field
           ref={mfRef}
@@ -97,6 +105,11 @@ export default function MathInput(props: inputProps) {
             fontSize: 24,
           }}
         />
+        {after ? (
+          <div>
+            <RenderMath text={`$${after}$`} className="txt text-lg"/>
+          </div>
+        ) : null}
         {/* <p>{latex}</p> */}
       </div>
     </div>

@@ -287,6 +287,11 @@ math-field::part(virtual-keyboard-toggle) {
   @apply shadow-[4px_4px_0px_2px] color-shadow border-2
 }
 
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2deg); }
+  75% { transform: rotate(2deg); }
+}
 
 /* ========================================= COLOUR THEMES ====================================================== */ 
 @custom-variant dark (&:where([data-theme="dark"] *));

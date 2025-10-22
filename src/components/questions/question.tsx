@@ -162,6 +162,8 @@ export default function Question(props: questionsProps) {
         setIsRight(false);
         setShowNoti(false);
     }, [props.position, props.questions]);
+
+    console.log("Resolved image path:", content?.[part]?.image);
     //==========================================================================================//
 
 
@@ -244,33 +246,52 @@ export default function Question(props: questionsProps) {
             {/* =============================== MATH INPUT ================================= */}
             <div className="flex">
                 { !props.preview ? (
-                    content?.[part]?.answer?.map((_: any, idx: number) => (
-                        <MathInput
-                            key={idx}
-                            index={idx}
-                            prefix={content?.[part]?.prefix[idx] ?? '' }
-                            setInputs={setInputs}
-                            onEnter={() => onCheck(inputs, content?.[part]?.answer)}   // <- Enter now checks
-                        />
-                    ))
-                ) :(<></>)
+                    (() => {
+                        const answers = content?.[part]?.answer ?? [];
+                        const prefixes = Array.isArray(content?.[part]?.prefix) ? content?.[part]?.prefix : [];
+
+                        if (answers.length === 1) {
+                            // One box; surround with two prefixes if provided
+                            const pfx =
+                                prefixes.length >= 2
+                                    ? [String(prefixes[0] ?? ''), String(prefixes[1] ?? '')]
+                                    : (Array.isArray(prefixes[0]) ? prefixes[0] : (prefixes[0] ?? ''));
+                            return (
+                                <MathInput
+                                    key={0}
+                                    index={0}
+                                    prefix={pfx}
+                                    setInputs={setInputs}
+                                    onEnter={() => onCheck(inputs, answers)}
+                                />
+                            );
+                        }
+
+                        // Multiple boxes; pass per-index prefix (string or [before, after])
+                        return answers.map((_: any, idx: number) => (
+                            <MathInput
+                                key={idx}
+                                index={idx}
+                                prefix={Array.isArray(prefixes[idx]) ? prefixes[idx] : (prefixes[idx] ?? '')}
+                                setInputs={setInputs}
+                                onEnter={() => onCheck(inputs, answers)}
+                            />
+                        ));
+                    })()
+                ) : (<></>)
                 }
                 {
-                    content?.[part]?.answer.length > 0 ? (
-
-                    <div
-                        id="check-btn"
-                        className="h-10 w-10 rounded-full color-bg-accent flex items-center justify-center cursor-pointer hover:opacity-90"
-                        onClick={() => onCheck(inputs, content?.[part]?.answer)}
-                        title="Check"
-                    >
-                        <LuCheck strokeWidth={3} size={30} className="color-txt-accent" />
-                    </div>
-                        
+                    (content?.[part]?.answer?.length ?? 0) > 0 ? (
+                        <div
+                            id="check-btn"
+                            className="h-10 w-10 rounded-full color-bg-accent flex items-center justify-center cursor-pointer hover:opacity-90 ml-2"
+                            onClick={() => onCheck(inputs, content?.[part]?.answer)}
+                            title="Check"
+                        >
+                            <LuCheck strokeWidth={3} size={30} className="color-txt-accent" />
+                        </div>
                     ) : (<></>) 
                 }
-           
-
             </div>
             {/* ============================================================================ */}
             </div>
