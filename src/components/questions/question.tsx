@@ -28,15 +28,12 @@ import '../../styles/navbar.css'
 import useMaths from "../../hooks/useMaths";
 
 // Sounds
-import correctSound from "../../assets/sounds/Click-Bounce_Success.wav";
-import incorrectSound from "../../assets/sounds/Click-Bounce_Failure.wav";
 import XPFly from "./XPFly";
 
 // User Context
 import { useContext } from "react";
 import { UserContext } from "../../context/UserContext";
 import Filter from "../filter";
-import { FcAnswers } from "react-icons/fc";
 
 // Component Props
 type questionsProps = {
@@ -85,15 +82,16 @@ export default function Question(props: questionsProps) {
     >([]);
 
     const rankRef = useRef<HTMLDivElement>(null);
-    const { rank, progress, setProgress, xp, streak, onCheck } = useRank({rankRef, setIsRight, setShowNoti, xpFlyers, setXpFlyers});
+    const { rank, progress, streak, onCheck } = useRank({rankRef, setIsRight, setShowNoti, xpFlyers, setXpFlyers});
 
-    const { user, setUser } = useContext(UserContext)
+    const { user } = useContext(UserContext)
 
-    const [displayedXP, setDisplayedXP] = useState(user?.xp ?? 0);
+    //const [displayedXP, setDisplayedXP] = useState(user?.xp ?? 0);
+
 
     // Keep displayedXP in sync when user.xp changes from context (e.g. on page load)
     useEffect(() => {
-        setDisplayedXP(user?.xp ?? 0);
+       // setDisplayedXP(user?.xp ?? 0);
         console.log(user.xp)
     }, [user?.xp]);
 
@@ -185,8 +183,8 @@ export default function Question(props: questionsProps) {
         to={fly.to}          // viewport coords
         delay={fly.delay}
         pitchIndex={fly.pitchIndex}
-        onDone={(chunk) => {
-            setDisplayedXP((prev) => prev + chunk);
+        onDone={() => {
+            //setDisplayedXP((prev) => prev + chunk);
             setXpFlyers((prev) => prev.filter((f) => f.id !== fly.id));
         }}
         // ⬇️ you can still pass jitter or custom colors if needed
@@ -235,7 +233,7 @@ export default function Question(props: questionsProps) {
                 <RenderMath text={content?.[part]?.question ?? ''} className="txt text-xl" />
                 {content?.[part]?.image &&
                 <div className="w-100 h-auto relative">
-                    <img src={content?.[part].image} className="max-h-30 invert brightness-0"/>
+                    <img src={content?.[part].image} className="max-h-30 image-invert  brightness-0"/>
                 </div>
                 }
             </div>

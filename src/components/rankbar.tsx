@@ -1,5 +1,5 @@
-// Animation
-import { motion } from "framer-motion";
+
+
 
 // Images
 import Rank1 from "../assets/images/Ranks/Rank1.png";
