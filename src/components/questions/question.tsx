@@ -1,5 +1,5 @@
 // Icons 
-import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuArrowLeft, LuArrowRight, LuSearch } from "react-icons/lu";
+import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuArrowLeft, LuArrowRight, LuSearch, LuTimer } from "react-icons/lu";
 import { TbCards } from "react-icons/tb";
 
 // Hooks 
@@ -17,6 +17,7 @@ import ViewDecks from "./../viewDecks";
 import SharePanel from "../social/sharePanel";
 import LogTables from "../../components/logtables"
 import MarkingScheme from "../../components/marking_scheme"
+import Timer from "../../components/timer"
 import QSearch from "./qSearch";
 import RankBar from "../../components/rankbar";
 import AnswerNoti from "../math/answerNoti";
@@ -335,6 +336,12 @@ export default function Question(props: questionsProps) {
             </div>
         ) : null}
 
+        {sideView === 'timer' ? (
+            <div className="h-full w-5/12">
+                <Timer/>
+            </div>
+        ) : null}
+
         {sideView === 'decks' ? (
             <div className="h-full w-5/12">
                 <ViewDecks question={properties?.id}/>
@@ -451,6 +458,22 @@ export default function Question(props: questionsProps) {
 
             )
             }   
+
+            <div className={sideView == 'timer' ? 'sidebar-selected group' : 'sidebar group'} 
+                onClick={() => {
+                    setSideView( (prev: any) => {
+                        if (prev != 'timer') return 'timer'
+                        else return '' 
+                    });
+                }}
+            >
+                <LuTimer strokeWidth={strokewidth} size={iconSize} 
+                    className={sideView == 'timer' ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
+                    fill={sideView == 'timer' ? 'currentColor' : 'none'} />
+
+                 <span className="tooltip">Timer</span>
+            </div>
+
             {/* =============================== FILTER ICON ================================= */}
             <div className={viewFilter ? 'sidebar-selected group' : 'sidebar group'} 
                 onClick={() => {
