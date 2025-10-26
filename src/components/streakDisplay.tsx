@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, {  useMemo } from "react";
 import { LuFlame } from "react-icons/lu";
 
 type StreakDisplayProps = {

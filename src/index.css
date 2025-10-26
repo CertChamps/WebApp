@@ -696,3 +696,31 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:bg-auroraBG
 }
 
+@utility image-invert {
+  @apply 
+    invert-0
+    dark:invert
+    markoblank:invert
+    discord:invert
+    ishtar:invert
+    tangerine:invert-0
+    icebergLight:invert-0
+    icebergDark:invert
+    husqy:invert
+    shadow:invert
+    matchaMoccha:invert-0
+    redDragon:invert
+    modernInk:invert-0
+    gruvbox:invert
+    magicGirl:invert-0
+    tronOrange:invert
+    menthol:invert-0
+    lavendar:invert-0
+    diner:invert-0
+    airplane:invert-0
+    nordLight:invert-0
+    sewingTinLight:invert-0
+    camping:invert-0
+    paper:invert-0
+    aurora:invert-0
+}
