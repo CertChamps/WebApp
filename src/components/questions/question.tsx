@@ -168,6 +168,8 @@ export default function Question(props: questionsProps) {
 
     return (
     <div className="flex flex-col h-full w-full items-end justify-end p-4">
+                  { showSearch ? <QSearch  setShowSearch={setShowSearch} 
+                questions={props.questions} position={props.position} setPosition={props.setPosition ?? null} /> : <></> } 
     <AnswerNoti visible={showNoti && isRight} onNext={goNextFromNoti} />
 
     <div className="flex justify-start items-end w-full h-[90%]">
@@ -193,8 +195,7 @@ export default function Question(props: questionsProps) {
     ))}
     </div>
         <div className="p-8 flex flex-1 flex-col justify-between h-full">
-            { showSearch ? <QSearch  setShowSearch={setShowSearch} 
-                questions={props.questions} position={props.position} setPosition={props.setPosition ?? null} /> : <></> } 
+  
 
             <div className="h-full">
             {/* ================================ HEADING =================================== */}
@@ -230,7 +231,7 @@ export default function Question(props: questionsProps) {
 
 
             {/* ============================== QUESTION CONTENT =========================== */}
-            <div className="w-2/3 m-4 ">
+            <div className="w-full h-3/4 overflow-y-auto px-2 py-2">
                 <RenderMath text={content?.[part]?.question ?? ''} className="txt text-xl" />
                 {content?.[part]?.image &&
                 <div className="w-100 h-auto relative">

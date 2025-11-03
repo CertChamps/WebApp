@@ -38,10 +38,6 @@ export default function QSearch(props: searchProps) {
 
             // set up fuse 
             fuse.current = new Fuse(q, searchOptions)
-            q.forEach(question => {
-                console.log(question.id, question.content[0].question)
-
-            })
         }
 
         init()

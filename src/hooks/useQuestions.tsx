@@ -112,8 +112,8 @@ export default function useQuestions( props?:questionProps ) {
         const contentPromises = contentSnap.map( async (doc : any ) => {
 
             // Get data
-            const data = doc.data()
-
+            const data = await doc.data()
+            console.log("✅ image going in!", data.image)
             // if data has image get its URL 
             if (data.image) {
                 // get the url 
@@ -121,7 +121,7 @@ export default function useQuestions( props?:questionProps ) {
 
                 // upate data 
                 data.image = imageUrl
-            }
+            } 
             console.log(data)
             return data
             
@@ -165,6 +165,13 @@ export default function useQuestions( props?:questionProps ) {
                 const contentSnap = await getDocs(collection(db, "certchamps-questions", id, "content"));
                 const contentPromises = contentSnap.docs.map(async (contentDoc: any) => {
                     const data = contentDoc.data();
+                    if (data.image) {
+                        // get the url 
+                        const imageUrl = await fetchImage(data.image)
+
+                        // upate data 
+                        data.image = imageUrl
+                    } 
                     return data;
                 });
                 const content = await Promise.all(contentPromises);
