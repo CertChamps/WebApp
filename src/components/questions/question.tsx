@@ -342,74 +342,77 @@ export default function Question(props: questionsProps) {
             <div>
             {/* =============================== MATH INPUT ================================= */}
             <div className="flex">
-                { !props.preview ? (
-                    (() => {
-                        const answers = content?.[part]?.answer ?? [];
-                        const prefixes = Array.isArray(content?.[part]?.prefix) ? content?.[part]?.prefix : [];
+               {!props.preview &&
+  (() => {
+    /* ---------- 1.  bail-out conditions ---------- */
+    const answers = content?.[part]?.answer;          // keep null/undefined
+    if (!Array.isArray(answers) || answers.length === 0 || answers[0] == null) {
+      return null;                                    // ← nothing to show
+    }
 
-                        if (answers.length === 1) {
-                            // One box; surround with two prefixes if provided
-                            const pfx =
-                                prefixes.length >= 2
-                                    ? [String(prefixes[0] ?? ''), String(prefixes[1] ?? '')]
-                                    : (Array.isArray(prefixes[0]) ? prefixes[0] : (prefixes[0] ?? ''));
-                            return (
-                                <div
-                                  className={
-                                    locked
-                                      ? 'pointer-events-none opacity-50'
-                                      : ''
-                                  }
-                                >
-                                  <MathInput
-                                    key={0}
-                                    index={0}
-                                    prefix={pfx}
-                                    setInputs={setInputs}
-                                    onEnter={handleCheck}
-                                  />
-                                </div>
-                            );
-                        }
+    const prefixes = Array.isArray(content?.[part]?.prefix)
+      ? content?.[part]?.prefix
+      : [];
 
-                        // Multiple boxes; pass per-index prefix (string or [before, after])
-                        return answers.map((_: any, idx: number) => (
-                            <div
-                              key={idx}
-                              className={
-                                locked ? 'pointer-events-none opacity-50' : ''
-                              }
-                            >
-                              <MathInput
-                                index={idx}
-                                prefix={
-                                  Array.isArray(prefixes[idx])
-                                    ? prefixes[idx]
-                                    : prefixes[idx] ?? ''
-                                }
-                                setInputs={setInputs}
-                                onEnter={handleCheck}
-                              />
-                            </div>
-                        ));
-                    })()
-                ) : (<></>)
-                }
-                {
-                    (content?.[part]?.answer?.length ?? 0) > 0 ? (
-                        <div
-                            id="check-btn"
-                            className={`h-10 w-10 rounded-full color-bg-accent flex items-center
-                                                                       justify-center ml-2 hover:opacity-90 ${
-                                                              locked ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
-                                                            }`}
-                                                            onClick={handleCheck}
-                            title="Check"
-                        >
-                            <LuCheck strokeWidth={3} size={30} className="color-txt-accent" />
-                        </div>
-                    ) : (<></>) 
-                }
+    /* ---------- 2.  single box ---------- */
+    if (answers.length === 1) {
+      const pfx =
+        prefixes.length >= 2
+          ? [String(prefixes[0] ?? ''), String(prefixes[1] ?? '')]
+          : (Array.isArray(prefixes[0]) ? prefixes[0] : (prefixes[0] ?? ''));
+
+      return (
+        <div
+          key={0}
+          className={locked ? 'pointer-events-none opacity-50' : ''}
+        >
+          <MathInput
+            index={0}
+            prefix={pfx}
+            setInputs={setInputs}
+            onEnter={handleCheck}
+          />
+        </div>
+      );
+    }
+
+    /* ---------- 3.  multiple boxes ---------- */
+    return answers.map((ans, idx) =>
+      ans != null && ans !== 'null' ? (
+        <div
+          key={idx}
+          className={locked ? 'pointer-events-none opacity-50' : ''}
+        >
+          <MathInput
+            index={idx}
+            prefix={
+              Array.isArray(prefixes[idx])
+                ? prefixes[idx]
+                : (prefixes[idx] ?? '')
+            }
+            setInputs={setInputs}
+            onEnter={handleCheck}
+          />
+        </div>
+      ) : null
+    );
+  })()}
+                
+               {(Array.isArray(content?.[part]?.answer) &&
+  content[part].answer.length > 0 &&
+  content[part].answer[0] != null) && (
+  <div
+    id="check-btn"
+    className={`h-10 w-10 rounded-full color-bg-accent flex items-center
+                justify-center ml-2 hover:opacity-90 ${
+                  locked ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
+                }`}
+    onClick={handleCheck}
+    title="Check"
+  >
+    <LuCheck strokeWidth={3} size={30} className="color-txt-accent" />
+  </div>
+)}
             </div>
             {canReveal && !showSolution ? (
               <div className="mt-3">

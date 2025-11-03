@@ -9,13 +9,20 @@ export default function useMaths() {
   const expandFracShorthand = (s: string) =>
     s.replace(/\\frac\s*([^{}\s])\s*([^{}\s])/g, '\\frac{$1}{$2}');
 
-  /** Full sanitise + expansion */
+  const normalizeSqrt = (s: string) =>
+  s
+    .replace(/\\sqrt\(([^)]+)\)/g, '\\sqrt{$1}')
+    .replace(/\\sqrt\s*([^{}\s(])/g, '\\sqrt{$1}');
+
   const sanitizeLatex = (tex: string) =>
-    expandFracShorthand(tex)
-      .replace(/\\left|\\right/g, '')
-      .replace(/\\,/g, '')
-      .trim();
-  // ---------------------------
+    normalizeSqrt(
+      expandFracShorthand(tex)
+        .replace(/\\left|\\right/g, '')
+        .replace(/\\,/g, '')
+        .trim()
+    );
+
+
 
   const latexToExpr = (tex: string) => {
     try {
@@ -92,18 +99,18 @@ const isCorrectSingle = (inputLatex: string, answer: string): boolean => {
  * Check arrays of inputs and answers.
  * @param inputs       array of input LaTeX strings
  * @param answers      array of answer LaTeX strings (same length as inputs)
- * @param orderMatters if true, inputs[i] must match answers[i] exactly.
+ * @param ordermatters if true, inputs[i] must match answers[i] exactly.
  */
 const isCorrect = (
   inputs: string[],
   answers: string[],
-  orderMatters?: boolean
+  ordermatters?: boolean
 ): boolean => {
   if (!Array.isArray(inputs) || !Array.isArray(answers)) return false;
   if (inputs.length !== answers.length) return false;
 
   /* ----- ORDERED MODE ----- */
-  if (orderMatters) {
+  if (ordermatters) {
     return inputs.every((inp, i) => isCorrectSingle(inp, answers[i]));
   }
 

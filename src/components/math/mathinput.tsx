@@ -24,12 +24,14 @@ export default function MathInput(props: inputProps) {
     mf.menuItems = [];
     mf.suggestions = "none";
     mf.inlineShortcuts = {
+      pi: "\\pi",
       sqrt: "\\sqrt{#?}",
       frac: "\\frac{#?}{#?}",
       "/": "\\frac{#@}{#?}",
-      sin: "\\sin",
-      cos: "\\cos",
-      tan: "\\tan",
+      sin: "\\sin({#?})",
+      cos: "\\cos({#?})",
+      tan: "\\tan({#?})",
+      ln: "\\ln({#?})",
     };
     mf.keybindings = [
       { key: "[Backspace]", command: "deleteBackward" },
@@ -114,4 +116,4 @@ export default function MathInput(props: inputProps) {
       </div>
     </div>
   );
-}
+} 
