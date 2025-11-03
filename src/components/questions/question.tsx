@@ -86,6 +86,10 @@ export default function Question(props: questionsProps) {
     const { rank, progress, streak, onCheck } = useRank({rankRef, setIsRight, setShowNoti, xpFlyers, setXpFlyers});
 
     const { user } = useContext(UserContext)
+    const [attempts, setAttempts] = useState(0);
+    const [canReveal, setCanReveal] = useState(false);
+    const [showSolution, setShowSolution] = useState(false); // overlay
+    const [locked, setLocked] = useState(false);
 
     //const [displayedXP, setDisplayedXP] = useState(user?.xp ?? 0);
 
@@ -100,26 +104,53 @@ export default function Question(props: questionsProps) {
     const iconSize = 40
     const strokewidth = 1.75
 
-    function goNextFromNoti() {
-        setShowNoti(false);
-        setIsRight(false);
-        setInputs([]);
-      
-        // Next part if available
-        if ((content?.length ?? 0) > part + 1) {
-          setPart((p) => p + 1);
-          return;
+    // Check handler: shows overlay on correct; after 3 fails offers reveal button
+   function handleCheck() {
+          if (locked) return;
+          const answers = content?.[part]?.answer ?? [];
+          const correct = isCorrect(inputs, answers);
+          // still notify rank/xp system
+          onCheck(inputs, answers);
+          if (correct) {
+            setAttempts(0);
+            setCanReveal(true); // show the button
+            setLocked(true);    // disable further answering
+            setIsRight(true);   // trigger AnswerNoti visuals
+            setShowNoti(true);
+            return;
+          }
+          setAttempts((a) => {
+            const n = a + 1;
+            if (n >= 3) setCanReveal(true);
+            return n;
+          });
         }
-      
-        // Otherwise ask parent to move to the next question
-        if (props.nextQuestion) {
-          props.nextQuestion();
-        } else if (props.setPosition) {
-          // fallback if parent didn’t pass nextQuestion
-          props.setPosition((p) => Math.min(p + 1, (props.questions?.length ?? 1) - 1));
-        }
-    }
+    
+        function handleOpenSolution() {
+          setShowSolution(true);
+          setLocked(true); // once you choose to view, no more answering
+       }
 
+        function handleCloseSolution() {
+          // keep it locked even if they close
+          setShowSolution(false);
+        }
+    
+        function handleNextQuestion() {
+          setShowSolution(false);
+          setLocked(false);
+          setAttempts(0);
+          setCanReveal(false);
+          setInputs([]);
+          // always go to next question (not just next part)
+          if (props.nextQuestion) {
+            props.nextQuestion();
+          } else if (props.setPosition) {
+            props.setPosition((p) =>
+              Math.min(p + 1, (props.questions?.length ?? 1) - 1)
+            );
+          }
+        }
     //===================================== Question handling ===================================//
     useEffect(() => {
 
@@ -148,18 +179,25 @@ export default function Question(props: questionsProps) {
     }, [props.position, props.questions])
     //==========================================================================================//
 
-
     useEffect(() => {
         setInputs([]);
         setIsRight(false);
         setShowNoti(false);
+        setAttempts(0);
+        setCanReveal(false);
+        setShowSolution(false);
+        setLocked(false);
     }, [part]);
       
     useEffect(() => {
         setPart(0);
         setInputs([]);
-        setIsRight(false);
-        setShowNoti(false);
+        setIsRight(false);        // unused visually
+        setShowNoti(false);       // unused visually
+        setAttempts(0);
+        setCanReveal(false);
+        setShowSolution(false);
+        setLocked(false);
     }, [props.position, props.questions]);
 
     console.log("Resolved image path:", content?.[part]?.image);
@@ -168,9 +206,68 @@ export default function Question(props: questionsProps) {
 
     return (
     <div className="flex flex-col h-full w-full items-end justify-end p-4">
-                  { showSearch ? <QSearch  setShowSearch={setShowSearch} 
-                questions={props.questions} position={props.position} setPosition={props.setPosition ?? null} /> : <></> } 
-    <AnswerNoti visible={showNoti && isRight} onNext={goNextFromNoti} />
+                  {showSearch ? (
+        <QSearch
+          setShowSearch={setShowSearch}
+          questions={props.questions}
+          position={props.position}
+          setPosition={props.setPosition ?? null}
+        />
+      ) : null}
+
+        { showNoti && isRight ? (
+        <AnswerNoti
+            visible={true}
+            onNext={() => {
+            setShowNoti(false);
+            setIsRight(false);
+            }}
+        />
+        ) : null }
+
+      {showSolution ? (
+        <div
+          className="fixed inset-0 z-[500] bg-black/40 backdrop-blur-sm
+                     flex items-center justify-center p-4"
+          onClick={handleCloseSolution}
+        >
+          <div
+            className="color-bg-grey-5 rounded-2xl shadow-xl w-full max-w-4xl
+                       max-h-[85vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-3 border-b">
+              <p className="txt-bold">Marking Scheme</p>
+              <button
+                className="txt-sub hover:opacity-80"
+                onClick={handleCloseSolution}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-3">
+              {/* Your exact request: fixed year/page for now */}
+              <MarkingScheme year="25" pgNumber="1" />
+            </div>
+            <div className="flex justify-end gap-3 p-3 border-t">
+              <button
+                className="px-4 py-2 rounded-full color-bg-grey-5 hover:opacity-90"
+                onClick={handleCloseSolution}
+              >
+                Close
+              </button>
+              <button
+                className="px-4 py-2 rounded-full color-bg-accent color-txt-accent
+                           hover:opacity-90"
+                onClick={handleNextQuestion}
+              >
+                Next question
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
     <div className="flex justify-start items-end w-full h-[90%]">
     { //============================= QUESTIONS CONTAINER ====================================// 
@@ -257,25 +354,43 @@ export default function Question(props: questionsProps) {
                                     ? [String(prefixes[0] ?? ''), String(prefixes[1] ?? '')]
                                     : (Array.isArray(prefixes[0]) ? prefixes[0] : (prefixes[0] ?? ''));
                             return (
-                                <MathInput
+                                <div
+                                  className={
+                                    locked
+                                      ? 'pointer-events-none opacity-50'
+                                      : ''
+                                  }
+                                >
+                                  <MathInput
                                     key={0}
                                     index={0}
                                     prefix={pfx}
                                     setInputs={setInputs}
-                                    onEnter={() => onCheck(inputs, answers)}
-                                />
+                                    onEnter={handleCheck}
+                                  />
+                                </div>
                             );
                         }
 
                         // Multiple boxes; pass per-index prefix (string or [before, after])
                         return answers.map((_: any, idx: number) => (
-                            <MathInput
-                                key={idx}
+                            <div
+                              key={idx}
+                              className={
+                                locked ? 'pointer-events-none opacity-50' : ''
+                              }
+                            >
+                              <MathInput
                                 index={idx}
-                                prefix={Array.isArray(prefixes[idx]) ? prefixes[idx] : (prefixes[idx] ?? '')}
+                                prefix={
+                                  Array.isArray(prefixes[idx])
+                                    ? prefixes[idx]
+                                    : prefixes[idx] ?? ''
+                                }
                                 setInputs={setInputs}
-                                onEnter={() => onCheck(inputs, answers)}
-                            />
+                                onEnter={handleCheck}
+                              />
+                            </div>
                         ));
                     })()
                 ) : (<></>)
@@ -284,8 +399,11 @@ export default function Question(props: questionsProps) {
                     (content?.[part]?.answer?.length ?? 0) > 0 ? (
                         <div
                             id="check-btn"
-                            className="h-10 w-10 rounded-full color-bg-accent flex items-center justify-center cursor-pointer hover:opacity-90 ml-2"
-                            onClick={() => onCheck(inputs, content?.[part]?.answer)}
+                            className={`h-10 w-10 rounded-full color-bg-accent flex items-center
+                                                                       justify-center ml-2 hover:opacity-90 ${
+                                                              locked ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
+                                                            }`}
+                                                            onClick={handleCheck}
                             title="Check"
                         >
                             <LuCheck strokeWidth={3} size={30} className="color-txt-accent" />
@@ -293,6 +411,17 @@ export default function Question(props: questionsProps) {
                     ) : (<></>) 
                 }
             </div>
+            {canReveal && !showSolution ? (
+              <div className="mt-3">
+                <button
+                  className="px-4 py-2 rounded-full border color-shadow
+                             hover:opacity-90"
+                  onClick={handleOpenSolution}
+                >
+                  Show Marking Scheme
+                </button>
+              </div>
+            ) : null}
             {/* ============================================================================ */}
             </div>
 
@@ -329,15 +458,15 @@ export default function Question(props: questionsProps) {
             </div>
         ) : null}
 
-        {sideView === 'marking_scheme' ? (
-            <div className="h-full w-5/12">
-                <MarkingScheme year="25" pgNumber="1"/>
-            </div>
-        ) : null}
-
         {sideView === 'timer' ? (
             <div className="h-full w-5/12">
                 <Timer/>
+            </div>
+        ) : null}
+
+        `{sideView === 'marking_scheme' ? (
+            <div className="h-full w-5/12">
+                <MarkingScheme year="25" pgNumber="1"/>
             </div>
         ) : null}
 
@@ -402,21 +531,6 @@ export default function Question(props: questionsProps) {
             </div>
             {/* ================================================================================ */}
 
-            <div className={sideView == 'marking_scheme' ? 'sidebar-selected group' : 'sidebar group'} 
-                onClick={() => {
-                    setSideView( (prev: any) => {
-                        if (prev != 'marking_scheme') return 'marking_scheme'
-                        else return '' 
-                    });
-                }}
-            >
-                <LuBookMarked strokeWidth={strokewidth} size={iconSize} 
-                    className={sideView == 'marking_scheme' ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
-                    fill={sideView == 'marking_scheme' ? 'currentColor' : 'none'} />
-
-                 <span className="tooltip">Marking Scheme</span>
-            </div>
-            
             { props.deckmode ? (
             /* =========================== SHARE ICON (DECK ONLY) =========================== */
             <div className={sideView == 'share' ? 'sidebar-selected  group' : 'sidebar group'} 
