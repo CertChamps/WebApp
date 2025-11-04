@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, createRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import pdfWorker from "pdfjs-dist/build/pdf.worker?url";
+import React from "react";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -35,7 +36,7 @@ const MarkingScheme = ({ year, pgNumber }: QuestionType) => {
 
   return (
     <div
-      className="flex flex-col items-start overflow-y-auto border-2 color-shadow"
+      className="flex flex-col items-start overflow-y-auto color-shadow"
       style={{ height: "80vh", width: "650px" }}
     >
       <Document
@@ -68,4 +69,4 @@ const MarkingScheme = ({ year, pgNumber }: QuestionType) => {
   );
 };
 
-export default MarkingScheme;
+export default React.memo(MarkingScheme);
