@@ -34,7 +34,7 @@ export default function App() {
         {/* // ================ DIV THEME WRAPPER ===================== // */}
         <div id="themed-root" data-theme={options.theme}>
           <div className="color-bg h-screen w-screen flex flex-row">
-            <CustomCursor />
+            {/* <CustomCursor /> */}
             <AppRouter />
           </div>
         </div>

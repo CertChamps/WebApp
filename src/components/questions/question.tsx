@@ -203,6 +203,73 @@ export default function Question(props: questionsProps) {
     console.log("Resolved image path:", content?.[part]?.image);
     //==========================================================================================//
 
+    const Lplaceholders = [
+      "Yeh I mean... decent attempt I guess",
+      "Ah yes, the famous *close enough* theorem.",
+      "I think Pythagoras just rolled in his grave",
+      "You can't just invent new math...",
+      "I mean the spirit was definitely there!...",
+      "Just off the phone to Newton, he has no idea either",
+      "I mean, I'm sure some other question had that answer",
+      "Legend says the examiner is still trynna understand you",
+      "bro... what?",
+      "Atleast you didn't answer with 67",
+      "Get it right next time or we'll start charging for CertChamps",
+      "dy/dx = 0 or something idek bro",
+      "I think you're cooked bro...",
+      "Man lock in bro",
+      "I won't tell your teacher if you don't...",
+      "INSERT INSULT HERE",
+      "Back to reels, is it?",
+      "I spent all this time making this stupid app just for you to do that...",
+      "Dude...",
+      "Uhm.............................",
+      "Hey, nice guy here, sorry about the other guys insults... better luck next time! <3",
+      ""
+    ];
+    
+    const [losePlaceholder, setLosePlaceholder] = useState("");
+
+    //This will just pick a random placeholder whenever the screen renders
+    useEffect(() => {
+        const randomIndex = Math.floor(Math.random() * Lplaceholders.length);
+        setLosePlaceholder(Lplaceholders[randomIndex]);
+    }, []);
+
+    const Wplaceholders = [
+      "Alright... now that was awesome",
+      "Hey... not bad for a rookie",
+      "Polynomial? More like poly‑perfect.",
+      "The limit of your brilliance as n → ∞.",
+      "You just differentiated yourself from the rest.",
+      "Even imaginary numbers think you’re real.",
+      "HELL YEH BRO THAT WAS SICK!!!",
+      "Would Euler shed a tear? Probably one of joy.",
+      "That’s not PEMDAS — that’s P✨E✨R✨F✨E✨C✨T✨.",
+      "Pretty sigma ngl",
+      "It's giving academic",
+      "This ur math era?",
+      "Thank GOD the answer wasn't 67",
+      "Bro's out here carrying the whole squad",
+      "Pretty snazzy ngl",
+      "I'm not paid enough for these placeholders man",
+      "Oh get over yourself...",
+      "Schrödinger? I hardly know her",
+      "Oh hey... that was pretty neat... wanna be the sin to my cosine?",
+      "SOMEONE is LOCKED in. WOW",
+      "I showed this to ChatGPT and it filed a restraining order.",
+      "Knock knock. Who's there? Perf. Perf who? Perfection<3",
+      "That was pretty lit bro",
+      "Would Einstein REALLY have done better?",
+    ];
+    
+    const [winPlaceholder, setWinPlaceholder] = useState("");
+
+    //This will just pick a random placeholder whenever the screen renders
+    useEffect(() => {
+        const randomIndex = Math.floor(Math.random() * Wplaceholders.length);
+        setWinPlaceholder(Wplaceholders[randomIndex]);
+    }, []);
 
     return (
     <div className="flex flex-col h-full w-full items-end justify-end p-4">
@@ -227,30 +294,32 @@ export default function Question(props: questionsProps) {
 
       {showSolution ? (
         <div
-          className="fixed inset-0 z-[500] bg-black/40 backdrop-blur-sm
+          className="fixed inset-0 z-[500] color-bg-grey-5 backdrop-blur-sm
                      flex items-center justify-center p-4"
           onClick={handleCloseSolution}
         >
           <div
-            className="color-bg-grey-5 rounded-2xl shadow-xl w-full max-w-4xl
+            className="color-bg rounded-2xl shadow-xl w-full max-w-4xl
                        max-h-[85vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-3 border-b">
-              <p className="txt-bold">Marking Scheme</p>
+            <div className="flex items-center justify-between p-3">
+              <div>
+                <p className="color-txt-main txt-bold">Marking Scheme</p>
+                <p className="color-txt-accent">{isRight ? winPlaceholder : losePlaceholder}</p>
+              </div>
               <button
-                className="txt-sub hover:opacity-80"
+                className="color-txt-sub hover:opacity-80"
                 onClick={handleCloseSolution}
                 title="Close"
               >
                 ✕
               </button>
             </div>
-            <div className="flex-1 overflow-auto p-3">
-              {/* Your exact request: fixed year/page for now */}
+            <div className="flex-1 overflow-auto p-3 flex items-center justify-center">
               <MarkingScheme year="25" pgNumber="1" />
             </div>
-            <div className="flex justify-end gap-3 p-3 border-t">
+            <div className="flex justify-end gap-3 p-3">
               <button
                 className="px-4 py-2 rounded-full color-bg-grey-5 hover:opacity-90"
                 onClick={handleCloseSolution}
@@ -258,7 +327,7 @@ export default function Question(props: questionsProps) {
                 Close
               </button>
               <button
-                className="px-4 py-2 rounded-full color-bg-accent color-txt-accent
+                className="px-4 py-2 rounded-full color-bg-accent color-txt-accent txt-bold
                            hover:opacity-90"
                 onClick={handleNextQuestion}
               >
@@ -417,7 +486,7 @@ export default function Question(props: questionsProps) {
             {canReveal && !showSolution ? (
               <div className="mt-3">
                 <button
-                  className="px-4 py-2 rounded-full border color-shadow
+                  className="px-4 py-2 rounded-full border-2 border-r-4 border-b-4 color-shadow
                              hover:opacity-90"
                   onClick={handleOpenSolution}
                 >
