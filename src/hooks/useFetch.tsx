@@ -13,7 +13,7 @@ export default function useFetch () {
         try {
             // retrieve the image and return a useable url 
             const imageUrl = await getDownloadURL( ref(storage, path) )
-            console.log("✅ Image found: ", imageUrl)
+            // console.log("✅ Image found: ", imageUrl)
             return imageUrl
         } 
         catch ( err: any) {

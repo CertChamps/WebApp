@@ -18,7 +18,7 @@ export default function useAuthentication (props?: authprops) {
     const { setUser } = useContext(UserContext)
     const [error, setError] = useState<any>({}) // object that holds all errors 
 
-    useEffect(() => {console.log(error)}, [error])
+    // useEffect(() => {console.log(error)}, [error])
 
     // Initialise storage & router
     const storage = getStorage()
@@ -125,7 +125,7 @@ export default function useAuthentication (props?: authprops) {
         } 
         // Log any errors
         catch (error) {
-            console.log(error)
+            // console.log(error)
             setError((prevError: any) => ({
                 ...prevError,
                 general: "Something went wrong. Please try again"
@@ -247,7 +247,7 @@ export default function useAuthentication (props?: authprops) {
                     email: "User not found"
                 }));
             } else {
-                console.log(errorCode)
+                // console.log(errorCode)
                 setError((prevError: any) => ({
                     ...prevError,
                     general: "Something went wrong. Please try again."
@@ -281,7 +281,7 @@ export default function useAuthentication (props?: authprops) {
 
             // Navigate to home page or previous route if it exists
             props?.prevRoute ? navigate(`${props.prevRoute}`) : navigate('/practice')
-            console.log(`User Exists ✅: ${user.uid}`)
+            // console.log(`User Exists ✅: ${user.uid}`)
         } 
 
     };
