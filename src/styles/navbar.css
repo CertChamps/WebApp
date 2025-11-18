@@ -88,6 +88,18 @@
   @apply txt-bold color-txt-accent opacity-0 translate-x-[-24px] invisible w-0
   group-hover:opacity-100 group-hover:translate-x-0 group-hover:visible group-hover:w-20
   transition-all duration-250;
-  
+}
+
+.nav-settings {
+  @apply flex items-center rounded-out hover:color-bg my-1 
+  cursor-pointer mt-auto 
+  group-hover:px-2 group-hover:justify-start w-full
+  transition-all duration-250;
+}
+
+.nav-settings-selected {
+  @apply flex items-center rounded-out color-bg-accent my-1
+  group-hover:px-2 group-hover:justify-start w-full mt-auto
+  transition-all duration-250;
 }
 /* ===================================================================================== */ 

@@ -39,18 +39,6 @@
   --color-markogrey: #d5d4e9;
   --color-markobrown: #9ccfd8;
 
-  /* Discord Colour theme */
-  --color-discordblack: #272822;
-  --color-discordblue: #a6e22e;
-  --color-discordgrey: #e6db74;
-  --color-discordwhite: #e2e2dc;
-
-  /* Ishtar Colour Theme */ 
-  --color-ishtarblack: #202020;
-  --color-ishtarred: #91170c;
-  --color-ishtargrey: #847869;
-  --color-ishtarbeige: #fae1c3;
-
   /* Tangerine */
   --color-tangerineBG: #ffede0;
   --color-tangerineAccent: #fe5503;
@@ -62,6 +50,7 @@
   --color-icebergLightAccent: #2d539e;
   --color-icebergLightPrimary: #33374c;
   --color-icebergLightSub: #adb1c4;
+
   /* Iceberg Dark */
   --color-icebergDarkBG: #161821;
   --color-icebergDarkAccent: #c6c8d1;
@@ -79,18 +68,6 @@
   --color-shadowAccent: #eeeeee;
   --color-shadowPrimary: #eeeeee;
   --color-shadowSub: #444444;
-
-  /* Matcha Moccha */
-  --color-matchaMocchaBG: #523525;
-  --color-matchaMocchaAccent: #7ec160;
-  --color-matchaMocchaPrimary: #ecddcc;
-  --color-matchaMocchaSub: #9e6749;
-
-  /* Red Dragon */
-  --color-redDragonBG: #1a0b0c;
-  --color-redDragonAccent: #ff3a32;
-  --color-redDragonPrimary: #e2a528;
-  --color-redDragonSub: #4a4d4e;
 
   /* Modern Ink */
   --color-modernInkBG: #ffffff;
@@ -110,12 +87,6 @@
   --color-magicGirlPrimary: #f5b1cc;
   --color-magicGirlSub: #93e8d3;
 
-  /* Tron Orange */
-  --color-tronOrangeBG: #0d1c1c;
-  --color-tronOrangeAccent: #ffffff;
-  --color-tronOrangePrimary: #f0e800;
-  --color-tronOrangeSub: #ff6600;
-
   /* Menthol */
   --color-mentholBG: #00c18c;
   --color-mentholAccent: #ffffff;
@@ -127,12 +98,6 @@
   --color-lavendarAccent: #212B43;
   --color-lavendarPrimary: #8A5BD6;
   --color-lavendarSub: #A28DB8;
-  
-  /* Diner */
-  --color-dinerBG: #537997;
-  --color-dinerAccent: #DFDBC8;
-  --color-dinerPrimary: #C3AF5B;
-  --color-dinerSub: #445C7F;
 
   /* Airplane */
   --color-airplaneBG: #E0F7FA;
@@ -296,22 +261,16 @@ math-field::part(virtual-keyboard-toggle) {
 /* ========================================= COLOUR THEMES ====================================================== */ 
 @custom-variant dark (&:where([data-theme="dark"] *));
 @custom-variant markoblank (&:where([data-theme="markoblank"] *));
-@custom-variant discord (&:where([data-theme="discord"] *));
-@custom-variant ishtar (&:where([data-theme="ishtar"] *));
 @custom-variant tangerine (&:where([data-theme="tangerine"] *));
 @custom-variant icebergLight (&:where([data-theme="icebergLight"] *));
 @custom-variant icebergDark (&:where([data-theme="icebergDark"] *));
 @custom-variant husqy (&:where([data-theme="husqy"] *));
 @custom-variant shadow (&:where([data-theme="shadow"] *));
-@custom-variant matchaMoccha (&:where([data-theme="matchaMoccha"] *));
-@custom-variant redDragon (&:where([data-theme="redDragon"] *));
 @custom-variant modernInk (&:where([data-theme="modernInk"] *));
 @custom-variant gruvbox (&:where([data-theme="gruvbox"] *));
 @custom-variant magicGirl (&:where([data-theme="magicGirl"] *));
-@custom-variant tronOrange (&:where([data-theme="tronOrange"] *));
 @custom-variant menthol (&:where([data-theme="menthol"] *));
 @custom-variant lavendar (&:where([data-theme="lavendar"] *));
-@custom-variant diner (&:where([data-theme="diner"] *));
 @custom-variant airplane (&:where([data-theme="airplane"] *));
 @custom-variant nordLight (&:where([data-theme="nordLight"] *));
 @custom-variant sewingTinLight (&:where([data-theme="sewingTinLight"] *));
@@ -324,22 +283,16 @@ math-field::part(virtual-keyboard-toggle) {
     text-black
     dark:text-white
     markoblank:text-markobrown
-    discord:text-discordwhite
-    ishtar:text-ishtarbeige
     tangerine:text-tangerinePrimary
     icebergLight:text-icebergLightPrimary
     icebergDark:text-icebergDarkPrimary
     husqy:text-husqyPrimary
     shadow:text-shadowPrimary
-    matchaMoccha:text-matchaMocchaPrimary
-    redDragon:text-redDragonPrimary
     modernInk:text-modernInkPrimary
     gruvbox:text-gruvboxPrimary
     magicGirl:text-magicGirlPrimary
-    tronOrange:text-tronOrangePrimary
     menthol:text-mentholPrimary
     lavendar:text-lavendarPrimary
-    diner:text-dinerPrimary
     airplane:text-airplanePrimary
     nordLight:text-nordLightPrimary
     sewingTinLight:text-sewingTinLightPrimary
@@ -353,22 +306,16 @@ math-field::part(virtual-keyboard-toggle) {
     text-grey
     dark:text-light-grey
     markoblank:text-markogrey
-    discord:text-discordgrey
-    ishtar:text-ishtargrey
     tangerine:text-tangerineSub
     icebergLight:text-icebergLightSub
     icebergDark:text-icebergDarkSub
     husqy:text-husqySub
     shadow:text-shadowSub
-    matchaMoccha:text-matchaMocchaSub
-    redDragon:text-redDragonSub
     modernInk:text-modernInkSub
     gruvbox:text-gruvboxSub
     magicGirl:text-magicGirlSub
-    tronOrange:text-tronOrangeSub
     menthol:text-mentholSub
     lavendar:text-lavendarSub
-    diner:text-dinerSub
     airplane:text-airplaneSub
     nordLight:text-nordLightSub
     sewingTinLight:text-sewingTinLightSub
@@ -382,22 +329,16 @@ math-field::part(virtual-keyboard-toggle) {
     text-blue
     dark:text-blue-light
     markoblank:text-markored
-    discord:text-discordblue
-    ishtar:text-ishtarred
     tangerine:text-tangerineAccent
     icebergLight:text-icebergLightAccent
     icebergDark:text-icebergDarkAccent
     husqy:text-husqyAccent
     shadow:text-shadowAccent
-    matchaMoccha:text-matchaMocchaAccent
-    redDragon:text-redDragonAccent
     modernInk:text-modernInkAccent
     gruvbox:text-gruvboxAccent
     magicGirl:text-magicGirlAccent
-    tronOrange:text-tronOrangeAccent
     menthol:text-mentholAccent
     lavendar:text-lavendarAccent
-    diner:text-dinerAccent
     airplane:text-airplaneAccent
     nordLight:text-nordLightAccent
     sewingTinLight:text-sewingTinLightAccent
@@ -411,22 +352,16 @@ math-field::part(virtual-keyboard-toggle) {
     bg-white
     dark:bg-black
     markoblank:bg-markoteal
-    discord:bg-discordblack
-    ishtar:bg-ishtarblack
     tangerine:bg-tangerineBG
     icebergLight:bg-icebergLightBG
     icebergDark:bg-icebergDarkBG
     husqy:bg-husqyBG
     shadow:bg-shadowBG
-    matchaMoccha:bg-matchaMocchaBG
-    redDragon:bg-redDragonBG
     modernInk:bg-modernInkBG
     gruvbox:bg-gruvboxBG
     magicGirl:bg-magicGirlBG
-    tronOrange:bg-tronOrangeBG
     menthol:bg-mentholBG
     lavendar:bg-lavendarBG
-    diner:bg-dinerBG
     airplane:bg-airplaneBG
     nordLight:bg-nordLightBG
     sewingTinLight:bg-sewingTinLightBG
@@ -440,22 +375,16 @@ math-field::part(virtual-keyboard-toggle) {
     text-white
     dark:text-black
     markoblank:text-markoteal
-    discord:text-discordblack
-    ishtar:text-ishtarblack
     tangerine:text-tangerineBG
     icebergLight:text-icebergLightBG
     icebergDark:text-icebergDarkBG
     husqy:text-husqyBG
     shadow:text-shadowBG
-    matchaMoccha:text-matchaMocchaBG
-    redDragon:text-redDragonBG
     modernInk:text-modernInkBG
     gruvbox:text-gruvboxBG
     magicGirl:text-magicGirlBG
-    tronOrange:text-tronOrangeBG
     menthol:text-mentholBG
     lavendar:text-lavendarBG
-    diner:text-dinerBG
     airplane:text-airplaneBG
     nordLight:text-nordLightBG
     sewingTinLight:text-sewingTinLightBG
@@ -470,22 +399,16 @@ math-field::part(virtual-keyboard-toggle) {
     bg-grey/7
     dark:bg-light-grey/5
     markoblank:bg-markogrey/5
-    discord:bg-discordgrey/5
-    ishtar:bg-ishtargrey/5
     tangerine:bg-tangerineSub/5
     icebergLight:bg-icebergLightSub/5
     icebergDark:bg-icebergDarkSub/5
     husqy:bg-husqySub/5
     shadow:bg-shadowSub/5
-    matchaMoccha:bg-matchaMocchaSub/5
-    redDragon:bg-redDragonSub/5
     modernInk:bg-modernInkSub/5
     gruvbox:bg-gruvboxSub/5
     magicGirl:bg-magicGirlSub/5
-    tronOrange:bg-tronOrangeSub/5
     menthol:bg-mentholSub/5
     lavendar:bg-lavendarSub/5
-    diner:bg-dinerSub/5
     airplane:bg-airplaneSub/5
     nordLight:bg-nordLightSub/5
     sewingTinLight:bg-sewingTinLightSub/5
@@ -500,22 +423,16 @@ math-field::part(virtual-keyboard-toggle) {
     bg-grey/20
     dark:bg-light-grey/20
     markoblank:bg-markogrey/20
-    discord:bg-discordgrey/20
-    ishtar:bg-ishtargrey/20
     tangerine:bg-tangerineSub/20
     icebergLight:bg-icebergLightSub/20
     icebergDark:bg-icebergDarkSub/20
     husqy:bg-husqySub/20
     shadow:bg-shadowSub/20
-    matchaMoccha:bg-matchaMocchaSub/20
-    redDragon:bg-redDragonSub/20
     modernInk:bg-modernInkSub/20
     gruvbox:bg-gruvboxSub/20
     magicGirl:bg-magicGirlSub/20
-    tronOrange:bg-tronOrangeSub/20
     menthol:bg-mentholSub/20
     lavendar:bg-lavendarSub/20
-    diner:bg-dinerSub/20
     airplane:bg-airplaneSub/20
     nordLight:bg-nordLightSub/20
     sewingTinLight:bg-sewingTinLightSub/20
@@ -530,22 +447,16 @@ math-field::part(virtual-keyboard-toggle) {
     bg-blue/20
     dark:bg-blue-light/15
     markoblank:bg-markored/15
-    discord:bg-discordblue/15
-    ishtar:bg-ishtarred/15
     tangerine:bg-tangerineAccent/15
     icebergLight:bg-icebergLightAccent/15
     icebergDark:bg-icebergDarkAccent/15
     husqy:bg-husqyAccent/15
     shadow:bg-shadowAccent/15
-    matchaMoccha:bg-matchaMocchaAccent/15
-    redDragon:bg-redDragonAccent/15
     modernInk:bg-modernInkAccent/15
     gruvbox:bg-gruvboxAccent/15
     magicGirl:bg-magicGirlAccent/15
-    tronOrange:bg-tronOrangeAccent/15
     menthol:bg-mentholAccent/15
     lavendar:bg-lavendarAccent/15
-    diner:bg-dinerAccent/15
     airplane:bg-airplaneAccent/15
     nordLight:bg-nordLightAccent/15
     sewingTinLight:bg-sewingTinLightAccent/15
@@ -559,22 +470,16 @@ math-field::part(virtual-keyboard-toggle) {
     border-light-grey/40
     dark:border-grey/20
     markoblank:border-markobrown/20
-    discord:border-discordgrey/20
-    ishtar:border-ishtargrey/20
     tangerine:border-tangerineSub/20
     icebergLight:border-icebergLightSub/20
     icebergDark:border-icebergDarkSub/20
     husqy:border-husqySub/20
     shadow:border-shadowSub/20
-    matchaMoccha:border-matchaMocchaSub/20
-    redDragon:border-redDragonSub/20
     modernInk:border-modernInkSub/20
     gruvbox:border-gruvboxSub/20
     magicGirl:border-magicGirlSub/20
-    tronOrange:border-tronOrangeSub/20
     menthol:border-mentholSub/20
     lavendar:border-lavendarSub/20
-    diner:border-dinerSub/20
     airplane:border-airplaneSub/20
     nordLight:border-nordLightSub/20
     sewingTinLight:border-sewingTinLightSub/20
@@ -585,22 +490,16 @@ math-field::part(virtual-keyboard-toggle) {
     shadow-light-grey/40
     dark:shadow-grey/20
     markoblank:shadow-markobrown/20
-    discord:shadow-discordgrey/20
-    ishtar:shadow-ishtargrey/20
     tangerine:shadow-tangerineSub/20
     icebergLight:shadow-icebergLightSub/20
     icebergDark:shadow-icebergDarkSub/20
     husqy:shadow-husqySub/20
     shadow:shadow-shadowSub/20
-    matchaMoccha:shadow-matchaMocchaSub/20
-    redDragon:shadow-redDragonSub/20
     modernInk:shadow-modernInkSub/20
     gruvbox:shadow-gruvboxSub/20  
     magicGirl:shadow-magicGirlSub/20
-    tronOrange:shadow-tronOrangeSub/20
     menthol:shadow-mentholSub/20
     lavendar:shadow-lavendarSub/20
-    diner:shadow-dinerSub/20
     airplane:shadow-airplaneSub/20
     nordLight:shadow-nordLightSub/20
     sewingTinLight:shadow-sewingTinLightSub/20
@@ -615,22 +514,16 @@ math-field::part(virtual-keyboard-toggle) {
     border-blue
     dark:border-blue-light
     markoblank:border-markored
-    discord:border-discordblue
-    ishtar:border-ishtarred
     tangerine:border-tangerineAccent
     icebergLight:border-icebergLightAccent
     icebergDark:border-icebergLightAccent
     husqy:border-husqyAccent
     shadow:border-shadowAccent
-    matchaMoccha:border-matchaMocchaAccent
-    redDragon:border-redDragonAccent
     modernInk:border-modernInkAccent
     gruvbox:border-gruvboxAccent
     magicGirl:border-magicGirlAccent
-    tronOrange:border-tronOrangeAccent
     menthol:border-mentholAccent
-    lavendar:border-lavendarAccent  
-    diner:border-dinerAccent
+    lavendar:border-lavendarAccent
     airplane:border-airplaneAccent
     nordLight:border-nordLightAccent
     sewingTinLight:border-sewingTinLightAccent
@@ -642,22 +535,16 @@ math-field::part(virtual-keyboard-toggle) {
     shadow-blue
     dark:shadow-blue-light
     markoblank:shadow-markored
-    discord:shadow-discordblue
-    ishtar:shadow-ishtarred
     tangerine:shadow-tangerineAccent
     icebergLight:shadow-icebergLightAccent
     icebergDark:shadow-icebergDarkAccent
     husqy:shadow-husqyAccent
     shadow:shadow-shadowAccent
-    matchaMoccha:shadow-matchaMocchaAccent
-    redDragon:shadow-redDragonAccent
     modernInk:shadow-modernInkAccent
     gruvbox:shadow-gruvboxAccent
     magicGirl:shadow-magicGirlAccent
-    tronOrange:shadow-tronOrangeAccent
     menthol:shadow-mentholAccent
     lavendar:shadow-lavendarAccent
-    diner:shadow-dinerAccent
     airplane:shadow-airplaneAccent
     nordLight:shadow-nordLightAccent
     sewingTinLight:shadow-sewingTinLightAccent
@@ -672,22 +559,16 @@ math-field::part(virtual-keyboard-toggle) {
     bg-blue
     dark:bg-blue-light
     markoblank:bg-markored
-    discord:bg-discordblue
-    ishtar:bg-ishtarred
     tangerine:bg-tangerineAccent
     icebergLight:bg-icebergLightAccent
     icebergDark:bg-icebergDarkAccent
     husqy:bg-husqyAccent
     shadow:bg-shadowAccent
-    matchaMoccha:bg-matchaMocchaAccent
-    redDragon:bg-redDragonAccent
     modernInk:bg-modernInkAccent
     gruvbox:bg-gruvboxAccent
     magicGirl:bg-magicGirlAccent
-    tronOrange:bg-tronOrangeAccent
     menthol:bg-mentholAccent
     lavendar:bg-lavendarAccent
-    diner:bg-dinerAccent
     airplane:bg-airplaneAccent
     nordLight:bg-nordLightAccent
     sewingTinLight:bg-sewingTinLightAccent
@@ -701,22 +582,16 @@ math-field::part(virtual-keyboard-toggle) {
     invert-0
     dark:invert
     markoblank:invert
-    discord:invert
-    ishtar:invert
     tangerine:invert-0
     icebergLight:invert-0
     icebergDark:invert
     husqy:invert
     shadow:invert
-    matchaMoccha:invert-0
-    redDragon:invert
     modernInk:invert-0
     gruvbox:invert
     magicGirl:invert-0
-    tronOrange:invert
     menthol:invert-0
     lavendar:invert-0
-    diner:invert-0
     airplane:invert-0
     nordLight:invert-0
     sewingTinLight:invert-0

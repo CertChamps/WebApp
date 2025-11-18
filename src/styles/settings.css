@@ -41,7 +41,7 @@
 /* ================================= THEMES ================================ */
 
 .theme-container {
-    @apply w-[23%] min-w-sm h-20 py-2 text-center m-2 rounded-out cursor-pointer shadow-small flex items-center justify-between
+    @apply w-[23%] h-20 py-2 text-center m-2 rounded-out cursor-pointer shadow-small flex items-center justify-between
 }
 
 .theme-text {
