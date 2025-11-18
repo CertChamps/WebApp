@@ -6,7 +6,6 @@ import '../styles/navbar.css'
 // ======================= ICON IMPORTS ======================== // 
 import { LuPencil, LuSettings, LuUsers } from "react-icons/lu";
 
-
 export default function Navbar () {
 
     // Icon Properties
@@ -42,7 +41,6 @@ export default function Navbar () {
                     <p className='nav-txt !txt-heading-colour !color-txt-accent' >{user.username}</p>
                     <p className='nav-txt !txt-sub !color-txt-sub text-nowrap' >Rank: {user.rank}</p> 
                 </div>
-                <LuSettings className='nav-txt' id="settings" size={24} onClick={() => {pageNaviagte('user/settings')}}/>
             </div>
 
             {/* ============================= PRACTICE ICON ================================ */}
@@ -69,6 +67,12 @@ export default function Navbar () {
                 <p className={page == 'games' ? 'nav-txt-selected' : 'nav-txt'} >Games</p>
             </div> */}
             
+            <div className={page == 'user/settings' ? 'nav-settings-selected' : 'nav-settings'} onClick={() => {pageNaviagte('user/settings')}}> 
+                <LuSettings strokeWidth={strokewidth} size={iconSize} 
+                    className={page == 'user/settings' ? 'nav-icon-selected' : 'nav-icon'}
+                    fill={page == 'user/settings' ? 'currentColor' : 'none'} />  
+                <p className={page == 'user/settings' ? 'nav-txt-selected' : 'nav-txt'} >Settings</p>
+            </div>
         </div>
     )
 }

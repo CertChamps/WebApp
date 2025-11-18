@@ -259,37 +259,6 @@ export default function Settings() {
                     <div className="color-strip-item bg-light-grey" > </div> {/* TEXT */}
                 </div>
             </div>
-    
-            <div className="cursor-target theme-container" 
-                onClick={() => setTheme('markoblank')}>
-                <p className="theme-text">Markoblank</p>
-                <div className="color-strip-container bg-markoteal" >
-                    <div className="color-strip-item bg-markored " > </div> {/* ACCENT */}
-                    <div className="color-strip-item bg-markobrown " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-markogrey " > </div> {/* TEXT */}
-                </div>
-            </div>
-
-
-            <div className="cursor-target theme-container" 
-                onClick={() => setTheme('discord')}>
-                <p className="theme-text">Discord</p>
-                <div className="color-strip-container bg-discordblack " >
-                    <div className="color-strip-item bg-discordblue " > </div> {/* ACCENT */}
-                    <div className="color-strip-item bg-discordwhite " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-discordgrey " > </div> {/* TEXT */}
-                </div>
-            </div>
-
-            <div className="cursor-target theme-container" 
-                onClick={() => setTheme('ishtar')}>
-                <p className="theme-text">Ishtar</p>
-                <div className="color-strip-container bg-ishtarblack " >    {/* BG */}
-                    <div className="color-strip-item bg-ishtarred " > </div> {/* ACCENT */}
-                    <div className="color-strip-item bg-ishtargrey " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-ishtarbeige " > </div> {/* TEXT */}
-                </div>
-            </div>
 
             <div className="cursor-target theme-container" 
                 onClick={() => setTheme('tangerine')}>
@@ -342,26 +311,6 @@ export default function Settings() {
             </div>
 
             <div className="cursor-target theme-container" 
-                onClick={() => setTheme('matchaMoccha')}>
-                <p className="theme-text">Matcha Moccha</p>
-                <div className="color-strip-container bg-matchaMocchaBG " >
-                    <div className="color-strip-item bg-matchaMocchaPrimary " > </div> {/* PRIMARY */}
-                    <div className="color-strip-item bg-matchaMocchaSub " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-matchaMocchaAccent " > </div> {/* ACCENT */}
-                </div>
-            </div>
-
-            <div className="cursor-target theme-container" 
-                onClick={() => setTheme('redDragon')}>
-                <p className="theme-text">Red Dragon</p>
-                <div className="color-strip-container bg-redDragonBG " >
-                    <div className="color-strip-item bg-redDragonPrimary " > </div> {/* PRIMARY */}
-                    <div className="color-strip-item bg-redDragonSub " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-redDragonAccent " > </div> {/* ACCENT */}
-                </div>
-            </div>
-
-            <div className="cursor-target theme-container" 
                 onClick={() => setTheme('modernInk')}>
                 <p className="theme-text">Modern Ink</p>
                 <div className="color-strip-container bg-modernInkBG " >
@@ -392,16 +341,6 @@ export default function Settings() {
             </div>
 
             <div className="cursor-target theme-container" 
-                onClick={() => setTheme('tronOrange')}>
-                <p className="theme-text">Tron Orange</p>
-                <div className="color-strip-container bg-tronOrangeBG " >
-                    <div className="color-strip-item bg-tronOrangePrimary " > </div> {/* PRIMARY */}
-                    <div className="color-strip-item bg-tronOrangeSub " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-tronOrangeAccent " > </div> {/* ACCENT */}
-                </div>
-            </div>
-
-            <div className="cursor-target theme-container" 
                 onClick={() => setTheme('menthol')}>
                 <p className="theme-text">Menthol</p>
                 <div className="color-strip-container bg-mentholBG " >
@@ -418,16 +357,6 @@ export default function Settings() {
                     <div className="color-strip-item bg-lavendarPrimary " > </div> {/* PRIMARY */}
                     <div className="color-strip-item bg-lavendarSub " > </div> {/* SUB */}
                     <div className="color-strip-item bg-lavendarAccent " > </div> {/* ACCENT */}
-                </div>
-            </div>
-
-            <div className="cursor-target theme-container" 
-                onClick={() => setTheme('diner')}>
-                <p className="theme-text">Diner</p>
-                <div className="color-strip-container bg-dinerBG " >
-                    <div className="color-strip-item bg-dinerPrimary " > </div> {/* PRIMARY */}
-                    <div className="color-strip-item bg-dinerSub " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-dinerAccent " > </div> {/* ACCENT */}
                 </div>
             </div>
 
@@ -490,8 +419,19 @@ export default function Settings() {
                     <div className="color-strip-item bg-gradient-to-r from-auroraAccent1 to-auroraAccent2 " > </div> {/* ACCENT */}
                 </div>
             </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('markoblank')}>
+                <p className="theme-text">Markoblank</p>
+                <div className="color-strip-container bg-markoteal" >
+                    <div className="color-strip-item bg-markored " > </div> {/* ACCENT */}
+                    <div className="color-strip-item bg-markobrown " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-markogrey " > </div> {/* TEXT */}
+                </div>
+            </div>
         </div>
 
+            
         
 
         {/* ======================================================================================== */}
