@@ -1,208 +1,123 @@
-import { collection, getCountFromServer, getDocs, doc, 
-    query, where, limit, orderBy, getDoc } from 'firebase/firestore'
-import { db }from '../../firebase'
-import React from 'react'
-import useFetch from './useFetch'
+import { collection, getDocs, doc, 
+    query, orderBy, getDoc } from 'firebase/firestore'
+import { db } from '../../firebase'
 import { useState } from 'react'
+import useFetch from './useFetch'
 
-// Props Type 
 type questionProps = {
     setQuestions: React.Dispatch<React.SetStateAction<any>>
-    filters: any[]
+    filters: string[]
 }
 
-export default function useQuestions( props?:questionProps ) {
-
-    // ====================== HOOKS ========================= //
+export default function useQuestions(props?: questionProps) {
     const { fetchImage } = useFetch()
     const [allQuestions, setAllQuestions] = useState<any[]>([])
-    // ====================== RETURN RANDOM NUMBER IN GIVEN RANGE ========================= //
-    const getRandom = (range: number) => {
 
-        // Return a random number between 0 and the range
-        return Math.floor( Math.random() * ( range ) ) + 1
-
-    }
-    // ===================================================================================== //
-
-    // ============================== GENERATE A CCQ ID =================================== //
-    const generateID = (max: number) => { 
-
-        // Generate a random number
-        const index = getRandom(max).toString()
-
-        // Generate a unique ID and return 
-        const id = `CCQ${index.padStart(8, '0')}`
-        return id
-
-    } 
-    // ===================================================================================== //
-
-
-    // ============================== GET A RANDOM QUESTION FROM FIREBASE =================================== //
-    const getRandomQuestion = async (idExclude: string) => {
-
-        // Get number of questions in database
-        let questionSnapshot = query(collection(db, 'certchamps-questions'));
-        const questionCount = await getCountFromServer(questionSnapshot);
-
-        // Generate an ID at random 
-        const randomID = generateID(questionCount.data().count) 
+    const getRandomQuestion = async (idExclude: string = '') => {
+        const coll = collection(db, 'certchamps-questions')
         
-        // -- QUERYING WITH FILTERS INVOLVED -- //
-        if ( props?.filters && props?.filters.length > 0) {
-            console.log(props.filters)
-            // Query and retrive the question with the generated ID ( search up the database for questions )
-            questionSnapshot = query(collection(db, 'certchamps-questions'), 
-            where('id', '<=', randomID), // search DOWN the database by id 
-            where('id', '!=', idExclude), // do not include ceratin id 
-            where('tags', 'array-contains-any', props.filters), // abide to filters
-            orderBy('id', 'desc'), limit(1) // only grab the bottom result 
-            );
+        // Firestore array-contains-any limit: max 10 values
+        const filters = (props?.filters || []).slice(0, 10)
+
+        // Get all available IDs (single index read, efficient for collections < 10k docs)
+        const allIdsSnap = await getDocs(query(coll, orderBy('__name__')))
+        const allIds = allIdsSnap.docs.map(d => d.id).filter(id => id !== idExclude)
         
+        if (allIds.length === 0) {
+            throw new Error('No questions available')
+        }
 
-            // in the case no result is found search up the database
-            if ((await getDocs(questionSnapshot)).empty) {
-            
-            questionSnapshot = query(collection(db, 'certchamps-questions'), 
-            where('id', '>=', randomID), // search UP the database by id 
-            where('id', '!=', idExclude), // do not include ceratin id 
-            where('tags', 'array-contains-any', props.filters), // abide to filters
-            orderBy('id', 'asc'), limit(1) // only grab the bottom result 
-            );
+        // If no filters, return a pure random ID
+        if (filters.length === 0) {
+            const randomIndex = Math.floor(Math.random() * allIds.length)
+            return allIds[randomIndex]
+        }
 
+        // With filters: shuffle and check sequentially for a match
+        // This randomizes while respecting filters without reading every doc
+        const shuffledIds = [...allIds].sort(() => Math.random() - 0.5)
+        
+        for (const candidateId of shuffledIds) {
+            const docSnap = await getDoc(doc(db, 'certchamps-questions', candidateId))
+            if (docSnap.exists()) {
+                const data = docSnap.data()
+                // Check if question has at least one matching tag
+                const hasMatchingTag = data.tags?.some((tag: string) => filters.includes(tag))
+                if (hasMatchingTag) {
+                    return candidateId
+                }
             }
-        } 
+        }
 
-        // -- QUERYING WITHOUT FILTERS INVOLVED -- //
-        else {
-            // Query and retrive the question with the generated ID ( search up the database for questions )
-            questionSnapshot = query(collection(db, 'certchamps-questions'), 
-            where('id', '<=', randomID), // search DOWN the database by id 
-            where('id', '!=', idExclude), // do not include ceratin id 
-            orderBy('id', 'desc'), limit(1) // only grab the bottom result 
-            );
-        
-            // in the case no result is found search up the database
-            if ( (await getDocs(questionSnapshot)).empty ) {
-            questionSnapshot = query(collection(db, 'certchamps-questions'), 
-            where('id', '>=', randomID), // search UP the database by id 
-            where('id', '!=', idExclude), // do not include ceratin id 
-            orderBy('id', 'asc'), limit(1) // only grab the bottom result 
-            );
-            }
-        } 
-                
-        // Return the ID of that question
-        return ( (await getDocs(questionSnapshot)).docs[0].id )
-
+        // Fallback: return random if no match found after checking all
+        console.warn('No question matched filters, returning random one')
+        return allIds[Math.floor(Math.random() * allIds.length)]
     }
-    // ================================================================================================= //
 
-    // ============================== GET A QUESTION DATA FROM FIREBASE ================================ //
     const fetchQuestion = async (id: string) => {
+        const properties = (await getDoc(doc(db, 'certchamps-questions', id))).data()
 
-        // Get the question properties 
-        const properties = ( await getDoc( doc(db, "certchamps-questions", id) ) ).data()
-
-        // Get the question content 
-        const contentSnap = ( await getDocs( collection(db, "certchamps-questions", id, "content")) ).docs
-        const contentPromises = contentSnap.map( async (doc : any ) => {
-
-            // Get data
-            const data = await doc.data()
-            // console.log("✅ image going in!", data.image)
-            // if data has image get its URL 
+        const contentSnap = (await getDocs(collection(db, 'certchamps-questions', id, 'content'))).docs
+        const contentPromises = contentSnap.map(async (doc: any) => {
+            const data = doc.data()
             if (data.image) {
-                // get the url 
                 const imageUrl = await fetchImage(data.image)
-
-                // upate data 
                 data.image = imageUrl
-            } 
-            // console.log(data)
+            }
             return data
-            
-        });  
+        })
 
-        const content = await Promise.all(contentPromises);
-
-        // Return the question
-        return { id, properties, content } 
+        const content = await Promise.all(contentPromises)
+        console.log("fetched question:", id); 
+        return { id, properties, content }
     }
-    // ================================================================================================= //
 
-    // ====================================== LOAD QUESTIONS =========================================== //
     const loadQuestions = async (id?: string) => {
-        
-        let question = null; 
-        // Load in a questions
-        if (id)
-            question = await fetchQuestion(id) 
-        else 
-            question = await fetchQuestion(await getRandomQuestion('')) 
+        let question = null
+        if (id) {
+            question = await fetchQuestion(id)
+        } else {
+            const randomId = await getRandomQuestion('')
+            question = await fetchQuestion(randomId)
+        }
 
-        // Add it into the questions array
-        props?.setQuestions( (questions : any ) => [...questions, question])
-
+        props?.setQuestions?.((questions: any) => [...questions, question])
     }
-    // ================================================================================================= //
 
-    // ====================================== FETCH ALL QUESTIONS =========================================== //
     const fetchAllQuestions = async () => {
-        // Fetch all questions from the main collection
-        const questionsSnap = await getDocs(collection(db, "certchamps-questions"));
+        // WARNING: Unbounded read. Use only for small collections or admin functions.
+        const questionsSnap = await getDocs(collection(db, 'certchamps-questions'))
 
         const questions = await Promise.all(
-
             questionsSnap.docs.map(async (docSnap) => {
-                const id = docSnap.id;
-                const properties = docSnap.data();
+                const id = docSnap.id
+                const properties = docSnap.data()
 
-                // Fetch subcollection "content" for each question
-                const contentSnap = await getDocs(collection(db, "certchamps-questions", id, "content"));
+                const contentSnap = await getDocs(collection(db, 'certchamps-questions', id, 'content'))
                 const contentPromises = contentSnap.docs.map(async (contentDoc: any) => {
-                    const data = contentDoc.data();
+                    const data = contentDoc.data()
                     if (data.image) {
-                        // get the url 
                         const imageUrl = await fetchImage(data.image)
-
-                        // upate data 
                         data.image = imageUrl
-                    } 
-                    return data;
-                });
-                const content = await Promise.all(contentPromises);
+                    }
+                    return data
+                })
+                const content = await Promise.all(contentPromises)
 
-                return { id, properties, content };
+                return { id, properties, content }
             })
-        );
-        setAllQuestions(questions);
-        return questions;
+        )
+        setAllQuestions(questions)
+        return questions
     }
-    // ================================================================================================= //
 
-    // ================================= CONVERTS NUMBER TO ROMAN NUMERAL ====================================== //
     function toRoman(n: number): string | null {
         const map: Record<number, string> = {
-            1: "i",
-            2: "ii",
-            3: "iii",
-            4: "iv",
-            5: "v",
-            6: "vi",
-            7: "vii",
-            8: "viii",
-            9: "ix",
-            10: "x",
-        };
-    
-        return map[n] ?? null;
+            1: 'i', 2: 'ii', 3: 'iii', 4: 'iv', 5: 'v',
+            6: 'vi', 7: 'vii', 8: 'viii', 9: 'ix', 10: 'x',
+        }
+        return map[n] ?? null
     }
-    // ========================================================================================================= //
-    
 
     return { getRandomQuestion, fetchQuestion, loadQuestions, toRoman, fetchAllQuestions, allQuestions }
-
-
 }

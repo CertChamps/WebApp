@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { UserContext } from "./context/UserContext";
 import { OptionsContext } from "./context/OptionsContext";
 import AppRouter from "./Router";
-import CustomCursor from "./components/CustomCursor"
+import UsernamePrompt from "./components/prompts/username_prompt";
+//import CustomCursor from "./components/CustomCursor"
 
 export default function App() {
   // =================== CONTEXT SETUP ===================== //
@@ -36,6 +37,7 @@ export default function App() {
           <div className="color-bg h-screen w-screen flex flex-row">
             {/* <CustomCursor /> */}
             <AppRouter />
+            <UsernamePrompt /> 
           </div>
         </div>
       </UserContext.Provider>

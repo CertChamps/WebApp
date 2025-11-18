@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from 'react';
 
 export default function useFilters() {
+    // Stable unique key generator for subtopics
+    const subTopicKeyCounter = useRef(0);
 
     const [ unselectedTopics, setUnselectedTopics ] = useState<{key: number, topic: string, subTopics: string[]}[]>([
         { key: 1, topic: 'Algebra', subTopics: ['Cubics', 'Expressions & Factorising', 'Indices & Logs', 'Inequalities', 'Quadratics', 'Simultaneous Equations', 'Solving Equations'] },
@@ -14,70 +16,79 @@ export default function useFilters() {
         { key: 9, topic: 'Statistics', subTopics: ['Descriptive', 'Inferential', 'ZScores'] },
         { key: 10, topic: 'Trigonometry', subTopics: ['Functions & Identities', 'Triangles'] },
         { key: 11, topic: 'Geometry', subTopics: [] },
-    ])
+        { key: 12, topic: 'First Year Algebra', subTopics: [] },
+    ]);
+    
     const [ selectedTopics, setSelectedTopics ] = useState<{key: number, topic: string, subTopics: string[]}[]>([])
-    const [ unselectedSubTopics, setUnselectedSubTopics  ] = useState<{parent: string, key: number, topic: string}[]>([])
-    const [ selectedSubTopics, setSelectedSubTopics  ] = useState<{parent: string, key: number, topic: string}[]>([])
-
+    const [ unselectedSubTopics, setUnselectedSubTopics ] = useState<{parent: string, key: number, topic: string}[]>([])
+    const [ selectedSubTopics, setSelectedSubTopics ] = useState<{parent: string, key: number, topic: string}[]>([])
     const [ localFilters, setLocalFilters ] = useState<string[]>([])
 
-
-    // ============================================== SELECTING TOPICS ================================================= // 
     const selectTopic = (topic: {key: number, topic: string, subTopics: string[]}) => {
-
-        setSelectedTopics(topics => [...topics, topic]) // selects the topic 
-        setUnselectedTopics(topics => topics.filter(tpc => tpc !== topic)) // removes topic from unselected
-        // Add subtopics to list
-        topic.subTopics.forEach( sub => {
-            setUnselectedSubTopics(topics => [...topics, {parent: topic.topic, key: Math.floor(Math.random() * 500), topic: sub}])
-        })
-        // add topic to filter 
-        setLocalFilters(filters => [...filters, topic.topic])
-
+        setSelectedTopics(prev => [...prev, topic]);
+        setUnselectedTopics(prev => prev.filter(tpc => tpc !== topic));
+        
+        topic.subTopics.forEach(sub => {
+            setUnselectedSubTopics(prev => [...prev, {
+                parent: topic.topic, 
+                key: subTopicKeyCounter.current++, // Unique sequential key
+                topic: sub
+            }]);
+        });
+        
+        setLocalFilters(prev => {
+            const newFilter = topic.topic;
+            return prev.includes(newFilter) ? prev : [...prev, newFilter];
+        });
     }
-    // =============================================================================================================== //
 
-    // ============================================= UNSELECTING TOPICS ================================================= // 
     const unselectTopic = (topic: {key: number, topic: string, subTopics: string[]}) => {
-
-        setUnselectedTopics(topics => [...topics, topic]) // unselects the topic 
-        setSelectedTopics(topics => topics.filter(tpc => tpc !== topic))  // removes topic from selected
-        // Dealing with subtopics...
-        topic.subTopics.forEach( sub => {
-            setUnselectedSubTopics(topics => topics.filter(tpc => tpc.topic !== sub))
-            setSelectedSubTopics(topics => topics.filter(tpc => tpc.topic !== sub))
-            setLocalFilters(filters => filters.filter(tpc => tpc !== sub))
-        })
-        setLocalFilters(filters => filters.filter(tpc => tpc !== topic.topic))
-
+        setUnselectedTopics(prev => [...prev, topic]);
+        setSelectedTopics(prev => prev.filter(tpc => tpc !== topic));
+        
+        // Remove all subtopics for this topic from both lists
+        topic.subTopics.forEach(sub => {
+            setUnselectedSubTopics(prev => prev.filter(tpc => tpc.topic !== sub));
+            setSelectedSubTopics(prev => prev.filter(tpc => tpc.topic !== sub));
+        });
+        
+        // Remove topic and all its subtopics from filters atomically
+        setLocalFilters(prev => {
+            const toRemove = new Set([topic.topic, ...topic.subTopics]);
+            return prev.filter(f => !toRemove.has(f));
+        });
     }
-    // =============================================================================================================== //
-
-    // ============================================= SELECTING SUBTOPICS ============================================ // 
 
     const selectSubTopic = (topic: { parent: string, key: number, topic: string}) => {
-        setSelectedSubTopics(topics => [...topics, topic])
-        setUnselectedSubTopics(topics => topics.filter(tpc => tpc !== topic))
-        setLocalFilters(filters => [...filters, topic.topic])
-        setLocalFilters(filters => filters.filter(tpc => tpc !== topic.parent))
+        setSelectedSubTopics(prev => [...prev, topic]);
+        setUnselectedSubTopics(prev => prev.filter(tpc => tpc !== topic));
+        
+        // Add subtopic filter and remove parent topic filter
+        setLocalFilters(prev => {
+            const next = [...prev];
+            if (!next.includes(topic.topic)) next.push(topic.topic);
+            return next.filter(f => f !== topic.parent);
+        });
     }
-    // =============================================================================================================== //
 
-    // ============================================= UNSELECTING SUBTOPICS ================================================= // 
     const unselectSubTopic = (topic: {parent: string, key: number, topic: string}) => {
-        setUnselectedSubTopics(topics => [...topics, topic])
-        setSelectedSubTopics(topics => topics.filter(tpc => tpc !== topic))
-        setLocalFilters(filters => filters.filter(tpc => tpc !== topic.topic))
-        // checking fo 
-        let empty = true
-        unselectedSubTopics.forEach(sub => { 
-            if ( sub.parent === topic.parent ) empty = false 
-        } )
-
-        if ( empty ) 
-            setLocalFilters(filters => [...filters, topic.parent])
+        // Check if this is the last subtopic for its parent BEFORE removing
+        const remainingSubtopics = selectedSubTopics.filter(
+            t => t.parent === topic.parent && t.key !== topic.key
+        );
+        const isLastSubtopicForParent = remainingSubtopics.length === 0;
+        
+        setSelectedSubTopics(prev => prev.filter(tpc => tpc !== topic));
+        setUnselectedSubTopics(prev => [...prev, topic]);
+        setLocalFilters(prev => prev.filter(tpc => tpc !== topic.topic));
+        
+        // If last subtopic, restore parent topic filter
+        if (isLastSubtopicForParent) {
+            setLocalFilters(prev => {
+                return prev.includes(topic.parent) ? prev : [...prev, topic.parent];
+            });
+        }
     }
-    // =============================================================================================================== //
 
     return {
         selectTopic, unselectTopic, selectSubTopic, unselectSubTopic,
