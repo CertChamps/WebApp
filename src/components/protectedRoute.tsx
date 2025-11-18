@@ -13,7 +13,7 @@ export const ProtectedRoute: React.FC<Props> = ({ children }) => {
 
   if (!user) {
     // redirect to root ("/"). We include state.from so you can return after login.
-    console.log("No user found, redirecting to login.", location.pathname)
+    // console.log("No user found, redirecting to login.", location.pathname)
     return <Navigate to="/" state={{ prevRoute: location.pathname }} replace />;
   }
 

@@ -61,7 +61,7 @@ export default function useRank(props: rankProps) {
 
     // ============================ CALCULATE RANK PROGRESS ============================ //
     const calculateProgress = () => { 
-        console.log(xp, progress, 'fffffffffffffff')
+        // console.log(xp, progress, 'fffffffffffffff')
         const thresholds = [100, 300, 1000, 5000, 10000, 100000];
         let remainingXP = xp;
         let newRank = 0;

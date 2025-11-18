@@ -12,7 +12,7 @@ export default function useFriends() {
     const getSearch = async (search: string) => {
         try {
             //const searchLower = search.toLowerCase() // lowercase search for non case sensitivity 
-            console.log(user.pendingFriends)
+            // console.log(user.pendingFriends)
             
             // Search for users on firebase and get docs 
             const excludeUids = [

@@ -16,7 +16,6 @@ export default function MathInput(props: inputProps) {
   const mfRef = useRef<any>(null);
 
   useEffect(() => {
-    console.log("prefix:", props.prefix)
     if (!mfRef.current) return;
     const mf = mfRef.current;
 
@@ -80,7 +79,6 @@ export default function MathInput(props: inputProps) {
     }
   };
 
-  console.log("Rendering MathInput with prefix:", props.prefix);
 
   // Support string or [before, after]
   const toArray = (v?: string | string[]) => Array.isArray(v) ? v : (v ? [v] : []);

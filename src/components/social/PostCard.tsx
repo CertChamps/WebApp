@@ -42,7 +42,7 @@ interface PostCardProps {
                     const imageRef = ref(storage, imageURL);
                     const imageUrl = await getDownloadURL(imageRef);
                     setDisplayImageUrl(imageUrl);
-                    console.log(imageUrl);
+                    // console.log(imageUrl);
                 } catch (error) {
                     console.error('Error fetching image:', error);
                     setDisplayImageUrl(null);

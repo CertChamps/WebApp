@@ -16,8 +16,6 @@ export default function useQuestions( props?:questionProps ) {
     // ====================== HOOKS ========================= //
     const { fetchImage } = useFetch()
     const [allQuestions, setAllQuestions] = useState<any[]>([])
-    console.log(allQuestions) // unused
-
     // ====================== RETURN RANDOM NUMBER IN GIVEN RANGE ========================= //
     const getRandom = (range: number) => {
 
@@ -113,7 +111,7 @@ export default function useQuestions( props?:questionProps ) {
 
             // Get data
             const data = await doc.data()
-            console.log("✅ image going in!", data.image)
+            // console.log("✅ image going in!", data.image)
             // if data has image get its URL 
             if (data.image) {
                 // get the url 
@@ -122,7 +120,7 @@ export default function useQuestions( props?:questionProps ) {
                 // upate data 
                 data.image = imageUrl
             } 
-            console.log(data)
+            // console.log(data)
             return data
             
         });  
@@ -204,7 +202,7 @@ export default function useQuestions( props?:questionProps ) {
     // ========================================================================================================= //
     
 
-    return { getRandomQuestion, fetchQuestion, loadQuestions, toRoman, fetchAllQuestions }
+    return { getRandomQuestion, fetchQuestion, loadQuestions, toRoman, fetchAllQuestions, allQuestions }
 
 
 }

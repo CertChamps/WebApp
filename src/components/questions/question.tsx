@@ -56,9 +56,9 @@ export default function Question(props: questionsProps) {
     const [inputs, setInputs] = useState<any[]>([])
 
     useEffect(() => {
-        console.log("inputs: ", inputs)
-        console.log("answers: ",content?.[part]?.answer)
-        console.log(isCorrect(inputs, content?.[part]?.answer))
+        // console.log("inputs: ", inputs)
+        // console.log("answers: ",content?.[part]?.answer)
+        // console.log(isCorrect(inputs, content?.[part]?.answer))
     }, [inputs])
 
     const [ sideView, setSideView ] = useState<string>('')
@@ -87,6 +87,7 @@ export default function Question(props: questionsProps) {
 
     const { user } = useContext(UserContext)
     const [attempts, setAttempts] = useState(0);
+    
     const [canReveal, setCanReveal] = useState(false);
     const [showSolution, setShowSolution] = useState(false); // overlay
     const [locked, setLocked] = useState(false);
@@ -96,12 +97,11 @@ export default function Question(props: questionsProps) {
 
     // Keep displayedXP in sync when user.xp changes from context (e.g. on page load)
     useEffect(() => {
-       // setDisplayedXP(user?.xp ?? 0);
-        console.log(user.xp)
+       // setDisplayedXP(user?.xp ?? 0); 
     }, [user?.xp]);
 
     //=========================================== Constants =====================================//
-    const iconSize = 40
+    const iconSize = 40 + attempts - attempts 
     const strokewidth = 1.75
 
     // Check handler: shows overlay on correct; after 3 fails offers reveal button
@@ -200,7 +200,6 @@ export default function Question(props: questionsProps) {
         setLocked(false);
     }, [props.position, props.questions]);
 
-    console.log("Resolved image path:", content?.[part]?.image);
     //==========================================================================================//
 
     const Lplaceholders = [
