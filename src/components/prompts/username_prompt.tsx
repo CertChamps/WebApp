@@ -8,6 +8,7 @@ export default function UsernamePrompt() {
     const { user, setUser } = useContext(UserContext); 
     const [showPrompt, setShowPrompt] = useState<boolean>(false); 
     const [newUsername, setNewUsername] = useState<string>(''); 
+    const [error, setError] = useState<string>(''); 
 
     useEffect(() => {
         
@@ -21,11 +22,22 @@ export default function UsernamePrompt() {
         try {
             const username = newUsername.trim();
 
-            setUser({...user, username: username})
-            await setDoc(doc(db, 'user-data', user.uid), {username: username}, {merge: true})
-            setNewUsername("");
 
-            setShowPrompt(false);
+            if ( username.length > 0) {
+                // Update context 
+                setUser({...user, username: username})
+                // Update firbase 
+                await setDoc(doc(db, 'user-data', user.uid), {username: username}, {merge: true})
+
+                // Reset all state 
+                setNewUsername("");
+                setError('');
+                setShowPrompt(false);
+            }
+            else {
+                setError('please input a valid name');
+            }
+
         }
         catch (err) {
             console.log(err)
@@ -44,10 +56,16 @@ export default function UsernamePrompt() {
                             className="h-[50%] mx-auto"
                         />
                         <p className="txt-bold text-center w-full">Looks like someone doesn't have a username...</p>
+                        <p className="txt color-txt-accent w-full text-center">{error}</p>
                         <input 
-                            className="txtbox mx-auto my-5"
+                            className="txtbox mx-auto my-2"
                             placeholder="New Username"
                             value={newUsername}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    updateUsername();
+                                }
+                            }}
                             onChange={(e) => setNewUsername(e.target.value)}/>
                         <div className="blue-btn mx-auto text-center"
                             onClick={() => {updateUsername()}}

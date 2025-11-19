@@ -17,6 +17,7 @@ export default function QSearch(props: searchProps) {
     const [search, setSearch] = useState('')
     const [isVisible, setIsVisible] = useState(false)
     const searchContainerRef = useRef<any>(null)
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const fuse = useRef<any>(null)
 
@@ -31,6 +32,7 @@ export default function QSearch(props: searchProps) {
     useEffect(() => {
         // Trigger fade in animation
         setIsVisible(true)
+        inputRef.current?.focus();
         
         const init = async () => {
             // set questions 
@@ -105,6 +107,7 @@ export default function QSearch(props: searchProps) {
                 <LuSearch className="color-txt-sub ml-2" strokeWidth={2} size={20}/>
                 <input 
                     type="text" 
+                    ref={inputRef}
                     className="outline-none w-full p-2 font-bold placeholder:color-txt-sub
                     color-txt-main rounded-out" 
                     placeholder="Search Questions..."
