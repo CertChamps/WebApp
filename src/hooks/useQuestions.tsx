@@ -1,5 +1,5 @@
 import { collection, getDocs, doc, 
-    query, orderBy, getDoc } from 'firebase/firestore'
+    query, orderBy, getDoc, where } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { useState } from 'react'
 import useFetch from './useFetch'
@@ -10,49 +10,47 @@ type questionProps = {
 }
 
 export default function useQuestions(props?: questionProps) {
+
     const { fetchImage } = useFetch()
     const [allQuestions, setAllQuestions] = useState<any[]>([])
 
     const getRandomQuestion = async (idExclude: string = '') => {
         const coll = collection(db, 'certchamps-questions')
-        
-        // Firestore array-contains-any limit: max 10 values
         const filters = (props?.filters || []).slice(0, 10)
 
-        // Get all available IDs (single index read, efficient for collections < 10k docs)
+        // Step 1 — Get all IDs once
         const allIdsSnap = await getDocs(query(coll, orderBy('__name__')))
         const allIds = allIdsSnap.docs.map(d => d.id).filter(id => id !== idExclude)
-        
+
         if (allIds.length === 0) {
-            throw new Error('No questions available')
+            throw new Error("No questions available")
         }
 
-        // If no filters, return a pure random ID
+        // Step 2 — If no filters → pure random
         if (filters.length === 0) {
             const randomIndex = Math.floor(Math.random() * allIds.length)
             return allIds[randomIndex]
         }
 
-        // With filters: shuffle and check sequentially for a match
-        // This randomizes while respecting filters without reading every doc
-        const shuffledIds = [...allIds].sort(() => Math.random() - 0.5)
-        
-        for (const candidateId of shuffledIds) {
-            const docSnap = await getDoc(doc(db, 'certchamps-questions', candidateId))
-            if (docSnap.exists()) {
-                const data = docSnap.data()
-                // Check if question has at least one matching tag
-                const hasMatchingTag = data.tags?.some((tag: string) => filters.includes(tag))
-                if (hasMatchingTag) {
-                    return candidateId
-                }
-            }
+        // Step 3 — Filter using Firestore, not JS
+        const q = query(coll, where("tags", "array-contains-any", filters))
+        const snap = await getDocs(q)
+
+        const matchingIds = snap.docs.map(d => d.id).filter(id => id !== idExclude)
+
+        // If Firestore found matches
+        if (matchingIds.length > 0) {
+            const randomIndex = Math.floor(Math.random() * matchingIds.length)
+            return matchingIds[randomIndex]
         }
 
-        // Fallback: return random if no match found after checking all
-        console.warn('No question matched filters, returning random one')
-        return allIds[Math.floor(Math.random() * allIds.length)]
+        console.warn("No question matched filters, returning random one")
+
+        // Fallback — pure random
+        const randomIndex = Math.floor(Math.random() * allIds.length)
+        return allIds[randomIndex]
     }
+
 
     const fetchQuestion = async (id: string) => {
         const properties = (await getDoc(doc(db, 'certchamps-questions', id))).data()
