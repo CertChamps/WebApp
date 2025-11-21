@@ -373,7 +373,7 @@ export default function Question(props: questionsProps) {
             <p className="txt-bold color-txt-accent">{properties?.name}
                 <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
 
-                { user.uid == "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" || user.uid == " NkN9UBqoPEYpE21MC89fipLn0SP2" ? ( 
+                { user.uid == "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" || user.uid == "NkN9UBqoPEYpE21MC89fipLn0SP2" ? ( 
                   content?.[part]?.answer?.length ? (
                     content?.[part].answer.map((ans: any) => (
                          <span key={ans} className="txt-sub">{`ANS: ${ans}`}</span>

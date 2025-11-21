@@ -12,7 +12,7 @@ export default function UsernamePrompt() {
 
     useEffect(() => {
         
-        if(user?.username.length < 1) 
+        if(user?.username?.length < 1) 
             setShowPrompt(true); 
         else 
             setShowPrompt(false); 
@@ -20,10 +20,10 @@ export default function UsernamePrompt() {
 
     const updateUsername = async () => {
         try {
-            const username = newUsername.trim();
+            const username = newUsername?.trim();
 
 
-            if ( username.length > 0) {
+            if ( username?.length > 0) {
                 // Update context 
                 setUser({...user, username: username})
                 // Update firbase 
