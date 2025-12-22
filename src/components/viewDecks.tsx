@@ -31,6 +31,9 @@ export default function ViewDecks (props?: deckProps) {
     const { createDeck, addQuestiontoDeck } = useDeckHandler()
     //==========================================================================================//
 
+    const hasQuestion = Boolean(props?.question)
+    const resolvedColor = color || '#FFFFFF'
+
     return (
     <div className="h-container items-start w-full overflow-y-scroll px-4">
         {
@@ -54,7 +57,17 @@ export default function ViewDecks (props?: deckProps) {
                                 <span className="txt-sub">{deck?.questions?.length} question{deck?.questions?.length !== 1 ? 's' : ''}</span>
                             </div>
 
-                            <span className="cursor-target blue-btn cursor-pointer my-2" onClick={(e: any) => {addQuestiontoDeck([props?.question], deck.id); e.stopPropagation();}}>Add to deck</span>
+                            {hasQuestion ? (
+                                <span
+                                    className="cursor-target blue-btn cursor-pointer my-2"
+                                    onClick={(e: any) => {
+                                        addQuestiontoDeck([props!.question], deck.id)
+                                        e.stopPropagation()
+                                    }}
+                                >
+                                    Add to deck
+                                </span>
+                            ) : null}
 
                         </div>
                     ))
@@ -83,7 +96,15 @@ export default function ViewDecks (props?: deckProps) {
 
                 <CirclePicker color={color} onChangeComplete={(color:any) => {setColor(color.hex)}} />
 
-                <span className="create-deck" onClick={() => {createDeck(name, desc, [props?.question ?? null], color); setView('decks')}} >Create Deck</span>
+                <span
+                    className="create-deck"
+                    onClick={() => {
+                        createDeck(name, desc, hasQuestion ? [props!.question] : [], resolvedColor)
+                        setView('decks')
+                    }}
+                >
+                    Create Deck
+                </span>
 
             </div>
             ) : null

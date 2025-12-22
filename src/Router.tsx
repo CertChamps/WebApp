@@ -9,6 +9,7 @@ import Navbar from "./components/navbar";
 import Replies from "./pages/social/replies";
 import Settings from "./pages/settings";
 import DeckViewer from "./pages/deckViewer";
+import Decks from "./pages/decks";
 import ProfileViewer from "./pages/profileViewer";
 import { ProtectedRoute } from "./components/protectedRoute";
 
@@ -35,6 +36,17 @@ const router = createHashRouter([
         <>
           <Navbar />
           <Questions />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/decks",
+    element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <Decks />
         </>
       </ProtectedRoute>
     ),

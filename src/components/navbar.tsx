@@ -5,6 +5,7 @@ import '../styles/navbar.css'
 
 // ======================= ICON IMPORTS ======================== // 
 import { LuPencil, LuSettings, LuUsers } from "react-icons/lu";
+import { TbCards } from 'react-icons/tb';
 
 export default function Navbar () {
 
@@ -57,6 +58,14 @@ export default function Navbar () {
                     className={page == 'social/social' ? 'nav-icon-selected' : 'nav-icon'}
                     fill={page == 'social/social' ? 'currentColor' : 'none'} />  
                 <p className={page == 'social/social' ? 'nav-txt-selected' : 'nav-txt'} >Social</p>
+            </div>
+
+            {/* ============================= DECKS ICON ================================ */}
+            <div className={page == 'decks' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('decks')}}> 
+                <TbCards strokeWidth={strokewidth} size={iconSize} 
+                    className={page == 'decks' ? 'nav-icon-selected' : 'nav-icon'}
+                    fill={page == 'decks' ? 'currentColor' : 'none'} />  
+                <p className={page == 'decks' ? 'nav-txt-selected' : 'nav-txt'} >Decks</p>
             </div>
 
             {/* ============================= GAMES ICON ================================ */}
