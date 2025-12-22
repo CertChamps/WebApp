@@ -1,10 +1,10 @@
-import { useContext, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { UserContext } from '../context/UserContext'
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import '../styles/navbar.css'
 
 // ======================= ICON IMPORTS ======================== // 
-import { LuPencil, LuSettings, LuUsers } from "react-icons/lu";
+import { LuPencil, LuSettings, LuUsers, LuChartSpline } from "react-icons/lu";
 
 export default function Navbar () {
 
@@ -16,6 +16,7 @@ export default function Navbar () {
     const { user } = useContext(UserContext)
     const [page, setPage ]= useState<string>('practice')
     const navigate = useNavigate()
+    const location = useLocation()
 
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //
     const pageNaviagte = (page: string) => {
@@ -27,6 +28,14 @@ export default function Navbar () {
         navigate(`/${page}`) 
         
     } 
+
+    useEffect(() => {
+        const path = location.pathname
+        if (path.startsWith('/progress')) setPage('progress')
+        else if (path.startsWith('/social')) setPage('social/social')
+        else if (path.startsWith('/user/settings')) setPage('user/settings')
+        else setPage('practice')
+    }, [location.pathname])
 
     return (
         <div className="container group" >
@@ -58,6 +67,14 @@ export default function Navbar () {
                     fill={page == 'social/social' ? 'currentColor' : 'none'} />  
                 <p className={page == 'social/social' ? 'nav-txt-selected' : 'nav-txt'} >Social</p>
             </div>
+
+            <div className={page == 'progress' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('progress')}}>
+                <LuChartSpline strokeWidth={strokewidth} size={iconSize}
+                    className={page == 'progress' ? 'nav-icon-selected' : 'nav-icon'}
+                    fill="none" />
+                <p className={page == 'progress' ? 'nav-txt-selected' : 'nav-txt'}>Progress</p>
+            </div>
+            
 
             {/* ============================= GAMES ICON ================================ */}
             {/* <div className={page == 'games' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('games')}}> 
