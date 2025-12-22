@@ -12,6 +12,7 @@ import DeckViewer from "./pages/deckViewer";
 import Decks from "./pages/decks";
 import ProfileViewer from "./pages/profileViewer";
 import { ProtectedRoute } from "./components/protectedRoute";
+import Progress from "./pages/progress/progress_main";
 
 const router = createHashRouter([
   { path: "/", element: <SignUp /> },
@@ -58,6 +59,17 @@ const router = createHashRouter([
         <>
           <Navbar />
           <Social />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/progress",
+    element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <Progress />
         </>
       </ProtectedRoute>
     ),

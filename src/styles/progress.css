@@ -1,0 +1,144 @@
+@reference '../index.css';
+
+.progress-main {
+    @apply w-full h-full p-6 md:p-10 flex flex-row gap-6 overflow-auto;
+}
+
+.left-column {
+    @apply w-5/8;
+}
+
+.right-column {
+    @apply w-3/8;
+}
+
+.rank {
+    @apply shadow-small p-6 rounded-lg flex flex-col gap-4;
+}
+
+.profile-header {
+    @apply flex items-center gap-4 pb-4 border-b color-shadow;
+}
+
+.profile-pic {
+    @apply w-16 h-16 rounded-full object-cover border-2 color-shadow;
+}
+
+.profile-info {
+    @apply flex flex-col gap-1;
+}
+
+.profile-username {
+    @apply text-xl font-bold color-txt-main;
+}
+
+.profile-subtitle {
+    @apply text-sm color-txt-sub;
+}
+
+.rank-stats {
+    @apply grid grid-cols-2 gap-4 mt-4;
+}
+
+.rank-info, .xp-info {
+    @apply flex flex-col gap-1;
+}
+
+.rank-label, .xp-label {
+    @apply text-xs uppercase tracking-wide color-txt-sub;
+}
+
+.rank-name {
+    @apply text-2xl font-black color-txt-accent;
+}
+
+.xp-value {
+    @apply text-2xl font-black color-txt-main;
+}
+
+.todo-list {
+    @apply shadow-small p-6 rounded-lg;
+}
+
+.todo-title {
+    @apply text-lg font-semibold color-txt-main mb-4;
+}
+
+.todo-items {
+    @apply list-none flex flex-col gap-2;
+}
+
+.todo-item {
+    @apply flex items-center gap-3 p-3 border-b color-shadow cursor-pointer transition;
+}
+
+.todo-item.done {
+    @apply opacity-50;
+}
+
+.todo-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    @apply w-5 h-5 cursor-pointer border-2 color-shadow rounded;
+}
+
+.todo-checkbox:checked {
+    @apply color-cursor;
+}
+
+.todo-text {
+    @apply color-txt-sub flex-1;
+}
+
+.todo-item.done .todo-text {
+    @apply line-through;
+}
+
+.subject-progress {
+    @apply shadow-small p-6 rounded-lg flex flex-col gap-4;
+}
+
+.subject-title {
+    @apply text-lg font-bold color-txt-main;
+}
+
+.subject-circles {
+    @apply grid grid-cols-3 gap-4;
+}
+
+.subject-circle {
+    @apply flex flex-col items-center gap-2;
+}
+
+.circle-svg {
+    @apply transform -rotate-90;
+}
+
+.circle-bg-subject {
+    @apply fill-none stroke-current color-txt-sub opacity-20;
+    stroke-width: 16;
+}
+
+.circle-progress {
+    @apply fill-none transition-all duration-700 ease-out color-txt-accent;
+    stroke-width: 16;
+    stroke-linecap: round;
+    stroke: currentColor;
+}
+
+.circle-label {
+    @apply flex flex-col items-center gap-1;
+}
+
+.subject-percent {
+    @apply text-lg font-bold color-txt-main;
+}
+
+.subject-name {
+    @apply text-sm color-txt-sub;
+}
+
+.subject-progress {
+    @apply shadow-small p-6 rounded-lg mt-5;
+}
