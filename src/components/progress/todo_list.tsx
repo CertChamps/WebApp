@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { LuSquarePlus } from "react-icons/lu";
-import { collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, updateDoc, doc } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, updateDoc, doc } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
 

@@ -1,6 +1,6 @@
 import { useState, useContext, useEffect } from 'react';
 import { UserContext } from '../context/UserContext';
-import { updateDoc, doc } from 'firebase/firestore';
+import { updateDoc, doc, getDoc, setDoc, arrayUnion } from 'firebase/firestore';
 import { db }from '../../firebase'
 import correctSound from "../assets/sounds/Click-Bounce_Success.wav";
 import incorrectSound from "../assets/sounds/Click-Bounce_Failure.wav";
@@ -149,15 +149,75 @@ export default function useRank(props: rankProps) {
 
     // ======================================================================================= //
 
+    // ============================ TRACK COMPLETED QUESTIONS ============================ //
+    async function trackCompletedQuestion(questionId: string, tags: string[]) {
+        if (!user?.uid || !questionId || !tags?.length) return;
+
+        // Only track these main topics
+        const validTopics = [
+            "Algebra",
+            "Area & Volume",
+            "Calculus",
+            "Complex Numbers",
+            "Financial Maths",
+            "Coordinate Geometry",
+            "Probability",
+            "Sequences & Series",
+            "Statistics",
+            "Trigonometry",
+            "Geometry",
+            "First Year Algebra"
+        ];
+
+        // Filter tags to only include valid main topics
+        const mainTopics = tags.filter(tag => validTopics.includes(tag));
+        
+        if (mainTopics.length === 0) return;
+
+        try {
+            // For each main topic, check if question is already completed
+            for (const topic of mainTopics) {
+                const topicRef = doc(db, 'user-data', user.uid, 'completed-questions', topic);
+                const topicSnap = await getDoc(topicRef);
+
+                if (topicSnap.exists()) {
+                    const data = topicSnap.data();
+                    const completedIds = data?.questionIds || [];
+                    
+                    // Only add if not already completed
+                    if (!completedIds.includes(questionId)) {
+                        await updateDoc(topicRef, {
+                            questionIds: arrayUnion(questionId)
+                        });
+                    }
+                } else {
+                    // Create new topic doc with this question
+                    await setDoc(topicRef, {
+                        questionIds: [questionId],
+                        topic: topic
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Failed to track completed question", error);
+        }
+    }
+    // ================================================================================= //
+
     
     //===================================== Answer checking ===================================//
-    async function onCheck(inputs: any, answers: any) {
+    async function onCheck(inputs: any, answers: any, questionId?: string, tags?: string[]) {
           
         const ok = isCorrect(inputs, answers);
         
         // inside onCheck()
         if (ok) {
             playCorrectSound();
+
+            // Track completed question
+            if (questionId && tags) {
+                await trackCompletedQuestion(questionId, tags);
+            }
           
             setStreak((prevStreak: number) => {
               const newStreak = prevStreak + 1;

@@ -52,6 +52,7 @@ export default function Question(props: questionsProps) {
     //================================= State, Hooks, and Context ================================//
     const [content, setContent] = useState<any>()
     const [properties, setProperties] = useState<any>()
+    const [questionId, setQuestionId] = useState<string>('')
     const [part, setPart] = useState<number>(0) 
     const [inputs, setInputs] = useState<any[]>([])
 
@@ -109,8 +110,9 @@ export default function Question(props: questionsProps) {
           if (locked) return;
           const answers = content?.[part]?.answer ?? [];
           const correct = isCorrect(inputs, answers);
-          // still notify rank/xp system
-          onCheck(inputs, answers);
+          // Pass question ID and tags to track completion
+          const tags = properties?.tags ?? [];
+          onCheck(inputs, answers, questionId, tags);
           if (correct) {
             setAttempts(0);
             setCanReveal(true); // show the button
@@ -175,6 +177,7 @@ export default function Question(props: questionsProps) {
         // Set the question state 
         setContent(safeContent)
         setProperties(q.properties ?? {})
+        setQuestionId(q.id ?? '')
 
     }, [props.position, props.questions])
     //==========================================================================================//
