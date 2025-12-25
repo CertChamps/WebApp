@@ -2,6 +2,8 @@ import "../../styles/progress.css"
 import TodoList from "../../components/progress/todo_list"
 import SubjectProgress from "../../components/progress/subject_progress"
 import ProfileDisplay from "../../components/progress/profile_display"
+import StatsOverview from "../../components/progress/stats_overview"
+import DailyActivityChart from "../../components/progress/daily_activity_chart"
 
 const Progress = () => {
   return (
@@ -9,11 +11,13 @@ const Progress = () => {
         {/* ==================== THE LEFT COLUMN OF THE PAGE HERE ==================== */}
       <div className="left-column">
         <ProfileDisplay />
+        <StatsOverview />
         <SubjectProgress />
       </div>
       {/* ==================== THE RIGHT COLUMN OF THE PAGE HERE ==================== */}
       <div className="right-column">
         <TodoList />
+        <DailyActivityChart />
       </div>
     </div>
   );

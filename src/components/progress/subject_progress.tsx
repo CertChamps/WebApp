@@ -1,11 +1,11 @@
 import { useContext, useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
 
 const subject_progress = () => {
     const { user } = useContext(UserContext);
-    const [subjects, setSubjects] = useState<{ name: string; completed: number }[]>([]);
+    const [subjects, setSubjects] = useState<{ name: string; completed: number; total: number }[]>([]);
 
     const validTopics = [
         "Algebra",
@@ -26,25 +26,30 @@ const subject_progress = () => {
         if (!user?.uid) return;
 
         const fetchProgress = async () => {
-            const progressData: { name: string; completed: number }[] = [];
+            const progressData: { name: string; completed: number; total: number }[] = [];
 
             for (const topic of validTopics) {
                 try {
-                    const completedQuestionsRef = collection(
-                        db,
-                        "user-data",
-                        user.uid,
-                        "completed-questions"
+                    // Fetch completed count directly from topic document
+                    const completedDocRef = doc(db, "user-data", user.uid, "completed-questions", topic);
+                    const completedDocSnap = await getDoc(completedDocRef);
+                    const completed = completedDocSnap.exists() 
+                      ? (completedDocSnap.data()?.questionIds?.length || 0)
+                      : 0;
+
+                    // Fetch total available questions for this topic from certchamps-questions
+                    const totalSnap = await getDocs(
+                      query(
+                        collection(db, "certchamps-questions"),
+                        where("tags", "array-contains", topic)
+                      )
                     );
-                    const snapshot = await getDocs(completedQuestionsRef);
-                    
-                    const topicDoc = snapshot.docs.find(doc => doc.id === topic);
-                    const completed = topicDoc?.data()?.questionIds?.length || 0;
-                    
-                    progressData.push({ name: topic, completed });
+                    const total = totalSnap.size || 0;
+
+                    progressData.push({ name: topic, completed, total });
                 } catch (error) {
                     console.error(`Error fetching progress for ${topic}:`, error);
-                    progressData.push({ name: topic, completed: 0 });
+                    progressData.push({ name: topic, completed: 0, total: 0 });
                 }
             }
 
@@ -62,9 +67,9 @@ const subject_progress = () => {
           <h3 className="subject-title">Subject Progress</h3>
           <div className="subject-circles">
             {subjects.map((subject) => {
-              // Calculate progress based on completed questions (out of 100 questions per topic as example)
-              const maxQuestions = 100;
-              const progress = Math.min((subject.completed / maxQuestions) * 100, 100);
+              // Calculate progress based on actual total questions per topic
+              const total = subject.total > 0 ? subject.total : 0;
+              const progress = total > 0 ? Math.min(Math.round((subject.completed / total) * 100), 100) : 0;
               const offset = circumference - (progress / 100) * circumference;
               
               return (
@@ -88,7 +93,7 @@ const subject_progress = () => {
                     />
                   </svg>
                   <div className="circle-label">
-                    <span className="subject-percent">{subject.completed}</span>
+                    <span className="subject-percent">{progress}%</span>
                     <span className="subject-name">{subject.name}</span>
                   </div>
                 </div>

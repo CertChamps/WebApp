@@ -1,6 +1,6 @@
 import { useState, useContext, useEffect } from 'react';
 import { UserContext } from '../context/UserContext';
-import { updateDoc, doc, getDoc, setDoc, arrayUnion } from 'firebase/firestore';
+import { updateDoc, doc, getDoc, setDoc, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
 import { db }from '../../firebase'
 import correctSound from "../assets/sounds/Click-Bounce_Success.wav";
 import incorrectSound from "../assets/sounds/Click-Bounce_Failure.wav";
@@ -82,6 +82,63 @@ export default function useRank(props: rankProps) {
         setProgress(100);
 
     };
+    // ================================================================================= //
+
+    // ============================ LOG DAILY CORRECT ANSWER ============================ //
+    async function logDailyCorrectAnswer(tags?: string[]) {
+        try {
+            if (!user?.uid) return;
+
+            // Valid topics only (same list used in subject_progress)
+            const validTopics = [
+                "Algebra",
+                "Area & Volume",
+                "Calculus",
+                "Complex Numbers",
+                "Financial Maths",
+                "Coordinate Geometry",
+                "Probability",
+                "Sequences & Series",
+                "Statistics",
+                "Trigonometry",
+                "Geometry",
+                "First Year Algebra"
+            ];
+
+            const now = new Date();
+            const tzOffsetMinutes = now.getTimezoneOffset();
+            // Local midnight
+            const localMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            // Convert local midnight to UTC timestamp for ordering queries
+            const dayStartUtc = new Date(localMidnight.getTime() - tzOffsetMinutes * 60000);
+
+            // YYYY-MM-DD key in local time
+            const yyyy = localMidnight.getFullYear();
+            const mm = String(localMidnight.getMonth() + 1).padStart(2, '0');
+            const dd = String(localMidnight.getDate()).padStart(2, '0');
+            const dateKey = `${yyyy}-${mm}-${dd}`;
+
+            const dailyRef = doc(db, 'user-data', user.uid, 'daily-answers', dateKey);
+
+            // Build atomic increments
+            const updates: any = {
+                dateKey,
+                dayStartUtcTs: dayStartUtc,
+                tzOffsetMinutes,
+                updatedAt: serverTimestamp(),
+                totalCount: increment(1),
+            };
+
+            const filteredTopics = (tags || []).filter(t => validTopics.includes(t));
+            filteredTopics.forEach((t) => {
+                updates[`topics.${t}`] = increment(1);
+            });
+
+            await setDoc(dailyRef, updates, { merge: true });
+        } catch (err) {
+            console.error('Failed to log daily correct answer', err);
+        }
+    }
     // ================================================================================= //
 
     // ===================================== ADD XP ==================================== //
@@ -214,10 +271,12 @@ export default function useRank(props: rankProps) {
         if (ok) {
             playCorrectSound();
 
-            // Track completed question
+            // Track completed question (first-time only)
             if (questionId && tags) {
                 await trackCompletedQuestion(questionId, tags);
             }
+            // Always log daily activity (counts repeats as intended)
+            await logDailyCorrectAnswer(tags);
           
             setStreak((prevStreak: number) => {
               const newStreak = prevStreak + 1;
@@ -226,7 +285,8 @@ export default function useRank(props: rankProps) {
               // Update XP right here — using function form ensures both are in sync
               setXp((prevXp) => {
                 const updatedXp = prevXp + reward;
-                syncUserData({ xp: updatedXp, streak: newStreak });
+                                const newRecord = Math.max((user?.highestStreak ?? 0), newStreak);
+                                syncUserData({ xp: updatedXp, streak: newStreak, highestStreak: newRecord });
                 awardXP(reward);
                 return updatedXp;
               });

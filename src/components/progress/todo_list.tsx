@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
-import { LuSquarePlus } from "react-icons/lu";
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, updateDoc, doc } from "firebase/firestore";
+import { LuSquarePlus, LuTrash2 } from "react-icons/lu";
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
 
@@ -67,6 +67,17 @@ const todo_list = () => {
             console.error("Failed to add task", error);
         }
     };
+
+    const deleteTask = async (item: TodoItem) => {
+        setTodos((prev) => prev.filter((t) => t.id !== item.id));
+
+        try {
+            await deleteDoc(doc(db, "user-data", user.uid, "tasks", item.id));
+        } catch (error) {
+            console.error("Failed to delete task", error);
+            setTodos((prev) => [...prev, item]);
+        }
+    };
     
     return(   
         <div className="todo-list">
@@ -82,6 +93,13 @@ const todo_list = () => {
                         id={`todo-${item.id}`}
                     />
                     <span className="todo-text">{item.text}</span>
+                    <button 
+                        className="todo-delete-button"
+                        onClick={() => deleteTask(item)}
+                        title="Delete task"
+                    >
+                        <LuTrash2 size={16} strokeWidth={2} />
+                    </button>
                 </li>
                 ))}
             </ul>
