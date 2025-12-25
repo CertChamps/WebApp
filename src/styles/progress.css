@@ -1,5 +1,6 @@
 @reference '../index.css';
 
+/*==========MAIN PROGRESS ORGANIZATION STUFF===========*/
 .progress-main {
     @apply w-full h-full p-6 md:p-10 flex flex-row gap-6 overflow-auto;
 }
@@ -12,6 +13,8 @@
     @apply w-3/8;
 }
 
+
+/*=========PROFILE STUFF==========*/
 .rank {
     @apply shadow-small p-6 rounded-lg flex flex-col gap-4;
 }
@@ -56,6 +59,9 @@
     @apply text-2xl font-black color-txt-main;
 }
 
+
+
+/*===============TODO LIST STUFF================*/
 .todo-list {
     @apply shadow-small p-6 rounded-lg;
 }
@@ -95,6 +101,29 @@
     @apply line-through;
 }
 
+.todo-input {
+    @apply w-full color-shadow rounded color-txt-sub;
+}
+
+.todo-input:focus {
+    @apply outline-none;
+}
+
+.todo-adder {
+    @apply flex mt-4;
+}
+
+.todo-add-button {
+    @apply ml-2 px-4 py-2 rounded cursor-pointer transition color-txt-sub;
+}
+
+.todo-add-button:hover {
+    @apply color-txt-accent;
+}
+
+
+
+/*===============SUBJECT PROGRESS STUFF================*/
 .subject-progress {
     @apply shadow-small p-6 rounded-lg flex flex-col gap-4;
 }

@@ -1,28 +1,14 @@
 import "../../styles/progress.css"
-import { useState, useContext } from "react"
+import { useContext } from "react"
 import { UserContext } from "../../context/UserContext"
 import Rankbar from "../../components/rankbar"
-
-
-
-const todoItems = [
-  { id: 1, text: "Complete algebra section", done: false },
-  { id: 2, text: "Review quadratic equations", done: true },
-  { id: 3, text: "Practice word problems", done: false },
-  { id: 4, text: "Take mock quiz", done: false },
-];
-
+import TodoList from "../../components/progress/todo_list"
 
 
 export default function Progress() {
-
-    
-  const [todos, setTodos] = useState(todoItems);
   const { user } = useContext(UserContext)
 
-  const toggleTodo = (id: number) => {
-    setTodos(todos.map(t => t.id === id ? { ...t, done: !t.done } : t));
-  };
+  
 
   const rankNames = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master"];
   const currentRank = rankNames[user.rank] || "Unranked";
@@ -35,7 +21,6 @@ export default function Progress() {
 
   const radius = 50;
   const circumference = 2 * Math.PI * radius;
-
 
 
 
@@ -53,7 +38,7 @@ export default function Progress() {
             </div>
           </div>
 
-          <Rankbar rank={user.rank || 0} progress={user.progress || 0} />
+          <Rankbar rank={user.rank || 0} progress={user.questionStreak || 0} />
           
           <div className="rank-stats">
             <div className="rank-info">
@@ -104,23 +89,7 @@ export default function Progress() {
       </div>
       {/* ==================== THE RIGHT COLUMN OF THE PAGE HERE ==================== */}
       <div className="right-column">
-        <div className="todo-list">
-          <h3 className="todo-title">Todo-List</h3>
-          <ul className="todo-items">
-            {todos.map((item) => (
-              <li key={item.id} className={`todo-item ${item.done ? "done" : ""}`}>
-                <input
-                    type="checkbox"
-                    checked={item.done}
-                    onChange={() => toggleTodo(item.id)}
-                    className="todo-checkbox"
-                    id={`todo-${item.id}`}
-                />
-                <span className="todo-text">{item.text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <TodoList />
       </div>
     </div>
   );
