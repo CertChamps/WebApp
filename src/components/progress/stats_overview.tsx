@@ -41,7 +41,7 @@ const stats_overview = () => {
             <div className="stat-card">
                 <BarChart3 className="stat-icon" size={36} />
                 <div className="stat-content">
-                    <span className="stat-label">Total Correct Questions</span>
+                    <span className="stat-label">Liftime Correct Questions</span>
                     <span className="stat-value">{totalQuestions.toLocaleString()}</span>
                 </div>
             </div>

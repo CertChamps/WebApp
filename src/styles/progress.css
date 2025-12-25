@@ -87,7 +87,7 @@
 
 /*===============TODO LIST STUFF================*/
 .todo-list {
-    @apply shadow-small p-6 rounded-lg;
+    @apply shadow-small p-6 mt-6 rounded-lg;
 }
 
 .todo-title {
@@ -99,7 +99,7 @@
 }
 
 .todo-item {
-    @apply flex items-center gap-3 p-3 border-b color-shadow cursor-pointer transition;
+    @apply flex items-center gap-3 p-2 color-shadow cursor-pointer transition;
 }
 
 .todo-item.done {
@@ -129,12 +129,16 @@
     @apply w-full color-shadow rounded color-txt-sub;
 }
 
+.todo-input.todo-small-input {
+    @apply flex-0 w-20;
+}
+
 .todo-input:focus {
     @apply outline-none;
 }
 
 .todo-adder {
-    @apply flex mt-4;
+    @apply flex mt-4 pt-4 border-t color-shadow;
 }
 
 .todo-add-button {
@@ -210,7 +214,7 @@
 
 /*================ DAILY CHART ================*/
 .daily-chart {
-    @apply shadow-small p-6 rounded-lg mt-6 flex flex-col gap-4;
+    @apply shadow-small p-6 rounded-lg flex flex-col gap-4;
 }
 
 .daily-chart-header {
@@ -290,4 +294,69 @@
 
 .daily-bar-count {
     @apply text-sm font-bold color-txt-main;
+}
+
+/*================ EXAM TRACKER ================*/
+.exam-tracker {
+    @apply shadow-small p-6 rounded-lg mt-6 flex flex-col gap-4;
+}
+
+.exam-title {
+    @apply text-lg font-bold color-txt-main;
+}
+
+.exam-items {
+    @apply list-none flex flex-col gap-2;
+}
+
+.exam-item {
+    @apply flex items-center justify-between p-2 color-shadow cursor-pointer transition;
+}
+
+.exam-info {
+    @apply flex flex-row justify-between gap-4 flex-1 items-center;
+}
+
+.exam-name {
+    @apply color-txt-sub;
+}
+
+.exam-grade {
+    @apply color-txt-accent text-right;
+}
+
+.exam-delete-button {
+    @apply ml-auto px-2 py-1 rounded cursor-pointer transition color-txt-sub opacity-0;
+}
+
+.exam-item:hover .exam-delete-button {
+    @apply opacity-100 color-txt-accent;
+}
+
+.exam-delete-button:hover {
+    @apply color-txt-accent;
+}
+
+.exam-adder {
+    @apply flex gap-2 pt-4 border-t color-shadow;
+}
+
+.exam-input {
+    @apply flex-1 color-shadow rounded color-txt-sub px-3 py-2;
+}
+
+.exam-input.exam-grade-input {
+    @apply flex-0 w-20;
+}
+
+.exam-input:focus {
+    @apply outline-none;
+}
+
+.exam-add-button {
+    @apply px-4 py-2 rounded cursor-pointer transition color-txt-sub;
+}
+
+.exam-add-button:hover {
+    @apply color-txt-accent;
 }

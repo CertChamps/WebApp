@@ -4,6 +4,7 @@ import SubjectProgress from "../../components/progress/subject_progress"
 import ProfileDisplay from "../../components/progress/profile_display"
 import StatsOverview from "../../components/progress/stats_overview"
 import DailyActivityChart from "../../components/progress/daily_activity_chart"
+import ExamTracker from "../../components/progress/exam_tracker"
 
 const Progress = () => {
   return (
@@ -16,8 +17,9 @@ const Progress = () => {
       </div>
       {/* ==================== THE RIGHT COLUMN OF THE PAGE HERE ==================== */}
       <div className="right-column">
-        <TodoList />
         <DailyActivityChart />
+        <ExamTracker />
+        <TodoList />
       </div>
     </div>
   );
