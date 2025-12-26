@@ -168,13 +168,13 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
     // Validate deck name
     if (name.trim().length === 0) {
       newErrors.name = 'Deck name is required'
-    } else if (name.trim().length > 10) {
-      newErrors.name = 'Max 10 characters'
+    } else if (name.trim().length > 20) {
+      newErrors.name = 'Max 20 characters'
     }
 
     // Validate description
-    if (desc.length > 25) {
-      newErrors.description = 'Max 25 characters'
+    if (desc.length > 50) {
+      newErrors.description = 'Max 50 characters'
     }
 
     // Validate at least one question is selected

@@ -3,7 +3,7 @@ import { LuArrowLeft, LuTrash, LuPencil } from "react-icons/lu";
 
 // Hooks 
 import { useContext, useEffect, useState, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useStopwatch } from "../hooks/useStopwatch";
 import useDeckHandler from "../hooks/useDeckHandler";
 import useQuestions from "../hooks/useQuestions";
@@ -23,6 +23,7 @@ export default function DeckViewer () {
     const { getDeckbyID , saveProgress, getUsersDeckSaveData} = useDeckHandler()
     const { fetchQuestion } = useQuestions()
     const navigate = useNavigate()
+    const location = useLocation()
 
     const { user } = useContext(UserContext)
 
@@ -38,11 +39,6 @@ export default function DeckViewer () {
     // ============================ INITIALISATION ============================== //
     useEffect(() => {
 
-        // Automatically bring user to preview mode if does not own deck 
-        // if (!isPrev && !user?.decks?.some( (deck:any) => deck.id === id)) {
-        //     navigate(`/decks/${userID}/${id}/preview`);
-        // }
-
         // Initialise the Deck ========================
         const init_deck = async () => {
             try {
@@ -52,6 +48,12 @@ export default function DeckViewer () {
 
                 // get the User Save Data 
                 const saveData = await getUsersDeckSaveData(id, user?.uid)
+
+                // Redirect to preview only if user is NOT in usersAdded
+                if (!isPreviewMode && user?.uid && !saveData) {
+                    navigate(`/decks/${id}/preview`, { state: { fromPreview: true } })
+                    return
+                }
 
                 // Concatenate all data 
                 const init = {
@@ -89,7 +91,7 @@ export default function DeckViewer () {
 
         init_deck()
 
-    }, [])
+    }, [id, isPrev])
     // ========================================================================== // 
 
     // =============================== KEYPRESS ================================= //
@@ -181,9 +183,12 @@ export default function DeckViewer () {
             <DeckPreview 
                 deck={deck} 
                 questions={questions} 
+                deckId={id as string}
                 onBack={() => {
                     saveProgress([], id, secondsElapsed);
-                    navigate(-1);
+                    // Only navigate back 2 if the previous page in history contains "preview" (to avoid preview loop)
+                    const navigationSteps = location.state?.fromPreview ? -2 : -1;
+                    navigate(navigationSteps);
                     stop();
                 }}
             />

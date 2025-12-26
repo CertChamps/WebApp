@@ -146,8 +146,8 @@ export default function useFetch () {
             })
 
             // Add all decks where a user is Added 
-            const decksWithUser = await getDocs( query( collectionGroup(db, "addedUsers"), where("uid", "==", userID) ) )
-
+            const decksWithUser = await getDocs( query( collectionGroup(db, "usersAdded"), where("uid", "==", userID) ) )
+            console.log(decksWithUser.size, userID);
             // go through each added user doc to get parent deck info
             for (const addedUserDoc of decksWithUser.docs) {
                 const parentDeckRef = addedUserDoc.ref.parent.parent; // Get reference to the parent deck\
@@ -165,15 +165,20 @@ export default function useFetch () {
                 }
             }
 
+            // Deduplicate decks by ID
+            const uniqueDecks = Array.from(
+                new Map(userDecks.map((deck: any) => [deck.id, deck])).values()
+            );
+
             // Sort combined decks by timestamp, newest first
-            userDecks.sort((a: any, b: any) => {
+            uniqueDecks.sort((a: any, b: any) => {
                 const aTime = a.timestamp?.seconds || 0;
                 const bTime = b.timestamp?.seconds || 0;
                 return bTime - aTime;
             });
 
             // Return all decks 
-            return userDecks;
+            return uniqueDecks;
 
         }
         catch ( err ) {

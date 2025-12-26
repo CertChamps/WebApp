@@ -1,19 +1,26 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useContext } from "react"
+import { useNavigate } from "react-router-dom"
 import RenderMath from "../math/mathdisplay"
 import { LuArrowLeft } from "react-icons/lu"
 import useFetch from "../../hooks/useFetch"
+import { UserContext } from "../../context/UserContext"
+import useDeckHandler from "../../hooks/useDeckHandler"
 
 type DeckPreviewProps = {
     deck?: any
     questions?: any[]
     onBack?: () => void
+    deckId?: string
 }
 
-export default function DeckPreview({ deck, questions, onBack }: DeckPreviewProps) {
+export default function DeckPreview({ deck, questions, onBack, deckId }: DeckPreviewProps) {
     const [collapsed, setCollapsed] = useState(false)
+    const navigate = useNavigate()
     const totalQuestions = questions?.length ?? deck?.questions?.length ?? 0
     const { fetchUsernameByID } = useFetch()
     const [creatorName, setCreatorName] = useState<string>("")
+    const { user } = useContext(UserContext)
+    const { addtoDecks } = useDeckHandler()
     const toRoman = (n: number) => {
         const map = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"]
         return map[n] ?? `${n}`
@@ -66,9 +73,12 @@ export default function DeckPreview({ deck, questions, onBack }: DeckPreviewProp
                         <p className="txt-heading-colour leading-relaxed">{deck.description || "No description provided."}</p>
                     </div>
 
-                    <div className="blue-btn text-center py-2 h-8 flex items-center justify-center cursor-pointer" onClick={() => {
-                        // addtoDecks(deck.name, deck.description, deck.questions);
-                        // navigate('/practice')
+                    <div className="blue-btn text-center py-2 h-8 flex items-center justify-center cursor-pointer" onClick={async () => {
+                        if (!user?.uid) return
+                        const targetId = deckId ?? deck?.id
+                        if (!targetId) return
+                        await addtoDecks(targetId, user.uid);
+                        navigate(`/decks/${targetId}`);
                     }}>Add to "My Decks"</div>
        
                 </div>
@@ -87,38 +97,45 @@ export default function DeckPreview({ deck, questions, onBack }: DeckPreviewProp
                         </div>
                     </div>
 
-                    {!collapsed ? (
-                        <div className="flex flex-col gap-4 max-h-[420px] overflow-auto pr-1 scrollbar-minimal">
-                            {questions?.length ? questions.map((q, idx) => {
-                                const parts = Array.isArray(q?.content) ? q.content : []
-                                return (
-                                    <div key={q?.id ?? idx} className="rounded-lg border color-shadow color-bg p-4 shadow-small">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="txt-sub">Q{idx + 1}</span>
-                                            <span className="txt-sub">{q?.properties?.name || "Untitled question"}</span>
-                                        </div>
-                                        <div className="flex flex-col gap-3">
-                                            {parts.length ? parts.map((p: any, partIdx: number) => (
-                                                <div key={partIdx} className="flex gap-3 items-start">
-                                                    {parts.length > 1 ? <span className="txt-sub min-w-[28px] lowercase">{toRoman(partIdx + 1)}</span> : null}
-                                                    <RenderMath text={p?.question ?? ""} className="txt leading-relaxed" />
-                                                </div>
-                                            )) : <RenderMath text={"No question text"} className="txt-heading-colour" />}
-                                        </div>
-                                        {q?.properties?.tags?.length ? (
-                                            <div className="flex flex-wrap gap-2 mt-3">
-                                                {q.properties.tags.map((tag: string) => (
-                                                    <span key={tag} className="px-2 py-1 rounded-full color-bg-grey-10 txt-sub text-xs">{tag}</span>
-                                                ))}
+                        <div
+                            className="overflow-hidden transition-all duration-300 ease-out"
+                            style={{
+                                maxHeight: collapsed ? 0 : 420,
+                                opacity: collapsed ? 0 : 1,
+                                pointerEvents: collapsed ? "none" : "auto"
+                            }}
+                        >
+                            <div className="flex flex-col gap-4 max-h-[420px] overflow-auto pr-1 scrollbar-minimal">
+                                {questions?.length ? questions.map((q, idx) => {
+                                    const parts = Array.isArray(q?.content) ? q.content : []
+                                    return (
+                                        <div key={q?.id ?? idx} className="rounded-lg border color-shadow color-bg p-4 shadow-small">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="txt-sub">Q{idx + 1}</span>
+                                                <span className="txt-sub">{q?.properties?.name || "Untitled question"}</span>
                                             </div>
-                                        ) : null}
-                                    </div>
-                                )
-                            }) : (
-                                <span className="txt-sub">No questions available yet.</span>
-                            )}
+                                            <div className="flex flex-col gap-3">
+                                                {parts.length ? parts.map((p: any, partIdx: number) => (
+                                                    <div key={partIdx} className="flex gap-3 items-start">
+                                                        {parts.length > 1 ? <span className="txt-sub min-w-[28px]">Part {toRoman(partIdx + 1)}</span> : null}
+                                                        <RenderMath text={p?.question ?? ""} className="txt leading-relaxed" />
+                                                    </div>
+                                                )) : <RenderMath text={"No question text"} className="txt-heading-colour" />}
+                                            </div>
+                                            {q?.properties?.tags?.length ? (
+                                                <div className="flex flex-wrap gap-2 mt-3">
+                                                    {q.properties.tags.map((tag: string) => (
+                                                        <span key={tag} className="px-2 py-1 rounded-full color-bg-grey-10 txt-sub text-xs">{tag}</span>
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    )
+                                }) : (
+                                    <span className="txt-sub">No questions available yet.</span>
+                                )}
+                            </div>
                         </div>
-                    ) : null}
                 </div>
             </div>
         </div>

@@ -31,13 +31,8 @@ export default function DeckCard({ deck, questionId, onAddQuestion, className }:
 
 		if (!user?.uid) return
 
-		if (deck.createdBy !== user.uid) {
-			navigate(`/decks/${deck.id}/preview`)
-			return
-		}
-		else {
 		navigate(`/decks/${deck.id}`)
-		}
+
 	}
 
 	const createdDate = deck.timestamp?.seconds

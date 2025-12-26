@@ -122,30 +122,16 @@ const useDeckHandler = () => {
     //===========================================================================================================// 
 
     //========================================ADDING DECKS TO PERSONAL COLLECTION=================================================// 
-    const addtoDecks = async (name: any, description: any, questions: string[], visibility: boolean, color: string) => {
+    const addtoDecks = async (deckID: string, userID: string ) => {
 
         try {
-
-            // Add the deck to the database 
-            const docRef = await addDoc(collection(db, 'decks'), {
-                name, 
-                description, 
-                questions,
-                visibility,
-                color,
-                timestamp: Timestamp.now(),
-                createdBy: user.uid
-            });
-
-            const docID = docRef.id;    
-            
-            // Add the user who added the deck to the usersAdded subcollection
-            await addDoc(collection(db, 'decks', docID, 'usersAdded'), {
-                uid: user.uid,
+            await setDoc( doc(db, 'decks', deckID, 'usersAdded', userID), {
+                uid: userID,
                 timestamp: Timestamp.now(),
                 questionsCompleted: [],
-                timeElapsed: 0
-            }); 
+                timeElapsed: 0,
+                favourited: false
+            } )
             
         } catch (err) {
             console.log(err)
