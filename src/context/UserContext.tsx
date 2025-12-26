@@ -17,6 +17,7 @@ export type UserContextType = {
     savedQuestions: any[],
     decks: any[],
     streak: number,
+    highestStreak: number,
     },
     setUser: React.Dispatch<React.SetStateAction<any>>
 }
@@ -37,6 +38,7 @@ export const UserContext = createContext<UserContextType>({
     savedQuestions: [],
     decks: [],
     streak: 0,
+    highestStreak: 0,
     },
     setUser: () => {}
 })

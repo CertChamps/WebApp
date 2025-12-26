@@ -21,6 +21,7 @@
     "fuse.js": "^7.1.0",
     "katex": "^0.16.22",
     "lottie-react": "^2.4.1",
+    "lucide-react": "^0.562.0",
     "magicmouse.js": "^2.0.0",
     "mathlive": "^0.106.0",
     "nerdamer": "^1.1.13",

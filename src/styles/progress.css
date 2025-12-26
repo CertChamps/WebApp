@@ -1,5 +1,6 @@
 @reference '../index.css';
 
+/*==========MAIN PROGRESS ORGANIZATION STUFF===========*/
 .progress-main {
     @apply w-full h-full p-6 md:p-10 flex flex-row gap-6 overflow-auto scrollbar-minimal;
 }
@@ -12,6 +13,8 @@
     @apply w-3/8;
 }
 
+
+/*=========PROFILE STUFF==========*/
 .rank {
     @apply shadow-small p-6 rounded-lg flex flex-col gap-4;
 }
@@ -56,8 +59,35 @@
     @apply text-2xl font-black color-txt-main;
 }
 
+/*===============STATS OVERVIEW STUFF================*/
+.stats-overview {
+    @apply shadow-small p-6 rounded-lg mt-6 grid grid-cols-3 gap-4;
+}
+
+.stat-card {
+    @apply flex items-center gap-3 p-4 rounded-lg color-shadow transition-all;
+}
+
+.stat-icon {
+    @apply text-3xl color-txt-accent flex-shrink-0;
+}
+
+.stat-content {
+    @apply flex flex-col gap-1;
+}
+
+.stat-label {
+    @apply text-xs uppercase tracking-wide color-txt-sub;
+}
+
+.stat-value {
+    @apply text-2xl font-black color-txt-main;
+}
+
+
+/*===============TODO LIST STUFF================*/
 .todo-list {
-    @apply shadow-small p-6 rounded-lg;
+    @apply shadow-small p-6 mt-6 rounded-lg;
 }
 
 .todo-title {
@@ -69,7 +99,7 @@
 }
 
 .todo-item {
-    @apply flex items-center gap-3 p-3 border-b color-shadow cursor-pointer transition;
+    @apply flex items-center gap-3 p-2 color-shadow cursor-pointer transition;
 }
 
 .todo-item.done {
@@ -95,6 +125,45 @@
     @apply line-through;
 }
 
+.todo-input {
+    @apply w-full color-shadow rounded color-txt-sub;
+}
+
+.todo-input.todo-small-input {
+    @apply flex-0 w-20;
+}
+
+.todo-input:focus {
+    @apply outline-none;
+}
+
+.todo-adder {
+    @apply flex mt-4 pt-4 border-t color-shadow;
+}
+
+.todo-add-button {
+    @apply ml-2 px-4 py-2 rounded cursor-pointer transition color-txt-sub;
+}
+
+.todo-add-button:hover {
+    @apply color-txt-accent;
+}
+
+.todo-delete-button {
+    @apply ml-auto px-2 py-1 rounded cursor-pointer transition color-txt-sub opacity-0 group-hover:opacity-100;
+}
+
+.todo-item:hover .todo-delete-button {
+    @apply opacity-100 color-txt-accent;
+}
+
+.todo-delete-button:hover {
+    @apply color-txt-accent;
+}
+
+
+
+/*===============SUBJECT PROGRESS STUFF================*/
 .subject-progress {
     @apply shadow-small p-6 rounded-lg flex flex-col gap-4;
 }
@@ -104,7 +173,7 @@
 }
 
 .subject-circles {
-    @apply grid grid-cols-3 gap-4;
+    @apply grid grid-cols-6 gap-4;
 }
 
 .subject-circle {
@@ -141,4 +210,153 @@
 
 .subject-progress {
     @apply shadow-small p-6 rounded-lg mt-5;
+}
+
+/*================ DAILY CHART ================*/
+.daily-chart {
+    @apply shadow-small p-6 rounded-lg flex flex-col gap-4;
+}
+
+.daily-chart-header {
+    @apply flex items-center justify-between;
+}
+
+.daily-chart-title {
+    @apply text-lg font-bold color-txt-main;
+}
+
+.daily-chart-controls {
+    @apply flex items-center gap-3;
+}
+
+.daily-chart-subtitle {
+    @apply text-xs color-txt-sub;
+}
+
+.daily-chart-dropdown {
+    @apply px-3 py-1 text-sm rounded cursor-pointer transition color-txt-sub font-bold;
+}
+
+.daily-chart-dropdown:hover {
+    @apply color-bg-grey-5;
+}
+
+.daily-chart-dropdown:focus {
+    @apply outline-none;
+}
+
+.daily-chart-container {
+    @apply flex justify-between items-end gap-2 h-48 flex-nowrap;
+}
+
+.daily-chart-container.month-view {
+    @apply flex-wrap h-auto gap-1;
+}
+
+.daily-bar-group {
+    @apply flex flex-col items-center gap-2 flex-1 h-full;
+}
+
+.daily-chart-container.month-view .daily-bar-group {
+    @apply h-30;
+    flex: 0 0 calc(10% - 0.5rem);
+}
+
+.daily-chart-container.month-view .daily-bar-label {
+    @apply text-[10px];
+}
+
+.daily-chart-container.month-view .daily-bar-count {
+    @apply text-[10px];
+}
+
+.daily-bar-container {
+    @apply w-full flex items-end justify-center rounded-md color-bg-grey-5;
+    height: 100%;
+}
+
+.daily-chart-container.month-view .daily-bar-container {
+    @apply px-0;
+}
+
+.daily-bar {
+    @apply w-full rounded-t transition-all duration-300 ease-out color-bg-accent;
+    min-height: 4px;
+}
+
+.daily-chart-container.month-view .daily-bar {
+    @apply w-full;
+}
+
+.daily-bar-label {
+    @apply text-xs font-medium color-txt-sub;
+}
+
+.daily-bar-count {
+    @apply text-sm font-bold color-txt-main;
+}
+
+/*================ EXAM TRACKER ================*/
+.exam-tracker {
+    @apply shadow-small p-6 rounded-lg mt-6 flex flex-col gap-4;
+}
+
+.exam-title {
+    @apply text-lg font-bold color-txt-main;
+}
+
+.exam-items {
+    @apply list-none flex flex-col gap-2;
+}
+
+.exam-item {
+    @apply flex items-center justify-between p-2 color-shadow cursor-pointer transition;
+}
+
+.exam-info {
+    @apply flex flex-row justify-between gap-4 flex-1 items-center;
+}
+
+.exam-name {
+    @apply color-txt-sub;
+}
+
+.exam-grade {
+    @apply color-txt-accent text-right;
+}
+
+.exam-delete-button {
+    @apply ml-auto px-2 py-1 rounded cursor-pointer transition color-txt-sub opacity-0;
+}
+
+.exam-item:hover .exam-delete-button {
+    @apply opacity-100 color-txt-accent;
+}
+
+.exam-delete-button:hover {
+    @apply color-txt-accent;
+}
+
+.exam-adder {
+    @apply flex gap-2 pt-4 border-t color-shadow;
+}
+
+.exam-input {
+    @apply flex-1 color-shadow rounded color-txt-sub px-3 py-2;
+}
+
+.exam-input.exam-grade-input {
+    @apply flex-0 w-20;
+}
+
+.exam-input:focus {
+    @apply outline-none;
+}
+
+.exam-add-button {
+    @apply px-4 py-2 rounded cursor-pointer transition color-txt-sub;
+}
+
+.exam-add-button:hover {
+    @apply color-txt-accent;
 }
