@@ -34,7 +34,7 @@ const LogTables = ({ pgNumber }: QuestionType) => {
 
   return (
     <div
-      className="flex flex-col items-start overflow-y-auto border-2 color-shadow"
+      className="flex flex-col items-start overflow-y-auto scrollbar-minimal border-2 color-shadow"
       style={{ height: "80vh", width: "650px" }}
     >
       <Document

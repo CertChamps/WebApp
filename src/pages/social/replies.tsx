@@ -61,7 +61,7 @@ export default function Replies(
 
   return (
     <div className="w-h-container p-4 pb-0 items-start">
-      <div className="w-full h-full overflow-y-scroll">
+      <div className="w-full h-full overflow-y-scroll scrollbar-minimal">
 
 
         {/* ============================================== OG POST ============================================== */}

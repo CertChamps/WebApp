@@ -36,7 +36,7 @@ const MarkingScheme = ({ year, pgNumber }: QuestionType) => {
 
   return (
     <div
-      className="flex flex-col items-start overflow-y-auto color-shadow"
+      className="flex flex-col items-start overflow-y-auto scrollbar-minimal color-shadow"
       style={{ height: "80vh", width: "650px" }}
     >
       <Document

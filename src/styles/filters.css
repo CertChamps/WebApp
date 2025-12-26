@@ -2,14 +2,14 @@
 
 .filter-container-shown {
     @apply w-[50vh] h-auto rounded-out border-2  color-shadow absolute bottom-[100%] color-bg
-    z-100 p-2 max-h-[80vh] overflow-y-scroll 
+    z-100 p-2 max-h-[80vh] overflow-y-scroll scrollbar-minimal 
     transform origin-bottom-left scale-100  opacity-100 pointer-events-auto
     duration-250 transition-all;
 }
 
 .filter-container-hidden {
     @apply w-[50vh] h-auto rounded-out border-2  color-shadow absolute bottom-[100%] color-bg
-    z-100 p-2 max-h-[80vh] overflow-y-scroll 
+    z-100 p-2 max-h-[80vh] overflow-y-scroll scrollbar-minimal 
     transform origin-bottom-left scale-0 opacity-0 pointer-events-none 
     duration-250 transition-all overflow-hidden
 }

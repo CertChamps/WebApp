@@ -138,7 +138,7 @@ export default function Settings() {
 
 
     return (
-        <div className="p-4 w-full h-full overflow-y-scroll">        
+        <div className="p-4 w-full h-full overflow-y-scroll scrollbar-minimal">        
 
         {/* ====================================== HEADING ========================================= */}
         <div>

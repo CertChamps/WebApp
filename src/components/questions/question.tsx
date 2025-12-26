@@ -1,5 +1,5 @@
 // Icons 
-import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuArrowLeft, LuArrowRight, LuSearch, LuTimer } from "react-icons/lu";
+import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuArrowLeft, LuArrowRight, LuSearch, LuTimer, LuListOrdered} from "react-icons/lu";
 import { TbCards } from "react-icons/tb";
 
 // Hooks 
@@ -19,6 +19,7 @@ import LogTables from "../../components/logtables"
 import MarkingScheme from "../../components/marking_scheme"
 import Timer from "../../components/timer"
 import QSearch from "./qSearch";
+import ViewQuestionsList from "./viewQuestionsList";
 import RankBar from "../../components/rankbar";
 import AnswerNoti from "../math/answerNoti";
 import StreakDisplay from "../streakDisplay";
@@ -45,6 +46,8 @@ type questionsProps = {
     deckmode?: boolean;
     preview?: boolean;
     setFilters: React.Dispatch<React.SetStateAction<any>>;
+    onQuestionAnswered?: (questionId: string, isCorrect: boolean) => void;
+    questionsAnswered?: any;
 };
 
 export default function Question(props: questionsProps) {
@@ -61,7 +64,7 @@ export default function Question(props: questionsProps) {
         // console.log(isCorrect(inputs, content?.[part]?.answer))
     }, [inputs])
 
-    const [ sideView, setSideView ] = useState<string>('')
+    const [ sideView, setSideView ] = useState<string>(props.deckmode ? 'viewQuestions' : '')  // filters | viewQuestions | ''  
     const [ showSearch, setShowSearch ] = useState<boolean>(false)
 
     const { toRoman } = useQuestions()
@@ -83,7 +86,15 @@ export default function Question(props: questionsProps) {
     >([]);
 
     const rankRef = useRef<HTMLDivElement>(null);
-    const { rank, progress, streak, onCheck } = useRank({rankRef, setIsRight, setShowNoti, xpFlyers, setXpFlyers});
+    const { rank, progress, streak, onCheck } = useRank({
+        rankRef, 
+        setIsRight, 
+        setShowNoti, 
+        xpFlyers, 
+        setXpFlyers,
+        questionId: props.questions[props.position]?.id,
+        onQuestionAnswered: props.onQuestionAnswered
+    });
 
     const { user } = useContext(UserContext)
     const [attempts, setAttempts] = useState(0);
@@ -315,7 +326,7 @@ export default function Question(props: questionsProps) {
                 ✕
               </button>
             </div>
-            <div className="flex-1 overflow-auto p-3 flex items-center justify-center">
+            <div className="flex-1 overflow-auto scrollbar-minimal p-3 flex items-center justify-center">
               <MarkingScheme year="25" pgNumber="1" />
             </div>
             <div className="flex justify-end gap-3 p-3">
@@ -398,7 +409,7 @@ export default function Question(props: questionsProps) {
 
 
             {/* ============================== QUESTION CONTENT =========================== */}
-            <div className="w-full h-3/4 overflow-y-auto px-2 py-2">
+            <div className="w-full h-3/4 overflow-y-auto scrollbar-minimal px-2 py-2">
                 <RenderMath text={content?.[part]?.question ?? ''} className="txt text-xl" />
                 {content?.[part]?.image &&
                 <div className="w-100 h-auto relative">
@@ -554,6 +565,17 @@ export default function Question(props: questionsProps) {
                 <SharePanel/>
             </div>
         ) : null}
+
+        {sideView === 'viewQuestions' ? (
+          <div className="h-full w-5/12 overflow-hidden">
+            <ViewQuestionsList
+              questions={props.questions}
+              currentIndex={props.position}
+              onSelect={(idx) => props.setPosition?.(idx)}
+              questionsAnswered={props.questionsAnswered}
+            />
+          </div>
+        ) : null}
         {/* ====================================================================================== */}    
         </div>
 
@@ -562,7 +584,22 @@ export default function Question(props: questionsProps) {
         <div className="flex w-full justify-center items-center rounded-r-out h-auto z">
 
             <div className="color-bg-grey-5 mx-4 w-10 h-10 flex items-center group relative 
-                justify-center rounded-full hover:scale-95 duration-250 transition-all">
+                justify-center rounded-full hover:scale-95 duration-250 transition-all"
+                onClick={() => {
+                    setInputs([]);
+
+                    // Previous part if available
+                    if (part > 0) {
+                        setPart((p) => p - 1);
+                        return;
+                    }
+
+                    // Otherwise ask parent to move to the previous question
+                    const prevIndex = props.position - 1;
+                    if (prevIndex >= 0) {
+                        props.setPosition(prevIndex);
+                    }
+                }}>
                 <LuArrowLeft strokeWidth={strokewidth} size={32} className="color-txt-sub"/>
 
                 <span className="tooltip">previous</span>
@@ -677,7 +714,26 @@ export default function Question(props: questionsProps) {
             </div>
             {/* ================================================================================ */}
 
-            {/* =============================== SEARCH ICON ================================= */}
+            {props.deckmode ? (
+            /* =============================== VIEW QUESTIONS ICON (DECK ONLY) ================================= */
+            <div className={sideView == 'viewQuestions' ? 'sidebar-selected group' : 'sidebar group'} 
+              onClick={() => {
+                setSideView((prev) => {
+                  if (prev !== 'viewQuestions') return 'viewQuestions';
+                  return '';
+                });
+                setShowSearch(false);
+              }}
+            >
+              <LuListOrdered strokeWidth={strokewidth} size={iconSize} 
+                className={sideView == 'viewQuestions' ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
+                fill={sideView == 'viewQuestions' ? 'currentColor' : 'none'} />
+
+               <span className="tooltip">view questions</span>
+            </div>
+            /* ================================================================================ */
+              ):(
+            /* =============================== SEARCH ICON ================================= */
             <div className={showSearch ? 'sidebar-selected group' : 'sidebar group'} 
                 onClick={() => {
                     setShowSearch( v => !v)
@@ -689,8 +745,8 @@ export default function Question(props: questionsProps) {
 
                  <span className="tooltip">search</span>
             </div>
-            {/* ================================================================================ */}
-            
+            /* ================================================================================ */
+              )}
             </div>
 
             <div className="color-bg-grey-5 mx-4 w-10 h-10 flex items-center group relative 
@@ -703,8 +759,20 @@ export default function Question(props: questionsProps) {
                     return;
                     }
                 
-                    // Otherwise ask parent to move to the next question
+                    // For deck mode, skip correct answers
+                    if (props.deckmode && props.questionsAnswered) {
+                        let nextIndex = props.position + 1;
+                        while (nextIndex < (props.questions?.length ?? 0)) {
+                            const nextQuestionId = props.questions[nextIndex]?.id;
+                            if (!props.questionsAnswered[nextQuestionId]) {
+                                props.setPosition(nextIndex);
+                                return;
+                            }
+                            nextIndex++;
+                        }
+                    }
                     
+                    // Otherwise ask parent to move to the next question
                     props.nextQuestion();
                 }}
                 >

@@ -199,7 +199,7 @@ const QThread = (props: questionType) => {
     // min-h-0 is important so in a flex parent the child is allowed to be smaller than content.
     <div className="h-full min-h-0 flex flex-col">
       {/* Replies list: flex-1 and overflow-auto so it scrolls without expanding parent */}
-      <div className="mx-auto max-w-3xl w-full  px-3 pt-2 flex-1 overflow-auto">
+      <div className="mx-auto max-w-3xl w-full  px-3 pt-2 flex-1 overflow-auto scrollbar-minimal">
         {replies.map((post) => (
           <SubReplies
             key={post.id}

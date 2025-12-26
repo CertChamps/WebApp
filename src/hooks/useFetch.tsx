@@ -1,11 +1,16 @@
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
+import { useContext } from "react";
+import { UserContext } from "../context/UserContext";
 import { db  }from '../../firebase'
-import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where, collectionGroup, orderBy} from 'firebase/firestore';
 
 export default function useFetch () {
 
     // Initalise Storage
     const storage = getStorage()
+
+    // get user context 
+    const {user} = useContext(UserContext)
 
     // ============================ FIREBASE STORAGE GET IMAGE FROM PATH ==================== //
     const fetchImage = async (path: string) => {
@@ -85,6 +90,24 @@ export default function useFetch () {
     }
     // ====================================================================================== //
 
+    
+    // =============================== FIREBASE GET ALL USER FRIENDS ======================== //
+    const fetchUsernameByID = async (id: any, customprops?: any) => {
+        try {
+
+            // get the user data
+            const userData = (await getDoc(doc(db, 'user-data', id))).data()
+
+            return userData?.username || "Unknown User"
+            
+        }
+        catch ( err ) {
+            console.log(err) 
+            return null
+        }
+    }
+    // ====================================================================================== //
+
     // =============================== FIREBASE GET ALL USER DECKS ========================== //
     const fetchDecks = async (id: any) => {
         try {
@@ -106,9 +129,83 @@ export default function useFetch () {
     }
     // ====================================================================================== //
 
+    // ============================= FETCH ALL USER DECKS =================================== //
+    const fetchUserDecks = async (userID: any) => {
+        try {
+            // Initalise empty array
+            const userDecks = [];  
+
+            // Add all decks created by user to array
+            const decksByUser = await getDocs( query( collection(db, "decks"), where("createdBy", "==", userID), orderBy("timestamp", "desc") ) )
+            decksByUser.forEach( (deckDoc)  => {
+                // add to the decks array 
+                userDecks.push({
+                    id: deckDoc.id, 
+                    ...deckDoc.data()
+                })
+            })
+
+            // Add all decks where a user is Added 
+            const decksWithUser = await getDocs( query( collectionGroup(db, "addedUsers"), where("uid", "==", userID) ) )
+
+            // go through each added user doc to get parent deck info
+            for (const addedUserDoc of decksWithUser.docs) {
+                const parentDeckRef = addedUserDoc.ref.parent.parent; // Get reference to the parent deck\
+
+                if (parentDeckRef) {
+                    const parentDeckDoc = await getDoc(parentDeckRef); // get parent deck document
+
+                    if (parentDeckDoc.exists()) {
+                        // add to the decks array 
+                        userDecks.push({
+                            id: parentDeckDoc.id,
+                            ...parentDeckDoc.data()
+                        });
+                    }
+                }
+            }
+
+            // Sort combined decks by timestamp, newest first
+            userDecks.sort((a: any, b: any) => {
+                const aTime = a.timestamp?.seconds || 0;
+                const bTime = b.timestamp?.seconds || 0;
+                return bTime - aTime;
+            });
+
+            // Return all decks 
+            return userDecks;
+
+        }
+        catch ( err ) {
+            console.log(err) 
+            return null;
+        }
+    }
+
+    const fetchPublicDecks = async () => {
+        try {
+            // Initalise empty array
+            const publicDecks: { id: any; }[] = [];  
+
+            // Add all decks created by user to array
+            const publicDeck = await getDocs( query( collection(db, "decks"), where("visibility", "==", true), /*where("createdBy", "!=", user.uid),*/ orderBy("timestamp", "desc") ) )
+            publicDeck.forEach( (deckDoc)  => {
+                // add to the decks array 
+                publicDecks.push({
+                    id: deckDoc.id, 
+                    ...deckDoc.data()
+                })
+            })
+
+            return publicDecks; 
+        }
+        catch ( err ) {
+            console.log(err) 
+            return null; 
+        }
+    }
     // =============================== FIREBASE GET ALL USER DECKS ========================== //
     const fetchPost = async (id: any) => {
-
         try {
             // initialise post Data 
             const postSnap = (await getDoc(doc(db, "posts", id)) )
@@ -136,6 +233,6 @@ export default function useFetch () {
     // ====================================================================================== //
 
 
-    return { fetchImage, fetchFriends, fetchUser, fetchDecks, fetchPost }
+    return { fetchImage, fetchFriends, fetchUser, fetchDecks, fetchUserDecks, fetchPublicDecks, fetchPost, fetchUsernameByID }
 
 }

@@ -15,9 +15,21 @@ export default function Navbar () {
 
     // Context and State and Hooks
     const { user } = useContext(UserContext)
-    const [page, setPage ]= useState<string>('practice')
     const navigate = useNavigate()
     const location = useLocation()
+
+    const derivePageFromPath = (path: string) => {
+        if (path.startsWith('/decks')) return 'decks'
+        if (path.startsWith('/social')) return 'social/social'
+        if (path.startsWith('/progress')) return 'progress'
+        if (path.startsWith('/user/settings')) return 'user/settings'
+        if (path.startsWith('/games')) return 'games'
+        if (path.startsWith('/practice')) return 'practice'
+        if (path.startsWith('/post')) return 'social/social'
+        return 'practice'
+    }
+
+    const [page, setPage ]= useState<string>(() => derivePageFromPath(location.pathname))
 
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //
     const pageNaviagte = (page: string) => {
@@ -31,11 +43,7 @@ export default function Navbar () {
     } 
 
     useEffect(() => {
-        const path = location.pathname
-        if (path.startsWith('/progress')) setPage('progress')
-        else if (path.startsWith('/social')) setPage('social/social')
-        else if (path.startsWith('/user/settings')) setPage('user/settings')
-        else setPage('practice')
+        setPage(derivePageFromPath(location.pathname))
     }, [location.pathname])
 
     return (

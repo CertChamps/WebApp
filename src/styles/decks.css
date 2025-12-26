@@ -1,5 +1,10 @@
 @reference '../index.css';
 
+.topBar {
+    @apply w-1/3 h-16 flex items-center 
+           px-6 gap-4  mx-auto
+}
+
 .new-deck {
     @apply shadow-small w-full p-2 cursor-pointer hover:scale-[97%] duration-200 transition-all ease-in-out
 }
@@ -13,9 +18,17 @@
 }
 
 .color-strip {
-    @apply w-2 h-full rounded-l-in absolute left-0 top-0
+    @apply h-1 w-full absolute left-0 top-0 rounded-t-in
 }
 
 .deck {
-    @apply shadow-small mb-3 py-2 px-4 relative hover:scale-[97%] duration-200 transition-all ease-in-out
+    @apply shadow-small w-[24%] min-w-sm cursor-pointer h-32 flex-shrink-0 py-2 px-4 relative hover:scale-[97%] duration-200 transition-all ease-in-out
+}
+
+.deck-grid {
+    @apply flex flex-row gap-4  h-auto overflow-x-auto pb-4 scrollbar-minimal
+}
+
+.gradient {
+    @apply absolute top-0 right-0 w-full h-full pointer-events-none bg-gradient-bg-fade z-10;
 }

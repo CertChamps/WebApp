@@ -599,3 +599,182 @@ math-field::part(virtual-keyboard-toggle) {
     paper:invert-0
     aurora:invert-0
 }
+
+@utility bg-gradient-bg-fade {
+  @apply
+    bg-gradient-to-l
+    from-white from-[0%]
+    via-white via-[2%]
+    to-transparent to-[5%]
+    dark:from-black/100
+    dark:via-black/100
+    markoblank:from-markoteal/100
+    markoblank:via-markoteal/100
+    tangerine:from-tangerineBG/100
+    tangerine:via-tangerineBG/100
+    icebergLight:from-icebergLightBG/100
+    icebergLight:via-icebergLightBG/100
+    icebergDark:from-icebergDarkBG/100
+    icebergDark:via-icebergDarkBG/100
+    husqy:from-husqyBG/100
+    husqy:via-husqyBG/100
+    shadow:from-shadowBG/100
+    shadow:via-shadowBG/100
+    modernInk:from-modernInkBG/100
+    modernInk:via-modernInkBG/100
+    gruvbox:from-gruvboxBG/100
+    gruvbox:via-gruvboxBG/100
+    magicGirl:from-magicGirlBG/100
+    magicGirl:via-magicGirlBG/100
+    menthol:from-mentholBG/100
+    menthol:via-mentholBG/100
+    lavendar:from-lavendarBG/100
+    lavendar:via-lavendarBG/100
+    airplane:from-airplaneBG/100
+    airplane:via-airplaneBG/100
+    nordLight:from-nordLightBG/100
+    nordLight:via-nordLightBG/100
+    sewingTinLight:from-sewingTinLightBG/100
+    sewingTinLight:via-sewingTinLightBG/100
+    camping:from-campingBG/100
+    camping:via-campingBG/100
+    paper:from-paperBG/100
+    paper:via-paperBG/100
+    aurora:from-auroraBG/100
+    aurora:via-auroraBG/100;
+}
+
+/* ================== SCROLLBAR STYLES ================== */
+/* Single unified scrollbar utility using theme color system */
+
+@utility scrollbar-minimal {
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    @apply
+      rounded-full
+      transition-colors
+      bg-grey/40
+      hover:bg-grey/60
+      dark:bg-light-grey/30
+      dark:hover:bg-light-grey/50
+      markoblank:bg-markogrey/40
+      markoblank:hover:bg-markogrey/60
+      tangerine:bg-tangerineSub/40
+      tangerine:hover:bg-tangerineSub/60
+      icebergLight:bg-icebergLightSub/40
+      icebergLight:hover:bg-icebergLightSub/60
+      icebergDark:bg-icebergDarkSub/40
+      icebergDark:hover:bg-icebergDarkSub/60
+      husqy:bg-husqySub/40
+      husqy:hover:bg-husqySub/60
+      shadow:bg-shadowSub/40
+      shadow:hover:bg-shadowSub/60
+      modernInk:bg-modernInkSub/40
+      modernInk:hover:bg-modernInkSub/60
+      gruvbox:bg-gruvboxSub/40
+      gruvbox:hover:bg-gruvboxSub/60
+      magicGirl:bg-magicGirlSub/40
+      magicGirl:hover:bg-magicGirlSub/60
+      menthol:bg-mentholSub/40
+      menthol:hover:bg-mentholSub/60
+      lavendar:bg-lavendarSub/40
+      lavendar:hover:bg-lavendarSub/60
+      airplane:bg-airplaneSub/40
+      airplane:hover:bg-airplaneSub/60
+      nordLight:bg-nordLightSub/40
+      nordLight:hover:bg-nordLightSub/60
+      sewingTinLight:bg-sewingTinLightSub/40
+      sewingTinLight:hover:bg-sewingTinLightSub/60
+      camping:bg-campingSub/40
+      camping:hover:bg-campingSub/60
+      paper:bg-paperSub/40
+      paper:hover:bg-paperSub/60
+      aurora:bg-auroraSub1/40
+      aurora:hover:bg-auroraSub1/60;
+  }
+
+  /* Firefox */
+  scrollbar-color: rgb(117 119 117 / 0.4) transparent;
+  scrollbar-width: thin;
+
+  [data-theme="dark"] & {
+    scrollbar-color: rgb(189 189 189 / 0.3) transparent;
+  }
+
+  [data-theme="markoblank"] & {
+    scrollbar-color: rgb(213 212 233 / 0.4) transparent;
+  }
+
+  [data-theme="tangerine"] & {
+    scrollbar-color: rgb(255 149 98 / 0.4) transparent;
+  }
+
+  [data-theme="icebergLight"] & {
+    scrollbar-color: rgb(173 177 196 / 0.4) transparent;
+  }
+
+  [data-theme="icebergDark"] & {
+    scrollbar-color: rgb(89 94 118 / 0.4) transparent;
+  }
+
+  [data-theme="husqy"] & {
+    scrollbar-color: rgb(151 47 255 / 0.4) transparent;
+  }
+
+  [data-theme="shadow"] & {
+    scrollbar-color: rgb(68 68 68 / 0.4) transparent;
+  }
+
+  [data-theme="modernInk"] & {
+    scrollbar-color: rgb(183 183 183 / 0.4) transparent;
+  }
+
+  [data-theme="gruvbox"] & {
+    scrollbar-color: rgb(102 92 84 / 0.4) transparent;
+  }
+
+  [data-theme="magicGirl"] & {
+    scrollbar-color: rgb(147 232 211 / 0.4) transparent;
+  }
+
+  [data-theme="menthol"] & {
+    scrollbar-color: rgb(24 101 68 / 0.4) transparent;
+  }
+
+  [data-theme="lavendar"] & {
+    scrollbar-color: rgb(162 141 184 / 0.4) transparent;
+  }
+
+  [data-theme="airplane"] & {
+    scrollbar-color: rgb(38 166 154 / 0.4) transparent;
+  }
+
+  [data-theme="nordLight"] & {
+    scrollbar-color: rgb(106 119 145 / 0.4) transparent;
+  }
+
+  [data-theme="sewingTinLight"] & {
+    scrollbar-color: rgb(56 94 202 / 0.4) transparent;
+  }
+
+  [data-theme="camping"] & {
+    scrollbar-color: rgb(194 184 170 / 0.4) transparent;
+  }
+
+  [data-theme="paper"] & {
+    scrollbar-color: rgb(178 178 178 / 0.4) transparent;
+  }
+
+  [data-theme="aurora"] & {
+    scrollbar-color: rgb(171 178 191 / 0.4) transparent;
+  }
+}

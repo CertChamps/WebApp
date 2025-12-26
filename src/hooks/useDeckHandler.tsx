@@ -1,4 +1,4 @@
-import { arrayUnion, doc, updateDoc, Timestamp, addDoc, collection, deleteDoc, getDoc} from "firebase/firestore";
+import { arrayUnion, doc, updateDoc, Timestamp, addDoc, collection, deleteDoc, getDoc, setDoc} from "firebase/firestore";
 import { db }from '../../firebase'
 import { UserContext } from "../context/UserContext";
 import { useContext } from "react";
@@ -10,32 +10,33 @@ const useDeckHandler = () => {
     const { user, setUser } = useContext(UserContext) 
 
     // ========================= CREATE DECK ============================ //
-    const createDeck = async (name: string, description: string, questions: any[], color: string) => {
+    const createDeck = async (name: string, description: string, questions: any[], visibility: boolean, color: string) => {
 
         try {
-            // add deck to database 
-            const docRef = await addDoc(collection(db, 'user-data', user.uid, 'decks'), 
-                {name, description, questions, timestamp: Timestamp.now(), questionsCompleted: [], 
-                    color, timeElapsed: 0
-                }
-            )
+            // Add the deck to the database 
+            const docRef = await addDoc(collection(db, 'decks'), {
+                name, 
+                description, 
+                questions,
+                visibility,
+                color,
+                likes: 0, 
+                timestamp: Timestamp.now(),
+                createdBy: user.uid
+            });
 
-
-            // add deck to context
-            setUser( ( prev: any ) => ({
-                ...prev,
-                decks: [
-                ...(prev.decks || []),
-                { name, description, questions, timestamp: Timestamp.now(), questionsCompleted: [],
-                    color, id: docRef.id, timeElapsed: 0
-                }
-                ]
-            }))
-
-          
-        }
-        catch (err) {
-            // log any errors
+            const docID = docRef.id;    
+            
+            // Add the user who added the deck to the usersAdded subcollection with their uid as the document ID
+            await setDoc(doc(db, 'decks', docID, 'usersAdded', user.uid), {
+                uid: user.uid,
+                timestamp: Timestamp.now(),
+                questionsCompleted: [],
+                timeElapsed: 0,
+                favourited: false
+            }); 
+            
+        } catch (err) {
             console.log(err)
         }
     }
@@ -121,36 +122,33 @@ const useDeckHandler = () => {
     //===========================================================================================================// 
 
     //========================================ADDING DECKS TO PERSONAL COLLECTION=================================================// 
-    const addtoDecks = async (name: any, description: any, questions: string[]) => {
+    const addtoDecks = async (name: any, description: any, questions: string[], visibility: boolean, color: string) => {
 
         try {
-            const docRef = await addDoc(collection(db, 'user-data', user.uid, 'decks'), {
-                name, description, questions,
+
+            // Add the deck to the database 
+            const docRef = await addDoc(collection(db, 'decks'), {
+                name, 
+                description, 
+                questions,
+                visibility,
+                color,
+                timestamp: Timestamp.now(),
+                createdBy: user.uid
+            });
+
+            const docID = docRef.id;    
+            
+            // Add the user who added the deck to the usersAdded subcollection
+            await addDoc(collection(db, 'decks', docID, 'usersAdded'), {
+                uid: user.uid,
                 timestamp: Timestamp.now(),
                 questionsCompleted: [],
-                color: '#FFFFFF', 
                 timeElapsed: 0
-            })
-
-            // add deck to user's context 
-            setUser((prev: any) => ({
-                ...prev,
-                decks: [
-                ...(prev.decks || []),
-                {
-                    name,
-                    description,
-                    questions,
-                    timestamp: Timestamp.now(),
-                    questionsCompleted: [],
-                    color: '#FFFFFF',
-                    id: docRef.id, 
-                    timeElapsed: 0
-                }
-                ]
-            }));
+            }); 
+            
         } catch (err) {
-        console.log(err)
+            console.log(err)
         }
     }
     //===========================================================================================================// 
@@ -158,30 +156,11 @@ const useDeckHandler = () => {
     //========================================SAVE PROGRESS YOU HAVE MADE ON A DECK=================================================//
     const saveProgress = async (questionsCompleted: any, deckID: any, timeElapsed: any) => {
     try {
+        // update the user's progress on the deck in the usersAdded subcollection
+        const userDeckRef = doc(db, 'decks', deckID, 'usersAdded', user.uid);
+        
+        await updateDoc(userDeckRef, {
 
-        // Create new updated deck
-        const updatedDeck = {
-        ...user.decks.find((deck: any) => deck.id == deckID),
-        questionsCompleted,
-        timeElapsed
-        };
-
-        // Reconstruct decks array with updated deck at the beginning
-        const decks = [
-        updatedDeck,
-        ...user.decks.filter((deck: any) => deck.id != deckID),
-        ];
-
-        console.log(decks)
-
-        // Update user context
-        setUser((prev: any) => ({
-        ...prev,
-        decks,
-        }));
-
-        // Update Firestore
-        updateDoc(doc(db, 'user-data', user.uid, 'decks', deckID), {
             questionsCompleted,
             timeElapsed
         });
@@ -194,11 +173,11 @@ const useDeckHandler = () => {
 
 
     //======================================== GET DECK BY ID ==================================================//
-    const getDeckbyID = async (id: any, userID: any) => {
+    const getDeckbyID = async (id: any) => {
 
         try {
             // Get the deck from the database 
-            const deck = (await getDoc(doc(db, 'user-data', userID, 'decks', id))).data()
+            const deck = (await getDoc(doc(db, 'decks', id))).data()
         
             return deck
         }
@@ -210,7 +189,25 @@ const useDeckHandler = () => {
     }
     //=========================================================================================================// 
 
-    return { createDeck, deleteDeck, addQuestiontoDeck, shareDeck, addtoDecks, saveProgress, getDeckbyID }
+        //======================================== GET USER SAVE DATA ==================================================//
+    const getUsersDeckSaveData = async (id: any, userID: any) => {
+
+        try {
+            // Get the deck from the database 
+            const deck = (await getDoc(doc(db, 'decks', id, 'usersAdded', userID))).data()
+        
+            return deck
+        }
+        catch (err) {
+            console.log(err) 
+            return null
+        }
+
+    }
+    //=========================================================================================================// 
+
+
+    return { createDeck, deleteDeck, addQuestiontoDeck, shareDeck, addtoDecks, saveProgress, getDeckbyID, getUsersDeckSaveData }
 }
 
 export default useDeckHandler

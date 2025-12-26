@@ -108,7 +108,7 @@ const router = createHashRouter([
     ),
   },
   {
-    path: "/decks/:userID/:id/*",
+    path: "/decks/:id/*",
     element: (
       <ProtectedRoute>
         <DeckViewer />

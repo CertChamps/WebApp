@@ -279,7 +279,7 @@ export default function Social() {
 
     return (
         <div className="flex w-full h-full">
-            <div className="w-2/3 h-full overflow-y-scroll">          
+            <div className="w-2/3 h-full overflow-y-scroll scrollbar-minimal">          
                 <div className="compose-post-container">
                     <div className="compose-post-text-wrapper"> 
                         <img 
@@ -384,7 +384,7 @@ export default function Social() {
             </div>
                 <div className="flex-1 h-full flex flex-col">
                     {/* scrollable top part */}
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto scrollbar-minimal">
                         <div className="p-3">
                         <FriendsSearch />
                         </div>

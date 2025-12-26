@@ -35,7 +35,7 @@ export default function ViewDecks (props?: deckProps) {
     const resolvedColor = color || '#FFFFFF'
 
     return (
-    <div className="h-container items-start w-full overflow-y-scroll px-4">
+    <div className="h-container items-start w-full overflow-y-scroll scrollbar-minimal px-4">
         {
             //==================================== VIEW USER DECKS ===================================//
             view === 'decks' ? (
@@ -99,7 +99,7 @@ export default function ViewDecks (props?: deckProps) {
                 <span
                     className="create-deck"
                     onClick={() => {
-                        createDeck(name, desc, hasQuestion ? [props!.question] : [], resolvedColor)
+                       // createDeck(name, desc, hasQuestion ? [props!.question] : [], resolvedColor)
                         setView('decks')
                     }}
                 >

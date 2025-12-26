@@ -1,8 +1,8 @@
 // Icons
-import { LuArrowLeft, LuTrash } from "react-icons/lu";
+import { LuArrowLeft, LuTrash, LuPencil } from "react-icons/lu";
 
 // Hooks 
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useStopwatch } from "../hooks/useStopwatch";
 import useDeckHandler from "../hooks/useDeckHandler";
@@ -10,6 +10,7 @@ import useQuestions from "../hooks/useQuestions";
 
 // Components 
 import Question from "../components/questions/question";
+import DeckPreview from "../components/decks/deckPreview";
 
 // Context 
 import { UserContext } from "../context/UserContext";
@@ -17,8 +18,9 @@ import { UserContext } from "../context/UserContext";
 export default function DeckViewer () {
 
     // =========================== HOOKS, STATE, CONTEXT =========================== //
-    const { userID, id, "*": isPrev } = useParams()
-    const { getDeckbyID , deleteDeck, saveProgress, addtoDecks} = useDeckHandler()
+    const { id, "*": isPrev } = useParams()
+    const isPreviewMode = isPrev === "preview"
+    const { getDeckbyID , saveProgress, getUsersDeckSaveData} = useDeckHandler()
     const { fetchQuestion } = useQuestions()
     const navigate = useNavigate()
 
@@ -27,26 +29,48 @@ export default function DeckViewer () {
     const [deck, setDeck] = useState<any>()
     const [questions, setQuestions] = useState<any>([])
     const [position, setPosition] = useState<number>(0)
+    const [questionsAnswered, setQuestionsAnswered] = useState<any>({})
+    const isInitialRender = useRef(true)
 
     // get stopwatch and start
-    const {timeFormatted, start, stop, secondsElapsed, setSecondsElapsed} = useStopwatch()
+    const { start, stop, secondsElapsed, setSecondsElapsed} = useStopwatch()
 
     // ============================ INITIALISATION ============================== //
     useEffect(() => {
 
         // Automatically bring user to preview mode if does not own deck 
-        if (!isPrev && !user?.decks?.some( (deck:any) => deck.id === id)) {
-            navigate(`/decks/${userID}/${id}/preview`);
-        }
+        // if (!isPrev && !user?.decks?.some( (deck:any) => deck.id === id)) {
+        //     navigate(`/decks/${userID}/${id}/preview`);
+        // }
 
         // Initialise the Deck ========================
         const init_deck = async () => {
             try {
                 
-                // set the deck
-                const init = await getDeckbyID(id, userID) 
+                // get the Deck Data 
+                const deckData = await getDeckbyID(id) 
+
+                // get the User Save Data 
+                const saveData = await getUsersDeckSaveData(id, user?.uid)
+
+                // Concatenate all data 
+                const init = {
+                    ...deckData,
+                    ...saveData
+                }
+
                 setDeck(init)
-                setSecondsElapsed(init?.timeElapsed)
+                setSecondsElapsed(saveData?.timeElapsed ?? 0)
+                
+                // Initialize questionsAnswered from save data
+                if (saveData?.questionsCompleted && Array.isArray(saveData.questionsCompleted)) {
+                    const answeredObj: any = {};
+                    saveData.questionsCompleted.forEach((qId: string) => {
+                        answeredObj[qId] = true;
+                    });
+                    setQuestionsAnswered(answeredObj);
+                }
+                
                 start()
                 // Map to array of promises
                 const questionPromises = init?.questions.map(async (qID: string) => {
@@ -90,54 +114,100 @@ export default function DeckViewer () {
         return () => window.removeEventListener('keydown', onKeyDown)
 
     }, [questions, position])
-    // ========================================================================== // 
+    // ========================================================================== //
+
+    // ============================= SAVE PROGRESS ============================== //
+    // // Save progress on page leave
+    useEffect(() => {
+        if (isInitialRender.current) {
+            isInitialRender.current = false;
+            return;
+        }
+
+        const handleBeforeUnload = () => {
+            const questionsCompletedArray = Object.keys(questionsAnswered).filter(
+                qId => questionsAnswered[qId] === true
+            );
+            console.log("Saving progress before unload:", questionsCompletedArray, secondsElapsed);
+            saveProgress(questionsCompletedArray, id, secondsElapsed);
+        };
+
+        handleBeforeUnload();
+    }, [questionsAnswered]);
+    // // ========================================================================== // 
 
 
 
     return (
-    <div className="w-h-container flex-col">
+    <div className="w-h-container flex-col overflow-clip">
 
         { /* ======================================= TOP PANEL ==================================== */ }
-        <div>
+        { !isPreviewMode ? (
+            <div className="px-4 pt-4  w-full flex justify-between">
 
-            { /* BACK BUTTON */ }
-            <LuArrowLeft className="hover:scale-110 duration-200 transition-all color-txt-main inline" 
-                onClick={() => {
-                    if(isPrev === "preview") 
-                        saveProgress([], id, secondsElapsed); 
-                    navigate('/practice'); stop();}}/>
+                { /* BACK BUTTON */ }
+                <div className="hover:opacity-75 duration-100 transition-all color-txt-main cursor-pointer flex items-center" 
+                    onClick={() => { navigate(-1); stop();}}>
+                    <LuArrowLeft className="" size={24} />
+                    <span className="mx-2">Back</span>
+                </div>
 
-            { /* TIMER */ }
-            { isPrev !== "preview" ? <span className="txt-heading-colour mx-8">{timeFormatted}</span> : <></>}
+                { /* TIMER */ }
+                {/* { isPrev !== "preview" ? <span className="txt-heading-colour mx-8">{timeFormatted}</span> : <></>} */}
 
-            { /* TITLE */ }
-            <span className="txt-heading-colour mx-8">{deck?.name}</span>
+                { /* TITLE */ }
+                <span className="txt-heading-colour mx-8">{deck?.name}</span>
 
-            { /* DELETE BUTTON */ }
-            { isPrev !== "preview" ? <LuTrash className="hover:scale-110 duration-200 transition-all color-txt-main inline" 
-                onClick={() => {deleteDeck(id); navigate('/practice'); stop()}}/> : <></>}
+                { /* RIGHT ACTIONS: EDIT + DELETE (no-op) */ }
+                <div className="flex items-center gap-4 color-txt-main txt-sub">
+                    <>
+                        <div className="flex items-center gap-2 cursor-pointer hover:opacity-75 duration-100 transition-all">
+                            <LuPencil size={20} />
+                            <span>Edit</span>
+                        </div>
+                        <div className="flex items-center gap-2 cursor-pointer hover:opacity-75 duration-100 transition-all">
+                            <LuTrash size={20} />
+                            <span>Delete</span>
+                        </div>
+                    </>
+                </div>
 
-        </div>
+            </div>
+        ) : null }
         { /* ====================================================================================== */ }
 
         { /* ======================================= QUESTION ==================================== */ }
-        <Question
-            questions={questions}
-            position={position}
-            setPosition={setPosition}
-            nextQuestion={() => setPosition(prev => (prev < questions.length - 1 ? prev + 1 : 0))}
-            setFilters={() => {}}
-            deckmode
-            preview={isPrev === "preview"}
-        /> 
+        { isPreviewMode ? (
+            <DeckPreview 
+                deck={deck} 
+                questions={questions} 
+                onBack={() => {
+                    saveProgress([], id, secondsElapsed);
+                    navigate(-1);
+                    stop();
+                }}
+            />
+        ) : (
+            <Question
+                questions={questions}
+                position={position}
+                setPosition={setPosition}
+                nextQuestion={() => setPosition(prev => (prev < questions.length - 1 ? prev + 1 : 0))}
+                setFilters={() => {}}
+                deckmode
+                preview={isPreviewMode}
+                onQuestionAnswered={(questionId: string, isCorrect: boolean) => {
+                    setQuestionsAnswered((prev: any) => ({
+                        ...prev,
+                        [questionId]: isCorrect
+                    }));
+                }}
+                questionsAnswered={questionsAnswered}
+            /> 
+        )}
         { /* ====================================================================================== */ }
 
-        { /* ======================= ADD TO DECKS BUTTON (Preview) ================================ */ }
-        { isPrev === "preview" ? <span className="blue-btn w-1/2 m-auto" onClick={() => {
-                addtoDecks(deck.name, deck.description, deck.questions);
-                navigate('/practice')
-            }}>Add to Decks</span> : <></>}
-        { /* ====================================================================================== */ }
+
 
 
     </div>

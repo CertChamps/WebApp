@@ -1,7 +1,7 @@
 @reference '../index.css';
 
 .progress-main {
-    @apply w-full h-full p-6 md:p-10 flex flex-row gap-6 overflow-auto;
+    @apply w-full h-full p-6 md:p-10 flex flex-row gap-6 overflow-auto scrollbar-minimal;
 }
 
 .left-column {

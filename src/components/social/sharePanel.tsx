@@ -44,7 +44,7 @@ export default function SharePanel() {
 
 
     return (
-    <div className="w-h-container justify-start items-start flex-col overflow-y-scroll p-4">
+    <div className="w-h-container justify-start items-start flex-col overflow-y-scroll scrollbar-minimal p-4">
 
         {   
             friends ? (

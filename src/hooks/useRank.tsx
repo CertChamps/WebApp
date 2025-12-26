@@ -12,6 +12,8 @@ type rankProps = {
     setShowNoti: any;
     xpFlyers: any;
     setXpFlyers: any;
+    questionId?: string;
+    onQuestionAnswered?: (questionId: string, isCorrect: boolean) => void;
 }
 
 export default function useRank(props: rankProps) {
@@ -173,10 +175,20 @@ export default function useRank(props: rankProps) {
           
               return newStreak;
             });
+
+            // Track this question as correct
+            if (props.questionId && props.onQuestionAnswered) {
+              props.onQuestionAnswered(props.questionId, true);
+            }
           } else {
 
             playIncorrectSound();
             setStreak(0);
+
+            // Track this question as incorrect
+            if (props.questionId && props.onQuestionAnswered) {
+              props.onQuestionAnswered(props.questionId, false);
+            }
     
         }
           

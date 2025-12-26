@@ -118,7 +118,7 @@ export default function QSearch(props: searchProps) {
                     onClick={handleClose}/>
                 </div>
                     
-                <div className="h-[85%] overflow-auto mt-2">
+                <div className="h-[85%] overflow-auto scrollbar-minimal mt-2">
                     {results.map((result: any) => (
                         <div
                             className="p-3 border-b-2 color-shadow hover:color-bg-grey-5"
