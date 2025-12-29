@@ -21,10 +21,10 @@
 @theme {
 
   /* Main Colour Set */
-  --color-white: #efefef;
+  --color-white: #ffffff;
   --color-black: #353535;
   --color-blue: #27548a;
-  --color-grey: #757575;
+  --color-grey: #9ca3af;
   --color-light-grey: #bdbdbd; /* #e0e0e0 og*/ 
   --color-red: #f03131;
   --color-button: #f3f4f6; /* Add this for light mode button bg */
