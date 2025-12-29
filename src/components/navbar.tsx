@@ -26,6 +26,7 @@ export default function Navbar () {
         if (path.startsWith('/games')) return 'games'
         if (path.startsWith('/practice')) return 'practice'
         if (path.startsWith('/post')) return 'social/social'
+        if (path.startsWith('/viewProfile')) return 'viewProfile'
         return 'practice'
     }
 
@@ -57,7 +58,7 @@ export default function Navbar () {
 
                 <div className='user-info '>
                     <p className='nav-txt !txt-heading-colour !color-txt-accent' >{user.username}</p>
-                    <p className='nav-txt !txt-sub !color-txt-sub text-nowrap' >Rank: {user.rank}</p> 
+                    {/* <p className='nav-txt !txt-sub !color-txt-sub text-nowrap' >Rank: {user.rank}</p>  */}
                 </div>
             </div>
 

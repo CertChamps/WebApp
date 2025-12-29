@@ -1,0 +1,133 @@
+@reference '../index.css';
+
+/* ================== PROFILE MAIN CONTAINER ================== */
+.profile-main {
+    @apply w-full h-full p-6 md:p-10 flex flex-col gap-6 overflow-auto;
+}
+
+/* ================== PROFILE VIEWER HEADER ================== */
+.profile-viewer-header {
+    @apply shadow-small p-8 rounded-lg flex flex-col md:flex-row items-start md:items-center gap-8 justify-between;
+}
+
+.profile-avatar {
+    @apply w-24 h-24 rounded-full object-cover border-2 color-shadow;
+}
+
+.profile-header-info {
+    @apply flex flex-col gap-3 flex-1;
+}
+
+.profile-username {
+    @apply text-3xl font-black color-txt-main;
+}
+
+.profile-email {
+    @apply txt-sub;
+}
+
+.profile-rank-badge {
+    @apply inline-block px-4 py-2 rounded-lg color-bg-accent color-txt-accent txt-bold w-fit mt-1;
+}
+
+/* ================== PROFILE STATS GRID ================== */
+.profile-stats {
+    @apply flex gap-8 md:gap-10;
+}
+
+.profile-stat-card {
+    @apply flex flex-col gap-2 items-center;
+}
+
+.profile-stat-value {
+    @apply text-2xl font-black color-txt-accent;
+}
+
+.profile-stat-label {
+    @apply txt-sub text-xs uppercase tracking-wide;
+}
+
+/* ================== PROFILE SECTION ================== */
+.profile-section {
+    @apply flex flex-col gap-4;
+}
+
+.profile-section-title {
+    @apply text-xl font-bold color-txt-main border-b color-shadow pb-3;
+}
+
+.profile-section-empty {
+    @apply txt-sub italic py-4 text-center;
+}
+
+/* ================== TABS ================== */
+.profile-tabs {
+    @apply flex gap-2 border-b color-shadow;
+}
+
+.profile-tab {
+    @apply px-4 py-3 txt-bold color-txt-sub cursor-pointer transition-all border-b-2 border-transparent hover:color-txt-main;
+}
+
+.profile-tab-active {
+    @apply color-txt-accent border-b-2 color-shadow-accent;
+}
+
+/* ================== FRIENDS LIST ================== */
+.profile-friends-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3;
+}
+
+.profile-friend-card {
+    @apply flex items-center gap-3 p-4 rounded-lg color-shadow hover:color-bg-accent transition-all cursor-pointer duration-200;
+}
+
+.profile-friend-avatar {
+    @apply w-12 h-12 rounded-full object-cover border-2 color-shadow flex-shrink-0;
+}
+
+.profile-friend-info {
+    @apply flex flex-col gap-1 flex-1;
+}
+
+.profile-friend-name {
+    @apply txt-bold;
+}
+
+.profile-friend-label {
+    @apply txt-sub;
+}
+
+/* ================== LOADING STATE ================== */
+.profile-loading {
+    @apply w-full h-full flex items-center justify-center;
+}
+
+/* ================== FRIENDS MODAL ================== */
+.profile-modal-overlay {
+    @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4;
+}
+
+.profile-modal {
+    @apply shadow-small rounded-lg color-bg w-full max-w-md max-h-96 flex flex-col;
+}
+
+.profile-modal-header {
+    @apply flex items-center justify-between p-6 border-b color-shadow;
+}
+
+.profile-modal-title {
+    @apply text-lg font-bold color-txt-main;
+}
+
+.profile-modal-close {
+    @apply txt-bold color-txt-sub hover:color-txt-accent cursor-pointer transition-colors text-xl;
+}
+
+.profile-modal-content {
+    @apply overflow-y-auto flex-1;
+}
+
+.profile-friends-list {
+    @apply flex flex-col;
+}
