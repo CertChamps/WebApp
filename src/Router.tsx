@@ -119,7 +119,10 @@ const router = createHashRouter([
     path: "/viewProfile/:userID",
     element: (
       <ProtectedRoute>
-        <ProfileViewer />
+        <>
+          <Navbar />
+          <ProfileViewer />
+        </>
       </ProtectedRoute>
     ),
   },

@@ -30,7 +30,6 @@ const profile_display = () => {
             <img src={user?.picture} alt={user?.username} className="profile-pic" />
             <div className="profile-info">
               <span className="profile-username">{user?.username}</span>
-              <span className="profile-subtitle">{currentRank} • {user?.xp?.toLocaleString() || "0"} XP</span>
             </div>
           </div>
 

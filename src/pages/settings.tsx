@@ -261,16 +261,6 @@ export default function Settings() {
             </div>
 
             <div className="cursor-target theme-container" 
-                onClick={() => setTheme('tangerine')}>
-                <p className="theme-text">Tangerine</p>
-                <div className="color-strip-container bg-tangerineBG " >
-                    <div className="color-strip-item bg-tangerinePrimary " > </div> {/* PRIMARY */}
-                    <div className="color-strip-item bg-tangerineSub " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-tangerineAccent " > </div> {/* ACCENT */}
-                </div>
-            </div>
-
-            <div className="cursor-target theme-container" 
                 onClick={() => setTheme('icebergLight')}>
                 <p className="theme-text">Iceberg Light</p>
                 <div className="color-strip-container bg-icebergLightBG " >
@@ -290,23 +280,13 @@ export default function Settings() {
                 </div>
             </div>
 
-            <div className="cursor-target theme-container" 
-                onClick={() => setTheme('husqy')}>
-                <p className="theme-text">Husqy</p>
-                <div className="color-strip-container bg-husqyBG " >
-                    <div className="color-strip-item bg-husqyPrimary " > </div> {/* PRIMARY */}
-                    <div className="color-strip-item bg-husqySub " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-husqyAccent " > </div> {/* ACCENT */}
-                </div>
-            </div>
-
-            <div className="cursor-target theme-container" 
-                onClick={() => setTheme('shadow')}>
-                <p className="theme-text">Shadow</p>
-                <div className="color-strip-container bg-shadowBG " >
-                    <div className="color-strip-item bg-shadowPrimary " > </div> {/* PRIMARY */}
-                    <div className="color-strip-item bg-shadowSub " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-shadowAccent " > </div> {/* ACCENT */}
+            <div className="cursor-target theme-container"
+                onClick={() => setTheme('nordLight')}>
+                <p className="theme-text">Nord Light</p>
+                <div className="color-strip-container bg-nordLightBG " >
+                    <div className="color-strip-item bg-nordLightPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-nordLightSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-nordLightAccent " > </div> {/* ACCENT */}
                 </div>
             </div>
 
@@ -321,32 +301,12 @@ export default function Settings() {
             </div>
 
             <div className="cursor-target theme-container" 
-                onClick={() => setTheme('gruvbox')}>
-                <p className="theme-text">Gruvbox</p>
-                <div className="color-strip-container bg-gruvboxBG " >
-                    <div className="color-strip-item bg-gruvboxPrimary " > </div> {/* PRIMARY */}
-                    <div className="color-strip-item bg-gruvboxSub " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-gruvboxAccent " > </div> {/* ACCENT */}
-                </div>
-            </div>
-
-            <div className="cursor-target theme-container" 
                 onClick={() => setTheme('magicGirl')}>
                 <p className="theme-text">Magic Girl</p>
                 <div className="color-strip-container bg-magicGirlBG " >
                     <div className="color-strip-item bg-magicGirlPrimary " > </div> {/* PRIMARY */}
                     <div className="color-strip-item bg-magicGirlSub " > </div> {/* SUB */}
                     <div className="color-strip-item bg-magicGirlAccent " > </div> {/* ACCENT */}
-                </div>
-            </div>
-
-            <div className="cursor-target theme-container" 
-                onClick={() => setTheme('menthol')}>
-                <p className="theme-text">Menthol</p>
-                <div className="color-strip-container bg-mentholBG " >
-                    <div className="color-strip-item bg-mentholPrimary " > </div> {/* PRIMARY */}
-                    <div className="color-strip-item bg-mentholSub " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-mentholAccent " > </div> {/* ACCENT */}
                 </div>
             </div>
 
@@ -367,16 +327,6 @@ export default function Settings() {
                     <div className="color-strip-item bg-airplanePrimary " > </div> {/* PRIMARY */}
                     <div className="color-strip-item bg-airplaneSub " > </div> {/* SUB */}
                     <div className="color-strip-item bg-airplaneAccent " > </div> {/* ACCENT */}
-                </div>
-            </div>
-
-            <div className="cursor-target theme-container"
-                onClick={() => setTheme('nordLight')}>
-                <p className="theme-text">Nord Light</p>
-                <div className="color-strip-container bg-nordLightBG " >
-                    <div className="color-strip-item bg-nordLightPrimary " > </div> {/* PRIMARY */}
-                    <div className="color-strip-item bg-nordLightSub " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-nordLightAccent " > </div> {/* ACCENT */}
                 </div>
             </div>
 
@@ -410,13 +360,23 @@ export default function Settings() {
                 </div>
             </div>
 
-            <div className="cursor-target theme-container"
-                onClick={() => setTheme('aurora')}>
-                <p className="theme-text">Aurora</p>
-                <div className="color-strip-container bg-auroraBG " >
-                    <div className="color-strip-item bg-auroraPrimary " > </div> {/* PRIMARY */}
-                    <div className="color-strip-item bg-gradient-to-r from-auroraSub1 to-auroraSub2 " > </div> {/* SUB */}
-                    <div className="color-strip-item bg-gradient-to-r from-auroraAccent1 to-auroraAccent2 " > </div> {/* ACCENT */}
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('tangerine')}>
+                <p className="theme-text">Tangerine</p>
+                <div className="color-strip-container bg-tangerineBG " >
+                    <div className="color-strip-item bg-tangerinePrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-tangerineSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-tangerineAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('menthol')}>
+                <p className="theme-text">Menthol</p>
+                <div className="color-strip-container bg-mentholBG " >
+                    <div className="color-strip-item bg-mentholPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-mentholSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-mentholAccent " > </div> {/* ACCENT */}
                 </div>
             </div>
 
@@ -427,6 +387,46 @@ export default function Settings() {
                     <div className="color-strip-item bg-markored " > </div> {/* ACCENT */}
                     <div className="color-strip-item bg-markobrown " > </div> {/* SUB */}
                     <div className="color-strip-item bg-markogrey " > </div> {/* TEXT */}
+                </div>
+            </div>
+
+             <div className="cursor-target theme-container"
+                onClick={() => setTheme('aurora')}>
+                <p className="theme-text">Aurora</p>
+                <div className="color-strip-container bg-auroraBG " >
+                    <div className="color-strip-item bg-auroraPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-gradient-to-r from-auroraSub1 to-auroraSub2 " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-gradient-to-r from-auroraAccent1 to-auroraAccent2 " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('gruvbox')}>
+                <p className="theme-text">Gruvbox</p>
+                <div className="color-strip-container bg-gruvboxBG " >
+                    <div className="color-strip-item bg-gruvboxPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-gruvboxSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-gruvboxAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('husqy')}>
+                <p className="theme-text">Husqy</p>
+                <div className="color-strip-container bg-husqyBG " >
+                    <div className="color-strip-item bg-husqyPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-husqySub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-husqyAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('shadow')}>
+                <p className="theme-text">Shadow</p>
+                <div className="color-strip-container bg-shadowBG " >
+                    <div className="color-strip-item bg-shadowPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-shadowSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-shadowAccent " > </div> {/* ACCENT */}
                 </div>
             </div>
         </div>

@@ -17,6 +17,13 @@ interface PostCardProps {
     isFlashcard?: boolean; 
     onPressReplies?: () => void;
   }
+
+    const rankNames = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master"];
+
+    const formatRankName = (rank?: number) => {
+        if (!rank || rank < 1) return "Unranked";
+        return rankNames[Math.min(rankNames.length - 1, rank - 1)] || "Unranked";
+    };
   
 
   const PostCard: React.FC<PostCardProps> = ({
@@ -66,7 +73,7 @@ interface PostCardProps {
                 />
                 <div>
                     <p className="post-card-user-name">{username}</p>
-                    <p className="post-card-user-rank">Level: {rank}</p> 
+                    <p className="post-card-user-rank">{formatRankName(rank)}</p> 
                 </div>
                 <span className="post-card-date">{formattedDate}</span>
             </div>
