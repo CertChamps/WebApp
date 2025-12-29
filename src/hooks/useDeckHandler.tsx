@@ -1,13 +1,17 @@
-import { arrayUnion, doc, updateDoc, Timestamp, addDoc, collection, deleteDoc, getDoc, setDoc} from "firebase/firestore";
+import { arrayUnion, doc, updateDoc, Timestamp, addDoc, collection, deleteDoc, getDoc, setDoc, getDocs} from "firebase/firestore";
 import { db }from '../../firebase'
 import { UserContext } from "../context/UserContext";
 import { useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { getStorage, ref, getDownloadURL } from "firebase/storage";
 
 
 
 const useDeckHandler = () => {
 
     const { user, setUser } = useContext(UserContext) 
+    const storage = getStorage();
+    const navigate = useNavigate(); 
 
     // ========================= CREATE DECK ============================ //
     const createDeck = async (name: string, description: string, questions: any[], visibility: boolean, color: string) => {
@@ -47,14 +51,19 @@ const useDeckHandler = () => {
     const deleteDeck = async (deckID: any) => {
 
         try {
-            // delete deck from database 
-            await deleteDoc(doc(db, 'user-data', user.uid, 'decks', deckID))
+            // Delete the deck from the database
+            await deleteDoc(doc(db, 'decks', deckID))
 
-            // remove from userContext
-            setUser((prev: any) => ({
-                ...prev, 
-                decks: prev.decks.filter((deck: any) => deck.id != deckID)
-            }))
+            // Delete all user-added subcollection documents
+            const usersAddedSnapshot = await getDocs(collection(db, 'decks', deckID, 'usersAdded'));
+            const deletePromises = usersAddedSnapshot.docs.map((userDoc) =>
+                deleteDoc(doc(db, 'decks', deckID, 'usersAdded', userDoc.id))
+            );
+            await Promise.all(deletePromises);
+
+            // navigate back to decks page 
+            navigate('/decks')
+        
           
         }
         catch (err) {
@@ -192,8 +201,86 @@ const useDeckHandler = () => {
     }
     //=========================================================================================================// 
 
+    //======================================== GET FRIENDS ANSWERS FOR A DECK ==================================================//
+    const getFriendsAnswers = async (deckID: string, friends: Array<{ uid: string; username: string; picture: string }>) => {
+        try {
+            // Object to store which friends got each question correct
+            // Format: { [questionId]: Array<{ uid, picture, username }> }
+            const friendsAnswered: { [questionId: string]: Array<{ uid: string; picture: string; username: string }> } = {};
 
-    return { createDeck, deleteDeck, addQuestiontoDeck, shareDeck, addtoDecks, saveProgress, getDeckbyID, getUsersDeckSaveData }
+            // For each friend, get their deck progress
+            const friendProgressPromises = friends.map(async (friend) => {
+                try {
+                    const friendDeckData = await getDoc(doc(db, 'decks', deckID, 'usersAdded', friend.uid));
+                    
+                    if (!friendDeckData.exists()) return null;
+
+                    const data = friendDeckData.data();
+                    const questionsCompleted = data?.questionsCompleted || [];
+
+                    // questionsCompleted is an array of question IDs that the friend got correct
+                    questionsCompleted.forEach((questionId: string) => {
+                        if (!friendsAnswered[questionId]) {
+                            friendsAnswered[questionId] = [];
+                        }
+                        friendsAnswered[questionId].push({
+                            uid: friend.uid,
+                            picture: friend.picture,
+                            username: friend.username
+                        });
+                    });
+                    
+                    return data;
+                } catch (err) {
+                    console.log(`Error fetching progress for friend ${friend.uid}:`, err);
+                    return null;
+                }
+            });
+
+            await Promise.all(friendProgressPromises);
+            console.log("Friend progress data:", friendsAnswered);
+            return friendsAnswered;
+        } catch (err) {
+            console.error('Failed to fetch friends answers:', err);
+            return {};
+        }
+    };
+    //=========================================================================================================// 
+
+
+    // ========================= UPDATE DECK ============================ //
+    const updateDeck = async (deckID: string, name: string, description: string, questions: any[], visibility: boolean, color: string) => {
+        try {
+            // Update the deck in the database 
+            await updateDoc(doc(db, 'decks', deckID), {
+                name, 
+                description, 
+                questions,
+                visibility,
+                color
+            });
+        } catch (err) {
+            console.log(err)
+            throw err
+        }
+    }
+    // ================================================================== //
+
+    // ========================= REMOVE USER FROM DECK ============================ //
+    const removeUserFromDeck = async (deckID: string) => {
+        try {
+            // Update the deck in the database;
+            await deleteDoc(doc(db, 'decks', deckID, 'usersAdded', user.uid));
+
+            navigate('/decks')
+        } catch (err) {
+            console.log(err)
+            throw err
+        }
+    }
+    // ================================================================== //
+
+    return { createDeck, deleteDeck, addQuestiontoDeck, shareDeck, addtoDecks, saveProgress, getDeckbyID, getUsersDeckSaveData, getFriendsAnswers, updateDeck, removeUserFromDeck }
 }
 
 export default useDeckHandler

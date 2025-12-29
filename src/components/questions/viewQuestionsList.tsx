@@ -6,6 +6,13 @@ type ViewQuestionsListProps = {
     currentIndex: number;
     onSelect?: (index: number) => void;
     questionsAnswered?: any;
+    friendsAnswered?: {
+        [questionId: string]: Array<{
+            uid: string;
+            picture: string;
+            username: string;
+        }>;
+    };
 };
 
 export default function ViewQuestionsList(props: ViewQuestionsListProps) {
@@ -33,6 +40,7 @@ export default function ViewQuestionsList(props: ViewQuestionsListProps) {
                         const questionId = q?.id;
                         const isAnswered = props.questionsAnswered?.[questionId];
                         const isCorrect = props.questionsAnswered?.[questionId] === true;
+                        const friendsWhoGotCorrect = props.friendsAnswered?.[questionId] || [];
 
                         return (
                             <button
@@ -53,6 +61,28 @@ export default function ViewQuestionsList(props: ViewQuestionsListProps) {
                                             ) : (
                                                 <LuX className="text-red-500" size={18} />
                                             )
+                                        )}
+                                        {friendsWhoGotCorrect.length > 0 && (
+                                            <div className="flex -space-x-2">
+                                                {friendsWhoGotCorrect.slice(0, 3).map((friend, i) => (
+                                                    <img
+                                                        key={friend.uid}
+                                                        src={friend.picture}
+                                                        alt={friend.username}
+                                                        title={friend.username}
+                                                        className="w-5 h-5 rounded-full object-cover"
+                                                        style={{ zIndex: 3 - i }}
+                                                    />
+                                                ))}
+                                                {friendsWhoGotCorrect.length > 3 && (
+                                                    <div 
+                                                        className="w-5 h-5 rounded-full  flex items-center justify-center text-[10px] color-txt-sub"
+                                                        title={`+${friendsWhoGotCorrect.length - 3} more`}
+                                                    >
+                                                        +{friendsWhoGotCorrect.length - 3}
+                                                    </div>
+                                                )}
+                                            </div>
                                         )}
                                         <span className="text-xs color-txt-sub">#{idx + 1}</span>
                                     </div>
