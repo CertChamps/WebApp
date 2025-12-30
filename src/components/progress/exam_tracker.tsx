@@ -11,8 +11,10 @@ const exam_tracker = () => {
     const [exams, setExams] = useState<ExamItem[]>([]);
     const [examName, setExamName] = useState("");
     const [examGrade, setExamGrade] = useState("");
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        setLoading(true);
         if (!user?.uid) return;
 
         const fetchExams = async () => {
@@ -33,11 +35,26 @@ const exam_tracker = () => {
                 setExams(loaded);
             } catch (error) {
                 console.error("Failed to load exams", error);
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchExams();
     }, [user?.uid]);
+
+    if (loading) {
+        return (
+            <div className="exam-tracker progress-skeleton-card">
+                <div className="progress-skeleton-line w-36" />
+                <div className="progress-skeleton-list">
+                    {[...Array(3)].map((_, idx) => (
+                        <div key={idx} className="progress-skeleton-line w-full" />
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     const addExam = async () => {
         const cleanName = examName.trim();

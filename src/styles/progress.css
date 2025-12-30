@@ -360,3 +360,44 @@
 .exam-add-button:hover {
     @apply color-txt-accent;
 }
+
+/*================ SKELETON STATES ================*/
+.progress-skeleton-card {
+    @apply shadow-small p-6 rounded-lg animate-pulse flex flex-col gap-4;
+}
+
+.progress-skeleton-avatar {
+    @apply w-16 h-16 rounded-full color-bg-grey-10 border color-shadow;
+}
+
+.progress-skeleton-lines {
+    @apply flex flex-col gap-3 flex-1;
+}
+
+.progress-skeleton-line {
+    @apply h-4 rounded-full color-bg-grey-10;
+}
+
+.progress-skeleton-pill {
+    @apply h-10 w-full rounded-full color-bg-grey-10 border color-shadow;
+}
+
+.progress-skeleton-circle {
+    @apply w-24 h-24 rounded-full color-bg-grey-10 border color-shadow;
+}
+
+.progress-skeleton-bars {
+    @apply flex items-end gap-2 h-36;
+}
+
+.progress-skeleton-bar {
+    @apply flex-1 h-24 rounded-md color-bg-grey-10;
+}
+
+.progress-skeleton-icon {
+    @apply w-10 h-10 rounded-full color-bg-grey-10;
+}
+
+.progress-skeleton-list {
+    @apply flex flex-col gap-2;
+}

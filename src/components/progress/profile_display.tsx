@@ -24,6 +24,25 @@ const profile_display = () => {
         return 100;
     }, [user?.xp]);
 
+    if (!user?.uid) {
+        return (
+            <div className="rank progress-skeleton-card">
+                <div className="flex items-center gap-4">
+                    <div className="progress-skeleton-avatar" />
+                    <div className="progress-skeleton-lines">
+                        <div className="progress-skeleton-line w-32" />
+                        <div className="progress-skeleton-line w-20" />
+                    </div>
+                </div>
+                <div className="progress-skeleton-line w-full h-3" />
+                <div className="grid grid-cols-2 gap-4 w-full">
+                    <div className="progress-skeleton-pill" />
+                    <div className="progress-skeleton-pill" />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="rank">
           <div className="profile-header">

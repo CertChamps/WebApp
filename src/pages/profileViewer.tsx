@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useContext } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { collection, getDocs, orderBy, query, where } from 'firebase/firestore'
-import Lottie from 'lottie-react'
-import loadingAnim from '../assets/animations/loading.json'
 import useFetch from "../hooks/useFetch"
 import DeckCard from '../components/decks/deckCard'
 import PostCard from '../components/social/PostCard'
 import { db } from '../../firebase'
+import { UserContext } from '../context/UserContext'
 import '../styles/profile.css'
 import '../styles/decks.css'
 import '../styles/social.css'
@@ -15,6 +14,7 @@ export default function ProfileViewer() {
 
     const { userID } = useParams()
     const navigate = useNavigate()
+    const { user: currentUser } = useContext(UserContext)
     const [user, setUser] = useState<any>()
     const [friends, setFriends] = useState<any>()
     const [decks, setDecks] = useState<any>()
@@ -58,6 +58,7 @@ export default function ProfileViewer() {
                 return {
                     id: docSnap.id,
                     ...post,
+                    userId: uid,
                     username: author?.username,
                     rank: author?.rank,
                     userImage: author?.picture,
@@ -78,18 +79,50 @@ export default function ProfileViewer() {
             
             setUser(usr)
             setFriends(frnds)
-            setDecks(dcks)
+            
+            // Filter decks based on whether viewing own profile or another user's
+            const isOwnProfile = currentUser?.uid === userID
+            if (isOwnProfile) {
+                // Show all decks (public and private) for own profile
+                setDecks(dcks)
+            } else {
+                // Only show public decks for other users' profiles
+                const publicDecks = dcks?.filter((deck: any) => deck.visibility === true) || []
+                setDecks(publicDecks)
+            }
+            
             setPosts(pst)
         }
 
         fetchInfo()
-    }, [userID])
+    }, [userID, currentUser?.uid])
 
     if (!user) {
         return (
-            <div className="profile-loading">
-                <Lottie animationData={loadingAnim} loop={true} autoplay={true} 
-                    className="h-40 w-40" />
+            <div className="profile-main">
+                <div className="profile-skeleton">
+                    <div className="profile-skeleton-header">
+                        <div className="skeleton-avatar" />
+                        <div className="skeleton-lines">
+                            <div className="skeleton-line w-40" />
+                            <div className="skeleton-line w-28" />
+                        </div>
+                        <div className="skeleton-stats">
+                            <div className="skeleton-pill" />
+                            <div className="skeleton-pill" />
+                            <div className="skeleton-pill" />
+                        </div>
+                    </div>
+                    <div className="profile-skeleton-tabs">
+                        <div className="skeleton-tab" />
+                        <div className="skeleton-tab" />
+                    </div>
+                    <div className="profile-skeleton-cards">
+                        {[...Array(6)].map((_, idx) => (
+                            <div key={idx} className="skeleton-card" />
+                        ))}
+                    </div>
+                </div>
             </div>
         )
     }
@@ -106,9 +139,9 @@ export default function ProfileViewer() {
                 <div className="profile-header-info">
                     <h1 className="profile-username">{user.username}</h1>
                     <p className="profile-email">{user.email}</p>
-                    <div className="profile-rank-badge">
+                    {/* <div className="profile-rank-badge">
                         {formatRankName(user.rank)}
-                    </div>
+                    </div> */}
                 </div>
                 <div className="profile-stats">
                     <div className="profile-stat-card">
@@ -168,6 +201,7 @@ export default function ProfileViewer() {
                             {posts.map((post: any) => (
                                 <PostCard
                                     key={post.id}
+                                    userId={post.userId}
                                     rank={post.rank}
                                     content={post.content}
                                     userImage={post.userImage}

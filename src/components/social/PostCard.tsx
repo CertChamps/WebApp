@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { storage } from "../../../firebase";
 import { getDownloadURL, ref } from "firebase/storage";
 import useNotifications from "../../hooks/useNotifications";
@@ -8,6 +9,7 @@ import { LuMessageCircleMore } from "react-icons/lu"
 
 interface PostCardProps {
     content: string;
+    userId?: string;
     rank?: number;
     userImage?: string;
     username?: string;
@@ -29,6 +31,7 @@ interface PostCardProps {
   const PostCard: React.FC<PostCardProps> = ({
     userImage,
     username,
+    userId,
     rank,
     time,
     content,
@@ -37,9 +40,17 @@ interface PostCardProps {
     onPressReplies
   }) => {
 
+    const navigate = useNavigate()
     const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
     const {timeAgoFormatter} = useNotifications()
     const formattedDate = timeAgoFormatter(time)
+
+    const handleUserClick = (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (userId) {
+            navigate(`/viewProfile/${userId}`)
+        }
+    }
 
     //======================== Fetch Image URL from Firebase Storage =========================
     useEffect(() => {
@@ -69,10 +80,11 @@ interface PostCardProps {
                 <img 
                     src={userImage} 
                     alt={username} 
-                    className="post-card-user-img" 
+                    className="post-card-user-img cursor-pointer" 
+                    onClick={handleUserClick}
                 />
                 <div>
-                    <p className="post-card-user-name">{username}</p>
+                    <p className="post-card-user-name cursor-pointer hover:opacity-80 transition-opacity" onClick={handleUserClick}>{username}</p>
                     <p className="post-card-user-rank">{formatRankName(rank)}</p> 
                 </div>
                 <span className="post-card-date">{formattedDate}</span>

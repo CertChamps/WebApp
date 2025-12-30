@@ -111,6 +111,12 @@
   --color-nordLightPrimary: #8FBCBB;
   --color-nordLightSub: #6A7791;
 
+  /* Nord Dark */
+  --color-nordDarkBG: #242933;
+  --color-nordDarkAccent: #88c0d0;
+  --color-nordDarkPrimary: #88c0d0;
+  --color-nordDarkSub: #d8dee9;
+
   /* Sewing Tin Light */
   --color-sewingTinLightBG: #FFFFFF;
   --color-sewingTinLightAccent: #2D2076;
@@ -136,6 +142,18 @@
   --color-auroraPrimary: #E06C75;
   --color-auroraSub1: #ABB2BF;
   --color-auroraSub2: #FFD700;
+
+  /* Blueberry Light */
+  --color-blueberryLightBG: #dae0f5;
+  --color-blueberryLightAccent: #678198;
+  --color-blueberryLightPrimary: #92a4be;
+  --color-blueberryLightSub: #506477;
+
+  /* Blueberry Dark */
+  --color-blueberryDarkBG: #506477;
+  --color-blueberryDarkAccent: #91b4d5;
+  --color-blueberryDarkPrimary: #add7ff;
+  --color-blueberryDarkSub: #5c7da5;
 
   /* Note: Do not change these randomly below styles must follow: 
   radius-out - radius-in = 2 * padding/margin */
@@ -273,10 +291,13 @@ math-field::part(virtual-keyboard-toggle) {
 @custom-variant lavendar (&:where([data-theme="lavendar"] *));
 @custom-variant airplane (&:where([data-theme="airplane"] *));
 @custom-variant nordLight (&:where([data-theme="nordLight"] *));
+@custom-variant nordDark (&:where([data-theme="nordDark"] *));
 @custom-variant sewingTinLight (&:where([data-theme="sewingTinLight"] *));
 @custom-variant camping (&:where([data-theme="camping"] *));
 @custom-variant paper (&:where([data-theme="paper"] *));
 @custom-variant aurora (&:where([data-theme="aurora"] *));
+@custom-variant blueberryLight (&:where([data-theme="blueberryLight"] *));
+@custom-variant blueberryDark (&:where([data-theme="blueberryDark"] *));
 
 @utility color-txt-main {
   @apply 
@@ -295,10 +316,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:text-lavendarPrimary
     airplane:text-airplanePrimary
     nordLight:text-nordLightPrimary
+    nordDark:text-nordDarkPrimary
     sewingTinLight:text-sewingTinLightPrimary
     camping:text-campingPrimary
     paper:text-paperPrimary
     aurora:text-auroraPrimary
+    blueberryLight:text-blueberryLightPrimary
+    blueberryDark:text-blueberryDarkPrimary
 }
 
 @utility color-txt-sub {
@@ -318,10 +342,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:text-lavendarSub
     airplane:text-airplaneSub
     nordLight:text-nordLightSub
+    nordDark:text-nordDarkSub
     sewingTinLight:text-sewingTinLightSub
     camping:text-campingSub
     paper:text-paperSub
     aurora:text-auroraSub1
+    blueberryLight:text-blueberryLightSub
+    blueberryDark:text-blueberryDarkSub
 }
 
 @utility color-txt-accent {
@@ -341,10 +368,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:text-lavendarAccent
     airplane:text-airplaneAccent
     nordLight:text-nordLightAccent
+    nordDark:text-nordDarkAccent
     sewingTinLight:text-sewingTinLightAccent
     camping:text-campingAccent
     paper:text-paperAccent
     aurora:text-auroraAccent1
+    blueberryLight:text-blueberryLightAccent
+    blueberryDark:text-blueberryDarkAccent
 }
 
 @utility color-bg {
@@ -364,10 +394,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:bg-lavendarBG
     airplane:bg-airplaneBG
     nordLight:bg-nordLightBG
+    nordDark:bg-nordDarkBG
     sewingTinLight:bg-sewingTinLightBG
     camping:bg-campingBG
     paper:bg-paperBG
     aurora:bg-auroraBG
+    blueberryLight:bg-blueberryLightBG
+    blueberryDark:bg-blueberryDarkBG
 }
 
 @utility color-txt-invert {
@@ -387,10 +420,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:text-lavendarBG
     airplane:text-airplaneBG
     nordLight:text-nordLightBG
+    nordDark:text-nordDarkBG
     sewingTinLight:text-sewingTinLightBG
     camping:text-campingBG
     paper:text-paperBG
     aurora:text-auroraBG
+    blueberryLight:text-blueberryLightBG
+    blueberryDark:text-blueberryDarkBG
 }
 
 
@@ -411,10 +447,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:bg-lavendarSub/5
     airplane:bg-airplaneSub/5
     nordLight:bg-nordLightSub/5
+    nordDark:bg-nordDarkSub/5
     sewingTinLight:bg-sewingTinLightSub/5
     camping:bg-campingSub/5
     paper:bg-paperSub/5
     aurora:bg-auroraSub1/5
+    blueberryLight:bg-blueberryLightSub/5
+    blueberryDark:bg-blueberryDarkSub/5
   
 }
 
@@ -435,10 +474,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:bg-lavendarSub/20
     airplane:bg-airplaneSub/20
     nordLight:bg-nordLightSub/20
+    nordDark:bg-nordDarkSub/20
     sewingTinLight:bg-sewingTinLightSub/20
     camping:bg-campingSub/20
     paper:bg-paperSub/20
     aurora:bg-auroraSub1/20
+    blueberryLight:bg-blueberryLightSub/20
+    blueberryDark:bg-blueberryDarkSub/20
 
 }
 
@@ -459,10 +501,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:bg-lavendarAccent/15
     airplane:bg-airplaneAccent/15
     nordLight:bg-nordLightAccent/15
+    nordDark:bg-nordDarkAccent/15
     sewingTinLight:bg-sewingTinLightAccent/15
     camping:bg-campingAccent/15
     paper:bg-paperAccent/15
     aurora:bg-auroraAccent1/15
+    blueberryLight:bg-blueberryLightAccent/15
+    blueberryDark:bg-blueberryDarkAccent/15
 }
 
 @utility color-shadow {
@@ -482,10 +527,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:border-lavendarSub/20
     airplane:border-airplaneSub/20
     nordLight:border-nordLightSub/20
+    nordDark:border-nordDarkSub/20
     sewingTinLight:border-sewingTinLightSub/20
     camping:border-campingSub/20
     paper:border-paperSub/20
     aurora:border-auroraSub1/20
+    blueberryLight:border-blueberryLightSub/20
+    blueberryDark:border-blueberryDarkSub/20
 
     shadow-light-grey/40
     dark:shadow-grey/20
@@ -502,10 +550,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:shadow-lavendarSub/20
     airplane:shadow-airplaneSub/20
     nordLight:shadow-nordLightSub/20
+    nordDark:shadow-nordDarkSub/20
     sewingTinLight:shadow-sewingTinLightSub/20
     camping:shadow-campingSub/20
     paper:shadow-paperSub/20
     aurora:shadow-auroraSub1/20
+    blueberryLight:shadow-blueberryLightSub/20
+    blueberryDark:shadow-blueberryDarkSub/20
   
 }
 
@@ -526,10 +577,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:border-lavendarAccent
     airplane:border-airplaneAccent
     nordLight:border-nordLightAccent
+    nordDark:border-nordDarkAccent
     sewingTinLight:border-sewingTinLightAccent
     camping:border-campingAccent
     paper:border-paperAccent
-    aurora:border-auroraAccent1; 
+    aurora:border-auroraAccent1
+    blueberryLight:border-blueberryLightAccent
+    blueberryDark:border-blueberryDarkAccent; 
     
     @apply
     shadow-blue
@@ -547,10 +601,13 @@ math-field::part(virtual-keyboard-toggle) {
     lavendar:shadow-lavendarAccent
     airplane:shadow-airplaneAccent
     nordLight:shadow-nordLightAccent
+    nordDark:shadow-nordDarkAccent
     sewingTinLight:shadow-sewingTinLightAccent
     camping:shadow-campingAccent
     paper:shadow-paperAccent
     aurora:shadow-auroraAccent1
+    blueberryLight:shadow-blueberryLightAccent
+    blueberryDark:shadow-blueberryDarkAccent
     
 }
 
@@ -575,6 +632,9 @@ math-field::part(virtual-keyboard-toggle) {
     camping:bg-campingAccent
     paper:bg-paperAccent
     aurora:bg-auroraBG
+    nordDark:bg-nordDarkAccent
+    blueberryLight:bg-blueberryLightAccent
+    blueberryDark:bg-blueberryDarkAccent
 }
 
 @utility image-invert {
@@ -598,6 +658,9 @@ math-field::part(virtual-keyboard-toggle) {
     camping:invert-0
     paper:invert-0
     aurora:invert-0
+    nordDark:invert-0
+    blueberryLight:invert-0
+    blueberryDark:invert-0
 }
 
 @utility bg-gradient-bg-fade {
@@ -642,6 +705,12 @@ math-field::part(virtual-keyboard-toggle) {
     paper:via-paperBG/100
     aurora:from-auroraBG/100
     aurora:via-auroraBG/100
+    nordDark:from-nordDarkBG/100
+    nordDark:via-nordDarkBG/100
+    blueberryLight:from-blueberryLightBG/100
+    blueberryLight:via-blueberryLightBG/100
+    blueberryDark:from-blueberryDarkBG/100
+    blueberryDark:via-blueberryDarkBG/100
     z-1000;
 }
 
@@ -699,8 +768,14 @@ math-field::part(virtual-keyboard-toggle) {
       camping:hover:bg-campingSub/60
       paper:bg-paperSub/40
       paper:hover:bg-paperSub/60
-      aurora:bg-auroraSub1/40
-      aurora:hover:bg-auroraSub1/60;
+        aurora:bg-auroraSub1/40
+        aurora:hover:bg-auroraSub1/60
+        nordDark:bg-nordDarkSub/40
+        nordDark:hover:bg-nordDarkSub/60
+        blueberryLight:bg-blueberryLightSub/40
+        blueberryLight:hover:bg-blueberryLightSub/60
+        blueberryDark:bg-blueberryDarkSub/40
+        blueberryDark:hover:bg-blueberryDarkSub/60;
   }
 
   /* Firefox */
@@ -763,6 +838,10 @@ math-field::part(virtual-keyboard-toggle) {
     scrollbar-color: rgb(106 119 145 / 0.4) transparent;
   }
 
+  [data-theme="nordDark"] & {
+    scrollbar-color: rgb(36 41 51 / 0.4) transparent;
+  }
+
   [data-theme="sewingTinLight"] & {
     scrollbar-color: rgb(56 94 202 / 0.4) transparent;
   }
@@ -777,5 +856,13 @@ math-field::part(virtual-keyboard-toggle) {
 
   [data-theme="aurora"] & {
     scrollbar-color: rgb(171 178 191 / 0.4) transparent;
+  }
+
+  [data-theme="blueberryLight"] & {
+    scrollbar-color: rgb(80 100 119 / 0.4) transparent;
+  }
+
+  [data-theme="blueberryDark"] & {
+    scrollbar-color: rgb(173 215 255 / 0.4) transparent;
   }
 }

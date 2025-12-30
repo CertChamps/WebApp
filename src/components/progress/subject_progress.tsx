@@ -6,6 +6,7 @@ import { UserContext } from "../../context/UserContext";
 const subject_progress = () => {
     const { user } = useContext(UserContext);
     const [subjects, setSubjects] = useState<{ name: string; completed: number; total: number }[]>([]);
+  const [loading, setLoading] = useState(true);
 
     const validTopics = [
         "Algebra",
@@ -23,7 +24,8 @@ const subject_progress = () => {
     ];
 
     useEffect(() => {
-        if (!user?.uid) return;
+      setLoading(true);
+      if (!user?.uid) return;
 
         const fetchProgress = async () => {
             const progressData: { name: string; completed: number; total: number }[] = [];
@@ -54,10 +56,24 @@ const subject_progress = () => {
             }
 
             setSubjects(progressData);
+      setLoading(false);
         };
 
         fetchProgress();
     }, [user?.uid]);
+
+  if (loading) {
+    return (
+      <div className="subject-progress progress-skeleton-card">
+        <div className="progress-skeleton-line w-40" />
+        <div className="subject-circles">
+          {[...Array(6)].map((_, idx) => (
+            <div key={idx} className="progress-skeleton-circle" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
     const radius = 50;
     const circumference = 2 * Math.PI * radius;
