@@ -101,7 +101,7 @@ export default function DeckCard({ deck, questionId, onAddQuestion, className }:
 				<span className="txt-sub">{createdDate}</span>
 			</div>
 
-			<div className="deck-txt">
+			<div className="deck-txt mb-1">
 				<span className="txt max-w-2/3">{deck.description || 'No description provided.'}</span>
 				<span className="txt">
 					{(deck.questions?.length || 0)} question{(deck.questions?.length || 0) !== 1 ? 's' : ''}
@@ -132,7 +132,7 @@ export default function DeckCard({ deck, questionId, onAddQuestion, className }:
 			
 			{hasQuestion ? (
 				<span
-					className="cursor-target blue-btn cursor-pointer my-2"
+					className="cursor-target blue-btn cursor-pointer mt-2 w-40 text-center"
 					onClick={(e) => {
 						e.stopPropagation()
 						if (questionId && onAddQuestion) onAddQuestion(deck.id, questionId)

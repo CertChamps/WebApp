@@ -604,7 +604,7 @@ math-field::part(virtual-keyboard-toggle) {
   @apply
     bg-gradient-to-l
     from-white from-[0%]
-    via-white via-[2%]
+    via-white via-[0%]
     to-transparent to-[5%]
     dark:from-black/100
     dark:via-black/100
@@ -641,7 +641,8 @@ math-field::part(virtual-keyboard-toggle) {
     paper:from-paperBG/100
     paper:via-paperBG/100
     aurora:from-auroraBG/100
-    aurora:via-auroraBG/100;
+    aurora:via-auroraBG/100
+    z-1000;
 }
 
 /* ================== SCROLLBAR STYLES ================== */

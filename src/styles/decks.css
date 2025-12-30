@@ -22,7 +22,7 @@
 }
 
 .deck {
-    @apply shadow-small w-[24%] min-w-sm cursor-pointer h-32 flex-shrink-0 p-4 relative hover:scale-[97%] duration-200 transition-all ease-in-out
+    @apply shadow-small min-w-sm cursor-pointer h-32 flex-shrink-0 p-4 relative hover:scale-[97%] duration-200 transition-all ease-in-out
 }
 
 .deck-grid {

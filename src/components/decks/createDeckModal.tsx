@@ -88,9 +88,7 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
   const [isClosing, setIsClosing] = useState(false)
   const [isPublic, setIsPublic] = useState(false)
   const [errors, setErrors] = useState<{ name?: string; description?: string; questions?: string }>({})
-  const [feedbackState, setFeedbackState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-  const [feedbackExiting, setFeedbackExiting] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
   const { fetchAllQuestions } = useQuestions()
 
   useEffect(() => {
@@ -150,21 +148,17 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
 
     // Wait for animation to complete before closing
     setTimeout(() => {
-    setName('')
-    setDesc('')
-    setColor('#FFFFFF')
+      setName('')
+      setDesc('')
+      setColor('#FFFFFF')
       setSearchTerm('')
       setSearchResults([])
       setSelectedQuestions([])
       setIsPublic(false)
       setErrors({})
-      // Don't reset feedbackState and errorMessage here - they're handled separately
-    }, 300) // Match this duration with the CSS transition duration
-
-    setTimeout(() => {
+      setIsCreating(false)
       props.setShowCreateModal(false)
-      // Don't reset feedbackState and errorMessage here - they're handled separately
-    }, 1500) // Match this duration with the CSS transition duration
+    }, 300) // Match this duration with the CSS transition duration
   }
 
   const handleCreate = async () => {
@@ -191,34 +185,14 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
 
     // If no errors, create deck
     if (Object.keys(newErrors).length === 0) {
-      try {
-        setFeedbackState('loading')
-        const questionIds = selectedQuestions.map((q) => q.id)
-        await props.createDeck(name, desc, questionIds, isPublic, color)
-        setFeedbackState('success')
-        
-        // Close modal immediately
-        handleClose()
-        
-        // Keep feedback visible for 2.5 seconds, then fade out over 0.5 seconds
-        setTimeout(() => {
-          setFeedbackExiting(true)
-          setTimeout(() => {
-            setFeedbackState('idle')
-            setErrorMessage('')
-            setFeedbackExiting(false)
-          }, 500)
-        }, 1000)
-      } catch (err) {
-        setFeedbackState('error')
-        setErrorMessage(err instanceof Error ? err.message : 'Failed to create deck')
-        
-        // Reset error state after 3 seconds
-        setTimeout(() => {
-          setFeedbackState('idle')
-          setErrorMessage('')
-        }, 3000)
-      }
+      setIsCreating(true)
+      const questionIds = selectedQuestions.map((q) => q.id)
+      
+      // Close modal immediately without animation
+      props.setShowCreateModal(false)
+      
+      // Then create the deck (happens after modal is gone)
+      await props.createDeck(name, desc, questionIds, isPublic, color)
     }
   }
 
@@ -452,59 +426,20 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
           <button
             className="color-txt-sub px-4 py-2 rounded cursor-pointer hover:color-txt-main"
             onClick={handleClose}
-            disabled={feedbackState === 'loading'}
+            disabled={isCreating}
           >
             Cancel
           </button>
           <button
             className="blue-btn cursor-pointer px-4 py-2"
             onClick={handleCreate}
-            disabled={!name.trim() || feedbackState === 'loading'}
+            disabled={!name.trim() || isCreating}
           >
-            {feedbackState === 'loading' ? 'Creating...' : 'Create Deck'}
+            {isCreating ? 'Creating...' : 'Create Deck'}
           </button>
         </div>
       </div>
     </div>
-
-    {/* Feedback Display - Outside modal so it persists independently */}
-    {feedbackState !== 'idle' && (
-      <div
-        className="fixed bottom-8 left-1/2 -translate-x-1/2 p-4 rounded-out flex items-center justify-center gap-3 z-[9999]"
-        style={{
-          animation: feedbackExiting ? 'fadeOut 0.5s ease-out forwards' : 'scaleIn 0.3s ease-out',
-          backgroundColor: feedbackState === 'loading' ? 'rgba(59, 130, 246, 0.1)' :
-            feedbackState === 'success' ? 'rgba(34, 197, 94, 0.1)' :
-            'rgba(239, 68, 68, 0.1)',
-          borderLeft: `4px solid ${feedbackState === 'loading' ? '#3b82f6' :
-            feedbackState === 'success' ? '#22c55e' :
-            '#ef4444'}`
-        }}>
-        {feedbackState === 'loading' && (
-          <>
-            <div style={{ animation: 'spin 1s linear infinite' }} className="color-txt-accent">
-              <div className="w-5 h-5 border-2 border-transparent border-t-current border-r-current rounded-full" />
-            </div>
-            <span className="color-txt-main font-semibold">Creating deck...</span>
-          </>
-        )}
-        {feedbackState === 'success' && (
-          <>
-            <LuCheck className="color-txt-main" size={24} strokeWidth={3} />
-            <span className="color-txt-main font-semibold">Deck created successfully!</span>
-          </>
-        )}
-        {feedbackState === 'error' && (
-          <>
-            <LuOctagon className="text-red-500" size={24} strokeWidth={2} />
-            <div className="flex flex-col">
-              <span className="text-red-600 font-semibold">Failed to create deck</span>
-              <span className="text-red-500 text-sm">{errorMessage}</span>
-            </div>
-          </>
-        )}
-      </div>
-    )}
     </>
   )
 }

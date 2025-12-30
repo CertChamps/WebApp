@@ -13,6 +13,20 @@ import { UserContext } from "../context/UserContext"
 import CreateDeckModal from "./decks/createDeckModal"
 import DeckCard from "./decks/deckCard"
 
+// Add inline styles for animation
+const styleSheet = `
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+`
+
 // Component Props 
 type ViewDecksProps = {
     questionId?: string
@@ -58,49 +72,60 @@ export default function ViewDecks({ questionId, question }: ViewDecksProps) {
     }
 
     return (
-        <div className="h-container items-start w-full overflow-y-auto scrollbar-minimal px-4">
-            {/* Deck Cards */}
-            <div className="w-full">
-                {userDecks.length === 0 ? (
-                    <p className="color-txt-sub text-center py-4">You have no decks yet. Create one below!</p>
-                ) : (
-                    <div className="flex flex-col gap-3">
-                        {userDecks.map((deck: any) => (
-                            <div key={deck.id} className="relative">
-                                <DeckCard
-                                    deck={deck}
-                                    questionId={currentQuestionId}
-                                    onAddQuestion={handleAddQuestion}
-                                    className={addedToDeck === deck.id ? 'ring-2 ring-green-500' : ''}
-                                />
-                                {addedToDeck === deck.id && (
-                                    <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
-                                        Added!
-                                    </div>
-                                )}
-                            </div>
-                        ))}
+        <>
+            <style>{styleSheet}</style>
+            <div className="h-container items-start w-full overflow-y-auto scrollbar-minimal px-4">
+                {/* Deck Cards */}
+                <div className="w-full">
+                    {userDecks.length === 0 ? (
+                        <p className="color-txt-sub text-center py-4">You have no decks yet. Create one below!</p>
+                    ) : (
+                        <div className="flex flex-col gap-3">
+                            {userDecks.map((deck: any) => (
+                                <div key={deck.id} className="relative transition-all duration-300">
+                                    <DeckCard
+                                        deck={deck}
+                                        questionId={currentQuestionId}
+                                        onAddQuestion={handleAddQuestion}
+                                        className={addedToDeck === deck.id ? 'ring-2 color-shadow' : ''}
+                                    />
+                                    {addedToDeck === deck.id && (
+                                        <div 
+                                            className="absolute bottom-4 right-5 color-bg-accent color-txt-main text-xs font-semibold px-3 py-1.5 rounded-out color-shadow flex items-center gap-1.5"
+                                            style={{
+                                                animation: 'scaleIn 0.3s ease-out'
+                                            }}
+                                        >
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Added!
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* New Deck Button */}
+                    <div 
+                        className="new-deck my-3 cursor-pointer" 
+                        onClick={() => setShowCreateModal(true)}
+                    >
+                        <p className="color-txt-main text-center">New Deck</p>
                     </div>
-                )}
-
-                {/* New Deck Button */}
-                <div 
-                    className="new-deck my-3 cursor-pointer" 
-                    onClick={() => setShowCreateModal(true)}
-                >
-                    <p className="color-txt-main text-center">New Deck</p>
                 </div>
-            </div>
 
-            {/* Create Deck Modal */}
-            {showCreateModal && (
-                <CreateDeckModal
-                    setShowCreateModal={setShowCreateModal}
-                    isVisible={isVisible}
-                    setIsVisible={setIsVisible}
-                    createDeck={createDeck}
-                />
-            )}
-        </div>
+                {/* Create Deck Modal */}
+                {showCreateModal && (
+                    <CreateDeckModal
+                        setShowCreateModal={setShowCreateModal}
+                        isVisible={isVisible}
+                        setIsVisible={setIsVisible}
+                        createDeck={createDeck}
+                    />
+                )}
+            </div>
+        </>
     )
 }
