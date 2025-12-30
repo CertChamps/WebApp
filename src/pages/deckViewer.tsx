@@ -7,21 +7,26 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useStopwatch } from "../hooks/useStopwatch";
 import useDeckHandler from "../hooks/useDeckHandler";
 import useQuestions from "../hooks/useQuestions";
+import useFetch from "../hooks/useFetch";
 
 // Components 
 import Question from "../components/questions/question";
 import DeckPreview from "../components/decks/deckPreview";
+import EditDeckModal from "../components/decks/editDeckModal";
+import ConfirmationPrompt from "../components/prompts/confirmation";
 
 // Context 
 import { UserContext } from "../context/UserContext";
+import { set } from "nerdamer";
 
 export default function DeckViewer () {
 
     // =========================== HOOKS, STATE, CONTEXT =========================== //
     const { id, "*": isPrev } = useParams()
     const isPreviewMode = isPrev === "preview"
-    const { getDeckbyID , saveProgress, getUsersDeckSaveData} = useDeckHandler()
+    const { getDeckbyID , saveProgress, getUsersDeckSaveData, getFriendsAnswers, updateDeck, deleteDeck, removeUserFromDeck } = useDeckHandler()
     const { fetchQuestion } = useQuestions()
+    const { fetchFriends } = useFetch()
     const navigate = useNavigate()
     const location = useLocation()
 
@@ -31,66 +36,88 @@ export default function DeckViewer () {
     const [questions, setQuestions] = useState<any>([])
     const [position, setPosition] = useState<number>(0)
     const [questionsAnswered, setQuestionsAnswered] = useState<any>({})
+    const [friendsAnswered, setFriendsAnswered] = useState<any>({})
+    const [showEditModal, setShowEditModal] = useState(false)
+    const [isEditVisible, setIsEditVisible] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
+    const [isOwner, setIsOwner] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
     const isInitialRender = useRef(true)
 
     // get stopwatch and start
     const { start, stop, secondsElapsed, setSecondsElapsed} = useStopwatch()
 
     // ============================ INITIALISATION ============================== //
-    useEffect(() => {
+    const fetchDeckData = async () => {
+        try {
+            // get the Deck Data 
+            const deckData = await getDeckbyID(id) 
 
-        // Initialise the Deck ========================
-        const init_deck = async () => {
-            try {
-                
-                // get the Deck Data 
-                const deckData = await getDeckbyID(id) 
+            // get the User Save Data 
+            const saveData = await getUsersDeckSaveData(id, user?.uid)
 
-                // get the User Save Data 
-                const saveData = await getUsersDeckSaveData(id, user?.uid)
-
-                // Redirect to preview only if user is NOT in usersAdded
-                if (!isPreviewMode && user?.uid && !saveData) {
-                    navigate(`/decks/${id}/preview`, { state: { fromPreview: true } })
-                    return
-                }
-
-                // Concatenate all data 
-                const init = {
-                    ...deckData,
-                    ...saveData
-                }
-
-                setDeck(init)
-                setSecondsElapsed(saveData?.timeElapsed ?? 0)
-                
-                // Initialize questionsAnswered from save data
-                if (saveData?.questionsCompleted && Array.isArray(saveData.questionsCompleted)) {
-                    const answeredObj: any = {};
-                    saveData.questionsCompleted.forEach((qId: string) => {
-                        answeredObj[qId] = true;
-                    });
-                    setQuestionsAnswered(answeredObj);
-                }
-                
-                start()
-                // Map to array of promises
-                const questionPromises = init?.questions.map(async (qID: string) => {
-                    return await fetchQuestion(qID);
-                });
-
-                const questionData = await Promise.all(questionPromises);
-                const filteredData = questionData.filter(q => q !== null); // remove any bad ones
-
-                setQuestions(filteredData);
-            } catch (error) {
-                console.error("Error loading questions:", error);
+            // Redirect to preview only if user is NOT in usersAdded
+            if (!isPreviewMode && user?.uid && !saveData) {
+                navigate(`/decks/${id}/preview`, { state: { fromPreview: true } })
+                return
             }
-        };
-        // ============================================
 
-        init_deck()
+            // Concatenate all data 
+            const init = {
+                ...deckData,
+                ...saveData
+            }
 
+            setIsOwner(user?.uid === deckData?.createdBy)
+
+
+            setDeck(init)
+            setSecondsElapsed(saveData?.timeElapsed ?? 0)
+            
+            // Initialize questionsAnswered from save data
+            if (saveData?.questionsCompleted && Array.isArray(saveData.questionsCompleted)) {
+                const answeredObj: any = {};
+                saveData.questionsCompleted.forEach((qId: string) => {
+                    answeredObj[qId] = true;
+                });
+                setQuestionsAnswered(answeredObj);
+            }
+            
+            start()
+            // Map to array of promises
+            const questionPromises = init?.questions.map(async (qID: string) => {
+                return await fetchQuestion(qID);
+            });
+
+            const questionData = await Promise.all(questionPromises);
+            const filteredData = questionData.filter(q => q !== null); // remove any bad ones
+
+            setQuestions(filteredData);
+
+            // Fetch friends' answers for this deck
+            if (user?.uid && id) {
+                const friends = await fetchFriends(user.uid);
+                console.log("Fetched friends:", friends);
+                if (friends && friends.length > 0) {
+                    const friendsData = await getFriendsAnswers(id, friends);
+                    setFriendsAnswered(friendsData);
+                }
+            }
+        } catch (error) {
+            console.error("Error loading questions:", error); 
+        }
+    }
+
+    // Refetch deck data (used after editing)
+    const refetchDeck = async () => {
+        setIsLoading(true)
+        await fetchDeckData()
+        setIsLoading(false)
+    }
+
+    useEffect(() => {
+        fetchDeckData()
     }, [id, isPrev])
     // ========================================================================== // 
 
@@ -141,7 +168,18 @@ export default function DeckViewer () {
 
 
     return (
-    <div className="w-h-container flex-col overflow-clip">
+    <div className="w-h-container flex-col overflow-clip relative">
+
+        { /* ======================================= LOADING OVERLAY ==================================== */ }
+        { isLoading && (
+            <div className="absolute inset-0 color-bg-grey-10 z-40 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-3 border-transparent border-t-current border-r-current rounded-full animate-spin color-txt-accent" />
+                    <span className="color-txt-main font-semibold">Updating deck...</span>
+                </div>
+            </div>
+        )}
+        { /* ====================================================================================== */ }
 
         { /* ======================================= TOP PANEL ==================================== */ }
         { !isPreviewMode ? (
@@ -163,14 +201,29 @@ export default function DeckViewer () {
                 { /* RIGHT ACTIONS: EDIT + DELETE (no-op) */ }
                 <div className="flex items-center gap-4 color-txt-main txt-sub">
                     <>
-                        <div className="flex items-center gap-2 cursor-pointer hover:opacity-75 duration-100 transition-all">
-                            <LuPencil size={20} />
-                            <span>Edit</span>
-                        </div>
-                        <div className="flex items-center gap-2 cursor-pointer hover:opacity-75 duration-100 transition-all">
-                            <LuTrash size={20} />
-                            <span>Delete</span>
-                        </div>
+                        {isOwner   ? (
+                            <>
+                                <div 
+                                    className="flex items-center gap-2 cursor-pointer hover:opacity-75 duration-100 transition-all"
+                                    onClick={() => setShowEditModal(true)}
+                                >
+                                    <LuPencil size={20} />
+                                    <span>Edit</span>
+                                </div>
+                                <div className="flex items-center gap-2 cursor-pointer hover:opacity-75 duration-100 transition-all"
+                                    onClick={() => setShowDeleteConfirm(true)}>
+                                    <LuTrash size={20} />
+                                    <span>Delete</span>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex items-center gap-2 cursor-pointer hover:opacity-75 duration-100 transition-all"
+                            onClick={() => setShowRemoveConfirm(true)}>
+                                <LuTrash size={20} />
+                                <span>Remove</span>
+                            </div>
+                        )
+                        }
                     </>
                 </div>
 
@@ -208,12 +261,60 @@ export default function DeckViewer () {
                     }));
                 }}
                 questionsAnswered={questionsAnswered}
+                friendsAnswered={friendsAnswered}
             /> 
         )}
         { /* ====================================================================================== */ }
 
+        { /* ======================================= EDIT MODAL ==================================== */ }
+        { showEditModal && deck && (
+            <EditDeckModal
+                setShowEditModal={setShowEditModal}
+                isVisible={isEditVisible}
+                setIsVisible={setIsEditVisible}
+                updateDeck={updateDeck}
+                deck={{
+                    id: id as string,
+                    name: deck.name || '',
+                    description: deck.description || '',
+                    questions: deck.questions || [],
+                    visibility: deck.visibility || false,
+                    color: deck.color || '#FFFFFF'
+                }}
+                onUpdate={refetchDeck}
+            />
+        )}
+        { /* ====================================================================================== */ }
 
+        { /* ======================================= DELETE CONFIRMATION ==================================== */ }
+        <ConfirmationPrompt
+            open={showDeleteConfirm}
+            title="Delete Deck"
+            message="Are you sure you want to delete this deck? This action cannot be undone and will remove this deck for all users."
+            confirmText="Delete"
+            cancelText="Cancel"
+            onConfirm={() => {
+                deleteDeck(id);
+                setShowDeleteConfirm(false);
+            }}
+            onCancel={() => setShowDeleteConfirm(false)}
+        />
+        { /* ====================================================================================== */ }
 
+        { /* ======================================= REMOVE CONFIRMATION ==================================== */ }
+        <ConfirmationPrompt
+            open={showRemoveConfirm}
+            title="Remove Deck"
+            message="Are you sure you want to remove this deck? This action cannot be undone and will remove all deck progress from your account."
+            confirmText="Remove"
+            cancelText="Cancel"
+            onConfirm={() => {
+                removeUserFromDeck(id as string);
+                setShowRemoveConfirm(false);
+            }}
+            onCancel={() => setShowRemoveConfirm(false)}
+        />
+        { /* ====================================================================================== */ }
 
     </div>
     )

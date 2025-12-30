@@ -48,6 +48,13 @@ type questionsProps = {
     setFilters: React.Dispatch<React.SetStateAction<any>>;
     onQuestionAnswered?: (questionId: string, isCorrect: boolean) => void;
     questionsAnswered?: any;
+    friendsAnswered?: {
+        [questionId: string]: Array<{
+            uid: string;
+            picture: string;
+            username: string;
+        }>;
+    };
 };
 
 export default function Question(props: questionsProps) {
@@ -576,6 +583,7 @@ export default function Question(props: questionsProps) {
               currentIndex={props.position}
               onSelect={(idx) => props.setPosition?.(idx)}
               questionsAnswered={props.questionsAnswered}
+              friendsAnswered={props.friendsAnswered}
             />
           </div>
         ) : null}

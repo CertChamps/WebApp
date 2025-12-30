@@ -55,16 +55,24 @@ const styleSheet = `
       transform: scale(0.8);
     }
   }
-  .question-item {
-    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
-  }
 `
 
-export type CreateDeckModalProps = {
-  setShowCreateModal: Dispatch<SetStateAction<boolean>>
+export type Deck = {
+  id: string
+  name: string
+  description: string
+  questions: string[]
+  visibility: boolean
+  color: string
+}
+
+export type EditDeckModalProps = {
+  setShowEditModal: Dispatch<SetStateAction<boolean>>
   isVisible: boolean
   setIsVisible: Dispatch<SetStateAction<boolean>>
-  createDeck: (name: string, description: string, questionIds: string[], visibility: boolean, color: string) => Promise<void>
+  updateDeck: (deckID: string, name: string, description: string, questionIds: string[], visibility: boolean, color: string) => Promise<void>
+  deck: Deck
+  onUpdate?: () => Promise<void> // Callback to refetch deck data after update
 }
 
 type Question = {
@@ -73,22 +81,24 @@ type Question = {
   content: any[]
 }
 
-export default function CreateDeckModal(props: CreateDeckModalProps) {
+export default function EditDeckModal(props: EditDeckModalProps) {
   const modalRef = useRef<any>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const reorderContainerRef = useRef<HTMLDivElement>(null)
-  const [name, setName] = useState('')
-  const [desc, setDesc] = useState('')
-  const [color, setColor] = useState('#FFFFFF')
+  const [name, setName] = useState(props.deck.name || '')
+  const [desc, setDesc] = useState(props.deck.description || '')
+  const [color, setColor] = useState(props.deck.color || '#FFFFFF')
   const [searchTerm, setSearchTerm] = useState('')
   const [searchResults, setSearchResults] = useState<Question[]>([])
   const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([])
   const [allQuestions, setAllQuestions] = useState<Question[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
-  const [isPublic, setIsPublic] = useState(false)
+  const [isPublic, setIsPublic] = useState(props.deck.visibility || false)
   const [errors, setErrors] = useState<{ name?: string; description?: string; questions?: string }>({})
-  const [isCreating, setIsCreating] = useState(false)
+  const [feedbackState, setFeedbackState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [feedbackExiting, setFeedbackExiting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   const { fetchAllQuestions } = useQuestions()
 
   useEffect(() => {
@@ -114,11 +124,20 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
     }
   }, [])
 
-  // Load all questions once for searching
+  // Load all questions once for searching and pre-populate selected questions
   useEffect(() => {
     const init = async () => {
       const qs = await fetchAllQuestions()
       setAllQuestions(qs as Question[])
+      
+      // Pre-populate selected questions from deck, preserving the order
+      if (props.deck.questions && props.deck.questions.length > 0) {
+        const questionsMap = new Map((qs as Question[]).map((q) => [q.id, q]))
+        const deckQuestions = props.deck.questions
+          .map((id) => questionsMap.get(id))
+          .filter((q): q is Question => q !== undefined)
+        setSelectedQuestions(deckQuestions)
+      }
     }
     init()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,20 +167,17 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
 
     // Wait for animation to complete before closing
     setTimeout(() => {
-      setName('')
-      setDesc('')
-      setColor('#FFFFFF')
       setSearchTerm('')
       setSearchResults([])
-      setSelectedQuestions([])
-      setIsPublic(false)
       setErrors({})
-      setIsCreating(false)
-      props.setShowCreateModal(false)
-    }, 300) // Match this duration with the CSS transition duration
+    }, 300)
+
+    setTimeout(() => {
+      props.setShowEditModal(false)
+    }, 1500)
   }
 
-  const handleCreate = async () => {
+  const handleUpdate = async () => {
     const newErrors: { name?: string; description?: string; questions?: string } = {}
 
     // Validate deck name
@@ -183,16 +199,42 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
 
     setErrors(newErrors)
 
-    // If no errors, create deck
+    // If no errors, update deck
     if (Object.keys(newErrors).length === 0) {
-      setIsCreating(true)
-      const questionIds = selectedQuestions.map((q) => q.id)
-      
-      // Close modal immediately without animation
-      props.setShowCreateModal(false)
-      
-      // Then create the deck (happens after modal is gone)
-      await props.createDeck(name, desc, questionIds, isPublic, color)
+      try {
+        setFeedbackState('loading')
+        const questionIds = selectedQuestions.map((q) => q.id)
+        await props.updateDeck(props.deck.id, name, desc, questionIds, isPublic, color)
+        
+        // Refetch deck data if callback provided
+        if (props.onUpdate) {
+          await props.onUpdate()
+        }
+        
+        setFeedbackState('success')
+        
+        // Close modal immediately
+        handleClose()
+        
+        // Keep feedback visible for 2.5 seconds, then fade out over 0.5 seconds
+        setTimeout(() => {
+          setFeedbackExiting(true)
+          setTimeout(() => {
+            setFeedbackState('idle')
+            setErrorMessage('')
+            setFeedbackExiting(false)
+          }, 500)
+        }, 1000)
+      } catch (err) {
+        setFeedbackState('error')
+        setErrorMessage(err instanceof Error ? err.message : 'Failed to update deck')
+        
+        // Reset error state after 3 seconds
+        setTimeout(() => {
+          setFeedbackState('idle')
+          setErrorMessage('')
+        }, 3000)
+      }
     }
   }
 
@@ -230,7 +272,7 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="txt-heading-colour text-xl font-bold">Create New Deck</h2>
+          <h2 className="txt-heading-colour text-xl font-bold">Edit Deck</h2>
           <LuX
             className="color-txt-sub cursor-pointer hover:color-txt-main"
             strokeWidth={2}
@@ -400,19 +442,19 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
                       dragConstraints={reorderContainerRef}
                       dragElastic={0}
                     >
-                    <LuGripVertical
-                      className="mr-2 color-txt-sub"
-                      strokeWidth={2}
-                      size={18}
-                    />
-                    <span className="flex-1">{q.properties?.name || 'Untitled question'}</span>
-                    <LuX
-                      className="ml-2 cursor-pointer color-txt-sub hover:color-txt-main transition-colors"
-                      strokeWidth={2}
-                      size={18}
-                      onClick={() => toggleQuestion(q)}
-                    />
-                  </Reorder.Item>
+                      <LuGripVertical
+                        className="mr-2 color-txt-sub"
+                        strokeWidth={2}
+                        size={18}
+                      />
+                      <span className="flex-1">{q.properties?.name || 'Untitled question'}</span>
+                      <LuX
+                        className="ml-2 cursor-pointer color-txt-sub hover:color-txt-main transition-colors"
+                        strokeWidth={2}
+                        size={18}
+                        onClick={() => toggleQuestion(q)}
+                      />
+                    </Reorder.Item>
                   ))}
                 </Reorder.Group>
               </div>
@@ -421,25 +463,64 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
         </div>
         </div>
 
-        {/* Create Button */}
+        {/* Update Button */}
         <div className="flex justify-end gap-3 pt-4 border-t color-shadow mt-4">
           <button
             className="color-txt-sub px-4 py-2 rounded cursor-pointer hover:color-txt-main"
             onClick={handleClose}
-            disabled={isCreating}
+            disabled={feedbackState === 'loading'}
           >
             Cancel
           </button>
           <button
             className="blue-btn cursor-pointer px-4 py-2"
-            onClick={handleCreate}
-            disabled={!name.trim() || isCreating}
+            onClick={handleUpdate}
+            disabled={!name.trim() || feedbackState === 'loading'}
           >
-            {isCreating ? 'Creating...' : 'Create Deck'}
+            {feedbackState === 'loading' ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
     </div>
+
+    {/* Feedback Display - Outside modal so it persists independently */}
+    {feedbackState !== 'idle' && (
+      <div
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 p-4 rounded-out flex items-center justify-center gap-3 z-[9999]"
+        style={{
+          animation: feedbackExiting ? 'fadeOut 0.5s ease-out forwards' : 'scaleIn 0.3s ease-out',
+          backgroundColor: feedbackState === 'loading' ? 'rgba(59, 130, 246, 0.1)' :
+            feedbackState === 'success' ? 'rgba(34, 197, 94, 0.1)' :
+            'rgba(239, 68, 68, 0.1)',
+          borderLeft: `4px solid ${feedbackState === 'loading' ? '#3b82f6' :
+            feedbackState === 'success' ? '#22c55e' :
+            '#ef4444'}`
+        }}>
+        {feedbackState === 'loading' && (
+          <>
+            <div style={{ animation: 'spin 1s linear infinite' }} className="color-txt-accent">
+              <div className="w-5 h-5 border-2 border-transparent border-t-current border-r-current rounded-full" />
+            </div>
+            <span className="color-txt-main font-semibold">Saving changes...</span>
+          </>
+        )}
+        {feedbackState === 'success' && (
+          <>
+            <LuCheck className="color-txt-main" size={24} strokeWidth={3} />
+            <span className="color-txt-main font-semibold">Deck updated successfully!</span>
+          </>
+        )}
+        {feedbackState === 'error' && (
+          <>
+            <LuOctagon className="text-red-500" size={24} strokeWidth={2} />
+            <div className="flex flex-col">
+              <span className="text-red-600 font-semibold">Failed to update deck</span>
+              <span className="text-red-500 text-sm">{errorMessage}</span>
+            </div>
+          </>
+        )}
+      </div>
+    )}
     </>
   )
 }
