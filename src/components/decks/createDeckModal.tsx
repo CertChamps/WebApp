@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction, useContext} from 'react'
 import { LuX, LuCheck, LuOctagon, LuGripVertical } from 'react-icons/lu'
 import { CirclePicker } from 'react-color'
 import { Reorder } from 'framer-motion'
 import useQuestions from '../../hooks/useQuestions'
 import RenderMath from '../math/mathdisplay'
+import { UserContext } from '../../context/UserContext'
 
 // Add inline styles for animation
 const styleSheet = `
@@ -64,7 +65,7 @@ export type CreateDeckModalProps = {
   setShowCreateModal: Dispatch<SetStateAction<boolean>>
   isVisible: boolean
   setIsVisible: Dispatch<SetStateAction<boolean>>
-  createDeck: (name: string, description: string, questionIds: string[], visibility: boolean, color: string) => Promise<void>
+  createDeck: (name: string, description: string, questionIds: string[], visibility: boolean, color: string, isOfficial: boolean) => Promise<void>
 }
 
 type Question = {
@@ -87,9 +88,11 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
   const [showDropdown, setShowDropdown] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
   const [isPublic, setIsPublic] = useState(false)
+  const [isOfficial, setIsOfficial] = useState(false)
   const [errors, setErrors] = useState<{ name?: string; description?: string; questions?: string }>({})
   const [isCreating, setIsCreating] = useState(false)
   const { fetchAllQuestions } = useQuestions()
+  const { user } = useContext(UserContext)
 
   useEffect(() => {
     // Trigger fade in animation
@@ -155,6 +158,7 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
       setSearchResults([])
       setSelectedQuestions([])
       setIsPublic(false)
+      setIsOfficial(false)
       setErrors({})
       setIsCreating(false)
       props.setShowCreateModal(false)
@@ -187,12 +191,14 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
     if (Object.keys(newErrors).length === 0) {
       setIsCreating(true)
       const questionIds = selectedQuestions.map((q) => q.id)
+      // If official, force visibility to public
+      const finalIsPublic = isOfficial ? true : isPublic
       
       // Close modal immediately without animation
       props.setShowCreateModal(false)
       
       // Then create the deck (happens after modal is gone)
-      await props.createDeck(name, desc, questionIds, isPublic, color)
+      await props.createDeck(name, desc, questionIds, finalIsPublic, color, isOfficial)
     }
   }
 
@@ -289,19 +295,41 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
           </div>
         </div>
 
-        {/* Public/Private Toggle */}
+        {/* Official Toggle and Visibility */}
         <div className="mb-6">
+
+          {(user?.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user?.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2") ? (
+          <div className="mb-4">
+            <label className="color-txt-main block mb-2 font-semibold">Make it official?</label>
+            <button
+              type="button"
+              onClick={() => setIsOfficial(!isOfficial)}
+              className={`relative w-14 h-7 rounded-full transition-colors duration-300 focus:outline-none focus:ring-offset-2 ${
+                isOfficial ? 'color-bg-accent' : 'color-bg-grey-5'
+              }`}
+            >
+              <span
+                className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out ${
+                  isOfficial ? 'translate-x-7' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div> 
+          ) : (<></>)}
+
+
           <label className="color-txt-main block mb-2 font-semibold">Visibility</label>
-          <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-3 transition-opacity duration-300 ${isOfficial ? 'opacity-50' : 'opacity-100'}`}>
             <span className={`txt-sub transition-colors ${!isPublic ? 'color-txt-accent font-semibold' : 'color-txt-sub font-semibold'}`}>
               Private
             </span>
             <button
               type="button"
-              onClick={() => setIsPublic(!isPublic)}
+              onClick={() => !isOfficial && setIsPublic(!isPublic)}
+              disabled={isOfficial}
               className={`relative w-14 h-7 rounded-full transition-colors duration-300 focus:outline-none focus:ring-offset-2 ${
                 isPublic ? 'color-bg-accent' : 'color-bg-grey-5'
-              }`}
+              } ${isOfficial ? 'cursor-not-allowed' : 'cursor-pointer'}`}
             >
               <span
                 className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out ${

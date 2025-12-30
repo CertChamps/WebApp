@@ -40,13 +40,14 @@ export default function Decks() {
 
 	const [userDecks, setUserDecks] = useState<any>([])
 	const [publicDecks, setPublicDecks] = useState<any>([])
+	const [certChampsDecks, setCertChampsDecks] = useState<any>([])
 	const [isLoading, setIsLoading] = useState(true)
 	const [feedbackState, setFeedbackState] = useState<'idle' | 'success' | 'error'>('idle')
 	const [feedbackExiting, setFeedbackExiting] = useState(false)
 	const [errorMessage, setErrorMessage] = useState('')
 
 	const { createDeck } = useDeckHandler()
-	const { fetchUserDecks, fetchPublicDecks } = useFetch()
+	const { fetchUserDecks, fetchPublicDecks, fetchCertChampsDecks } = useFetch()
 
 	const getDecks = async () => {
 		setIsLoading(true)
@@ -58,6 +59,9 @@ export default function Decks() {
 		const pblcDecks = await fetchPublicDecks()
 		setPublicDecks(pblcDecks)
 		
+		const ccDecks = await fetchCertChampsDecks()
+		setCertChampsDecks(ccDecks)
+
 		setIsLoading(false)
 	}
 
@@ -65,9 +69,9 @@ export default function Decks() {
 		getDecks()
 	}, [user?.uid])
 
-	const handleCreateDeck = async (name: string, description: string, questionIds: string[], visibility: boolean, color: string) => {
+	const handleCreateDeck = async (name: string, description: string, questionIds: string[], visibility: boolean, color: string, isOfficial: boolean) => {
 		try {
-			await createDeck(name, description, questionIds, visibility, color)
+			await createDeck(name, description, questionIds, visibility, color, isOfficial)
 			setFeedbackState('success')
 			
 			// Refetch decks after successful creation
@@ -95,7 +99,7 @@ export default function Decks() {
 
 
 	return (
-		<div className="w-full h-full flex flex-col overflow-x-hidden p-4">
+		<div className="w-full h-full flex flex-col overflow-x-hidden p-4 scrollbar-minimal">
 			{/*==================== Top bar with search and create deck button ======================= */}
 			<div className='topBar flex-shrink-0'>
 				<div className="flex items-center txtbox w-full color-bg">
@@ -126,7 +130,7 @@ export default function Decks() {
 			{/*==================================================================================== */}
 
 			{isLoading ? (
-				<div className="flex-1 w-full scrollbar-minimal">
+				<div className="flex-1 w-full scrollbar-minimal h-full overflow-y-hidden">
 					{/* My Decks Skeleton */}
 					<div className='py-4 w-full'>
 						<div className="h-8 color-bg-grey-5 rounded w-48 ml-4 mb-4 animate-pulse"></div>
@@ -158,11 +162,27 @@ export default function Decks() {
 							</div>
 						</div>
 					</div>
+
+					{/* The Real Deal Skeleton */}
+					<div className='py-4 w-full'>
+						<div className="h-8 color-bg-grey-5 rounded w-48 ml-4 mb-4 animate-pulse"></div>
+						<div className='w-full h-40 relative'>
+							<div className="deck-grid w-full relative p-4 mr-10">
+								{[...Array(5)].map((_, i) => (
+									<div key={i} className="w-60 h-32 color-bg rounded-out animate-pulse flex flex-col justify-between p-4">
+										<div className="h-4 color-bg-grey-5 rounded w-3/4"></div>
+										<div className="h-3 color-bg-grey-5 rounded w-1/2"></div>
+										<div className="h-3 color-bg-grey-5 rounded w-2/3"></div>
+									</div>
+								))}
+							</div>
+						</div>
+					</div>
 				</div>
 			) : (
 			<div className="flex-1  w-full scrollbar-minimal">
 				{/*================================== "My Decks" Section ============================== */}
-				<div className='py-4 w-full '>
+				<div className='py-2 w-full '>
 				<h2 className="txt-heading-colour text-2xl inline ml-4">My Decks</h2>
 				<h2 className="txt-sub inline mx-2 hover:opacity-50 duration-200 transition-all cursor-pointer">view all</h2>
 				{userDecks?.length === 0 ? (
@@ -181,7 +201,7 @@ export default function Decks() {
 			{/*==================================================================================== */}
 
 			{/*================================== "Newly Added" Section ============================== */}
-			<div className='py-4 w-full scrollbar-minimal'>
+			<div className='py-2 w-full scrollbar-minimal'>
 				
 				<h2 className="txt-heading-colour text-2xl inline ml-4">Newly Added</h2>
 				<h2 className="txt-sub inline mx-2 hover:opacity-50 duration-200 transition-all cursor-pointer">view all</h2>
@@ -198,7 +218,28 @@ export default function Decks() {
 					</div>
 				)}
 			</div>
-				{/*==================================================================================== */}
+			{/*==================================================================================== */}
+
+			
+			{/*================================== "CertChamps" Section ============================== */}
+			<div className='py-2 w-full scrollbar-minimal'>
+				
+				<h2 className="txt-heading-colour text-2xl inline ml-4">The Real Deal</h2>
+				<h2 className="txt-sub inline mx-2 hover:opacity-50 duration-200 transition-all cursor-pointer">view all</h2>
+				{certChampsDecks?.length === 0 ? (
+					<p className="color-txt-sub">No newly added decks available.</p>
+				) : (
+					<div className='w-full h-40 relative'>
+						<div className='gradient'></div>
+						<div className="deck-grid w-full relative p-4 mr-10">
+							{ certChampsDecks?.map((deck: any) => (
+								<DeckCard key={deck.id} deck={deck} />
+							)) }
+						</div>
+					</div>
+				)}
+			</div>
+			{/*==================================================================================== */}
 				{/*================================ Create Deck Modal ================================= */}
 				{showCreateModal && (
 					<CreateDeckModal
