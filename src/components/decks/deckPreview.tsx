@@ -29,10 +29,10 @@ export default function DeckPreview({ deck, questions, onBack, deckId }: DeckPre
 
     useEffect(() => {
         const getCreatorName = async () => {
-            if (deck?.createdBy) {
-                const name = await fetchUsernameByID(deck.createdBy)
-                setCreatorName(name)
-            }   
+			if (deck.createdBy) {
+				const name = deck.createdBy === "CertChamps" ? "CertChamps" : await fetchUsernameByID(deck.createdBy)
+				setCreatorName(name)
+			}
         }
         getCreatorName()
     }, [deck])

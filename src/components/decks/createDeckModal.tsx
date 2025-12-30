@@ -65,7 +65,7 @@ export type CreateDeckModalProps = {
   setShowCreateModal: Dispatch<SetStateAction<boolean>>
   isVisible: boolean
   setIsVisible: Dispatch<SetStateAction<boolean>>
-  createDeck: (name: string, description: string, questionIds: string[], visibility: boolean, color: string) => Promise<void>
+  createDeck: (name: string, description: string, questionIds: string[], visibility: boolean, color: string, isOfficial: boolean) => Promise<void>
 }
 
 type Question = {
@@ -198,7 +198,7 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
       props.setShowCreateModal(false)
       
       // Then create the deck (happens after modal is gone)
-      await props.createDeck(name, desc, questionIds, finalIsPublic, color)
+      await props.createDeck(name, desc, questionIds, finalIsPublic, color, isOfficial)
     }
   }
 

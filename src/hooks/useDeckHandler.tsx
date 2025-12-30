@@ -14,7 +14,7 @@ const useDeckHandler = () => {
     const navigate = useNavigate(); 
 
     // ========================= CREATE DECK ============================ //
-    const createDeck = async (name: string, description: string, questions: any[], visibility: boolean, color: string) => {
+    const createDeck = async (name: string, description: string, questions: any[], visibility: boolean, color: string, isOfficial?: boolean) => {
 
         try {
             // Add the deck to the database 
@@ -23,10 +23,10 @@ const useDeckHandler = () => {
                 description, 
                 questions,
                 visibility,
-                color,
+                color: isOfficial ? '#e1a853' : color,
                 likes: 0, 
                 timestamp: Timestamp.now(),
-                createdBy: user.uid
+                createdBy: isOfficial ? "CertChamps" : user.uid 
             });
 
             const docID = docRef.id;    

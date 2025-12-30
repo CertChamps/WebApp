@@ -23,7 +23,7 @@ type DeckCardProps = {
 	className?: string
 }
 
-export default function DeckCard({ deck, questionId, onAddQuestion, className }: DeckCardProps) {
+export default function DeckCard({ deck, questionId, onAddQuestion }: DeckCardProps) {
 	const { user } = useContext(UserContext)
 	const { fetchUsernameByID } = useFetch()
 	const navigate = useNavigate()
@@ -38,7 +38,7 @@ export default function DeckCard({ deck, questionId, onAddQuestion, className }:
 	useEffect(() => {
 		const loadCreatorName = async () => {
 			if (deck.createdBy) {
-				const name = await fetchUsernameByID(deck.createdBy)
+				const name = deck.createdBy === "CertChamps" ? "CertChamps" : await fetchUsernameByID(deck.createdBy)
 				setCreatorName(name)
 			}
 		}
@@ -90,13 +90,38 @@ export default function DeckCard({ deck, questionId, onAddQuestion, className }:
 		: ''
 
 	return (
-		<div className="deck flex flex-col" onClick={handleNavigate}>
-			<div className="color-strip" style={{ backgroundColor: resolvedColor }} />
+		<>
+			<style>
+				{`
+					@keyframes gradient {
+						0%, 100% {
+							background-position: 0% 50%;
+						}
+						50% {
+							background-position: 100% 50%;
+						}
+					}
+				`}
+			</style>
+			<div className="deck flex flex-col" onClick={handleNavigate}>
+				<div className="color-strip" style={{ backgroundColor: resolvedColor }} />
 
 			<div className="deck-txt">
 				<div>
 					<span className="txt-heading-colour">{deck.name || 'Untitled deck'}</span>
-					<span className="txt-sub mx-2">By {creatorName}</span>
+					{deck.createdBy === "CertChamps" ? (
+						<span 
+							className="mx-2 font-bold bg-gradient-to-r from-[#e1a853] via-[#f0db65] to-[#e1a853] bg-clip-text text-transparent animate-[gradient_3s_ease-in-out_infinite]"
+							style={{ 
+								backgroundSize: '200% 100%',
+								animation: 'gradient 3s ease-in-out infinite'
+							}}
+						>
+							By {creatorName}
+						</span>
+					) : (
+						<span className="txt-sub mx-2">By {creatorName}</span>
+					)}
 				</div>
 				<span className="txt-sub">{createdDate}</span>
 			</div>
@@ -142,6 +167,7 @@ export default function DeckCard({ deck, questionId, onAddQuestion, className }:
 				</span>
 			) : null}
 		</div> 
+		</>
 	)
 }
 

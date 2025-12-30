@@ -187,13 +187,14 @@ export default function useFetch () {
         }
     }
 
+    // ============================= FETCH ALL USER DECKS =================================== //
     const fetchPublicDecks = async () => {
         try {
             // Initalise empty array
             const publicDecks: { id: any; }[] = [];  
 
             // Add all decks created by user to array
-            const publicDeck = await getDocs( query( collection(db, "decks"), where("visibility", "==", true), /*where("createdBy", "!=", user.uid),*/ orderBy("timestamp", "desc") ) )
+            const publicDeck = await getDocs( query( collection(db, "decks"), where("visibility", "==", true), where("createdBy", "!=", "CertChamps"), orderBy("timestamp", "desc") ) )
             publicDeck.forEach( (deckDoc)  => {
                 // add to the decks array 
                 publicDecks.push({
@@ -209,6 +210,34 @@ export default function useFetch () {
             return null; 
         }
     }
+    // ====================================================================================== //
+
+    // =============================== FIREBASE GET ALL CERTCHAMPS DECKS ========================== //
+    const fetchCertChampsDecks = async () => {
+        try {
+            // Initalise empty array
+            const certChampsDecks: { id: any; }[] = [];
+
+            // Add all decks created by CertChamps to array
+            const certChampsDeck = await getDocs( query( collection(db, "decks"), where("createdBy", "==", "CertChamps"), orderBy("timestamp", "desc") ) )
+            certChampsDeck.forEach( (deckDoc)  => {
+                // add to the decks array 
+                certChampsDecks.push({
+                    id: deckDoc.id, 
+                    ...deckDoc.data()
+                })
+            })
+
+            return certChampsDecks;
+        } catch ( err ) {
+            console.log(err) 
+            return null; 
+        }
+    }
+    // ============================================================================================ //
+
+
+
     // =============================== FIREBASE GET ALL USER DECKS ========================== //
     const fetchPost = async (id: any) => {
         try {
@@ -238,6 +267,6 @@ export default function useFetch () {
     // ====================================================================================== //
 
 
-    return { fetchImage, fetchFriends, fetchUser, fetchDecks, fetchUserDecks, fetchPublicDecks, fetchPost, fetchUsernameByID }
+    return { fetchImage, fetchFriends, fetchUser, fetchDecks, fetchUserDecks, fetchPublicDecks, fetchPost, fetchUsernameByID, fetchCertChampsDecks }
 
 }
