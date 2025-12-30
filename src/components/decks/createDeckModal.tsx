@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
-import { LuX, LuCheck, LuOctagon } from 'react-icons/lu'
+import { LuX, LuCheck, LuOctagon, LuGripVertical } from 'react-icons/lu'
 import { CirclePicker } from 'react-color'
+import { Reorder } from 'framer-motion'
 import useQuestions from '../../hooks/useQuestions'
 import RenderMath from '../math/mathdisplay'
 
@@ -54,6 +55,9 @@ const styleSheet = `
       transform: scale(0.8);
     }
   }
+  .question-item {
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+  }
 `
 
 export type CreateDeckModalProps = {
@@ -72,6 +76,7 @@ type Question = {
 export default function CreateDeckModal(props: CreateDeckModalProps) {
   const modalRef = useRef<any>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const reorderContainerRef = useRef<HTMLDivElement>(null)
   const [name, setName] = useState('')
   const [desc, setDesc] = useState('')
   const [color, setColor] = useState('#FFFFFF')
@@ -404,12 +409,28 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
           {selectedQuestions.length > 0 && (
             <div className="mt-3">
               <p className="color-txt-main mb-2 font-semibold">Selected Questions</p>
-              <div className="flex flex-col gap-2">
-                {selectedQuestions.map((q) => (
-                  <div
-                    key={q.id}
-                    className="flex items-center justify-between p-2 rounded color-bg-grey-5 color-txt-main"
-                  >
+              <div ref={reorderContainerRef} className="overflow-hidden">
+                <Reorder.Group 
+                  axis="y" 
+                  values={selectedQuestions} 
+                  onReorder={setSelectedQuestions}
+                  className="flex flex-col gap-2"
+                  layoutScroll
+                >
+                  {selectedQuestions.map((q) => (
+                    <Reorder.Item
+                      key={q.id}
+                      value={q}
+                      className="flex items-center justify-between p-2 rounded color-bg-grey-5 color-txt-main cursor-grab active:cursor-grabbing"
+                      whileDrag={{ opacity: 0.8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                      dragConstraints={reorderContainerRef}
+                      dragElastic={0}
+                    >
+                    <LuGripVertical
+                      className="mr-2 color-txt-sub"
+                      strokeWidth={2}
+                      size={18}
+                    />
                     <span className="flex-1">{q.properties?.name || 'Untitled question'}</span>
                     <LuX
                       className="ml-2 cursor-pointer color-txt-sub hover:color-txt-main transition-colors"
@@ -417,8 +438,9 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
                       size={18}
                       onClick={() => toggleQuestion(q)}
                     />
-                  </div>
-                ))}
+                  </Reorder.Item>
+                  ))}
+                </Reorder.Group>
               </div>
             </div>
           )}

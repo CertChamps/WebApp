@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
-import { LuX, LuCheck, LuOctagon } from 'react-icons/lu'
+import { LuX, LuCheck, LuOctagon, LuGripVertical } from 'react-icons/lu'
 import { CirclePicker } from 'react-color'
+import { Reorder } from 'framer-motion'
 import useQuestions from '../../hooks/useQuestions'
 import RenderMath from '../math/mathdisplay'
 
@@ -83,6 +84,7 @@ type Question = {
 export default function EditDeckModal(props: EditDeckModalProps) {
   const modalRef = useRef<any>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const reorderContainerRef = useRef<HTMLDivElement>(null)
   const [name, setName] = useState(props.deck.name || '')
   const [desc, setDesc] = useState(props.deck.description || '')
   const [color, setColor] = useState(props.deck.color || '#FFFFFF')
@@ -128,11 +130,12 @@ export default function EditDeckModal(props: EditDeckModalProps) {
       const qs = await fetchAllQuestions()
       setAllQuestions(qs as Question[])
       
-      // Pre-populate selected questions from deck
+      // Pre-populate selected questions from deck, preserving the order
       if (props.deck.questions && props.deck.questions.length > 0) {
-        const deckQuestions = (qs as Question[]).filter((q) => 
-          props.deck.questions.includes(q.id)
-        )
+        const questionsMap = new Map((qs as Question[]).map((q) => [q.id, q]))
+        const deckQuestions = props.deck.questions
+          .map((id) => questionsMap.get(id))
+          .filter((q): q is Question => q !== undefined)
         setSelectedQuestions(deckQuestions)
       }
     }
@@ -422,21 +425,38 @@ export default function EditDeckModal(props: EditDeckModalProps) {
           {selectedQuestions.length > 0 && (
             <div className="mt-3">
               <p className="color-txt-main mb-2 font-semibold">Selected Questions</p>
-              <div className="flex flex-col gap-2">
-                {selectedQuestions.map((q) => (
-                  <div
-                    key={q.id}
-                    className="flex items-center justify-between p-2 rounded color-bg-grey-5 color-txt-main"
-                  >
-                    <span className="flex-1">{q.properties?.name || 'Untitled question'}</span>
-                    <LuX
-                      className="ml-2 cursor-pointer color-txt-sub hover:color-txt-main transition-colors"
-                      strokeWidth={2}
-                      size={18}
-                      onClick={() => toggleQuestion(q)}
-                    />
-                  </div>
-                ))}
+              <div ref={reorderContainerRef} className="overflow-hidden">
+                <Reorder.Group 
+                  axis="y" 
+                  values={selectedQuestions} 
+                  onReorder={setSelectedQuestions}
+                  className="flex flex-col gap-2"
+                  layoutScroll
+                >
+                  {selectedQuestions.map((q) => (
+                    <Reorder.Item
+                      key={q.id}
+                      value={q}
+                      className="flex items-center justify-between p-2 rounded color-bg-grey-5 color-txt-main cursor-grab active:cursor-grabbing"
+                      whileDrag={{ opacity: 0.8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
+                      dragConstraints={reorderContainerRef}
+                      dragElastic={0}
+                    >
+                      <LuGripVertical
+                        className="mr-2 color-txt-sub"
+                        strokeWidth={2}
+                        size={18}
+                      />
+                      <span className="flex-1">{q.properties?.name || 'Untitled question'}</span>
+                      <LuX
+                        className="ml-2 cursor-pointer color-txt-sub hover:color-txt-main transition-colors"
+                        strokeWidth={2}
+                        size={18}
+                        onClick={() => toggleQuestion(q)}
+                      />
+                    </Reorder.Item>
+                  ))}
+                </Reorder.Group>
               </div>
             </div>
           )}

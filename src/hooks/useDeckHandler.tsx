@@ -74,25 +74,13 @@ const useDeckHandler = () => {
     // ================================================================== //
 
     // ========================= ADD QUESTION TO DECK ============================ //
-    const addQuestiontoDeck = (questions: any[], deckID: any) => {
+    const addQuestiontoDeck = async (questions: any[], deckID: any) => {
 
         try {
-            // add question on firebase
-            updateDoc(doc(db, 'user-data', user.uid, 'decks', deckID), {
+            // add question on firebase (using the new decks collection path)
+            await updateDoc(doc(db, 'decks', deckID), {
                 questions: arrayUnion(...questions)
             })
-
-
-            // add question to context
-            setUser((prev: any) => ({
-                ...prev,
-                decks: prev.decks.map((deck: any) =>
-                    // using timestamp to identify decks
-                    deck.id == deckID 
-                        ? { ...deck, questions: [...(deck.questions || []), ...questions] }
-                        : deck
-                )
-            }))
         }
         catch (err) {
             // log any errors

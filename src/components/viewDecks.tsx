@@ -2,118 +2,105 @@
 import '../styles/decks.css'
 
 // Hooks
-import { useContext, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useContext, useEffect, useState } from "react"
 import useDeckHandler from "../hooks/useDeckHandler"
+import useFetch from "../hooks/useFetch"
 
 // Context 
 import { UserContext } from "../context/UserContext"
 
 // Components 
-import { CirclePicker } from "react-color"
+import CreateDeckModal from "./decks/createDeckModal"
+import DeckCard from "./decks/deckCard"
 
 // Component Props 
-type deckProps = {
-    question: string
+type ViewDecksProps = {
+    questionId?: string
+    question?: string // backwards compatibility
 }
 
-export default function ViewDecks (props?: deckProps) {
+export default function ViewDecks({ questionId, question }: ViewDecksProps) {
 
     //================================= State, Hooks, and Context ================================//
-    const [view, setView] = useState<string>('decks')
-    const [name, setName] = useState('')
-    const [desc, setDesc] = useState('')
-    const [color, setColor] = useState('')
+    const [showCreateModal, setShowCreateModal] = useState(false)
+    const [isVisible, setIsVisible] = useState(false)
+    const [userDecks, setUserDecks] = useState<any[]>([])
+    const [addedToDeck, setAddedToDeck] = useState<string | null>(null)
 
     const { user } = useContext(UserContext)
-
-    const navigate = useNavigate() 
     const { createDeck, addQuestiontoDeck } = useDeckHandler()
+    const { fetchUserDecks } = useFetch()
     //==========================================================================================//
 
-    const hasQuestion = Boolean(props?.question)
-    const resolvedColor = color || '#FFFFFF'
+    // Support both questionId and question props
+    const currentQuestionId = questionId || question
+
+    // Fetch user decks on mount and when modal closes
+    useEffect(() => {
+        const getDecks = async () => {
+            if (user?.uid) {
+                const decks = await fetchUserDecks(user.uid)
+                setUserDecks(decks || [])
+            }
+        }
+        getDecks()
+    }, [user?.uid, showCreateModal])
+
+    // Handler for adding question to a deck
+    const handleAddQuestion = async (deckId: string, qId: string) => {
+        await addQuestiontoDeck([qId], deckId)
+        setAddedToDeck(deckId)
+        
+        // Clear feedback after 2 seconds
+        setTimeout(() => {
+            setAddedToDeck(null)
+        }, 2000)
+    }
 
     return (
-    <div className="h-container items-start w-full overflow-y-scroll scrollbar-minimal px-4">
-        {
-            //==================================== VIEW USER DECKS ===================================//
-            view === 'decks' ? (
+        <div className="h-container items-start w-full overflow-y-auto scrollbar-minimal px-4">
+            {/* Deck Cards */}
             <div className="w-full">
-                {
-                    //================================= DECK CARD ===================================//
-                    user.decks?.map( (deck: any) => (
-                        <div key={deck.id} className="deck" onClick={() => {navigate(`/decks/${user.uid}/${deck.id}`)}}>
-
-                            <div className={`color-strip`} style={{backgroundColor: deck.color}} ></div>
-
-                            <div className="deck-txt">
-                                <span className="txt-heading-colour">{deck.name}</span>
-                                <span className="txt-sub">{deck.timestamp ? new Date(deck.timestamp.seconds * 1000).toLocaleDateString() : ''}</span>
+                {userDecks.length === 0 ? (
+                    <p className="color-txt-sub text-center py-4">You have no decks yet. Create one below!</p>
+                ) : (
+                    <div className="flex flex-col gap-3">
+                        {userDecks.map((deck: any) => (
+                            <div key={deck.id} className="relative">
+                                <DeckCard
+                                    deck={deck}
+                                    questionId={currentQuestionId}
+                                    onAddQuestion={handleAddQuestion}
+                                    className={addedToDeck === deck.id ? 'ring-2 ring-green-500' : ''}
+                                />
+                                {addedToDeck === deck.id && (
+                                    <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+                                        Added!
+                                    </div>
+                                )}
                             </div>
+                        ))}
+                    </div>
+                )}
 
-                            <div className="deck-txt">
-                                <span className="txt-sub">{deck.description}</span>
-                                <span className="txt-sub">{deck?.questions?.length} question{deck?.questions?.length !== 1 ? 's' : ''}</span>
-                            </div>
-
-                            {hasQuestion ? (
-                                <span
-                                    className="cursor-target blue-btn cursor-pointer my-2"
-                                    onClick={(e: any) => {
-                                        addQuestiontoDeck([props!.question], deck.id)
-                                        e.stopPropagation()
-                                    }}
-                                >
-                                    Add to deck
-                                </span>
-                            ) : null}
-
-                        </div>
-                    ))
-                    //==============================================================================//
-                }
-
-                {/*=================================== NEW DECK BUTTON ==================================*/}
-                <div className="new-deck my-3" onClick={() => setView('create')}>
+                {/* New Deck Button */}
+                <div 
+                    className="new-deck my-3 cursor-pointer" 
+                    onClick={() => setShowCreateModal(true)}
+                >
                     <p className="color-txt-main text-center">New Deck</p>
                 </div>
-                {/*======================================================================================*/}
-
             </div>
-            //=========================================================================================//
 
-            //==================================== CREATE DECK VIEW ===================================//
-            ) : view === 'create' ? (
-            <div className="w-full">
-
-                <p onClick={() => setView('decks')}>Back</p>
-
-                <input type="text" className="txtbox m-4" placeholder="Name" 
-                    onChange={(txt:React.ChangeEvent<HTMLInputElement>) => {setName(txt.target.value)}}/>
-                <input type="text" className="txtbox m-4" placeholder="Description"
-                    onChange={(txt:React.ChangeEvent<HTMLInputElement>) => {setDesc(txt.target.value)}}/>
-
-                <CirclePicker color={color} onChangeComplete={(color:any) => {setColor(color.hex)}} />
-
-                <span
-                    className="create-deck"
-                    onClick={() => {
-                       // createDeck(name, desc, hasQuestion ? [props!.question] : [], resolvedColor)
-                        setView('decks')
-                    }}
-                >
-                    Create Deck
-                </span>
-
-            </div>
-            ) : null
-            //=========================================================================================//
-
-        }
-        
-
-
-    </div>
+            {/* Create Deck Modal */}
+            {showCreateModal && (
+                <CreateDeckModal
+                    setShowCreateModal={setShowCreateModal}
+                    isVisible={isVisible}
+                    setIsVisible={setIsVisible}
+                    createDeck={createDeck}
+                />
+            )}
+        </div>
     )
 }
