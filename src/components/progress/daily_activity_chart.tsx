@@ -44,10 +44,12 @@ const DailyActivityChart = () => {
   const { user } = useContext(UserContext);
   const [dailyMap, setDailyMap] = useState<Record<string, number>>({});
   const [timeScale, setTimeScale] = useState<TimeScale>("week");
+  const [loading, setLoading] = useState(true);
 
   const daysToFetch = timeScale === "week" ? 7 : 30;
 
   useEffect(() => {
+    setLoading(true);
     if (!user?.uid) return;
     const ref = collection(db, "user-data", user.uid, "daily-answers");
     const q = query(ref, orderBy("dayStartUtcTs", "desc"), limit(daysToFetch));
@@ -60,8 +62,10 @@ const DailyActivityChart = () => {
         map[key] = total;
       });
       setDailyMap(map);
+      setLoading(false);
     }, (err) => {
       console.error("Failed to fetch daily answers", err);
+      setLoading(false);
     });
     return () => unsubscribe();
   }, [user?.uid, daysToFetch]);
@@ -79,6 +83,19 @@ const DailyActivityChart = () => {
   }, [dailyMap, days]);
 
   const timeScaleLabel = timeScale === "week" ? "This Week" : "Last 30 Days";
+
+  if (loading) {
+    return (
+      <div className="daily-chart progress-skeleton-card">
+        <div className="progress-skeleton-line w-32" />
+        <div className="progress-skeleton-bars">
+          {[...Array(7)].map((_, idx) => (
+            <div key={idx} className="progress-skeleton-bar" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="daily-chart">

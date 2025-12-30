@@ -132,6 +132,7 @@ export default function Social() {
                             id: docSnap.id,
                             content: post.content,
                             timestamp: post.timestamp,
+                            userId: userId,
                             username,
                             rank,
                             userImage,
@@ -357,6 +358,7 @@ export default function Social() {
                             {posts.map((post) => (
                                 <PostCard
                                     key={post.id}
+                                    userId={post.userId}
                                     rank={post.rank}
                                     content={post.content}
                                     userImage={post.userImage}

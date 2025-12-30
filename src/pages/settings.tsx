@@ -291,6 +291,16 @@ export default function Settings() {
             </div>
 
             <div className="cursor-target theme-container" 
+                onClick={() => setTheme('nordDark')}>
+                <p className="theme-text">Nord Dark</p>
+                <div className="color-strip-container bg-nordDarkBG " >
+                    <div className="color-strip-item bg-nordDarkPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-nordDarkSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-nordDarkAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
                 onClick={() => setTheme('modernInk')}>
                 <p className="theme-text">Modern Ink</p>
                 <div className="color-strip-container bg-modernInkBG " >
@@ -427,6 +437,26 @@ export default function Settings() {
                     <div className="color-strip-item bg-shadowPrimary " > </div> {/* PRIMARY */}
                     <div className="color-strip-item bg-shadowSub " > </div> {/* SUB */}
                     <div className="color-strip-item bg-shadowAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('blueberryLight')}>
+                <p className="theme-text">Blueberry Light</p>
+                <div className="color-strip-container bg-blueberryLightBG " >
+                    <div className="color-strip-item bg-blueberryLightPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-blueberryLightSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-blueberryLightAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('blueberryDark')}>
+                <p className="theme-text">Blueberry Dark</p>
+                <div className="color-strip-container bg-blueberryDarkBG " >
+                    <div className="color-strip-item bg-blueberryDarkPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-blueberryDarkSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-blueberryDarkAccent " > </div> {/* ACCENT */}
                 </div>
             </div>
         </div>

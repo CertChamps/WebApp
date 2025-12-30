@@ -15,11 +15,11 @@
 }
 
 .profile-header-info {
-    @apply flex flex-col gap-3 flex-1;
+    @apply flex flex-col gap-1 flex-1;
 }
 
 .profile-username {
-    @apply text-3xl font-black color-txt-main;
+    @apply text-3xl font-bold color-txt-main;
 }
 
 .profile-email {
@@ -96,6 +96,56 @@
 
 .profile-friend-label {
     @apply txt-sub;
+}
+
+/* ================== SKELETON ================== */
+.profile-skeleton {
+    @apply flex flex-col gap-6 animate-pulse;
+}
+
+.profile-skeleton-header {
+    @apply shadow-small p-8 rounded-lg flex flex-col md:flex-row items-start md:items-center gap-6 justify-between;
+}
+
+.skeleton-avatar {
+    @apply w-24 h-24 rounded-full color-bg-grey-10 border-2 color-shadow;
+}
+
+.skeleton-lines {
+    @apply flex flex-col gap-3 flex-1;
+}
+
+.skeleton-line {
+    @apply h-4 rounded-full color-bg-grey-10;
+}
+
+.skeleton-stats {
+    @apply flex gap-4;
+}
+
+.skeleton-pill {
+    @apply h-10 w-20 rounded-full color-bg-grey-10 border color-shadow;
+}
+
+.profile-skeleton-tabs {
+    @apply flex gap-2;
+}
+
+.skeleton-tab {
+    @apply h-10 w-24 rounded-in color-bg-grey-10 border color-shadow;
+}
+
+.profile-skeleton-cards {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+}
+
+.skeleton-card {
+    @apply h-32 rounded-in color-bg-grey-10 border color-shadow;
+}
+
+/* ================== DECK GRID OVERRIDE FOR PROFILE ================== */
+.profile-main .deck {
+    @apply w-full min-w-0;
 }
 
 /* ================== LOADING STATE ================== */

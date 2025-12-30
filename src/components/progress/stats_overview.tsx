@@ -6,9 +6,11 @@ import { BarChart3, Flame, Trophy } from "lucide-react";
 
 const stats_overview = () => {
     const { user } = useContext(UserContext);
-    const [totalQuestions, setTotalQuestions] = useState(0);
+    const [totalQuestions, setTotalQuestions] = useState<number | null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        setLoading(true);
         if (!user?.uid) return;
 
         const fetchTotalQuestions = async () => {
@@ -30,11 +32,29 @@ const stats_overview = () => {
                 setTotalQuestions(total);
             } catch (error) {
                 console.error("Error fetching total questions:", error);
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchTotalQuestions();
     }, [user?.uid]);
+
+    if (loading) {
+        return (
+            <div className="stats-overview progress-skeleton-card">
+                {[1, 2, 3].map((id) => (
+                    <div key={id} className="flex items-center gap-3">
+                        <div className="progress-skeleton-icon" />
+                        <div className="progress-skeleton-lines">
+                            <div className="progress-skeleton-line w-24" />
+                            <div className="progress-skeleton-line w-16" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
 
     return (
         <div className="stats-overview">
@@ -42,7 +62,7 @@ const stats_overview = () => {
                 <BarChart3 className="stat-icon" size={36} />
                 <div className="stat-content">
                     <span className="stat-label">Liftime Correct Questions</span>
-                    <span className="stat-value">{totalQuestions.toLocaleString()}</span>
+                    <span className="stat-value">{(totalQuestions ?? 0).toLocaleString()}</span>
                 </div>
             </div>
             
