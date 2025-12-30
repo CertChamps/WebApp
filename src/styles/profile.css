@@ -15,11 +15,11 @@
 }
 
 .profile-header-info {
-    @apply flex flex-col gap-3 flex-1;
+    @apply flex flex-col gap-1 flex-1;
 }
 
 .profile-username {
-    @apply text-3xl font-black color-txt-main;
+    @apply text-3xl font-bold color-txt-main;
 }
 
 .profile-email {
@@ -96,6 +96,11 @@
 
 .profile-friend-label {
     @apply txt-sub;
+}
+
+/* ================== DECK GRID OVERRIDE FOR PROFILE ================== */
+.profile-main .deck {
+    @apply w-full min-w-0;
 }
 
 /* ================== LOADING STATE ================== */

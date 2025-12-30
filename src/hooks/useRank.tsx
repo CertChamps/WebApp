@@ -26,6 +26,7 @@ export default function useRank(props: rankProps) {
     const [progress, setProgress] = useState(0); // progress towards next rank in % 
     const [xp, setXp] = useState(user.xp); // current xp
     const [streak, setStreak] = useState(user.streak); // current streak
+    const [highestStreak, setHighestStreak] = useState(user.highestStreak || 0); // highest streak record
 
     // Update state and context when user changes
     useEffect(() => {
@@ -37,7 +38,8 @@ export default function useRank(props: rankProps) {
                 rank,
                 progress,
                 xp,
-                streak
+                streak,
+                highestStreak
             });
         }
 
@@ -48,10 +50,11 @@ export default function useRank(props: rankProps) {
                 rank,
                 progress,
                 xp,
-                streak
+                streak,
+                highestStreak
             });
         }   
-    }, [rank, progress, xp, streak]);
+    }, [rank, progress, xp, streak, highestStreak]);
 
     // Update progress when xp changes 
     useEffect(() => {
@@ -287,8 +290,14 @@ export default function useRank(props: rankProps) {
               // Update XP right here — using function form ensures both are in sync
               setXp((prevXp) => {
                 const updatedXp = prevXp + reward;
-                                const newRecord = Math.max((user?.highestStreak ?? 0), newStreak);
-                                syncUserData({ xp: updatedXp, streak: newStreak, highestStreak: newRecord });
+                const newRecord = Math.max((user?.highestStreak ?? 0), newStreak);
+                
+                // Update highestStreak state if we beat the record
+                if (newRecord > (user?.highestStreak ?? 0)) {
+                  setHighestStreak(newRecord);
+                }
+                
+                syncUserData({ xp: updatedXp, streak: newStreak, highestStreak: newRecord });
                 awardXP(reward);
                 return updatedXp;
               });

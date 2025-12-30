@@ -38,6 +38,7 @@ export default function useAuthentication (props?: authprops) {
             notifications: [],
             rank: 0, xp: 0,
             streak: 0,
+            highestStreak: 0,
             savedQuestions: [], decks: [], 
         })
 
@@ -48,6 +49,7 @@ export default function useAuthentication (props?: authprops) {
             notifications: [],
             rank: 0, xp: 0,
             streak: 0,
+            highestStreak: 0,
             savedQuestions: [],
         })
 
@@ -83,6 +85,7 @@ export default function useAuthentication (props?: authprops) {
                     notifications: user.data().notifications,
                     rank: user.data().rank, xp: user.data().xp,
                     streak: user.data().streak,
+                    highestStreak: user.data().highestStreak || 0,
                     savedQuestions: user.data().savedQuestions, decks: decks,
                 })     
             }
