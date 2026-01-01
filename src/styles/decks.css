@@ -22,13 +22,140 @@
 }
 
 .deck {
-    @apply shadow-small min-w-sm cursor-pointer h-32 flex-shrink-0 p-4 relative hover:scale-[97%] duration-200 transition-all ease-in-out
+    @apply shadow-small rounded-2xl! border-0 w-80 cursor-pointer h-40 p-1 relative hover:scale-[97%] duration-200 transition-all ease-in-out -z-0
 }
 
 .deck-grid {
     @apply flex flex-row gap-4  h-auto overflow-x-auto pb-4 scrollbar-minimal
 }
 
-.gradient {
+/* .gradient {
     @apply absolute top-0 right-0 w-full h-full pointer-events-none bg-gradient-bg-fade z-10;
+} */
+
+.color-border {
+    @apply h-full w-full absolute left-0 top-0 rounded-2xl z-30 pointer-events-none;
+    border: 2px solid var(--border-color, transparent);
+}
+
+.color-border-gradient {
+    @apply h-full w-full absolute left-0 top-0 rounded-2xl z-30 pointer-events-none overflow-hidden;
+}
+
+.color-border-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 1rem;
+    padding: 2px;
+    background: conic-gradient(from var(--gradient-angle, 0deg), #93801545, #ddbe13, #93801545);
+    -webkit-mask: 
+        linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    z-index: 30;
+    animation: rotateGradient 3s linear infinite;
+}
+
+@property --gradient-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+
+@keyframes rotateGradient {
+    0% {
+        --gradient-angle: 0deg;
+    }
+    100% {
+        --gradient-angle: 360deg;
+    }
+}
+
+.color-overlay {
+    @apply absolute top-0 left-0 w-full h-3/4 rounded-t-2xl z-20;
+}
+
+.image {
+    @apply absolute top-0 left-0.5 w-[calc(100%-5px)] h-3/4 rounded-t-xl z-10 ;
+}
+
+.bg-overlay {
+    @apply absolute top-0 left-0.5 w-[calc(100%-5px)] h-3/4 rounded-t-2xl z-25 ;
+}
+
+/* Custom Checkbox Styling */
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 22px;
+    height: 22px;
+    border: 2px solid;
+    border-color: rgb(156, 163, 175);
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+input[type="checkbox"]:hover {
+    @apply color-txt-sub;
+    border-width: 2px;
+    box-shadow: 0 0 8px rgba(148, 163, 184, 0.2);
+}
+
+input[type="checkbox"]:checked {
+    @apply color-txt-accent color-bg-accent border-0;
+    
+}
+
+input[type="checkbox"]:checked::after {
+    content: '';
+    display: block;
+    width: 80%;
+    height: 80%;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    animation: checkBounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+@keyframes checkBounce {
+    0% {
+        transform: scale(0) rotate(-45deg);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.line {
+    @apply w-full h-[1px] color-bg-grey-10
+}
+
+.gradient-text {
+    background: linear-gradient(90deg, #c5a800, #f4fe85, #cbad00);
+    background-size: 200% 200%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientTextShift 3s ease infinite;
+}
+
+@keyframes gradientTextShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }

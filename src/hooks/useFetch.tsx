@@ -194,7 +194,7 @@ export default function useFetch () {
             const publicDecks: { id: any; }[] = [];  
 
             // Add all decks created by user to array
-            const publicDeck = await getDocs( query( collection(db, "decks"), where("visibility", "==", true), where("createdBy", "!=", "CertChamps"), orderBy("timestamp", "desc") ) )
+            const publicDeck = await getDocs( query( collection(db, "decks"), where("visibility", "==", true), orderBy("timestamp", "desc") ) )
             publicDeck.forEach( (deckDoc)  => {
                 // add to the decks array 
                 publicDecks.push({
@@ -266,7 +266,26 @@ export default function useFetch () {
     }
     // ====================================================================================== //
 
+    // =============================== FIREBASE GET USER IMAGE ============================== //
+    const fetchUserImage = async (id: any) => {
+        try {
+            // get the user data
+            const userData = (await getDoc(doc(db, 'user-data', id))).data()
 
-    return { fetchImage, fetchFriends, fetchUser, fetchDecks, fetchUserDecks, fetchPublicDecks, fetchPost, fetchUsernameByID, fetchCertChampsDecks }
+            // get the image 
+            const picture = await fetchImage(userData?.picture)
+
+            return picture || ''
+            
+        }
+        catch ( err ) {
+            console.log(err) 
+            return null
+        }
+    }
+    // ====================================================================================== //
+
+
+    return { fetchImage, fetchFriends, fetchUser, fetchDecks, fetchUserDecks, fetchPublicDecks, fetchPost, fetchUsernameByID, fetchCertChampsDecks, fetchUserImage }
 
 }

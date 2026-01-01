@@ -38,6 +38,26 @@ export default function Decks() {
 	const [showCreateModal, setShowCreateModal] = useState(false)
 	const [isVisible, setIsVisible] = useState(false)
 
+	// Filter states
+	const [selectedCategory, setSelectedCategory] = useState<'all' | 'certchamps' | 'textsAndTests' | 'userCreated'>('all')
+	const [sortBy, setSortBy] = useState<'dateCreated' | 'name' | 'questions'>('dateCreated')
+	const [selectedTopics, setSelectedTopics] = useState<string[]>([])
+
+	const availableTopics = [
+		"Algebra",
+		"Area & Volume",
+		"Calculus",
+		"Complex Numbers",
+		"Financial Maths",
+		"Coordinate Geometry",
+		"Probability",
+		"Sequences & Series",
+		"Statistics",
+		"Trigonometry",
+		"Geometry",
+		"First Year Algebra"
+	]
+
 	const [userDecks, setUserDecks] = useState<any>([])
 	const [publicDecks, setPublicDecks] = useState<any>([])
 	const [certChampsDecks, setCertChampsDecks] = useState<any>([])
@@ -183,7 +203,7 @@ export default function Decks() {
 			<div className="flex-1  w-full scrollbar-minimal">
 				{/*================================== "My Decks" Section ============================== */}
 				<div className='py-2 w-full '>
-				<h2 className="txt-heading-colour text-2xl inline ml-4">My Decks</h2>
+				<h2 className="txt-heading-colour text-3xl inline ml-4">My Decks</h2>
 				<h2 className="txt-sub inline mx-2 hover:opacity-50 duration-200 transition-all cursor-pointer">view all</h2>
 				{userDecks?.length === 0 ? (
 					<p className="color-txt-sub">You have not created any decks yet.</p>
@@ -200,46 +220,129 @@ export default function Decks() {
 			</div>
 			{/*==================================================================================== */}
 
-			{/*================================== "Newly Added" Section ============================== */}
-			<div className='py-2 w-full scrollbar-minimal'>
-				
-				<h2 className="txt-heading-colour text-2xl inline ml-4">Newly Added</h2>
-				<h2 className="txt-sub inline mx-2 hover:opacity-50 duration-200 transition-all cursor-pointer">view all</h2>
-				{publicDecks?.length === 0 ? (
-					<p className="color-txt-sub">No newly added decks available.</p>
-				) : (
-					<div className='w-full h-40 relative'>
-						<div className='gradient'></div>
-						<div className="deck-grid w-full relative p-4 mr-10">
-							{ publicDecks?.map((deck: any) => (
-								<DeckCard key={deck.id} deck={deck} />
-							)) }
+			{/*================================== MARKETPLACE Section ============================== */}
+			<div className='mt-10 mb-4 px-8 w-full flex items-center justify-around'>
+				<div className='line '></div>
+				<div className='min-w-80 px-2 '>
+					<span className="block txt-heading-colour text-4xl  w-full text-center">MARKETPLACE</span>
+				</div>
+				<div className='line '></div>
+
+			</div>
+			{/*==================================================================================== */}
+			
+			{/*================================== "Filter Section" ============================== */}
+			<div className="flex gap-2 px-4 mb-6 ">
+				{/* Filter Panel */}
+				<div className="w-64 flex-shrink-0 color-bg rounded-2xl p-1 space-y-2">
+					{/* Search Input */}
+					<div className="flex items-center txtbox w-full color-bg">
+						<input
+							type="text"
+							placeholder="Search Decks"
+							className="w-full p-1 outline-none border-none text-sm"
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+						/>
+						<LuSearch className="color-txt-sub" size={18} />
+					</div>
+
+					{/* Category Filters */}
+					<div className="space-y-2 pb-1">
+							<p className="txt-bold">Deck Types:</p>
+						<label className="flex items-center gap-2 mx-2 cursor-pointer group">
+							<input
+								type="checkbox"
+								checked={selectedCategory === 'certchamps'}
+								onChange={() => setSelectedCategory(selectedCategory === 'certchamps' ? 'all' : 'certchamps')}
+								className="w-4 h-4 cursor-pointer"
+							/>
+							<span className="txt-sub font-semibold group-hover:opacity-70 transition-opacity">Certchamps Officals</span>
+						</label>
+						<label className="flex items-center gap-2 mx-2 cursor-pointer group">
+							<input
+								type="checkbox"
+								checked={selectedCategory === 'textsAndTests'}
+								onChange={() => setSelectedCategory(selectedCategory === 'textsAndTests' ? 'all' : 'textsAndTests')}
+								className="w-4 h-4 cursor-pointer"
+							/>
+							<span className="txt-sub font-semibold group-hover:opacity-70 transition-opacity">Text's And Tests</span>
+						</label>
+						<label className="flex items-center gap-2 mx-2 cursor-pointer group">
+							<input
+								type="checkbox"
+								checked={selectedCategory === 'userCreated'}
+								onChange={() => setSelectedCategory(selectedCategory === 'userCreated' ? 'all' : 'userCreated')}
+								className="w-4 h-4 cursor-pointer"
+							/>
+							<span className="txt-sub font-semibold group-hover:opacity-70 transition-opacity">User Created</span>
+						</label>
+					</div>
+
+					{/* Dividers */}
+					<div className="line"></div>
+
+					{/* Sort By */}
+					<div className="space-y-2 py-1">
+						<label className="txt-bold flex items-center gap-2">
+							Sort By:
+							<select
+								value={sortBy}
+								onChange={(e) => setSortBy(e.target.value as any)}
+								className="color-bg txtbox px-2 py-1 rounded cursor-pointer text-sm outline-none"
+							>
+								<option value="dateCreated">Date Created</option>
+								<option value="name">Name</option>
+								<option value="questions">Questions</option>
+							</select>
+						</label>
+					</div>
+
+					{/* Dividers */}
+					<div className="line"></div>
+
+					{/* Topics */}
+					<div className="space-y-2">
+						<p className="txt-bold">Topics:</p>
+						<div className="space-y-1.5 max-h-64 pb-6 mx-2 overflow-y-auto scrollbar-minimal">
+							{availableTopics.map((topic) => (
+								<label key={topic} className="flex items-center gap-2 cursor-pointer group">
+									<input
+										type="checkbox"
+										checked={selectedTopics.includes(topic)}
+										onChange={(e) => {
+											if (e.target.checked) {
+												setSelectedTopics([...selectedTopics, topic])
+											} else {
+												setSelectedTopics(selectedTopics.filter(t => t !== topic))
+											}
+										}}
+										className="w-4 h-4 cursor-pointer rounded-in border-3"
+									/>
+									<span className="txt-sub font-semibold group-hover:opacity-70 transition-opacity">{topic}</span>
+								</label>
+							))}
 						</div>
 					</div>
-				)}
+				</div>
+
+				{/* Decks Display Area */}
+				<div className="flex-1 overflow-y-auto scrollbar-minimal h-200">
+					{publicDecks?.length === 0 ? (
+						<p className="txt text-center text-sm mb-4">No decks found</p>
+					) : (
+						<div className="flex flex-wrap gap-4 space-y-2 p-4 ">
+							{publicDecks?.map((deck: any) => (
+								<div key={deck.id}>
+									<DeckCard deck={deck} />
+								</div>
+							))}
+						</div>
+					)}
+				</div>
 			</div>
 			{/*==================================================================================== */}
 
-			
-			{/*================================== "CertChamps" Section ============================== */}
-			<div className='py-2 w-full scrollbar-minimal'>
-				
-				<h2 className="txt-heading-colour text-2xl inline ml-4">The Real Deal</h2>
-				<h2 className="txt-sub inline mx-2 hover:opacity-50 duration-200 transition-all cursor-pointer">view all</h2>
-				{certChampsDecks?.length === 0 ? (
-					<p className="color-txt-sub">No newly added decks available.</p>
-				) : (
-					<div className='w-full h-40 relative'>
-						<div className='gradient'></div>
-						<div className="deck-grid w-full relative p-4 mr-10">
-							{ certChampsDecks?.map((deck: any) => (
-								<DeckCard key={deck.id} deck={deck} />
-							)) }
-						</div>
-					</div>
-				)}
-			</div>
-			{/*==================================================================================== */}
 				{/*================================ Create Deck Modal ================================= */}
 				{showCreateModal && (
 					<CreateDeckModal
