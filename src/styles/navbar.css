@@ -10,7 +10,7 @@
 
 /* ====================================== USER STYLES  ================================= */ 
 .user-container {
-    @apply flex items-center justify-evenly rounded-out h-16 group-hover:color-bg-accent p-2 mb-1;
+    @apply flex items-center justify-evenly rounded-out h-16 group-hover:color-bg-accent p-2 mb-1 cursor-pointer;
 }
 
 .user-img {

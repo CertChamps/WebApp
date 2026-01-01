@@ -547,7 +547,7 @@ export default function Question(props: questionsProps) {
         ) : null}
 
         {sideView === 'logtables' ? (
-            <div className="h-full w-5/12">
+            <div className="h-full w-5/12 flex items-center justify-center">
                 <LogTables pgNumber={(parseInt(content?.[part].logtables) + 0).toString()}/>
             </div>
         ) : null}
