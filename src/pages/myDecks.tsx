@@ -1,14 +1,13 @@
 import '../styles/decks.css'
-import { useContext, useEffect, useState, type ChangeEvent } from 'react'
+import { useContext, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UserContext } from '../context/UserContext'
-import { LuSearch, LuCheck, LuOctagon } from 'react-icons/lu'
+import { LuArrowLeft, LuCheck, LuOctagon } from 'react-icons/lu'
 import useDeckHandler from '../hooks/useDeckHandler'
-import useDeckFilter from '../hooks/useDeckFilter'
+import useMyDeckFilter from '../hooks/useMyDeckFilter'
 import CreateDeckModal from '../components/decks/createDeckModal'
 import DeckCard from '../components/decks/deckCard'
-import DeckFilter from '../components/decks/deckFilter'
-import useFetch from '../hooks/useFetch'
+import MyDeckFilter from '../components/decks/myDeckFilter'
 
 // Add inline styles for animation
 const styleSheet = `
@@ -34,19 +33,17 @@ const styleSheet = `
   }
 `
 
-export default function Decks() {
+export default function MyDecks() {
 	const { user } = useContext(UserContext)
 	const navigate = useNavigate()
 
 	const [showCreateModal, setShowCreateModal] = useState(false)
 	const [isVisible, setIsVisible] = useState(false)
 
-	// Use the deck filter hook
+	// Use the my deck filter hook
 	const {
 		search,
 		setSearch,
-		selectedCategory,
-		setSelectedCategory,
 		sortBy,
 		setSortBy,
 		selectedTopics,
@@ -56,27 +53,13 @@ export default function Decks() {
 		isFiltering,
 		refetchDecks,
 		availableTopics
-	} = useDeckFilter(user?.uid)
+	} = useMyDeckFilter(user?.uid)
 
-	const [userDecks, setUserDecks] = useState<any>([])
-	const [isLoadingUserDecks, setIsLoadingUserDecks] = useState(true)
 	const [feedbackState, setFeedbackState] = useState<'idle' | 'success' | 'error'>('idle')
 	const [feedbackExiting, setFeedbackExiting] = useState(false)
 	const [errorMessage, setErrorMessage] = useState('')
 
 	const { createDeck } = useDeckHandler()
-	const { fetchUserDecks } = useFetch()
-
-	const getUserDecks = async () => {
-		setIsLoadingUserDecks(true)
-		const usrDecks = await fetchUserDecks(user?.uid)
-		setUserDecks(usrDecks)
-		setIsLoadingUserDecks(false)
-	}
-
-	useEffect(() => {
-		getUserDecks()
-	}, [user?.uid])
 
 	const handleCreateDeck = async (name: string, description: string, questionIds: string[], visibility: boolean, color: string, isOfficial: boolean, imageFile?: File | null) => {
 		try {
@@ -84,7 +67,6 @@ export default function Decks() {
 			setFeedbackState('success')
 			
 			// Refetch decks after successful creation
-			await getUserDecks()
 			await refetchDecks()
 			
 			// Keep feedback visible for 2 seconds, then fade out
@@ -107,94 +89,38 @@ export default function Decks() {
 		}
 	}
 
-
 	return (
 		<div className="w-full h-full flex flex-col overflow-x-hidden p-4 scrollbar-minimal">
-			{/*==================== Top bar with search and create deck button ======================= */}
-			<div className='topBar flex-shrink-0'>
-				<div className="flex items-center txtbox w-full color-bg">
-					<input
-						type="text"
-						placeholder="Search decks"
-						className="w-full p-1 outline-none border-none"
-						onChange={(e: ChangeEvent<HTMLInputElement>) => {
-						setSearch(e.target.value);
-						}}
-						value={search}
-						aria-label="Search friends"
-						aria-controls="friends-search-dropdown"
-					/>
-
-					<LuSearch className="color-txt-sub" size={24} />
-        		</div>
-				
-                <button
-                    type="button"
-                    className="ml-auto blue-btn cursor-pointer"
-                    onClick={() => {
-                        setShowCreateModal(true)
-                    }}>
-                    Create Deck
-                </button>
-			</div>
-			{/*==================================================================================== */}
-
-			<div className="flex-1  w-full scrollbar-minimal">
-				{/*================================== "My Decks" Section ============================== */}
-				<div className='py-2 w-full '>
-				<h2 className="txt-heading-colour text-3xl inline ml-4">My Decks</h2>
-				<h2 
-					className="txt-sub inline mx-2 hover:opacity-50 duration-200 transition-all cursor-pointer"
-					onClick={() => navigate('/decks/my-decks')}
+			{/*==================== Top bar with back button and create deck button ======================= */}
+			<div className='topBar flex-shrink-0 flex items-center gap-4'>
+				<button
+					type="button"
+					className="flex items-center gap-2 txt hover:opacity-70 transition-opacity cursor-pointer"
+					onClick={() => navigate('/decks')}
 				>
-					view all
-				</h2>
-				{isLoadingUserDecks ? (
-					<div className='w-full relative overflow-hidden'>
-						<div className="deck-grid w-full relative p-4 mr-10 flex-nowrap">
-							{[...Array(5)].map((_, i) => (
-								<div key={i} className="w-60 min-w-60 h-48 color-bg rounded-out animate-pulse flex flex-col justify-between p-4">
-									<div className="h-4 color-bg-grey-5 rounded w-3/4"></div>
-									<div className="h-3 color-bg-grey-5 rounded w-1/2"></div>
-									<div className="h-3 color-bg-grey-5 rounded w-2/3"></div>
-								</div>
-							))}
-						</div>
-					</div>
-				) : userDecks?.length === 0 ? (
-					<p className="color-txt-sub ml-4 mt-2">You have not created any decks yet.</p>
-				) : (
-					<div className='w-full relative overflow-hidden'>
-						<div className='gradient'></div>
-						<div className="deck-grid w-full relative p-4 mr-10 flex-nowrap overflow-y-hidden">
-							{ userDecks?.map((deck: any) => (
-								<DeckCard key={deck.id} deck={deck} />
-							)) }
-						</div>
-					</div>
-				)}
+					<LuArrowLeft size={24} />
+					<span className="txt-bold">Back</span>
+				</button>
+
+				<h1 className="txt-heading-colour text-2xl flex-1 text-center">My Decks</h1>
+				
+				<button
+					type="button"
+					className="blue-btn cursor-pointer"
+					onClick={() => {
+						setShowCreateModal(true)
+					}}>
+					Create Deck
+				</button>
 			</div>
 			{/*==================================================================================== */}
 
-			{/*================================== MARKETPLACE Section ============================== */}
-			<div className='mt-2 mb-4 px-8 w-full flex items-center justify-around'>
-				<div className='line '></div>
-				<div className='min-w-80 px-2 '>
-					<span className="block txt-heading-colour text-4xl  w-full text-center">MARKETPLACE</span>
-				</div>
-				<div className='line '></div>
-
-			</div>
-			{/*==================================================================================== */}
-			
-			{/*================================== "Filter Section" ============================== */}
-			<div className="flex gap-2 px-4 mb-6 ">
+			{/*================================== Filter Section ============================== */}
+			<div className="flex gap-4 px-4 mt-6 flex-1 min-h-0">
 				{/* Filter Panel */}
-				<DeckFilter
+				<MyDeckFilter
 					search={search}
 					setSearch={setSearch}
-					selectedCategory={selectedCategory}
-					setSelectedCategory={setSelectedCategory}
 					sortBy={sortBy}
 					setSortBy={setSortBy}
 					selectedTopics={selectedTopics}
@@ -203,7 +129,7 @@ export default function Decks() {
 				/>
 
 				{/* Decks Display Area */}
-				<div className="flex-1 overflow-y-auto scrollbar-minimal h-200">
+				<div className="flex-1 overflow-y-auto scrollbar-minimal">
 					{isLoading || isFiltering ? (
 						<div className="flex flex-wrap gap-4 p-4">
 							{[...Array(6)].map((_, i) => (
@@ -222,13 +148,24 @@ export default function Decks() {
 						</div>
 					) : filteredDecks?.length === 0 ? (
 						<div className="flex flex-col items-center justify-center h-full">
-							<p className="txt text-center text-sm mb-2">No decks found</p>
-							<p className="txt-sub text-center text-xs">Try adjusting your filters or search term</p>
+							<p className="txt text-center text-lg mb-2">No decks found</p>
+							<p className="txt-sub text-center text-sm mb-4">
+								{search || selectedTopics.length > 0 
+									? "Try adjusting your filters or search term" 
+									: "You haven't created any decks yet"}
+							</p>
+							<button
+								type="button"
+								className="blue-btn cursor-pointer"
+								onClick={() => setShowCreateModal(true)}
+							>
+								Create Your First Deck
+							</button>
 						</div>
 					) : (
-						<div className="flex flex-wrap gap-4 py-4 pl-4 ">
+						<div className="flex flex-wrap gap-4 p-4">
 							{filteredDecks?.map((deck: any) => (
-								<div key={deck.id} className='w-[32%] '>
+								<div key={deck.id}>
 									<DeckCard deck={deck} />
 								</div>
 							))}
@@ -238,18 +175,16 @@ export default function Decks() {
 			</div>
 			{/*==================================================================================== */}
 
-				{/*================================ Create Deck Modal ================================= */}
-				{showCreateModal && (
-					<CreateDeckModal
-						setShowCreateModal={setShowCreateModal}
-						isVisible={isVisible}
-						setIsVisible={setIsVisible}
-						createDeck={handleCreateDeck}
-					/>
-
-				)}
-				{/*==================================================================================== */}
-			</div>
+			{/*================================ Create Deck Modal ================================= */}
+			{showCreateModal && (
+				<CreateDeckModal
+					setShowCreateModal={setShowCreateModal}
+					isVisible={isVisible}
+					setIsVisible={setIsVisible}
+					createDeck={handleCreateDeck}
+				/>
+			)}
+			{/*==================================================================================== */}
 			
 			{/* Feedback Display */}
 			{feedbackState !== 'idle' && (
@@ -281,4 +216,3 @@ export default function Decks() {
 		</div>
 	)
 }
-

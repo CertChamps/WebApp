@@ -17,7 +17,9 @@ import ConfirmationPrompt from "../components/prompts/confirmation";
 
 // Context 
 import { UserContext } from "../context/UserContext";
-import { set } from "nerdamer";
+
+// Firebase
+import { getStorage, ref, getDownloadURL } from "firebase/storage";
 
 export default function DeckViewer () {
 
@@ -63,13 +65,30 @@ export default function DeckViewer () {
                 return
             }
 
+            // Resolve image URL if deck has an image
+            let imageUrl: string | undefined
+            if (deckData?.image) {
+                try {
+                    const storage = getStorage()
+                    const imageRef = ref(storage, deckData.image)
+                    imageUrl = await getDownloadURL(imageRef)
+                } catch (err) {
+                    console.warn("Failed to get deck image:", err)
+                }
+            }
+
             // Concatenate all data 
             const init = {
                 ...deckData,
-                ...saveData
+                ...saveData,
+                imageUrl
             }
 
-            setIsOwner(user?.uid === deckData?.createdBy)
+            if (deckData?.createdBy === 'CertChamps') {
+                setIsOwner(user?.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user?.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2")
+            } else {
+                setIsOwner(user?.uid === deckData?.createdBy)
+            }
 
 
             setDeck(init)
@@ -86,12 +105,12 @@ export default function DeckViewer () {
             
             start()
             // Map to array of promises
-            const questionPromises = init?.questions.map(async (qID: string) => {
+            const questionPromises = (deckData?.questions || []).map(async (qID: string) => {
                 return await fetchQuestion(qID);
             });
 
             const questionData = await Promise.all(questionPromises);
-            const filteredData = questionData.filter(q => q !== null); // remove any bad ones
+            const filteredData = questionData.filter((q: any) => q !== null); // remove any bad ones
 
             setQuestions(filteredData);
 
@@ -279,7 +298,9 @@ export default function DeckViewer () {
                     description: deck.description || '',
                     questions: deck.questions || [],
                     visibility: deck.visibility || false,
-                    color: deck.color || '#FFFFFF'
+                    color: deck.color || '#FFFFFF',
+                    image: deck.imageUrl || undefined,
+                    createdBy: deck.createdBy || ''
                 }}
                 onUpdate={refetchDeck}
             />

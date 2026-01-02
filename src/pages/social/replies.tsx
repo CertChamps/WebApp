@@ -203,7 +203,7 @@ export default function Replies(
 
       {/* ============================================== FLASCHARD ============================================== */}
         {post?.isFlashcard && (
-            <div className="mx-4">
+            <div className="mx-4 w-1/2">
               <div className="mx-auto w-[90%] color-bg-accent txt-heading-colour text-center py-1.5 rounded-out mb-6
                 hover:scale-95 duration-200 cursor-pointer"
                  onClick={() => {navigate(`/practice/${post.flashcardId}`)}}>

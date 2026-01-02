@@ -671,8 +671,8 @@ math-field::part(virtual-keyboard-toggle) {
   @apply
     bg-gradient-to-t
     from-white from-[0%]
-    via-white via-[0%]
-    to-transparent to-[100%]
+    via-white via-[20%]
+    to-transparent to-[150%]
     dark:from-black/100
     dark:via-black/100
     markoblank:from-markoteal/100

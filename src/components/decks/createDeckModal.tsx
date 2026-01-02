@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction, useContext} from 'react'
-import { LuX, LuCheck, LuOctagon, LuGripVertical } from 'react-icons/lu'
+import { LuX, LuGripVertical, LuImage } from 'react-icons/lu'
 import { CirclePicker } from 'react-color'
 import { Reorder } from 'framer-motion'
 import useQuestions from '../../hooks/useQuestions'
@@ -65,7 +65,7 @@ export type CreateDeckModalProps = {
   setShowCreateModal: Dispatch<SetStateAction<boolean>>
   isVisible: boolean
   setIsVisible: Dispatch<SetStateAction<boolean>>
-  createDeck: (name: string, description: string, questionIds: string[], visibility: boolean, color: string, isOfficial: boolean) => Promise<void>
+  createDeck: (name: string, description: string, questionIds: string[], visibility: boolean, color: string, isOfficial: boolean, imageFile?: File | null) => Promise<void>
 }
 
 type Question = {
@@ -91,6 +91,9 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
   const [isOfficial, setIsOfficial] = useState(false)
   const [errors, setErrors] = useState<{ name?: string; description?: string; questions?: string }>({})
   const [isCreating, setIsCreating] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const { fetchAllQuestions } = useQuestions()
   const { user } = useContext(UserContext)
 
@@ -145,6 +148,26 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
     setSearchResults(filtered.slice(0, 30))
   }, [searchTerm, allQuestions])
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setImageFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const removeImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    if (imageInputRef.current) {
+      imageInputRef.current.value = ''
+    }
+  }
+
   const handleClose = () => {
     // Trigger fade out animation
     props.setIsVisible(false)
@@ -161,6 +184,8 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
       setIsOfficial(false)
       setErrors({})
       setIsCreating(false)
+      setImageFile(null)
+      setImagePreview(null)
       props.setShowCreateModal(false)
     }, 300) // Match this duration with the CSS transition duration
   }
@@ -198,7 +223,7 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
       props.setShowCreateModal(false)
       
       // Then create the deck (happens after modal is gone)
-      await props.createDeck(name, desc, questionIds, finalIsPublic, color, isOfficial)
+      await props.createDeck(name, desc, questionIds, finalIsPublic, color, isOfficial, imageFile)
     }
   }
 
@@ -292,6 +317,40 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
               color={color}
               onChangeComplete={(picked: any) => setColor(picked.hex)}
             />
+          </div>
+        </div>
+
+        {/* Image Upload */}
+        <div className="mb-6">
+          <label className="color-txt-main block mb-2 font-semibold">Cover Image (Optional)</label>
+          <div className="flex items-center gap-3">
+            <label className="blue-btn cursor-pointer flex items-center gap-2 px-4 py-2">
+              <LuImage size={20} />
+              <span>Upload Image</span>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+            </label>
+            {imagePreview && (
+              <div className="flex items-center gap-3">
+                <img
+                  src={imagePreview}
+                  alt="preview"
+                  className="w-16 h-16 rounded object-cover border color-shadow"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

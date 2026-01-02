@@ -3,20 +3,30 @@ import { db }from '../../firebase'
 import { UserContext } from "../context/UserContext";
 import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { getStorage, ref, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, uploadBytes } from "firebase/storage";
 
 
 
 const useDeckHandler = () => {
 
-    const { user, setUser } = useContext(UserContext) 
+    const { user } = useContext(UserContext) 
     const storage = getStorage();
     const navigate = useNavigate(); 
 
     // ========================= CREATE DECK ============================ //
-    const createDeck = async (name: string, description: string, questions: any[], visibility: boolean, color: string, isOfficial?: boolean) => {
+    const createDeck = async (name: string, description: string, questions: any[], visibility: boolean, color: string, isOfficial?: boolean, imageFile?: File | null) => {
 
         try {
+            let imagePath: string | null = null
+
+            // Upload image if provided
+            if (imageFile) {
+                const fileName = `${Date.now()}-${imageFile.name}`
+                const imageRef = ref(storage, `decks/${user.uid}/${fileName}`)
+                await uploadBytes(imageRef, imageFile)
+                imagePath = `decks/${user.uid}/${fileName}`
+            }
+
             // Add the deck to the database 
             const docRef = await addDoc(collection(db, 'decks'), {
                 name, 
@@ -26,7 +36,8 @@ const useDeckHandler = () => {
                 color: isOfficial ? '#e1a853' : color,
                 likes: 0, 
                 timestamp: Timestamp.now(),
-                createdBy: isOfficial ? "CertChamps" : user.uid 
+                createdBy: isOfficial ? "CertChamps" : user.uid,
+                ...(imagePath && { image: imagePath })
             });
 
             const docID = docRef.id;    
@@ -237,15 +248,39 @@ const useDeckHandler = () => {
 
 
     // ========================= UPDATE DECK ============================ //
-    const updateDeck = async (deckID: string, name: string, description: string, questions: any[], visibility: boolean, color: string) => {
+    const updateDeck = async (deckID: string, name: string, description: string, questions: any[], visibility: boolean, color: string, isOfficial?: boolean, imageFile?: File | null, originalCreatedBy?: string) => {
         try {
+            let imagePath: string | null = null
+
+            // Upload image if provided
+            if (imageFile) {
+                const fileName = `${Date.now()}-${imageFile.name}`
+                const imageRef = ref(storage, `decks/${user.uid}/${fileName}`)
+                await uploadBytes(imageRef, imageFile)
+                imagePath = `decks/${user.uid}/${fileName}`
+            }
+
+            // Determine createdBy - only update if isOfficial is explicitly set
+            let createdByUpdate: { createdBy?: string } = {}
+            if (isOfficial === true) {
+                createdByUpdate = { createdBy: "CertChamps" }
+            } else if (isOfficial === false && originalCreatedBy && originalCreatedBy !== "CertChamps") {
+                // Revert to original creator if unchecking official and we have a valid original creator
+                createdByUpdate = { createdBy: originalCreatedBy }
+            } else if (isOfficial === false && (!originalCreatedBy || originalCreatedBy === "CertChamps")) {
+                // If original was CertChamps or empty, set to current user
+                createdByUpdate = { createdBy: user.uid }
+            }
+
             // Update the deck in the database 
             await updateDoc(doc(db, 'decks', deckID), {
                 name, 
                 description, 
                 questions,
                 visibility,
-                color
+                color,
+                ...createdByUpdate,
+                ...(imagePath && { image: imagePath })
             });
         } catch (err) {
             console.log(err)

@@ -10,6 +10,7 @@ import Replies from "./pages/social/replies";
 import Settings from "./pages/settings";
 import DeckViewer from "./pages/deckViewer";
 import Decks from "./pages/decks";
+import MyDecks from "./pages/myDecks";
 import ProfileViewer from "./pages/profileViewer";
 import { ProtectedRoute } from "./components/protectedRoute";
 import Progress from "./pages/progress/progress_main";
@@ -48,6 +49,17 @@ const router = createHashRouter([
         <>
           <Navbar />
           <Decks />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/decks/my-decks",
+    element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <MyDecks />
         </>
       </ProtectedRoute>
     ),
