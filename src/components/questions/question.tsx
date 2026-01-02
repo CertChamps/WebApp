@@ -308,6 +308,7 @@ export default function Question(props: questionsProps) {
             onNext={() => {
             setShowNoti(false);
             setIsRight(false);
+            handleNextQuestion();
             }}
         />
         ) : null }
