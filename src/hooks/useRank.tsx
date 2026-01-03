@@ -290,14 +290,14 @@ export default function useRank(props: rankProps) {
               // Update XP right here — using function form ensures both are in sync
               setXp((prevXp) => {
                 const updatedXp = prevXp + reward;
-                const newRecord = Math.max((user?.highestStreak ?? 0), newStreak);
                 
-                // Update highestStreak state if we beat the record
-                if (newRecord > (user?.highestStreak ?? 0)) {
-                  setHighestStreak(newRecord);
-                }
+                // Update highestStreak using the state variable, not user context
+                setHighestStreak((prevHighest) => {
+                  const newRecord = Math.max(prevHighest, newStreak);
+                  syncUserData({ xp: updatedXp, streak: newStreak, highestStreak: newRecord });
+                  return newRecord;
+                });
                 
-                syncUserData({ xp: updatedXp, streak: newStreak, highestStreak: newRecord });
                 awardXP(reward);
                 return updatedXp;
               });
