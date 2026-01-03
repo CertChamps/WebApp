@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import crown from '../assets/crown.png'
+import crown from '../assets/logo.png'
 import { FaGoogle } from 'react-icons/fa'
 import useAuthentication from '../hooks/useAuthentication'
 import { useNavigate } from 'react-router-dom'
@@ -19,7 +19,7 @@ export default function Login() {
     return (
         <div className=' h-full flex justify-center items-center w-full color-bg-grey-5' >
             <div className=' py-8 w-72 h-10/12 color-shadow border-2 rounded-out color-bg' >
-                <img src={crown}  className='w-34 m-auto object-cover h-24'/>
+                <img src={crown}  className='w-32 m-auto object-cover h-24'/>
                 <h1 className="txt-heading-colour text-center text-2xl mb-4" >Login</h1>
 
                 <p className='font-light text-red ml-0.5 text-center'>{error?.general ? error.general : ""}</p>

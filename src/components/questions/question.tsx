@@ -309,7 +309,7 @@ export default function Question(props: questionsProps) {
             setShowNoti(false);
             setIsRight(false);
             handleNextQuestion();
-            }}
+          }}
         />
         ) : null }
 
