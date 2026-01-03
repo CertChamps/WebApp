@@ -88,7 +88,7 @@ export default function MathInput(props: inputProps) {
 
   return (
     <div>
-      <div className="flex items-center">
+      <div className="flex items-center justify-center">
         <div>
           <RenderMath text={before ? `$${before}$` : ''} className="txt text-lg"/>
         </div>
@@ -97,8 +97,8 @@ export default function MathInput(props: inputProps) {
           default-mode="inline-math"
           onInput={handleInput}
           className="txtbox outline-none bg-none color-txt-main inline-block 
-            focus:border-3 color-shadow-accent w-50 mx-2
-            h-auto overflow-scroll"
+            focus:border-3 color-shadow-accent w-50 mx-2 rounded-2xl
+            h-auto min-h-10"
           style={{
             background: "none",
             outline: "none",
