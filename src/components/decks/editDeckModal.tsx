@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
-import { LuX, LuCheck, LuOctagon, LuGripVertical } from 'react-icons/lu'
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction, useContext } from 'react'
+import { LuX, LuCheck, LuOctagon, LuGripVertical, LuImage } from 'react-icons/lu'
 import { CirclePicker } from 'react-color'
 import { Reorder } from 'framer-motion'
 import useQuestions from '../../hooks/useQuestions'
 import RenderMath from '../math/mathdisplay'
+import { UserContext } from '../../context/UserContext'
 
 // Add inline styles for animation
 const styleSheet = `
@@ -64,13 +65,15 @@ export type Deck = {
   questions: string[]
   visibility: boolean
   color: string
+  image?: string
+  createdBy?: string
 }
 
 export type EditDeckModalProps = {
   setShowEditModal: Dispatch<SetStateAction<boolean>>
   isVisible: boolean
   setIsVisible: Dispatch<SetStateAction<boolean>>
-  updateDeck: (deckID: string, name: string, description: string, questionIds: string[], visibility: boolean, color: string) => Promise<void>
+  updateDeck: (deckID: string, name: string, description: string, questionIds: string[], visibility: boolean, color: string, isOfficial?: boolean, imageFile?: File | null, originalCreatedBy?: string) => Promise<void>
   deck: Deck
   onUpdate?: () => Promise<void> // Callback to refetch deck data after update
 }
@@ -85,9 +88,12 @@ export default function EditDeckModal(props: EditDeckModalProps) {
   const modalRef = useRef<any>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const reorderContainerRef = useRef<HTMLDivElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState(props.deck.name || '')
   const [desc, setDesc] = useState(props.deck.description || '')
   const [color, setColor] = useState(props.deck.color || '#FFFFFF')
+  const [originalColor] = useState(props.deck.color || '#FFFFFF')
+  const [originalCreatedBy] = useState(props.deck.createdBy || '')
   const [searchTerm, setSearchTerm] = useState('')
   const [searchResults, setSearchResults] = useState<Question[]>([])
   const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([])
@@ -95,11 +101,15 @@ export default function EditDeckModal(props: EditDeckModalProps) {
   const [showDropdown, setShowDropdown] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
   const [isPublic, setIsPublic] = useState(props.deck.visibility || false)
+  const [isOfficial, setIsOfficial] = useState(false)
   const [errors, setErrors] = useState<{ name?: string; description?: string; questions?: string }>({})
   const [feedbackState, setFeedbackState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [feedbackExiting, setFeedbackExiting] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(props.deck.image || null)
   const [errorMessage, setErrorMessage] = useState('')
   const { fetchAllQuestions } = useQuestions()
+  const { user } = useContext(UserContext)
 
   useEffect(() => {
     // Trigger fade in animation
@@ -143,6 +153,16 @@ export default function EditDeckModal(props: EditDeckModalProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Update color and visibility when isOfficial changes
+  useEffect(() => {
+    if (isOfficial) {
+      setColor('#FDE15C')
+      setIsPublic(true)
+    } else {
+      setColor(originalColor)
+    }
+  }, [isOfficial, originalColor])
+
   // Filter questions based on search term
   useEffect(() => {
     const term = searchTerm.trim().toLowerCase()
@@ -170,11 +190,28 @@ export default function EditDeckModal(props: EditDeckModalProps) {
       setSearchTerm('')
       setSearchResults([])
       setErrors({})
+      setImageFile(null)
+      setImagePreview(props.deck.image || null)
     }, 300)
 
     setTimeout(() => {
       props.setShowEditModal(false)
     }, 1500)
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  const removeImage = () => {
+    setImageFile(null)
+    setImagePreview(null)
+    if (imageInputRef.current) {
+      imageInputRef.current.value = ''
+    }
   }
 
   const handleUpdate = async () => {
@@ -204,7 +241,7 @@ export default function EditDeckModal(props: EditDeckModalProps) {
       try {
         setFeedbackState('loading')
         const questionIds = selectedQuestions.map((q) => q.id)
-        await props.updateDeck(props.deck.id, name, desc, questionIds, isPublic, color)
+        await props.updateDeck(props.deck.id, name, desc, questionIds, isPublic, color, isOfficial, imageFile, originalCreatedBy)
         
         // Refetch deck data if callback provided
         if (props.onUpdate) {
@@ -331,19 +368,74 @@ export default function EditDeckModal(props: EditDeckModalProps) {
           </div>
         </div>
 
-        {/* Public/Private Toggle */}
+        {/* Image Upload */}
         <div className="mb-6">
-          <label className="color-txt-main block mb-2 font-semibold">Visibility</label>
+          <label className="color-txt-main block mb-2 font-semibold">Cover Image (Optional)</label>
           <div className="flex items-center gap-3">
+            <label className="blue-btn cursor-pointer flex items-center gap-2 px-4 py-2">
+              <LuImage size={20} />
+              <span>{imagePreview ? 'Change Image' : 'Upload Image'}</span>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+            </label>
+            {imagePreview && (
+              <div className="flex items-center gap-3">
+                <img
+                  src={imagePreview}
+                  alt="preview"
+                  className="w-16 h-16 rounded object-cover border color-shadow"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Official Toggle and Visibility */}
+        <div className="mb-6">
+
+          {(user?.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user?.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2") ? (
+          <div className="mb-4">
+            <label className="color-txt-main block mb-2 font-semibold">Make it official?</label>
+            <button
+              type="button"
+              onClick={() => setIsOfficial(!isOfficial)}
+              className={`relative w-14 h-7 rounded-full transition-colors duration-300 focus:outline-none focus:ring-offset-2 ${
+                isOfficial ? 'color-bg-accent' : 'color-bg-grey-5'
+              }`}
+            >
+              <span
+                className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out ${
+                  isOfficial ? 'translate-x-7' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div> 
+          ) : (<></>)}
+
+          <label className="color-txt-main block mb-2 font-semibold">Visibility</label>
+          <div className={`flex items-center gap-3 transition-opacity duration-300 ${isOfficial ? 'opacity-50' : 'opacity-100'}`}>
             <span className={`txt-sub transition-colors ${!isPublic ? 'color-txt-accent font-semibold' : 'color-txt-sub font-semibold'}`}>
               Private
             </span>
             <button
               type="button"
-              onClick={() => setIsPublic(!isPublic)}
+              onClick={() => !isOfficial && setIsPublic(!isPublic)}
+              disabled={isOfficial}
               className={`relative w-14 h-7 rounded-full transition-colors duration-300 focus:outline-none focus:ring-offset-2 ${
                 isPublic ? 'color-bg-accent' : 'color-bg-grey-5'
-              }`}
+              } ${isOfficial ? 'cursor-not-allowed' : 'cursor-pointer'}`}
             >
               <span
                 className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ease-in-out ${
