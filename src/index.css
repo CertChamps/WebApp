@@ -23,14 +23,14 @@
   /* Main Colour Set */
   --color-white: #ffffff;
   --color-black: #353535;
-  --color-blue: #0d46a0;
+  --color-blue: #27548a;
   --color-grey: #9ca3af;
   --color-light-grey: #bdbdbd; /* #e0e0e0 og*/ 
   --color-red: #f03131;
   --color-button: #f3f4f6; /* Add this for light mode button bg */
 
   /* Dark Mode */ 
-  --color-blue-light: #6186bf;
+  --color-blue-light: #74a1d8;
   --color-button-dark: #374151; /* Add this for dark mode button bg */
 
   /* Markoblank colour theme */
@@ -262,10 +262,6 @@ math-field::part(virtual-keyboard-toggle) {
 }
 
 /* ================== Shadows ================== */ 
-@utility shadow-xsmall {
-  @apply shadow-[1px_1px_0px_0px] color-shadow border-2 rounded-in
-}
-
 @utility shadow-small {
   @apply shadow-[2px_2px_0px_0px] color-shadow border-2 rounded-in
 }
@@ -669,10 +665,10 @@ math-field::part(virtual-keyboard-toggle) {
 
 @utility bg-gradient-bg-fade {
   @apply
-    bg-gradient-to-t
+    bg-gradient-to-l
     from-white from-[0%]
     via-white via-[0%]
-    to-transparent to-[100%]
+    to-transparent to-[5%]
     dark:from-black/100
     dark:via-black/100
     markoblank:from-markoteal/100
