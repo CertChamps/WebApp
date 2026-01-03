@@ -2,7 +2,7 @@
 import { LuArrowLeft, LuTrash, LuPencil } from "react-icons/lu";
 
 // Hooks 
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useStopwatch } from "../hooks/useStopwatch";
 import useDeckHandler from "../hooks/useDeckHandler";
@@ -14,6 +14,7 @@ import Question from "../components/questions/question";
 import DeckPreview from "../components/decks/deckPreview";
 import EditDeckModal from "../components/decks/editDeckModal";
 import ConfirmationPrompt from "../components/prompts/confirmation";
+import DeckComplete from "../components/decks/deckComplete";
 
 // Context 
 import { UserContext } from "../context/UserContext";
@@ -45,6 +46,8 @@ export default function DeckViewer () {
     const [isOwner, setIsOwner] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
+    const [showCompletion, setShowCompletion] = useState(false)
+    const [hasShownCompletion, setHasShownCompletion] = useState(false)
     const isInitialRender = useRef(true)
 
     // get stopwatch and start
@@ -182,7 +185,47 @@ export default function DeckViewer () {
 
         handleBeforeUnload();
     }, [questionsAnswered]);
-    // // ========================================================================== // 
+    // // ========================================================================== //
+
+    // ============================= DECK COMPLETION CHECK ============================== //
+    // Check if all questions have been answered correctly
+    const isComplete = useMemo(() => {
+        if (!questions.length || !Object.keys(questionsAnswered).length) return false;
+        const answeredCorrectly = Object.values(questionsAnswered).filter(v => v === true).length;
+        return answeredCorrectly >= questions.length;
+    }, [questions, questionsAnswered]);
+
+    // Show completion celebration when deck is finished
+    useEffect(() => {
+        if (isComplete && !hasShownCompletion && !isPreviewMode && questions.length > 0) {
+            // Small delay to let the last answer animation play
+            const timer = setTimeout(() => {
+                setShowCompletion(true);
+                setHasShownCompletion(true);
+                stop(); // Stop the timer
+            }, 400);
+            return () => clearTimeout(timer);
+        }
+    }, [isComplete, hasShownCompletion, isPreviewMode, questions.length]);
+
+    // Handle reset deck
+    const handleResetDeck = async () => {
+        setQuestionsAnswered({});
+        setPosition(0);
+        setSecondsElapsed(0);
+        setShowCompletion(false);
+        setHasShownCompletion(false);
+        // Save the reset progress
+        await saveProgress([], id, 0);
+        start(); // Restart timer
+    };
+
+    // Handle keep progress
+    const handleKeepProgress = () => {
+        setShowCompletion(false);
+        navigate(-1);
+    };
+    // ========================================================================== // 
 
 
 
@@ -334,6 +377,17 @@ export default function DeckViewer () {
                 setShowRemoveConfirm(false);
             }}
             onCancel={() => setShowRemoveConfirm(false)}
+        />
+        { /* ====================================================================================== */ }
+
+        { /* ======================================= COMPLETION CELEBRATION ==================================== */ }
+        <DeckComplete
+            isVisible={showCompletion}
+            deckName={deck?.name || 'Deck'}
+            totalQuestions={questions.length}
+            timeElapsed={secondsElapsed}
+            onReset={handleResetDeck}
+            onKeepProgress={handleKeepProgress}
         />
         { /* ====================================================================================== */ }
 
