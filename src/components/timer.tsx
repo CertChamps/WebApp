@@ -49,7 +49,7 @@ const Timer = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen pb-40">
+    <div className="flex flex-col items-center justify-center h-full py-8">
       {/* Mode Toggle */}
       <div className="flex gap-4 mb-8">
         <button
