@@ -433,7 +433,7 @@ export default function Question(props: questionsProps) {
 
             <div>
             {/* =============================== MATH INPUT ================================= */}
-            <div className="flex">
+            <div className="flex items-center">
                {!props.preview &&
   (() => {
     /* ---------- 1.  bail-out conditions ---------- */
