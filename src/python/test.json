@@ -1,0 +1,33 @@
+[
+  {
+    "id": "CCQ00000001",
+    "name": "2025 Paper 1 - Q1a",
+    "tags": [
+      "Algebra",
+      "Inequalities"
+    ],
+    "difficulty": 2,
+    "isExamQ": true,
+    "markingScheme": "7",
+    "logTables": null,
+    "parts": [
+      {
+        "question": "Solve the following inequality for $x \\in \\mathbb{R}$:\n$|x - 3| \\leq 12$",
+        "image": null,
+        "orderMatters": false,
+        "inputs": [
+          {
+            "before": "",
+            "after": "$\\leq x$",
+            "answer": "-9"
+          },
+          {
+            "before": "$\\leq $",
+            "after": "",
+            "answer": "15"
+          }
+        ]
+      }
+    ]
+  }
+]

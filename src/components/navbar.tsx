@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import '../styles/navbar.css'
 
 // ======================= ICON IMPORTS ======================== // 
-import { LuPencil, LuSettings, LuUsers, LuChartSpline } from "react-icons/lu";
+import { LuPencil, LuSettings, LuUsers, LuChartSpline, LuFilePlus } from "react-icons/lu";
 import { TbCards } from 'react-icons/tb';
 
 export default function Navbar () {
@@ -23,6 +23,7 @@ export default function Navbar () {
         if (path.startsWith('/social')) return 'social/social'
         if (path.startsWith('/progress')) return 'progress'
         if (path.startsWith('/user/settings')) return 'user/settings'
+        if (path.startsWith('/admin/add-questions')) return 'admin/add-questions'
         if (path.startsWith('/games')) return 'games'
         if (path.startsWith('/practice')) return 'practice'
         if (path.startsWith('/post')) return 'social/social'
@@ -101,8 +102,18 @@ export default function Navbar () {
                     fill={page == 'games' ? 'currentColor' : 'none'} />  
                 <p className={page == 'games' ? 'nav-txt-selected' : 'nav-txt'} >Games</p>
             </div> */}
+
+            {/* ============================= ADD QUESTIONS (ADMIN ONLY) ================================ */}
+            {(user.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2") && (
+                <div className={page == 'admin/add-questions' ? 'nav-settings-selected' : 'nav-settings'} onClick={() => {pageNaviagte('admin/add-questions')}}> 
+                    <LuFilePlus strokeWidth={strokewidth} size={iconSize} 
+                        className={page == 'admin/add-questions' ? 'nav-icon-selected' : 'nav-icon'}
+                        fill={page == 'admin/add-questions' ? 'currentColor' : 'none'} />  
+                    <p className={page == 'admin/add-questions' ? 'nav-txt-selected' : 'nav-txt'} >Add Q's</p>
+                </div>
+            )}
             
-            <div className={page == 'user/settings' ? 'nav-settings-selected' : 'nav-settings'} onClick={() => {pageNaviagte('user/settings')}}> 
+            <div className={page == 'user/settings' ? (user.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" ? 'nav-bottom-selected' : 'nav-settings-selected') : (user.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" ? 'nav-bottom' : 'nav-settings')} onClick={() => {pageNaviagte('user/settings')}}> 
                 <LuSettings strokeWidth={strokewidth} size={iconSize} 
                     className={page == 'user/settings' ? 'nav-icon-selected' : 'nav-icon'}
                     fill={page == 'user/settings' ? 'currentColor' : 'none'} />  

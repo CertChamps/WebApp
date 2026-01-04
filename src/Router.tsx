@@ -11,6 +11,7 @@ import Settings from "./pages/settings";
 import DeckViewer from "./pages/deckViewer";
 import Decks from "./pages/decks";
 import MyDecks from "./pages/myDecks";
+import AddQuestions from "./pages/addQuestions";
 import ProfileViewer from "./pages/profileViewer";
 import { ProtectedRoute } from "./components/protectedRoute";
 import Progress from "./pages/progress/progress_main";
@@ -104,6 +105,17 @@ const router = createHashRouter([
         <>
           <Navbar />
           <Games />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/add-questions",
+    element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <AddQuestions />
         </>
       </ProtectedRoute>
     ),

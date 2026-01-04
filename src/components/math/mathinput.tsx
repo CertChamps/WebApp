@@ -138,7 +138,7 @@ export default function MathInput(props: inputProps) {
   const after = prefixArr[1];
 
   return (
-    <div>
+    <div className="mr-1.5">
       <div className="flex items-center justify-center">
         <div>
           <RenderMath text={before ? `$${before}$` : ''} className="txt text-lg"/>

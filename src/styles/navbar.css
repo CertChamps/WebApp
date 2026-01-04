@@ -102,4 +102,17 @@
   group-hover:px-2 group-hover:justify-start w-full mt-auto
   transition-all duration-250;
 }
+
+.nav-bottom {
+  @apply flex items-center rounded-out hover:color-bg my-1 
+  cursor-pointer
+  group-hover:px-2 group-hover:justify-start w-full
+  transition-all duration-250;
+}
+
+.nav-bottom-selected {
+  @apply flex items-center rounded-out color-bg-accent my-1
+  group-hover:px-2 group-hover:justify-start w-full
+  transition-all duration-250;
+}
 /* ===================================================================================== */ 

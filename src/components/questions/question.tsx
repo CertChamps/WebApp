@@ -574,13 +574,26 @@ export default function Question(props: questionsProps) {
                   const prefixes = Array.isArray(content?.[part]?.prefix)
                     ? content?.[part]?.prefix
                     : [];
+                  
+                  // Helper to extract [before, after] from prefix data
+                  // Supports: [before, after], [[b1,a1],[b2,a2]], or [{before,after},{before,after}]
+                  const getPrefixPair = (prefixItem: any): [string, string] | string => {
+                    if (Array.isArray(prefixItem)) {
+                      return [String(prefixItem[0] ?? ''), String(prefixItem[1] ?? '')]
+                    }
+                    if (prefixItem && typeof prefixItem === 'object' && 'before' in prefixItem) {
+                      return [String(prefixItem.before ?? ''), String(prefixItem.after ?? '')]
+                    }
+                    return prefixItem ?? ''
+                  }
 
                   /* ---------- 2.  single box ---------- */
                   if (answers.length === 1) {
+                    // For single input, prefix is [before, after]
                     const pfx =
                       prefixes.length >= 2
                         ? [String(prefixes[0] ?? ''), String(prefixes[1] ?? '')]
-                        : (Array.isArray(prefixes[0]) ? prefixes[0] : (prefixes[0] ?? ''));
+                        : getPrefixPair(prefixes[0]);
 
                     return (
                       <div
@@ -607,11 +620,7 @@ export default function Question(props: questionsProps) {
                       >
                         <MathInput
                           index={idx}
-                          prefix={
-                            Array.isArray(prefixes[idx])
-                              ? prefixes[idx]
-                              : (prefixes[idx] ?? '')
-                          }
+                          prefix={getPrefixPair(prefixes[idx])}
                           setInputs={setInputs}
                           onEnter={handleCheck}
                           attempts={attempts}
