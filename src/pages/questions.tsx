@@ -49,7 +49,7 @@ export default function Questions() {
 
 
     return (
-        <div className="w-h-container flex-col justify-end items-center">
+        <div className="w-h-container flex-row justify-end items-center">
 
             {/* ======================================== TOP PAGE INFORMATION ========================================== */}
             <div className="flex items-end justify-end">
@@ -59,10 +59,6 @@ export default function Questions() {
                     {/* <SearchandFilter setFilters={setFilters} /> */}
             </div>
             {/* ===================================================================================================== */}
-
-
-
-
             <Question
                 questions={questions}
                 position={position}

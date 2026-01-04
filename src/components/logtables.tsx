@@ -36,8 +36,8 @@ const LogTables = ({ pgNumber }: QuestionType) => {
 
   return (
     <div
-      className="flex flex-col items-center overflow-y-auto scrollbar-minimal shadow-small rounded-in color-bg relative"
-      style={{ height: "80vh", width: "650px" }}
+      className="flex flex-col items-center overflow-y-auto scrollbar-minimal shadow-small rounded-in color-bg relative ml-5"
+      style={{ height: "72.5vh", width: "650px" }}
     >
       {/* Dark Mode Toggle Button */}
       <button

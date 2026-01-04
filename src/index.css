@@ -665,7 +665,7 @@ math-field::part(virtual-keyboard-toggle) {
 
 @utility bg-gradient-bg-fade {
   @apply
-    bg-gradient-to-l
+    bg-gradient-to-t
     from-white from-[0%]
     via-white via-[20%]
     to-transparent to-[150%]

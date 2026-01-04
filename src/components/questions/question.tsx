@@ -1,5 +1,5 @@
 // Icons 
-import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuArrowLeft, LuArrowRight, LuSearch, LuTimer, LuListOrdered} from "react-icons/lu";
+import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuArrowLeft, LuArrowRight, LuSearch, LuTimer, LuListOrdered, LuLayoutList} from "react-icons/lu";
 import { TbCards } from "react-icons/tb";
 
 // Hooks 
@@ -22,7 +22,9 @@ import QSearch from "./qSearch";
 import ViewQuestionsList from "./viewQuestionsList";
 import RankBar from "../../components/rankbar";
 import AnswerNoti from "../math/answerNoti";
+import WrongAnswerNoti from "../math/wrongAnswerNoti";
 import StreakDisplay from "../streakDisplay";
+import Confetti from "../Confetti";
 
 // Style Imports 
 import '../../styles/questions.css'
@@ -72,16 +74,26 @@ export default function Question(props: questionsProps) {
         // console.log(isCorrect(inputs, content?.[part]?.answer))
     }, [inputs])
 
-    const [ sideView, setSideView ] = useState<string>(props.deckmode ? 'viewQuestions' : '')  // filters | viewQuestions | ''  
+    const [ sideView, setSideView ] = useState<string>(props.deckmode ? 'viewQuestions' : '')  // filters | viewQuestions | questionParts | ''  
     const [ showSearch, setShowSearch ] = useState<boolean>(false)
 
     const { toRoman } = useQuestions()
     const { isCorrect } = useMaths();
 
+    // Auto-open questionParts panel when question has multiple parts
+    useEffect(() => {
+        if (!props.deckmode && Array.isArray(content) && content.length > 1) {
+            setSideView('questionParts');
+        } else if (!props.deckmode && Array.isArray(content) && content.length <= 1) {
+            setSideView(prev => prev === 'questionParts' ? '' : prev);
+        }
+    }, [content, props.deckmode]);
+
     const [ viewFilter, setViewFilter ] = useState(false)
 
     const [isRight, setIsRight] = useState(false);   // result of last check
     const [showNoti, setShowNoti] = useState(false); // controls AnswerNoti
+    const [showWrongNoti, setShowWrongNoti] = useState(false); // controls WrongAnswerNoti
 
     const [xpFlyers, setXpFlyers] = useState<
         {
@@ -94,6 +106,7 @@ export default function Question(props: questionsProps) {
     >([]);
 
     const rankRef = useRef<HTMLDivElement>(null);
+    const partRefs = useRef<(HTMLDivElement | null)[]>([]);
     const { rank, progress, streak, onCheck } = useRank({
         rankRef, 
         setIsRight, 
@@ -110,6 +123,20 @@ export default function Question(props: questionsProps) {
     const [canReveal, setCanReveal] = useState(false);
     const [showSolution, setShowSolution] = useState(false); // overlay
     const [locked, setLocked] = useState(false);
+    const [showConfetti, setShowConfetti] = useState(false);
+    const [partsAnswered, setPartsAnswered] = useState<{
+        [questionId: string]: { [partIndex: number]: boolean };
+    }>({});
+
+    // Auto-scroll to current part in the questionParts panel
+    useEffect(() => {
+        if (sideView === 'questionParts' && partRefs.current[part]) {
+            partRefs.current[part]?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
+        }
+    }, [part, sideView]);
 
     //const [displayedXP, setDisplayedXP] = useState(user?.xp ?? 0);
 
@@ -137,11 +164,34 @@ export default function Question(props: questionsProps) {
             setLocked(true);    // disable further answering
             setIsRight(true);   // trigger AnswerNoti visuals
             setShowNoti(true);
+            setShowConfetti(true); // trigger confetti celebration
+            // Track this part as correctly answered
+            setPartsAnswered(prev => ({
+              ...prev,
+              [questionId]: {
+                ...prev[questionId],
+                [part]: true
+              }
+            }));
             return;
           }
+          // Show wrong answer notification
+          setShowWrongNoti(true);
+          
           setAttempts((a) => {
             const n = a + 1;
-            if (n >= 3) setCanReveal(true);
+            if (n >= 3) {
+              setCanReveal(true);
+              setLocked(true); // lock input after 3 failed attempts
+              // Track this part as incorrectly answered (after 3 failed attempts)
+              setPartsAnswered(prev => ({
+                ...prev,
+                [questionId]: {
+                  ...prev[questionId],
+                  [part]: false
+                }
+              }));
+            }
             return n;
           });
         }
@@ -162,6 +212,7 @@ export default function Question(props: questionsProps) {
           setAttempts(0);
           setCanReveal(false);
           setInputs([]);
+          setShowConfetti(false);
           // always go to next question (not just next part)
           if (props.nextQuestion) {
             props.nextQuestion();
@@ -292,7 +343,10 @@ export default function Question(props: questionsProps) {
     }, []);
 
     return (
-    <div className="flex flex-col h-full w-full items-end justify-end p-4">
+    <div className="flex flex-col h-full w-full items-center justify-between p-4">
+        {/* Confetti celebration on correct answer */}
+        <Confetti show={showConfetti} onComplete={() => setShowConfetti(false)} />
+        
                   {showSearch ? (
         <QSearch
           setShowSearch={setShowSearch}
@@ -305,11 +359,21 @@ export default function Question(props: questionsProps) {
         { showNoti && isRight ? (
         <AnswerNoti
             visible={true}
+            message={winPlaceholder}
             onNext={() => {
             setShowNoti(false);
             setIsRight(false);
             handleNextQuestion();
           }}
+        />
+        ) : null }
+
+        { showWrongNoti ? (
+        <WrongAnswerNoti
+            visible={true}
+            message={losePlaceholder}
+            attemptsLeft={3 - attempts}
+            onDismiss={() => setShowWrongNoti(false)}
         />
         ) : null }
 
@@ -359,8 +423,36 @@ export default function Question(props: questionsProps) {
         </div>
       ) : null}
 
-    <div className="flex justify-start items-end w-full h-[90%]">
-    { //============================= QUESTIONS CONTAINER ====================================// 
+      <div className="flex w-full" ref={rankRef}>
+          <RankBar rank={rank} progress={progress} />
+      </div>
+
+<div className="flex h-[90%] w-full mt-4 justify-center items-center relative">
+   <div className="color-bg-grey-5 mx-4 w-10 h-10 flex items-center group relative 
+          justify-center rounded-full hover:scale-95 duration-250 transition-all"
+          onClick={() => {
+              setInputs([]);
+
+              // Previous part if available
+              if (part > 0) {
+                  setPart((p) => p - 1);
+                  return;
+              }
+
+              // Otherwise ask parent to move to the previous question
+              const prevIndex = props.position - 1;
+              if (prevIndex >= 0) {
+                  props.setPosition(prevIndex);
+              }
+          }}>
+          <LuArrowLeft strokeWidth={strokewidth} size={32} className="color-txt-sub"/>
+
+          <span className="tooltip">previous</span>
+      </div> 
+  <div className="h-full w-full flex flex-col justify-center items-center">
+     
+    <div className="flex justify-start items-end w-11/12 h-[90%]">
+    { //============================= QUESTIONS CONTAINER ==================================// 
     props.questions[props.position]? ( 
     <div className={`card-container h-full items-end justify-start ${ (sideView == '' || sideView == 'filters') ? 'w-full' : 'w-7/12'}  
         transition-all duration-250 shrink-0 self-start justify-self-start origin-left relative`}>
@@ -383,140 +475,169 @@ export default function Question(props: questionsProps) {
     </div>
         <div className="p-8 flex flex-1 flex-col justify-between h-full">
   
-
-            <div className="h-full">
-            {/* ================================ HEADING =================================== */}
-            {/* ======================================== RANKBAR ========================================== */}
-            <div className="flex" ref={rankRef}>
-                <RankBar rank={rank} progress={progress} />
-                <StreakDisplay streak={streak}/>
-            </div>
-
-            <p className="txt-bold color-txt-accent">{properties?.name}
-                <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
-
-                { user.uid == "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" || user.uid == "NkN9UBqoPEYpE21MC89fipLn0SP2" ? ( 
-                  content?.[part]?.answer?.length ? (
-                    content?.[part].answer.map((ans: any) => (
-                         <span key={ans} className="txt-sub">{`ANS: ${ans}`}</span>
-                    ))
-                  ) : null ) : null}
-            </p>
-            {/* ============================================================================ */}
-
             
-            {/* ============================= PART NAVIGATION ===============================*/}
-            <div className="flex">
-                {Array.isArray(content) && content?.length > 1 && content?.map((_: any, idx: number) => (
-                    <div key={idx} className="flex items-center justify-center h-10" onClick={() => { setPart(idx); setInputs([]) }}>
-                        <p className={`part-number ${part === idx ? 'bg-white/5' : 'hover:bg-white/10'}`}>
-                            {toRoman(idx + 1)}
-                        </p>
-                        <LuChevronRight className={`${idx + 1 === content?.length ? 'invisible' : 'visible'} color-txt-sub`} />
-                    </div>
-                ))}
-            </div> 
-            {/* ============================================================================ */}
+            <div className="h-full ">
+                  <div className='flex flex-row justify-between w-full h-full '>
+                      <div className='w-full h-full'>
+                          {/* ================================ HEADING =================================== */}
 
+                          <p className="txt-bold color-txt-accent">{properties?.name}
+                              <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
+
+                              { user.uid == "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" || user.uid == "NkN9UBqoPEYpE21MC89fipLn0SP2" ? ( 
+                                content?.[part]?.answer?.length ? (
+                                  content?.[part].answer.map((ans: any) => (
+                                      <span key={ans} className="txt-sub">{`ANS: ${ans}`}</span>
+                                  ))
+                                ) : null ) : null}
+                          </p>
+
+                          {/* ============================================================================ */}
+
+
+                          {/* ============================= PART NAVIGATION ===============================*/}
+                          <div className="flex">
+                              {Array.isArray(content) && content?.length > 1 && content?.map((_: any, idx: number) => (
+                                  <div key={idx} className="flex items-center justify-center h-10" onClick={() => { setPart(idx); setInputs([]) }}>
+                                      <p className={`part-number ${part === idx ? 'bg-white/5' : 'hover:bg-white/10'}`}>
+                                          {toRoman(idx + 1)}
+                                      </p>
+                                      <LuChevronRight className={`${idx + 1 === content?.length ? 'invisible' : 'visible'} color-txt-sub`} />
+                                  </div>
+                              ))}
+                          </div> 
+
+                          <div className="w-full h-3/4 overflow-y-auto scrollbar-minimal px-2 py-2">
+                              <RenderMath text={content?.[part]?.question ?? ''} className="txt text-xl" />
+                              {content?.[part]?.image &&
+                              <div className="w-100 h-auto relative">
+                                  <img src={content?.[part].image} className="max-h-30 image-invert  brightness-0"/>
+                              </div>
+                              }
+                          </div>
+                          {/* ============================================================================ */}
+                      </div>
+
+                      <div>           
+                        <StreakDisplay streak={streak}/>
+                      </div>            
+
+
+                  </div>
 
             {/* ============================== QUESTION CONTENT =========================== */}
-            <div className="w-full h-3/4 overflow-y-auto scrollbar-minimal px-2 py-2">
-                <RenderMath text={content?.[part]?.question ?? ''} className="txt text-xl" />
-                {content?.[part]?.image &&
-                <div className="w-100 h-auto relative">
-                    <img src={content?.[part].image} className="max-h-30 image-invert  brightness-0"/>
-                </div>
-                }
-            </div>
+            
+            
             {/* ============================================================================ */}
             </div>
 
-            <div>
-            {/* =============================== MATH INPUT ================================= */}
-            <div className="flex items-center">
-               {!props.preview &&
-  (() => {
-    /* ---------- 1.  bail-out conditions ---------- */
-    const answers = content?.[part]?.answer;          // keep null/undefined
-    if (!Array.isArray(answers) || answers.length === 0 || answers[0] == null) {
-      return null;                                    // ← nothing to show
-    }
-
-    const prefixes = Array.isArray(content?.[part]?.prefix)
-      ? content?.[part]?.prefix
-      : [];
-
-    /* ---------- 2.  single box ---------- */
-    if (answers.length === 1) {
-      const pfx =
-        prefixes.length >= 2
-          ? [String(prefixes[0] ?? ''), String(prefixes[1] ?? '')]
-          : (Array.isArray(prefixes[0]) ? prefixes[0] : (prefixes[0] ?? ''));
-
-      return (
-        <div
-          key={0}
-          className={locked ? 'pointer-events-none opacity-50' : ''}
-        >
-          <MathInput
-            index={0}
-            prefix={pfx}
-            setInputs={setInputs}
-            onEnter={handleCheck}
-          />
-        </div>
-      );
-    }
-
-    /* ---------- 3.  multiple boxes ---------- */
-    return answers.map((ans, idx) =>
-      ans != null && ans !== 'null' ? (
-        <div
-          key={idx}
-          className={locked ? 'pointer-events-none opacity-50' : ''}
-        >
-          <MathInput
-            index={idx}
-            prefix={
-              Array.isArray(prefixes[idx])
-                ? prefixes[idx]
-                : (prefixes[idx] ?? '')
-            }
-            setInputs={setInputs}
-            onEnter={handleCheck}
-          />
-        </div>
-      ) : null
-    );
-  })()}
-                
-               {(Array.isArray(content?.[part]?.answer) &&
-  content[part].answer.length > 0 &&
-  content[part].answer[0] != null) && (
-  <div
-    id="check-btn"
-    className={`h-10 w-10 rounded-full color-bg-accent flex items-center
-                justify-center ml-2 hover:opacity-90 ${
-                  locked ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
-                }`}
-    onClick={handleCheck}
-    title="Check"
-  >
-    <LuCheck strokeWidth={3} size={30} className="color-txt-accent" />
-  </div>
-)}
-            </div>
-            {canReveal && !showSolution ? (
-              <div className="mt-3">
+                      {canReveal && !showSolution ? (
+              <div className="absolute bottom-[8.5%] right-6">
                 <button
-                  className="px-4 py-2 rounded-full border-2 border-r-4 border-b-4 color-shadow
-                             hover:opacity-90"
+                  className="px-4 py-2 rounded-2xl blue-btn w-full
+                             hover:opacity-90" 
                   onClick={handleOpenSolution}
                 >
                   Show Marking Scheme
                 </button>
               </div>
             ) : null}
+
+            <div>
+            {/* =============================== MATH INPUT ================================= */}
+            
+            {/* Attempts indicator - single one per question */}
+            {!props.preview && attempts > 0 && (
+              <div className="flex justify-start mb-2">
+                <div 
+                  className={`text-xs font-medium px-2 py-1 rounded-full ${(3 - attempts) === 2 ? 'color-bg-grey-5 color-txt-sub' : (3 - attempts) === 1 ? 'color-bg-accent color-txt-accent' : 'color-bg-accent color-txt-accent'}`}
+                  style={{
+                    animation: `pulse-opacity ${(3 - attempts) === 2 ? '0s' : (3 - attempts) === 1 ? '1s' : '0s'} ease-in-out infinite`
+                  }}
+                >
+                  {(3 - attempts) > 0 
+                    ? `${3 - attempts} attempt${(3 - attempts) !== 1 ? 's' : ''} remaining` 
+                    : 'No attempts remaining'}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex items-centerw-3/4 space-y-5 flex-wrap">
+                            {!props.preview &&
+                (() => {
+                  /* ---------- 1.  bail-out conditions ---------- */
+                  const answers = content?.[part]?.answer;          // keep null/undefined
+                  if (!Array.isArray(answers) || answers.length === 0 || answers[0] == null) {
+                    return null;                                    // ← nothing to show
+                  }
+
+                  const prefixes = Array.isArray(content?.[part]?.prefix)
+                    ? content?.[part]?.prefix
+                    : [];
+
+                  /* ---------- 2.  single box ---------- */
+                  if (answers.length === 1) {
+                    const pfx =
+                      prefixes.length >= 2
+                        ? [String(prefixes[0] ?? ''), String(prefixes[1] ?? '')]
+                        : (Array.isArray(prefixes[0]) ? prefixes[0] : (prefixes[0] ?? ''));
+
+                    return (
+                      <div
+                        key={0}
+                        className={locked ? 'pointer-events-none opacity-50' : ''}
+                      >
+                        <MathInput
+                          index={0}
+                          prefix={pfx}
+                          setInputs={setInputs}
+                          onEnter={handleCheck}
+                          attempts={attempts}
+                        />
+                      </div>
+                    );
+                  }
+
+                  /* ---------- 3.  multiple boxes ---------- */
+                  return answers.map((ans, idx) =>
+                    ans != null && ans !== 'null' ? (
+                      <div
+                        key={idx}
+                        className={locked ? 'pointer-events-none opacity-50' : ''}
+                      >
+                        <MathInput
+                          index={idx}
+                          prefix={
+                            Array.isArray(prefixes[idx])
+                              ? prefixes[idx]
+                              : (prefixes[idx] ?? '')
+                          }
+                          setInputs={setInputs}
+                          onEnter={handleCheck}
+                          attempts={attempts}
+                        />
+                      </div>
+                    ) : null
+                  );
+                })()}
+                              
+               {(Array.isArray(content?.[part]?.answer) &&
+                  content[part].answer.length > 0 &&
+                  content[part].answer[0] != null) && (
+                  <div
+                    id="check-btn"
+                    className={`h-10 w-10 rounded-full color-bg-accent flex items-center
+                                justify-center ml-2 hover:opacity-90 ${
+                                  locked ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
+                                }`}
+                    onClick={handleCheck}
+                    title="Check"
+                  >
+                    <LuCheck strokeWidth={3} size={30} className="color-txt-accent" />
+                  </div>
+                )}
+            </div>
+  
             {/* ============================================================================ */}
             </div>
 
@@ -582,10 +703,63 @@ export default function Question(props: questionsProps) {
             <ViewQuestionsList
               questions={props.questions}
               currentIndex={props.position}
-              onSelect={(idx) => props.setPosition?.(idx)}
+              currentPart={part}
+              onSelect={(idx, partIdx) => {
+                props.setPosition?.(idx);
+                if (partIdx !== undefined) {
+                  setPart(partIdx);
+                }
+              }}
               questionsAnswered={props.questionsAnswered}
+              partsAnswered={partsAnswered}
               friendsAnswered={props.friendsAnswered}
+              deckMode={props.deckmode}
             />
+          </div>
+        ) : null}
+
+        {sideView === 'questionParts' ? (
+          <div className="h-full w-5/12 overflow-hidden">
+            <div className="w-full h-full rounded-2xl p-4 flex flex-col overflow-hidden">
+              <p className="txt-heading-colour   mb-4">Question Parts</p>
+              <div className="flex-1 overflow-y-auto scrollbar-minimal pr-2">
+                {Array.isArray(content) && content.length > 0 ? (
+                  content.map((p: any, idx: number) => (
+                    <div 
+                      key={idx}
+                      ref={(el) => { partRefs.current[idx] = el; }}
+                      className={`mb-4 p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                        part === idx 
+                          ? 'color-bg-grey-5' 
+                          : 'hover:color-bg-grey-5/50'
+                      }`}
+                      onClick={() => { setPart(idx); setInputs([]); }}
+                    >
+                      {content.length > 1 && (
+                        <p className={`font-bold mb-2 ${part === idx ? 'color-txt-accent' : 'color-txt-main'}`}>
+                          {toRoman(idx + 1)})
+                        </p>
+                      )}
+                      <div className="color-txt-sub">
+                        <RenderMath text={p?.question ?? ''} className="txt leading-relaxed" />
+                      </div>
+                      {p?.image && (
+                        <img
+                          src={p.image}
+                          alt={`Question part ${idx + 1}`}
+                          className="mt-3 w-full max-w-md rounded-lg object-cover"
+                        />
+                      )}
+                      {idx < content.length - 1 && (
+                        <div className="h-0 border-t border-white/10 mt-4"></div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="color-txt-sub text-sm">No parts available</p>
+                )}
+              </div>
+            </div>
           </div>
         ) : null}
         {/* ====================================================================================== */}    
@@ -595,29 +769,9 @@ export default function Question(props: questionsProps) {
         { !props.preview ? (
         <div className="flex w-full justify-center items-center rounded-r-out h-auto z">
 
-            <div className="color-bg-grey-5 mx-4 w-10 h-10 flex items-center group relative 
-                justify-center rounded-full hover:scale-95 duration-250 transition-all"
-                onClick={() => {
-                    setInputs([]);
 
-                    // Previous part if available
-                    if (part > 0) {
-                        setPart((p) => p - 1);
-                        return;
-                    }
 
-                    // Otherwise ask parent to move to the previous question
-                    const prevIndex = props.position - 1;
-                    if (prevIndex >= 0) {
-                        props.setPosition(prevIndex);
-                    }
-                }}>
-                <LuArrowLeft strokeWidth={strokewidth} size={32} className="color-txt-sub"/>
-
-                <span className="tooltip">previous</span>
-            </div>
-
-            <div className="border-2 color-shadow color-bg-grey-5 flex my-2 px-3 rounded-full">
+            <div className="border-2 color-shadow  flex my-2 px-3 rounded-4xl shadow-[0px_2px_0px_0px]">
             {/* =============================== THREADS ICON ================================= */}
             <div
                 className={sideView == 'thread' ? "sidebar-selected group" : "sidebar group"}
@@ -651,6 +805,25 @@ export default function Question(props: questionsProps) {
 
                  <span className="tooltip">logbook</span>
             </div>
+            {/* ================================================================================ */}
+
+            {/* =============================== QUESTION PARTS ICON ================================= */}
+            {Array.isArray(content) && content.length > 1 && (
+            <div className={sideView == 'questionParts' ? 'sidebar-selected group' : 'sidebar group'} 
+                onClick={() => {
+                    setSideView( (prev: any) => {
+                        if (prev != 'questionParts') return 'questionParts'
+                        else return '' 
+                    });
+                }}
+            >
+                <LuLayoutList strokeWidth={strokewidth} size={iconSize} 
+                    className={sideView == 'questionParts' ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
+                    fill={sideView == 'questionParts' ? 'currentColor' : 'none'} />
+
+                 <span className="tooltip">all parts</span>
+            </div>
+            )}
             {/* ================================================================================ */}
 
             { props.deckmode ? (
@@ -711,9 +884,9 @@ export default function Question(props: questionsProps) {
 
             {/* =============================== FILTER ICON ================================= */}
             <div className={viewFilter ? 'sidebar-selected group' : 'sidebar group'} 
-                onClick={() => {
-                    if (!viewFilter )
-                        setViewFilter(true)
+                onMouseDown={(e) => {
+                    e.stopPropagation();
+                    setViewFilter(prev => !prev);
                 }}
 
             >
@@ -761,7 +934,12 @@ export default function Question(props: questionsProps) {
               )}
             </div>
 
-            <div className="color-bg-grey-5 mx-4 w-10 h-10 flex items-center group relative 
+            
+        </div>
+        ) : (<></> /* Do not show sidebar in preview mode */)
+        }
+</div>
+        <div className="color-bg-grey-5 mx-4 w-10 h-10 flex items-center group relative 
                 justify-center rounded-full hover:scale-95 duration-250 transition-all"
                 onClick={() => { setInputs([]);
       
@@ -791,11 +969,9 @@ export default function Question(props: questionsProps) {
                 <LuArrowRight strokeWidth={strokewidth} size={32} className="color-txt-sub"/>
 
                 <span className="tooltip">next</span>
-            </div>
-        </div>
-        ) : (<></> /* Do not show sidebar in preview mode */)
-        }
+            </div> 
         {/* ====================================================================================== */}    
+        </div>
     </div>
     )
 }

@@ -16,7 +16,7 @@ export default function Notifications() {
       <div className="w-full h-full flex flex-col p-6">
         <h3 className="txt-heading-colour text-xl mb-4">Your Notifications</h3>
         <div className="flex flex-col items-center justify-center py-12 gap-3">
-          <div className="text-4xl opacity-40">🔔</div>
+          {/* <div className="text-4xl opacity-40">🔔</div> */}
           <p className="txt-sub text-center">All clear! No notifications</p>
         </div>
       </div>

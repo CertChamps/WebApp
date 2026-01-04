@@ -56,7 +56,7 @@ export default function Filter(props: filterProps) {
   // Set filters 
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} onMouseDown={(e) => e.stopPropagation()}>
         {/* DROPDOWN (or dropup in this case haha) */}
         <div className={props.viewFilter ? 'filter-container-shown' : 'filter-container-hidden'}>
           <p className="filter-header">topic</p>
