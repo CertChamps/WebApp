@@ -7,7 +7,7 @@ import { storage, db } from '../../firebase'
 import RenderMath from '../components/math/mathdisplay'
 import MathInput from '../components/math/mathinput'
 import useMaths from '../hooks/useMaths'
-import { LuPlus, LuTrash2, LuX, LuArrowLeft, LuChevronLeft, LuChevronRight, LuCheck, LuUpload, LuImage, LuLoader } from 'react-icons/lu'
+import { LuPlus, LuTrash2, LuX, LuArrowLeft, LuChevronLeft, LuChevronRight, LuCheck, LuUpload, LuImage, LuLoader, LuFileText, LuPanelLeft, LuPanelRight, LuCode, LuEye } from 'react-icons/lu'
 import Editor from 'react-simple-code-editor'
 import { Highlight, themes } from 'prism-react-renderer'
 import '../styles/settings.css'
@@ -76,6 +76,9 @@ const THEME_OPTIONS = {
 
 type ThemeKey = keyof typeof THEME_OPTIONS
 
+// PDF viewer position options
+type PdfPosition = 'hidden' | 'left' | 'right' | 'third-column'
+
 // Helper to format answers from inputs array for display
 function formatAnswers(inputs: InputField[]): string {
   if (!inputs || inputs.length === 0) return 'No answer'
@@ -89,18 +92,36 @@ export default function AddQuestions() {
   const partRefs = useRef<Record<number, HTMLDivElement | null>>({})
   const { isCorrect } = useMaths()
   
-  const [parsedQuestions, setParsedQuestions] = useState<QuestionSet[]>([])
+  // localStorage key
+  const STORAGE_KEY = 'addQuestions-state'
+  
+  // Load initial state from localStorage
+  const loadFromStorage = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        return JSON.parse(saved)
+      }
+    } catch (e) {
+      console.warn('Failed to load state from localStorage:', e)
+    }
+    return null
+  }
+  
+  const savedState = loadFromStorage()
+  
+  const [parsedQuestions, setParsedQuestions] = useState<QuestionSet[]>(savedState?.parsedQuestions || [])
   const [parseError, setParseError] = useState<string | null>(null)
-  const [selectedQuestion, setSelectedQuestion] = useState<number>(0)
-  const [selectedPart, setSelectedPart] = useState<number>(0)
+  const [selectedQuestion, setSelectedQuestion] = useState<number>(savedState?.selectedQuestion || 0)
+  const [selectedPart, setSelectedPart] = useState<number>(savedState?.selectedPart || 0)
   // inputs[partIdx] = string[] of input values for each answer box
   const [partInputs, setPartInputs] = useState<Record<number, string[]>>({})
   const [testResults, setTestResults] = useState<Record<string, boolean | null>>({})
-  const [selectedTheme, setSelectedTheme] = useState<ThemeKey>('dracula')
-  const [fileName, setFileName] = useState<string | null>(null)
+  const [selectedTheme, setSelectedTheme] = useState<ThemeKey>(savedState?.selectedTheme || 'dracula')
+  const [fileName, setFileName] = useState<string | null>(savedState?.fileName || null)
   
   // Raw JSON text for the editor (allows free typing without immediate parsing)
-  const [editorText, setEditorText] = useState<string>('')
+  const [editorText, setEditorText] = useState<string>(savedState?.editorText || '')
   
   // Image uploads: key = "questionIdx-partIdx" e.g. "0-0", "0-1", "1-0"
   const [imageUploads, setImageUploads] = useState<Record<string, ImageUpload>>({})
@@ -108,14 +129,93 @@ export default function AddQuestions() {
   // Uploading state for the submit button
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string>('')
+  
+  // PDF viewer state - supports multiple PDFs
+  const [pdfFiles, setPdfFiles] = useState<{ file: File; url: string; name: string }[]>([])
+  const [currentPdfIndex, setCurrentPdfIndex] = useState(0)
+  const [pdfPosition, setPdfPosition] = useState<PdfPosition>(savedState?.pdfPosition || 'hidden')
+  const pdfInputRef = useRef<HTMLInputElement>(null)
+  
+  // Current PDF URL for display
+  const pdfUrl = pdfFiles[currentPdfIndex]?.url || null
+  
+  // Column visibility state
+  const [showJsonColumn, setShowJsonColumn] = useState(savedState?.showJsonColumn ?? true)
+  const [showPreviewColumn, setShowPreviewColumn] = useState(savedState?.showPreviewColumn ?? true)
+  
+  // Save state to localStorage when key values change
+  useEffect(() => {
+    const stateToSave = {
+      parsedQuestions,
+      selectedQuestion,
+      selectedPart,
+      selectedTheme,
+      fileName,
+      editorText,
+      pdfPosition,
+      showJsonColumn,
+      showPreviewColumn,
+    }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave))
+    } catch (e) {
+      console.warn('Failed to save state to localStorage:', e)
+    }
+  }, [parsedQuestions, selectedQuestion, selectedPart, selectedTheme, fileName, editorText, pdfPosition, showJsonColumn, showPreviewColumn])
+  
+  // Calculate visible count for toggle logic
+  const getVisibleCount = () => {
+    const showPdfCol = pdfPosition !== 'hidden' && pdfUrl
+    return (showJsonColumn ? 1 : 0) + (showPreviewColumn ? 1 : 0) + (showPdfCol ? 1 : 0)
+  }
+  
+  // Simple toggle - just show/hide, but prevent going below 2 columns
+  const toggleJsonColumn = () => {
+    if (showJsonColumn) {
+      // Trying to hide - only allow if at least 2 others will remain
+      if (getVisibleCount() > 2) {
+        setShowJsonColumn(false)
+      }
+    } else {
+      setShowJsonColumn(true)
+    }
+  }
+  
+  const togglePreviewColumn = () => {
+    if (showPreviewColumn) {
+      // Trying to hide - only allow if at least 2 others will remain
+      if (getVisibleCount() > 2) {
+        setShowPreviewColumn(false)
+      }
+    } else {
+      setShowPreviewColumn(true)
+    }
+  }
+  
+  const togglePdfColumn = () => {
+    if (!pdfUrl) return
+    
+    const showPdfCol = pdfPosition !== 'hidden'
+    if (showPdfCol) {
+      // Trying to hide - only allow if at least 2 others will remain
+      if (getVisibleCount() > 2) {
+        setPdfPosition('hidden')
+      }
+    } else {
+      setPdfPosition('right')
+    }
+  }
 
-  // Sync editor text when selecting a different question
+  // Sync editor text and clear inputs when selecting a different question
   useEffect(() => {
     if (parsedQuestions[selectedQuestion]) {
       setEditorText(JSON.stringify(parsedQuestions[selectedQuestion], null, 2))
     } else {
       setEditorText('')
     }
+    // Clear inputs and test results when switching questions
+    setPartInputs({})
+    setTestResults({})
   }, [selectedQuestion, parsedQuestions.length]) // Only on question change, not on every parse
 
   // Auto-scroll to selected part
@@ -163,6 +263,65 @@ export default function AddQuestions() {
         error: null
       }
     }))
+  }
+
+  // Handle PDF file selection - adds to array
+  const handlePdfSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    
+    const newPdfs = Array.from(files).map(file => ({
+      file,
+      url: URL.createObjectURL(file),
+      name: file.name
+    }))
+    
+    setPdfFiles(prev => {
+      const updated = [...prev, ...newPdfs]
+      // Auto-select the first new PDF
+      setCurrentPdfIndex(prev.length)
+      return updated
+    })
+    
+    // Auto-show PDF viewer if it was hidden
+    if (pdfPosition === 'hidden') {
+      setPdfPosition('right')
+    }
+    
+    // Reset input
+    if (pdfInputRef.current) {
+      pdfInputRef.current.value = ''
+    }
+  }
+  
+  // Remove current PDF
+  const removeCurrentPdf = () => {
+    if (pdfFiles.length === 0) return
+    
+    const currentPdf = pdfFiles[currentPdfIndex]
+    if (currentPdf) {
+      URL.revokeObjectURL(currentPdf.url)
+    }
+    
+    setPdfFiles(prev => {
+      const updated = prev.filter((_, i) => i !== currentPdfIndex)
+      // Adjust index if needed
+      if (currentPdfIndex >= updated.length && updated.length > 0) {
+        setCurrentPdfIndex(updated.length - 1)
+      }
+      if (updated.length === 0) {
+        setPdfPosition('hidden')
+      }
+      return updated
+    })
+  }
+  
+  // Remove all PDFs
+  const removeAllPdfs = () => {
+    pdfFiles.forEach(pdf => URL.revokeObjectURL(pdf.url))
+    setPdfFiles([])
+    setCurrentPdfIndex(0)
+    setPdfPosition('hidden')
   }
 
   // Remove image from a part
@@ -307,6 +466,11 @@ export default function AddQuestions() {
       if (upload.preview) URL.revokeObjectURL(upload.preview)
     })
     
+    // Revoke PDF URL
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl)
+    }
+    
     setParsedQuestions([])
     setParseError(null)
     setSelectedQuestion(0)
@@ -316,9 +480,16 @@ export default function AddQuestions() {
     setImageUploads({})
     setFileName(null)
     setEditorText('')
+    removeAllPdfs()
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+    if (pdfInputRef.current) {
+      pdfInputRef.current.value = ''
+    }
+    
+    // Clear localStorage
+    localStorage.removeItem(STORAGE_KEY)
   }
 
   const handleSubmit = async () => {
@@ -460,6 +631,15 @@ export default function AddQuestions() {
     // Get answers from inputs array
     const answerArray = part.inputs.map(input => input.answer)
     
+    // Log parsed LaTeX for debugging
+    console.group(`[${currentQuestion.id}] Part ${partIdx + 1} - Answer Check`)
+    console.log('User Inputs (raw):', userInputs)
+    console.log('Expected Answers (raw):', answerArray)
+    userInputs.forEach((input, i) => {
+      console.log(`  Input ${i + 1}: "${input}" → Expected: "${answerArray[i] || 'N/A'}"`)
+    })
+    console.groupEnd()
+    
     // Check using the same isCorrect function from useMaths
     const correct = isCorrect(userInputs, answerArray, part.orderMatters ?? false)
     
@@ -478,12 +658,122 @@ export default function AddQuestions() {
     }
   }
 
+  // Compute column widths based on visibility
+  const getColumnWidths = () => {
+    const showPdf = pdfPosition !== 'hidden' && pdfUrl
+    const visibleCount = (showJsonColumn ? 1 : 0) + (showPreviewColumn ? 1 : 0) + (showPdf ? 1 : 0)
+    
+    if (visibleCount === 0) return { json: 'w-full', preview: 'hidden', pdf: 'hidden' } // fallback
+    if (visibleCount === 1) {
+      return {
+        json: showJsonColumn ? 'w-full' : 'hidden',
+        preview: showPreviewColumn ? 'w-full' : 'hidden',
+        pdf: showPdf ? 'w-full' : 'hidden'
+      }
+    }
+    if (visibleCount === 2) {
+      return {
+        json: showJsonColumn ? 'w-1/2' : 'hidden',
+        preview: showPreviewColumn ? 'w-1/2' : 'hidden',
+        pdf: showPdf ? 'w-1/2' : 'hidden'
+      }
+    }
+    // All 3 visible
+    return {
+      json: showJsonColumn ? 'w-1/3' : 'hidden',
+      preview: showPreviewColumn ? 'w-1/3' : 'hidden',
+      pdf: showPdf ? 'w-1/3' : 'hidden'
+    }
+  }
+  
+  const columnWidths = getColumnWidths()
+  const showPdf = pdfPosition !== 'hidden' && pdfUrl
+
   return (
-    <div className="settings-page">
+    <div className="settings-page w-full relative">
+      {/* Floating Layout Controls */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-1 py-1 rounded-full color-bg">
+        <button
+          onClick={toggleJsonColumn}
+          className={`p-1.5 rounded-full transition-all ${showJsonColumn ? 'color-bg-accent' : 'opacity-40 hover:opacity-100'}`}
+          title={showJsonColumn ? 'Hide JSON' : 'Show JSON'}
+        >
+          <LuCode size={14} className="color-txt-main" />
+        </button>
+        <button
+          onClick={togglePreviewColumn}
+          className={`p-1.5 rounded-full transition-all ${showPreviewColumn ? 'color-bg-accent' : 'opacity-40 hover:opacity-100'}`}
+          title={showPreviewColumn ? 'Hide Preview' : 'Show Preview'}
+        >
+          <LuEye size={14} className="color-txt-main" />
+        </button>
+        {pdfUrl && (
+          <>
+            <button
+              onClick={togglePdfColumn}
+              className={`p-1.5 rounded-full transition-all ${pdfPosition !== 'hidden' ? 'color-bg-accent' : 'opacity-40 hover:opacity-100'}`}
+              title={pdfPosition !== 'hidden' ? 'Hide PDF' : 'Show PDF'}
+            >
+              <LuFileText size={14} className="color-txt-main" />
+            </button>
+            {pdfPosition !== 'hidden' && (
+              <button
+                onClick={() => setPdfPosition(pdfPosition === 'left' ? 'right' : 'left')}
+                className="p-1.5 rounded-full opacity-40 hover:opacity-100 transition-all"
+                title={pdfPosition === 'left' ? 'Move PDF Right' : 'Move PDF Left'}
+              >
+                {pdfPosition === 'left' ? <LuPanelRight size={14} className="color-txt-main" /> : <LuPanelLeft size={14} className="color-txt-main" />}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
       <div className="flex h-full w-full">
         
+        {/* PDF Viewer - Left Position */}
+        {pdfPosition === 'left' && showPdf && (
+          <div className={`${columnWidths.pdf} h-full p-2 order-first transition-all duration-300 ease-in-out flex flex-col`}>
+            {/* PDF Navigation */}
+            {pdfFiles.length > 1 && (
+              <div className="flex items-center justify-between gap-2 mb-2 px-2">
+                <button
+                  onClick={() => setCurrentPdfIndex(i => Math.max(0, i - 1))}
+                  disabled={currentPdfIndex === 0}
+                  className={`p-1 rounded-lg transition-all ${currentPdfIndex === 0 ? 'opacity-30' : 'hover:color-bg-grey-10'}`}
+                >
+                  <LuChevronLeft size={16} className="color-txt-main" />
+                </button>
+                <span className="color-txt-sub text-xs truncate flex-1 text-center" title={pdfFiles[currentPdfIndex]?.name}>
+                  {currentPdfIndex + 1}/{pdfFiles.length}
+                </span>
+                <button
+                  onClick={() => setCurrentPdfIndex(i => Math.min(pdfFiles.length - 1, i + 1))}
+                  disabled={currentPdfIndex === pdfFiles.length - 1}
+                  className={`p-1 rounded-lg transition-all ${currentPdfIndex === pdfFiles.length - 1 ? 'opacity-30' : 'hover:color-bg-grey-10'}`}
+                >
+                  <LuChevronRight size={16} className="color-txt-main" />
+                </button>
+                <button
+                  onClick={removeCurrentPdf}
+                  className="p-1 rounded-lg hover:bg-red-500/50 transition-all"
+                  title="Remove this PDF"
+                >
+                  <LuX size={14} className="color-txt-sub" />
+                </button>
+              </div>
+            )}
+            <iframe
+              src={pdfUrl}
+              className="w-full flex-1 border-0 rounded-xl"
+              title="PDF Preview"
+            />
+          </div>
+        )}
+        
         {/* LEFT SIDE - JSON Input */}
-        <div className="w-1/2 h-full flex flex-col p-6 gap-4">
+        {showJsonColumn && (
+        <div className={`${columnWidths.json} h-full flex flex-col p-6 gap-4 transition-all duration-300 ease-in-out`}>
           {/* Header */}
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -560,8 +850,43 @@ export default function AddQuestions() {
             </div>
           )}
 
+          {/* PDF Upload Section */}
+          <div className="flex items-center gap-3 p-3 rounded-2xl color-bg-grey-5">
+            <input
+              type="file"
+              ref={pdfInputRef}
+              onChange={handlePdfSelect}
+              accept=".pdf"
+              multiple
+              className="hidden"
+            />
+            <button
+              onClick={() => pdfInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl color-bg-grey-10 color-txt-main text-sm hover:color-bg-accent transition-all"
+            >
+              <LuFileText size={18} />
+              Add PDF{pdfFiles.length > 0 ? 's' : ''}
+            </button>
+            
+            {pdfFiles.length > 0 && (
+              <>
+                <span className="color-txt-sub text-sm">
+                  {pdfFiles.length} PDF{pdfFiles.length !== 1 ? 's' : ''}
+                </span>
+                
+                <button
+                  onClick={removeAllPdfs}
+                  className="p-2 rounded-lg color-bg-grey-10 hover:bg-red-500/50 transition-all"
+                  title="Remove all PDFs"
+                >
+                  <LuX size={16} className="color-txt-sub" />
+                </button>
+              </>
+            )}
+          </div>
+
           {/* Question Selector */}
-          {parsedQuestions.length > 0 && (
+          {/* {parsedQuestions.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap p-3 rounded-2xl color-bg-grey-5">
               <span className="color-txt-sub text-sm font-medium">Question:</span>
               {parsedQuestions.map((q, idx) => (
@@ -581,7 +906,7 @@ export default function AddQuestions() {
                 </button>
               ))}
             </div>
-          )}
+          )} */}
 
           {/* Current Question JSON Editor */}
           {currentQuestion && (
@@ -652,14 +977,15 @@ export default function AddQuestions() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* RIGHT SIDE - Preview Panel */}
-        <div className="w-1/2 h-full overflow-hidden p-6 pl-0">
+        {/* MIDDLE/RIGHT SIDE - Preview Panel */}
+        {showPreviewColumn && (
+        <div className={`${columnWidths.preview} h-full overflow-hidden p-6 pl-0 transition-all duration-300 ease-in-out`}>
           <div className="w-full h-full rounded-2xl color-bg-grey-5 p-6 flex flex-col overflow-hidden">
-            <p className="color-txt-main font-semibold text-lg mb-4">Question Preview</p>
             
             {parsedQuestions.length > 0 && currentQuestion ? (
-              <div key={JSON.stringify(currentQuestion)} className="flex-1 flex flex-col overflow-hidden">
+              <div key={currentQuestion.id} className="flex-1 flex flex-col overflow-hidden">
                 {/* Question Selector */}
                 {parsedQuestions.length > 1 && (
                   <div className="flex flex-wrap gap-2 mb-4 max-h-24 overflow-y-auto p-3 rounded-xl color-bg-grey-10">
@@ -909,6 +1235,47 @@ export default function AddQuestions() {
             )}
           </div>
         </div>
+        )}
+        
+        {/* PDF Viewer - Right or Third Column Position */}
+        {(pdfPosition === 'right' || pdfPosition === 'third-column') && showPdf && (
+          <div className={`${columnWidths.pdf} h-full p-2 transition-all duration-300 ease-in-out flex flex-col`}>
+            {/* PDF Navigation */}
+            {pdfFiles.length > 1 && (
+              <div className="flex items-center justify-between gap-2 mb-2 px-2">
+                <button
+                  onClick={() => setCurrentPdfIndex(i => Math.max(0, i - 1))}
+                  disabled={currentPdfIndex === 0}
+                  className={`p-1 rounded-lg transition-all ${currentPdfIndex === 0 ? 'opacity-30' : 'hover:color-bg-grey-10'}`}
+                >
+                  <LuChevronLeft size={16} className="color-txt-main" />
+                </button>
+                <span className="color-txt-sub text-xs truncate flex-1 text-center" title={pdfFiles[currentPdfIndex]?.name}>
+                  {currentPdfIndex + 1}/{pdfFiles.length}
+                </span>
+                <button
+                  onClick={() => setCurrentPdfIndex(i => Math.min(pdfFiles.length - 1, i + 1))}
+                  disabled={currentPdfIndex === pdfFiles.length - 1}
+                  className={`p-1 rounded-lg transition-all ${currentPdfIndex === pdfFiles.length - 1 ? 'opacity-30' : 'hover:color-bg-grey-10'}`}
+                >
+                  <LuChevronRight size={16} className="color-txt-main" />
+                </button>
+                <button
+                  onClick={removeCurrentPdf}
+                  className="p-1 rounded-lg hover:bg-red-500/50 transition-all"
+                  title="Remove this PDF"
+                >
+                  <LuX size={14} className="color-txt-sub" />
+                </button>
+              </div>
+            )}
+            <iframe
+              src={pdfUrl}
+              className="w-full flex-1 border-0 rounded-xl"
+              title="PDF Preview"
+            />
+          </div>
+        )}
       </div>
     </div>
   )
