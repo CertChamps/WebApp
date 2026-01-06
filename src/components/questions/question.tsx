@@ -25,6 +25,7 @@ import AnswerNoti from "../math/answerNoti";
 import WrongAnswerNoti from "../math/wrongAnswerNoti";
 import StreakDisplay from "../streakDisplay";
 import Confetti from "../Confetti";
+import ThemePicker, { ThemePickerButton } from "../ThemePicker";
 
 // Style Imports 
 import '../../styles/questions.css'
@@ -76,6 +77,7 @@ export default function Question(props: questionsProps) {
 
     const [ sideView, setSideView ] = useState<string>(props.deckmode ? 'viewQuestions' : '')  // filters | viewQuestions | questionParts | ''  
     const [ showSearch, setShowSearch ] = useState<boolean>(false)
+    const [ showThemePicker, setShowThemePicker ] = useState<boolean>(false)
 
     const { toRoman } = useQuestions()
     const { isCorrect } = useMaths();
@@ -356,6 +358,10 @@ export default function Question(props: questionsProps) {
         />
       ) : null}
 
+        {/* Theme Picker Modal */}
+        <ThemePicker show={showThemePicker} setShow={setShowThemePicker} />
+        <ThemePickerButton onClick={() => setShowThemePicker(true)} />
+
         { showNoti && isRight ? (
         <AnswerNoti
             visible={true}
@@ -451,7 +457,7 @@ export default function Question(props: questionsProps) {
       </div> 
   <div className="h-full w-full flex flex-col justify-center items-center">
      
-    <div className="flex justify-start items-end w-11/12 h-[90%]">
+    <div className="flex justify-start items-end w-35/36 h-[90%]">
     { //============================= QUESTIONS CONTAINER ==================================// 
     props.questions[props.position]? ( 
     <div className={`card-container h-full items-end justify-start ${ (sideView == '' || sideView == 'filters') ? 'w-full' : 'w-7/12'}  
