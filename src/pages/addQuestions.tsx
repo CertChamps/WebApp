@@ -324,6 +324,7 @@ export default function AddQuestions() {
     setPdfPosition('hidden')
   }
 
+
   // Remove image from a part
   const removeImage = (questionIdx: number, partIdx: number) => {
     const key = `${questionIdx}-${partIdx}`
@@ -335,6 +336,22 @@ export default function AddQuestions() {
       delete newUploads[key]
       return newUploads
     })
+  }
+
+  // Download all edited questions as JSON
+  const handleDownloadJson = () => {
+    const dataStr = JSON.stringify(parsedQuestions, null, 2)
+    const blob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'questions.json'
+    document.body.appendChild(a)
+    a.click()
+    setTimeout(() => {
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    }, 100)
   }
 
   // Syntax highlighting function for JSON
@@ -973,6 +990,17 @@ export default function AddQuestions() {
               >
                 <LuTrash2 size={18} />
                 Clear
+              </button>
+              <button
+                onClick={handleDownloadJson}
+                disabled={parsedQuestions.length === 0}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl color-bg-grey-10 color-txt-main transition-all ${
+                  parsedQuestions.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:brightness-110'
+                }`}
+                title="Download all questions as JSON"
+              >
+                <LuFileText size={18} />
+                Download JSON
               </button>
             </div>
           </div>
