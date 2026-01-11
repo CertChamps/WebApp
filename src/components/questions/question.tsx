@@ -840,7 +840,8 @@ export default function Question(props: questionsProps) {
                         <img
                           src={p.image}
                           alt={`Question part ${idx + 1}`}
-                          className="mt-3 w-full max-w-md rounded-lg object-cover"
+                          className="mt-3 max-w-[220px] max-h-[190px] object-contain"
+                          style={{ display: 'block', marginLeft: 'auto', marginRight: 'auto' }}
                         />
                       )}
                       {idx < content.length - 1 && (
