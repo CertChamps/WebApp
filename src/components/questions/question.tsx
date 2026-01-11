@@ -403,6 +403,11 @@ export default function Question(props: questionsProps) {
         setWinPlaceholder(Wplaceholders[randomIndex]);
     }, []);
 
+    // Helper variables to parse the "2516" string from DB
+    const msCode = properties?.markingScheme ? String(properties.markingScheme) : "";
+    const msYear = msCode.length >= 2 ? msCode.substring(0, 2) : "25"; // Default to 25 if missing
+    const msPage = msCode.length > 2 ? msCode.substring(2) : "1";      // Default to 1 if missing
+
     return (
     <div className="flex flex-col h-full w-full items-center justify-between p-4">
         {/* Confetti celebration on correct answer */}
@@ -467,7 +472,7 @@ export default function Question(props: questionsProps) {
               </button>
             </div>
             <div className="flex-1 overflow-auto scrollbar-minimal p-3 flex items-center justify-center">
-              <MarkingScheme year="25" pgNumber="1" />
+              <MarkingScheme year={msYear} pgNumber={msPage} />
             </div>
             <div className="flex justify-end gap-3 p-3">
               <button
@@ -773,9 +778,9 @@ export default function Question(props: questionsProps) {
             </div>
         ) : null}
 
-        `{sideView === 'marking_scheme' ? (
+        {sideView === 'marking_scheme' ? (
             <div className="h-full w-5/12">
-                <MarkingScheme year="25" pgNumber="1"/>
+                <MarkingScheme year={msYear} pgNumber={msPage}/>
             </div>
         ) : null}
 
