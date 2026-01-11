@@ -301,7 +301,7 @@ export default function Question(props: questionsProps) {
                 inputs: p?.inputs ?? [],
                 orderMatters: p?.ordermatters,
                 image: p?.image ?? '',
-                logtables: p?.logTables ? p.logTables : 1,
+                logtables: p?.logTables ?? null,
             };
         });
 
@@ -449,13 +449,11 @@ export default function Question(props: questionsProps) {
 
       {showSolution ? (
         <div
-          className="fixed inset-0 z-[500] color-bg-grey-5 backdrop-blur-sm
-                     flex items-center justify-center p-4"
+          className="fixed inset-0 z-[500] color-bg-grey-10 flex items-center justify-center transition-opacity duration-300"
           onClick={handleCloseSolution}
         >
           <div
-            className="color-bg rounded-2xl shadow-xl w-full max-w-4xl
-                       max-h-[85vh] overflow-hidden flex flex-col"
+            className="color-bg rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col transition-transform duration-300 scale-100"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-3">
@@ -767,9 +765,9 @@ export default function Question(props: questionsProps) {
         ) : null}
 
         {sideView === 'logtables' ? (
-            <div className="h-full w-5/12 flex items-center justify-center">
-                <LogTables pgNumber={(parseInt(content?.[part].logtables) + 0).toString()}/>
-            </div>
+          <div className="h-full w-5/12 flex items-center justify-center">
+            <LogTables pgNumber={content?.[part]?.logtables ? String(content[part].logtables) : "null"}/>
+          </div>
         ) : null}
 
         {sideView === 'timer' ? (
