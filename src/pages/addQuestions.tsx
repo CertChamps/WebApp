@@ -568,31 +568,24 @@ export default function AddQuestions() {
             }
           }
           
-          // Build answers array from inputs
-          const answers = part.inputs.map(input => input.answer)
-          
           // Build prefix - for single input use [before, after], for multiple use flat structure
-          // Firestore doesn't support nested arrays, so we store as alternating before/after
-          // or as an object-based structure
           let prefixData: any
           if (part.inputs.length === 1) {
-            // Single input: [before, after]
             prefixData = [part.inputs[0].before, part.inputs[0].after]
           } else {
-            // Multiple inputs: store as array of objects to avoid nested arrays
             prefixData = part.inputs.map(input => ({
               before: input.before,
               after: input.after
             }))
           }
-          
+
           // Write the question content document
           const questionDocId = `q${idx + 1}`
           const contentDocRef = doc(collection(docRef, 'content'), questionDocId)
-          
+
           await setDoc(contentDocRef, {
             question: part.question,
-            answer: answers.length === 1 ? answers[0] : answers,
+            inputs: part.inputs, // <-- Upload the array of input objects directly
             ordermatters: part.orderMatters ?? false,
             prefix: prefixData,
             image: imageStoragePath,
@@ -642,26 +635,60 @@ export default function AddQuestions() {
   const handleCheckPart = (partIdx: number) => {
     const part = currentQuestion?.parts?.[partIdx]
     const userInputs = partInputs[partIdx] || []
-    
-    if (!part || !currentQuestion) return
+    if (!part || !currentQuestion) return;
 
     // Get answers from inputs array
-    const answerArray = part.inputs.map(input => input.answer)
-    
+    const answerArray = part.inputs.map(input => input.answer);
+
     // Log parsed LaTeX for debugging
-    console.group(`[${currentQuestion.id}] Part ${partIdx + 1} - Answer Check`)
-    console.log('User Inputs (raw):', userInputs)
-    console.log('Expected Answers (raw):', answerArray)
+    console.group(`[${currentQuestion.id}] Part ${partIdx + 1} - Answer Check`);
+    console.log('User Inputs (raw):', userInputs);
+    console.log('Expected Answers (raw):', answerArray);
     userInputs.forEach((input, i) => {
-      console.log(`  Input ${i + 1}: "${input}" → Expected: "${answerArray[i] || 'N/A'}"`)
-    })
-    console.groupEnd()
-    
-    // Check using the same isCorrect function from useMaths
-    const correct = isCorrect(userInputs, answerArray, part.orderMatters ?? false)
-    
-    const key = `${currentQuestion.id}-${partIdx}`
-    setTestResults(prev => ({ ...prev, [key]: correct }))
+      console.log(`  Input ${i + 1}: "${input}" → Expected: "${answerArray[i] || 'N/A'}"`);
+    });
+    console.groupEnd();
+
+    let correct = false;
+    // 1. Single answer box, answer is array: any correct
+    if (part.inputs.length === 1 && Array.isArray(answerArray[0])) {
+      // User must provide one input, and it must match any of the possible answers
+      const possibleAnswers = answerArray[0];
+      correct = possibleAnswers.some((ans: string) => isCorrect([userInputs[0]], [ans], part.orderMatters ?? false));
+    }
+    // 2. Multiple answer boxes, each answer is an array: each input must match any in its array, all user inputs must be unique
+    else if (part.inputs.length > 1 && answerArray.every(a => Array.isArray(a))) {
+      // Check each user input matches any in its corresponding answer array
+      const normalized = (s: string) => (s ?? '').trim().toLowerCase();
+      const userNorm = userInputs.map(normalized);
+      // Check for duplicates
+      const hasDuplicates = new Set(userNorm).size !== userNorm.length;
+      if (!hasDuplicates) {
+        correct = userInputs.every((input, idx) =>
+          answerArray[idx].some((ans: string) => isCorrect([input], [ans], part.orderMatters ?? false))
+        );
+      } else {
+        correct = false;
+      }
+    }
+    // 3. Multiple answer boxes, each with a single answer: all must be unique and correct
+    else if (part.inputs.length > 1 && answerArray.every(a => typeof a === 'string')) {
+      const normalized = (s: string) => (s ?? '').trim().toLowerCase();
+      const userNorm = userInputs.map(normalized);
+      const hasDuplicates = new Set(userNorm).size !== userNorm.length;
+      if (!hasDuplicates) {
+        correct = isCorrect(userInputs, answerArray, part.orderMatters ?? false);
+      } else {
+        correct = false;
+      }
+    }
+    // 4. Fallback: original logic
+    else {
+      correct = isCorrect(userInputs, answerArray, part.orderMatters ?? false);
+    }
+
+    const key = `${currentQuestion.id}-${partIdx}`;
+    setTestResults(prev => ({ ...prev, [key]: correct }));
   }
 
   // Get setInputs function for a specific part
@@ -1157,6 +1184,22 @@ export default function AddQuestions() {
                         {/* Question Text */}
                         <div className="color-txt-sub mb-0">
                           <RenderMath text={part.question ?? ''} className="txt leading-relaxed" />
+
+                                                {/* Info/Proof/Show That Indicator */}
+                                                {(Array.isArray(part.inputs) && part.inputs.length === 0) && (
+                                                  <div className="mt-4 flex items-center justify-center">
+                                                    <span className="px-4 py-2 rounded-full bg-yellow-200 text-yellow-900 font-semibold text-base shadow-sm border border-yellow-300">
+                                                      This question doesn't have an answer so you can try it yourself.
+                                                    </span>
+                                                  </div>
+                                                )}
+                                                {(Array.isArray(part.inputs) && part.inputs.length === 1 && typeof part.inputs[0]?.answer === 'string' && part.inputs[0].answer.trim().toUpperCase() === 'NULL') && (
+                                                  <div className="mt-4 flex items-center justify-center">
+                                                    <span className="px-4 py-2 rounded-full bg-blue-200 text-blue-900 font-semibold text-base shadow-sm border border-blue-300">
+                                                      Introduction / Info only — no answer required for this part.
+                                                    </span>
+                                                  </div>
+                                                )}
                         </div>
 
                         {/* Answer Testing Section */}

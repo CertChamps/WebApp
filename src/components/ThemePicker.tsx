@@ -191,7 +191,7 @@ export function ThemePickerButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="fixed bottom-6 right-6 p-3 rounded-full color-bg-accent shadow-lg
+      className="fixed bottom-6 right-6 p-3 rounded-full color-bg-accent
         hover:scale-110 hover:brightness-110 transition-all duration-200 z-40 group"
       title="Change theme"
     >

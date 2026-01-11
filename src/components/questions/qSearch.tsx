@@ -119,28 +119,36 @@ export default function QSearch(props: searchProps) {
                 </div>
                     
                 <div className="h-[85%] overflow-auto scrollbar-minimal mt-2">
-                    {results.map((result: any) => (
-                        <div
-                            className="p-3 border-b-2 color-shadow hover:color-bg-grey-5"
-                            onClick={() => { handleSelect(result.item) }}
-                        >
-                            <div>
-                                <span className="txt-bold color-txt-accent">
-                                    {result.item.properties.name}
-                                </span>
-                                <span className="txt-sub mx-2">
-                                    {result.item.properties.tags.join(", ")}
-                                </span>
+                    {results.map((result: any) => {
+                        const item = result.item;
+                        const name = item?.properties?.name ?? "";
+                        const tags = Array.isArray(item?.properties?.tags) ? item.properties.tags.join(", ") : "";
+                        const questionText = item?.content && Array.isArray(item.content) && item.content[0]?.question
+                            ? item.content[0].question
+                            : "";
+                        return (
+                            <div
+                                className="p-3 border-b-2 color-shadow hover:color-bg-grey-5"
+                                onClick={() => { handleSelect(item) }}
+                            >
+                                <div>
+                                    <span className="txt-bold color-txt-accent">{name}</span>
+                                    <span className="txt-sub mx-2">{tags}</span>
+                                </div>
+                                <div className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[80%]">
+                                    {questionText ? (
+                                        <RenderMath
+                                            className="color-txt-sub italic m-1 inline"
+                                            text={questionText}
+                                        />
+                                    ) : (
+                                        <span className="color-txt-sub italic m-1">No preview available</span>
+                                    )}
+                                    <span className="color-txt-sub italic m-1">...</span>
+                                </div>
                             </div>
-                            <div className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[80%]">
-                                <RenderMath
-                                    className="color-txt-sub italic m-1 inline"
-                                    text={result.item.content[0].question}
-                                />
-                                <span className="color-txt-sub italic m-1">...</span>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         </div>
