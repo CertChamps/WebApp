@@ -677,7 +677,7 @@ export default function Question(props: questionsProps) {
                   }
 
                   /* ---------- 2.  single box ---------- */
-                  if (answers.length === 1) {
+                  if (answers.length === 1 && answers[0] != null && answers[0] !== 'NULL') {
                     // For single input, prefix is [before, after]
                     const pfx =
                       prefixes.length >= 2
@@ -702,7 +702,7 @@ export default function Question(props: questionsProps) {
 
                   /* ---------- 3.  multiple boxes ---------- */
                   return answers.map((ans, idx) =>
-                    ans != null && ans !== 'null' ? (
+                    ans != null && ans !== 'null' && ans !== 'NULL' ? (
                       <div
                         key={idx}
                         className={locked ? 'pointer-events-none opacity-50' : ''}
@@ -721,7 +721,8 @@ export default function Question(props: questionsProps) {
                               
                {(Array.isArray(content?.[part]?.answer) &&
                   content[part].answer.length > 0 &&
-                  content[part].answer[0] != null) && (
+                  content[part].answer[0] != null
+                  && content[part].answer[0] != 'NULL') && (
                   <div
                     id="check-btn"
                     className={`h-10 w-10 rounded-full color-bg-accent flex items-center
