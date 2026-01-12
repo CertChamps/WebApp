@@ -35,11 +35,6 @@ export default function MathInput(props: inputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [showSymbols, setShowSymbols] = useState(false);
   
-  // Attempts tracking
-  const attempts = props.attempts ?? 0;
-  const maxAttempts = props.maxAttempts ?? 3;
-  const remainingAttempts = maxAttempts - attempts;
-
   useEffect(() => {
     if (!mfRef.current) return;
     const mf = mfRef.current;

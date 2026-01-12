@@ -1,6 +1,4 @@
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { useContext } from "react";
-import { UserContext } from "../context/UserContext";
 import { db  }from '../../firebase'
 import { collection, doc, getDoc, getDocs, query, where, collectionGroup, orderBy} from 'firebase/firestore';
 
@@ -8,9 +6,6 @@ export default function useFetch () {
 
     // Initalise Storage
     const storage = getStorage()
-
-    // get user context 
-    const {user} = useContext(UserContext)
 
     // ============================ FIREBASE STORAGE GET IMAGE FROM PATH ==================== //
     const fetchImage = async (path: string) => {
@@ -92,7 +87,7 @@ export default function useFetch () {
 
     
     // =============================== FIREBASE GET ALL USER FRIENDS ======================== //
-    const fetchUsernameByID = async (id: any, customprops?: any) => {
+    const fetchUsernameByID = async (id: any) => {
         try {
 
             // get the user data

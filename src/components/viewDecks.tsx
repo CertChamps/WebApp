@@ -109,10 +109,10 @@ export default function ViewDecks({ questionId, question }: ViewDecksProps) {
 
                     {/* New Deck Button */}
                     <div 
-                        className="new-deck my-3 cursor-pointer" 
+                        className="new-deck my-3 cursor-pointer rounded-2xl!" 
                         onClick={() => setShowCreateModal(true)}
                     >
-                        <p className="color-txt-main text-center">New Deck</p>
+                        <p className="color-txt-main text-center font-bold">New Deck</p>
                     </div>
                 </div>
 
