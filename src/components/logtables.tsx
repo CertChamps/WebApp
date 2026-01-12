@@ -100,7 +100,7 @@ const LogTables = ({ pgNumber }: QuestionType) => {
               className="h-32 w-32"
             />
             <p className="color-txt-sub font-medium mt-4">
-               {isNullPage ? "Loading tables..." : "Finding your page..."}
+               {isNullPage ? "Loading tables..." : "CertChamps is find the exact page for you, hold tight..."}
             </p>
           </div>
         )}
