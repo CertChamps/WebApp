@@ -201,14 +201,14 @@ export default function DeckCard({ deck, questionId, onAddQuestion }: DeckCardPr
 			{topicCounts.length > 0 && (
 				<div className='px-4 mt-2 flex flex-wrap gap-1 items-center relative z-50' ref={dropdownRef}>
 					{topicCounts.slice(0, 3).map(({ topic }) => (
-						<span key={topic} className='blue-btn text-xs px-2 py-0.5 w-auto'>
+						<span key={topic} className='blue-btn color-bg-grey-5 text-xs font-semibold px-2 py-0.5 w-auto'>
 							{topic}
 						</span>
 					))}
 					{topicCounts.length > 3 && (
 						<>
 							<span
-								className='blue-btn text-[8px] px-2 py-1 w-auto cursor-pointer hover:scale-105 transition-transform'
+								className='blue-btn color-bg-grey-5 text-[8px] font-semibold px-2 py-1 w-auto cursor-pointer hover:scale-105 transition-transform'
 								onClick={(e) => {
 									e.stopPropagation()
 									setShowAllTopics(!showAllTopics)
@@ -225,7 +225,7 @@ export default function DeckCard({ deck, questionId, onAddQuestion }: DeckCardPr
 								}`}
 							>
 								{topicCounts.map(({ topic }) => (
-									<span key={topic} className='blue-btn text-xs px-2 py-0.5 w-auto'>
+									<span key={topic} className='blue-btn color-bg-grey-5 text-xs font-semibold px-2 py-0.5 w-auto'>
 										{topic}
 									</span>
 								))}
@@ -238,12 +238,12 @@ export default function DeckCard({ deck, questionId, onAddQuestion }: DeckCardPr
 			{/*========================================= Description =============================================== */}
 
 			<div className='px-4 mt-1.5 h-12 overflow-hidden z-50'>
-				<p className='txt color-txt-sub line-clamp-2'>{deck?.description || 'No description provided.'}</p>
+				<p className='txt-sub color-txt-sub line-clamp-2'>{deck?.description || 'No description provided.'}</p>
 			</div>
 
 			{hasQuestion ? (
 				<span
-					className="cursor-target blue-btn cursor-pointer mt-2 w-40 text-center"
+					className="cursor-target blue-btn cursor-pointer mx-4 mb-2 w-30 text-center txt-sub color-txt-accent font-semibold"
 					onClick={(e) => {
 						e.stopPropagation()
 						if (questionId && onAddQuestion) onAddQuestion(deck.id, questionId)

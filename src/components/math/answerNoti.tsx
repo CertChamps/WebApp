@@ -1,4 +1,4 @@
-import { LuCheck, LuArrowRight, LuSparkles } from "react-icons/lu";
+import { LuCheck, LuArrowRight } from "react-icons/lu";
 import { useEffect, useState } from "react";
 
 type AnswerNotiProps = {

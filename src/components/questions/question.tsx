@@ -1,5 +1,6 @@
 // Icons 
-import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuArrowLeft, LuArrowRight, LuSearch, LuTimer, LuListOrdered, LuLayoutList} from "react-icons/lu";
+import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuSearch, LuTimer, LuListOrdered, LuLayoutList} from "react-icons/lu";
+import { IoIosArrowBack, IoIosArrowForward } from "./RoundedArrows";
 import { TbCards } from "react-icons/tb";
 
 // Hooks 
@@ -154,49 +155,93 @@ export default function Question(props: questionsProps) {
 
     // Check handler: shows overlay on correct; after 3 fails offers reveal button
    function handleCheck() {
-          if (locked) return;
-          const answers = content?.[part]?.answer ?? [];
-          const correct = isCorrect(inputs, answers);
-          // Pass question ID and tags to track completion
-          const tags = properties?.tags ?? [];
-          onCheck(inputs, answers, questionId, tags);
-          if (correct) {
-            setAttempts(0);
-            setCanReveal(true); // show the button
-            setLocked(true);    // disable further answering
-            setIsRight(true);   // trigger AnswerNoti visuals
-            setShowNoti(true);
-            setShowConfetti(true); // trigger confetti celebration
-            // Track this part as correctly answered
-            setPartsAnswered(prev => ({
-              ...prev,
-              [questionId]: {
-                ...prev[questionId],
-                [part]: true
-              }
-            }));
+        if (locked) return;
+
+        const currentContent = content?.[part];
+        const answerData = currentContent?.answer ?? [];
+        
+        // Flatten all allowed answers into one big pool to check against uniqueness
+        // (Only needed if the boxes share the same pool of answers, like your screenshot)
+        let allPossibleAnswers: string[] = [];
+        answerData.forEach((ans: any) => {
+             if(Array.isArray(ans)) allPossibleAnswers.push(...ans);
+             else allPossibleAnswers.push(ans);
+        });
+
+        // Set to track which answer strings from the pool have been "used" by the user
+        // This prevents the user from typing "root2" into both boxes
+        const usedAnswers = new Set<number>(); 
+        
+        let correctCount = 0;
+
+        // Loop through every input box the user filled
+        for (let i = 0; i < inputs.length; i++) {
+            const userInput = inputs[i];
+            const allowedForThisBox = answerData[i]; // allowed answers for specific box
+
+            let isMatch = false;
+
+            // 1. If this box expects a specific single string (Classic behavior)
+            if (typeof allowedForThisBox === 'string') {
+                if (isCorrect([userInput], [allowedForThisBox])) {
+                    isMatch = true;
+                }
+            } 
+            // 2. If this box accepts ANY from a list (Your current case)
+            else if (Array.isArray(allowedForThisBox)) {
+                
+                // We must find a match in the allowed list that hasn't been used yet
+                for (let k = 0; k < allowedForThisBox.length; k++) {
+                    const potentialAnswer = allowedForThisBox[k];
+                    
+                    // Check if math is correct
+                    if (isCorrect([userInput], [potentialAnswer])) {
+                        
+                        // To be strict, we should check if this specific answer was already used 
+                        // by a previous box (e.g. don't type the same root twice).
+                        // However, since we are iterating allowedForThisBox (which is just strings), 
+                        // we need to check if the *userInput* has already been counted.
+                        
+                        // Simple uniqueness check:
+                        // Find the index of this answer in the 'allPossibleAnswers' pool to track it globally
+                        const globalIndex = allPossibleAnswers.findIndex(pa => isCorrect([userInput], [pa]));
+                        
+                        if (globalIndex !== -1 && !usedAnswers.has(globalIndex)) {
+                             usedAnswers.add(globalIndex);
+                             isMatch = true;
+                             break; // Stop checking other possibilities for this box
+                        }
+                    }
+                }
+            }
+
+            if (isMatch) correctCount++;
+        }
+
+        // Final Verification
+        // Using inputs.length ensures that if there are 2 boxes, we need 2 successes.
+        const isSuccess = (correctCount === inputs.length) && (inputs.length === answerData.length);
+
+        // --- Standard Success/Fail Logic ---
+        const tags = properties?.tags ?? [];
+        onCheck(inputs, answerData, questionId, tags);
+
+        if (isSuccess) {
+            setAttempts(0); setCanReveal(true); setLocked(true); setIsRight(true); setShowNoti(true); setShowConfetti(true);
+            setPartsAnswered(prev => ({ ...prev, [questionId]: { ...prev[questionId], [part]: true } }));
             return;
-          }
-          // Show wrong answer notification
-          setShowWrongNoti(true);
-          
-          setAttempts((a) => {
+        }
+
+        setShowWrongNoti(true);
+        setAttempts((a) => {
             const n = a + 1;
             if (n >= 3) {
-              setCanReveal(true);
-              setLocked(true); // lock input after 3 failed attempts
-              // Track this part as incorrectly answered (after 3 failed attempts)
-              setPartsAnswered(prev => ({
-                ...prev,
-                [questionId]: {
-                  ...prev[questionId],
-                  [part]: false
-                }
-              }));
+                setCanReveal(true); setLocked(true);
+                setPartsAnswered(prev => ({ ...prev, [questionId]: { ...prev[questionId], [part]: false } }));
             }
             return n;
-          });
-        }
+        });
+    }
     
         function handleOpenSolution() {
           setShowSolution(true);
@@ -226,31 +271,45 @@ export default function Question(props: questionsProps) {
         }
     //===================================== Question handling ===================================//
     useEffect(() => {
+        setPart(0);
 
-        // initialise the parts
-        setPart(0)
+        const questions = Array.isArray(props.questions) ? props.questions : [];
+        const q = questions[props.position] ?? {};
 
-        // Get the current question
-        const questions = Array.isArray(props.questions) ? props.questions : []
-        const q = questions[props.position] ?? {}
+        const safeContent = (q.content ?? []).map((p: any) => {
+            let finalAnswers: any[] = [];
+            let finalPrefixes: any[] = [];
+            
+            // Logic: Just grab the raw answer data. 
+            // If it's a string, keep it as a string. If it's an array, keep it as an array.
+            if (Array.isArray(p?.inputs) && p.inputs.length > 0) {
+                finalAnswers = p.inputs.map((i: any) => i.answer);
+                
+                finalPrefixes = p.inputs.map((i: any) => 
+                    i.prefix ?? { before: i.before, after: i.after }
+                );
+            } else {
+                // Fallback for old content structure
+                finalAnswers = Array.isArray(p?.answer) ? p.answer : [];
+                finalPrefixes = Array.isArray(p?.prefix) ? p.prefix : [];
+            }
 
-        
-        // Ensure content array is never null and each part has defaults
-        const safeContent = (q.content ?? []).map((p: any) => ({
-            question: p?.question ?? '',
-            answer:   Array.isArray(p?.answer)   ? p.answer   : [],
-            prefix:   Array.isArray(p?.prefix)   ? p.prefix   : [],   // <-- add
-            orderMatters: p?.ordermatters,                    // <-- optional
-            image:    p?.image ?? '',
-            logtables: p?.logTables ? p.logTables : 1
-        }));
+            return {
+                question: p?.question ?? '',
+                answer: finalAnswers,
+                prefix: finalPrefixes,
+                inputs: p?.inputs ?? [],
+                orderMatters: p?.ordermatters,
+                image: p?.image ?? '',
+                logtables: p?.logTables ?? null,
+            };
+        });
 
-        // Set the question state 
-        setContent(safeContent)
-        setProperties(q.properties ?? {})
-        setQuestionId(q.id ?? '')
+        setContent(safeContent);
+        setProperties(q.properties ?? {});
+        setQuestionId(q.id ?? '');
 
-    }, [props.position, props.questions])
+    }, [props.position, props.questions]);
     //==========================================================================================//
 
     useEffect(() => {
@@ -344,6 +403,11 @@ export default function Question(props: questionsProps) {
         setWinPlaceholder(Wplaceholders[randomIndex]);
     }, []);
 
+    // Helper variables to parse the "2516" string from DB
+    const msCode = properties?.markingScheme ? String(properties.markingScheme) : "";
+    const msYear = msCode.length >= 2 ? msCode.substring(0, 2) : "25"; // Default to 25 if missing
+    const msPage = msCode.length > 2 ? msCode.substring(2) : "1";      // Default to 1 if missing
+
     return (
     <div className="flex flex-col h-full w-full items-center justify-between p-4">
         {/* Confetti celebration on correct answer */}
@@ -385,13 +449,11 @@ export default function Question(props: questionsProps) {
 
       {showSolution ? (
         <div
-          className="fixed inset-0 z-[500] color-bg-grey-5 backdrop-blur-sm
-                     flex items-center justify-center p-4"
+          className="fixed inset-0 z-[500] color-bg-grey-10 flex items-center justify-center transition-opacity duration-300"
           onClick={handleCloseSolution}
         >
           <div
-            className="color-bg rounded-2xl shadow-xl w-full max-w-4xl
-                       max-h-[85vh] overflow-hidden flex flex-col"
+            className="color-bg rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col transition-transform duration-300 scale-100"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-3">
@@ -408,7 +470,7 @@ export default function Question(props: questionsProps) {
               </button>
             </div>
             <div className="flex-1 overflow-auto scrollbar-minimal p-3 flex items-center justify-center">
-              <MarkingScheme year="25" pgNumber="1" />
+              <MarkingScheme year={msYear} pgNumber={msPage} />
             </div>
             <div className="flex justify-end gap-3 p-3">
               <button
@@ -434,8 +496,7 @@ export default function Question(props: questionsProps) {
       </div>
 
 <div className="flex h-[90%] w-full mt-4 justify-center items-center relative">
-   <div className="color-bg-grey-5 mx-4 w-10 h-10 flex items-center group relative 
-          justify-center rounded-full hover:scale-95 duration-250 transition-all"
+  <div className="color-bg-grey-5 mx-4 w-10 h-10 min-w-[2.5rem] min-h-[2.5rem] aspect-square flex items-center group relative justify-center rounded-full hover:scale-95 duration-250 transition-all"
           onClick={() => {
               setInputs([]);
 
@@ -451,7 +512,7 @@ export default function Question(props: questionsProps) {
                   props.setPosition(prevIndex);
               }
           }}>
-          <LuArrowLeft strokeWidth={strokewidth} size={32} className="color-txt-sub"/>
+          <IoIosArrowBack size={36} className="color-txt-sub" style={{ verticalAlign: 'middle' }}/>
 
           <span className="tooltip">previous</span>
       </div> 
@@ -492,10 +553,12 @@ export default function Question(props: questionsProps) {
                           <p className="txt-bold color-txt-accent">{properties?.name}
                               <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
 
-                              { user.uid == "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" || user.uid == "NkN9UBqoPEYpE21MC89fipLn0SP2" ? ( 
-                                content?.[part]?.answer?.length ? (
-                                  content?.[part].answer.map((ans: any) => (
-                                      <span key={ans} className="txt-sub">{`ANS: ${ans}`}</span>
+                              { user.uid == "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" || user.uid == "NkN9UBqoPEYpE21MC89fipLn0SP2" ? (
+                                Array.isArray(content?.[part]?.inputs) && content[part].inputs.length ? (
+                                  content[part].inputs.map((input: any, idx: number) => (
+                                    Array.isArray(input.answer) ? input.answer.map((ans: any, aidx: number) => (
+                                      <span key={aidx} className="txt-sub">{`ANS: ${ans}`}</span>
+                                    )) : <span key={idx} className="txt-sub">{`ANS: ${input.answer}`}</span>
                                   ))
                                 ) : null ) : null}
                           </p>
@@ -522,6 +585,24 @@ export default function Question(props: questionsProps) {
                                   <img src={content?.[part].image} className="max-h-30 image-invert  brightness-0"/>
                               </div>
                               }
+                              {/* Proof/Show That Indicator */}
+                              {(!Array.isArray(content?.[part]?.inputs) || content[part]?.inputs.length === 0 || (Array.isArray(content[part]?.inputs) && content[part].inputs.every((input: any) => !input.answer || (Array.isArray(input.answer) ? input.answer.length === 0 : input.answer == null)))) && (
+                                <div className="mt-4 flex items-center justify-center">
+                                  <span className="px-6 py-2 rounded-full color-bg-accent color-txt-accent font-semibold text-base block text-center">
+                                    This question contains a proof which CertChamps currently cannot check.
+                                    <div className="w-full flex justify-center">
+                                      <span className="block mt-1 text-center">We trust you to try it yourself! Good luck!</span>
+                                    </div>
+                                  </span>
+                                </div>
+                              )}
+                              {(Array.isArray(content?.[part]?.inputs) && content[part].inputs.length === 1 && typeof content[part].inputs[0]?.answer === 'string' && content[part].inputs[0].answer.trim().toUpperCase() === 'NULL') && (
+                                <div className="mt-4 flex items-center justify-center">
+                                  <span className="px-4 py-2 rounded-full color-bg-accent color-txt-accent font-semibold text-base">
+                                    Introduction / Info only — no answer required for this part.
+                                  </span>
+                                </div>
+                              )}
                           </div>
                           {/* ============================================================================ */}
                       </div>
@@ -686,9 +767,9 @@ export default function Question(props: questionsProps) {
         ) : null}
 
         {sideView === 'logtables' ? (
-            <div className="h-full w-5/12 flex items-center justify-center" data-tutorial-id="sideview-logtables">
-                <LogTables pgNumber={(parseInt(content?.[part].logtables) + 0).toString()}/>
-            </div>
+          <div className="h-full w-5/12 flex items-center justify-center">
+            <LogTables pgNumber={content?.[part]?.logtables ? String(content[part].logtables) : "null"}/>
+          </div>
         ) : null}
 
         {sideView === 'timer' ? (
@@ -697,9 +778,9 @@ export default function Question(props: questionsProps) {
             </div>
         ) : null}
 
-        `{sideView === 'marking_scheme' ? (
+        {sideView === 'marking_scheme' ? (
             <div className="h-full w-5/12">
-                <MarkingScheme year="25" pgNumber="1"/>
+                <MarkingScheme year={msYear} pgNumber={msPage}/>
             </div>
         ) : null}
 
@@ -764,7 +845,8 @@ export default function Question(props: questionsProps) {
                         <img
                           src={p.image}
                           alt={`Question part ${idx + 1}`}
-                          className="mt-3 w-full max-w-md rounded-lg object-cover"
+                          className="mt-3 max-w-[220px] max-h-[190px] object-contain"
+                          style={{ display: 'block', marginLeft: 'auto', marginRight: 'auto' }}
                         />
                       )}
                       {idx < content.length - 1 && (
@@ -965,8 +1047,7 @@ export default function Question(props: questionsProps) {
         ) : (<></> /* Do not show sidebar in preview mode */)
         }
 </div>
-        <div className="color-bg-grey-5 mx-4 w-10 h-10 flex items-center group relative 
-                justify-center rounded-full hover:scale-95 duration-250 transition-all"
+        <div className="color-bg-grey-5 mx-4 w-10 h-10 min-w-[2.5rem] min-h-[2.5rem] aspect-square flex items-center group relative justify-center rounded-full hover:scale-95 duration-250 transition-all"
                 onClick={() => { setInputs([]);
       
                     // Next part if available
@@ -992,7 +1073,7 @@ export default function Question(props: questionsProps) {
                     props.nextQuestion();
                 }}
                 >
-                <LuArrowRight strokeWidth={strokewidth} size={32} className="color-txt-sub"/>
+                <IoIosArrowForward size={36} className="color-txt-sub" style={{ verticalAlign: 'middle' }}/>
 
                 <span className="tooltip">next</span>
             </div> 
