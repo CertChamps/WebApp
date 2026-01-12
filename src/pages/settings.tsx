@@ -9,9 +9,12 @@ import { auth, db } from "../../firebase";
 import { OptionsContext } from "../context/OptionsContext"
 import { UserContext } from "../context/UserContext";
 
+// Tutorial
+import { useTutorialContext } from "../context/TutorialContext";
+import { TutorialTriggerButton } from "../components/tutorial/Tutorial";
 
 // Styles & Icons
-import { LuLogOut } from "react-icons/lu";
+import { LuLogOut, LuRotateCcw } from "react-icons/lu";
 import '../styles/settings.css'
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import { doc, setDoc, updateDoc } from "firebase/firestore";
@@ -22,6 +25,9 @@ export default function Settings() {
     const { setOptions } = useContext(OptionsContext)
     const { user, setUser } = useContext(UserContext)
     const navigate = useNavigate()
+    
+    // Tutorial context
+    const { triggerTutorial, resetTutorial, hasCompletedTutorial } = useTutorialContext();
 
     // These are all just for cropping
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -229,6 +235,39 @@ export default function Settings() {
                 <span className="">Log Out</span>
                 <LuLogOut className="txt-heading-colour inline mx-1" strokeWidth={3}/>
         </span> 
+
+        {/* ====================================== HELP & TUTORIAL ========================================= */}
+        <div className="flex w-full items-center mt-6">
+            <h1 className="profile-heading">Help & Tutorial</h1>
+            <div className="line-break"></div>
+        </div>
+
+        <div className="mx-6 my-4 max-w-md">
+            <TutorialTriggerButton onClick={triggerTutorial} />
+            
+            {/* Admin option to reset tutorial */}
+            {user?.isAdmin && (
+                <button 
+                    className="flex items-center gap-2 mt-3 px-4 py-2 text-sm color-txt-sub 
+                               hover:color-txt-accent transition-colors cursor-pointer"
+                    onClick={async () => {
+                        await resetTutorial();
+                        triggerTutorial();
+                    }}
+                >
+                    <LuRotateCcw size={16} />
+                    <span>Reset & Replay Tutorial (Admin)</span>
+                </button>
+            )}
+            
+            {/* Show tutorial status for debugging/admin */}
+            {user?.isAdmin && (
+                <p className="text-xs color-txt-sub mt-2">
+                    Tutorial completed: {hasCompletedTutorial ? 'Yes' : 'No'}
+                </p>
+            )}
+        </div>
+        {/* ======================================================================================== */}
 
    
 
@@ -457,6 +496,26 @@ export default function Settings() {
                     <div className="color-strip-item bg-blueberryDarkPrimary " > </div> {/* PRIMARY */}
                     <div className="color-strip-item bg-blueberryDarkSub " > </div> {/* SUB */}
                     <div className="color-strip-item bg-blueberryDarkAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('darkFuchsia')}>
+                <p className="theme-text">Dark Fuchsia</p>
+                <div className="color-strip-container bg-darkFuchsiaBG " >
+                    <div className="color-strip-item bg-darkFuchsiaPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-darkFuchsiaSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-darkFuchsiaAccent " > </div> {/* ACCENT */}
+                </div>
+            </div>
+
+            <div className="cursor-target theme-container" 
+                onClick={() => setTheme('pastelPink')}>
+                <p className="theme-text">Pastel Pink</p>
+                <div className="color-strip-container bg-pastelPinkBG " >
+                    <div className="color-strip-item bg-pastelPinkPrimary " > </div> {/* PRIMARY */}
+                    <div className="color-strip-item bg-pastelPinkSub " > </div> {/* SUB */}
+                    <div className="color-strip-item bg-pastelPinkAccent " > </div> {/* ACCENT */}
                 </div>
             </div>
         </div>

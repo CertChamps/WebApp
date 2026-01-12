@@ -84,5 +84,43 @@ export default function useFriends() {
     }
     //==========================================================================================//
 
-    return { getSearch, sendFriendRequest }
+    //============================== GET ALL USERS (FOR MODERATORS) =================================//
+    const getAllUsers = async () => {
+        try {
+            // Exclude current user and friends
+            const excludeUids = [
+                user.uid,
+                ...user.friends.map((friend: any) => friend.uid),
+                ...user.pendingFriends
+            ].filter(Boolean);
+
+            // Firestore 'not-in' supports up to 10 elements, so slice if necessary
+            const notInUids = excludeUids.slice(0, 10);
+
+            const snapshot = query(
+                collection(db, 'user-data'),
+                where('uid', 'not-in', notInUids.length ? notInUids : ['']),
+                limit(50),
+                orderBy('rank', 'desc')
+            )
+            const users = await getDocs(snapshot)
+
+            const userPromises = users.docs.map(async (userDoc) => {
+                const userData = userDoc.data();
+                const imageUrl = await fetchImage(userData.picture);
+                return { ...userData, picture: imageUrl, uid: userDoc.id, sent: false };
+            });
+
+            const usersWithPics = await Promise.all(userPromises);
+            const filteredUsers = usersWithPics.filter(user => user !== null);
+
+            return filteredUsers
+        }
+        catch (error) {
+            console.log(error)
+        }
+    }
+    //==========================================================================================//
+
+    return { getSearch, getAllUsers, sendFriendRequest }
 }

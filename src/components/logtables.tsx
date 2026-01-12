@@ -55,7 +55,7 @@ const LogTables = ({ pgNumber }: QuestionType) => {
       <Document
         file={`/assets/log_tables.pdf`}
         onLoadSuccess={({ numPages }) => {
-          setNumPages(numPages);
+          setNumPages(numPages || 0) ;
           setPagesRendered(0); // reset render tracker
         }}
         onLoadError={(err) => console.error("PDF load error:", err)}
@@ -71,7 +71,7 @@ const LogTables = ({ pgNumber }: QuestionType) => {
             }}
           >
             <Page
-              pageNumber={index + 1}
+              pageNumber={index + 1 || 1}
               width={600}
               renderTextLayer={false}
               renderAnnotationLayer={false}

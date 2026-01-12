@@ -1,5 +1,5 @@
 // src/AppRouter.tsx
-import { createHashRouter, RouterProvider } from "react-router-dom";
+import { createHashRouter, RouterProvider, Outlet } from "react-router-dom";
 import Login from "./pages/login";
 import SignUp from "./pages/signup";
 import Questions from "./pages/questions";
@@ -15,23 +15,44 @@ import AddQuestions from "./pages/addQuestions";
 import ProfileViewer from "./pages/profileViewer";
 import { ProtectedRoute } from "./components/protectedRoute";
 import Progress from "./pages/progress/progress_main";
+import Tutorial from "./components/tutorial/Tutorial";
+import { useTutorialContext } from "./context/TutorialContext";
+
+// Layout component that includes the Tutorial overlay
+function RootLayout() {
+  const { showTutorial, setShowTutorial, completeTutorial } = useTutorialContext();
+  
+  return (
+    <>
+      <Outlet />
+      <Tutorial
+        isOpen={showTutorial}
+        onClose={() => setShowTutorial(false)}
+        onComplete={completeTutorial}
+      />
+    </>
+  );
+}
 
 const router = createHashRouter([
-  { path: "/", element: <SignUp /> },
-  { path: "/login", element: <Login /> },
-
-  // Protected routes
   {
-    path: "/practice",
-    element: (
-      <ProtectedRoute>
-        <>
-          <Navbar />
-          <Questions />
-        </>
-      </ProtectedRoute>
-    ),
-  },
+    element: <RootLayout />,
+    children: [
+      { path: "/", element: <SignUp /> },
+      { path: "/login", element: <Login /> },
+
+      // Protected routes
+      {
+        path: "/practice",
+        element: (
+          <ProtectedRoute>
+            <>
+              <Navbar />
+              <Questions />
+            </>
+          </ProtectedRoute>
+        ),
+      },
   {
     path: "/practice/:id",
     element: (
@@ -164,6 +185,8 @@ const router = createHashRouter([
 
   // If you also want a root login page instead of SignUp, keep one root route only.
   // Remove duplicates from your original file to avoid conflicts.
+    ],
+  },
 ]);
 
 export default function AppRouter() {
