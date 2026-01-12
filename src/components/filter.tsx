@@ -58,7 +58,10 @@ export default function Filter(props: filterProps) {
   return (
     <div ref={containerRef} onMouseDown={(e) => e.stopPropagation()}>
         {/* DROPDOWN (or dropup in this case haha) */}
-        <div className={props.viewFilter ? 'filter-container-shown' : 'filter-container-hidden'}>
+        <div 
+          className={props.viewFilter ? 'filter-container-shown' : 'filter-container-hidden'}
+          data-tutorial-id="sideview-filter"
+        >
           <p className="filter-header">topic</p>
           <div className="selection-container">
             {selectedTopics.map((topic) => (

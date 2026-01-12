@@ -64,7 +64,11 @@ export default function Navbar () {
             </div>
 
             {/* ============================= PRACTICE ICON ================================ */}
-            <div className={page == 'practice' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('practice')}} >
+            <div 
+                data-tutorial-id="nav-practice"
+                className={page == 'practice' ? 'nav-item-selected' : 'nav-item'} 
+                onClick={() => {pageNaviagte('practice')}} 
+            >
                 <LuPencil strokeWidth={strokewidth} size={iconSize} 
                     className={page == 'practice' ? 'nav-icon-selected' : 'nav-icon'}
                     fill={page == 'practice' ? 'currentColor' : 'none'} />
@@ -72,14 +76,22 @@ export default function Navbar () {
             </div>
             
             {/* ============================= SOCIAL ICON ================================ */}
-            <div className={page == 'social/social' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('social/social')}}> 
+            <div 
+                data-tutorial-id="nav-social"
+                className={page == 'social/social' ? 'nav-item-selected' : 'nav-item'} 
+                onClick={() => {pageNaviagte('social/social')}}
+            > 
                 <LuUsers strokeWidth={strokewidth} size={iconSize} 
                     className={page == 'social/social' ? 'nav-icon-selected' : 'nav-icon'}
                     fill={page == 'social/social' ? 'currentColor' : 'none'} />  
                 <p className={page == 'social/social' ? 'nav-txt-selected' : 'nav-txt'} >Social</p>
             </div>
 
-            <div className={page == 'progress' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('progress')}}>
+            <div 
+                data-tutorial-id="nav-progress"
+                className={page == 'progress' ? 'nav-item-selected' : 'nav-item'} 
+                onClick={() => {pageNaviagte('progress')}}
+            >
                 <LuChartSpline strokeWidth={strokewidth} size={iconSize}
                     className={page == 'progress' ? 'nav-icon-selected' : 'nav-icon'}
                     fill="none" />
@@ -88,7 +100,11 @@ export default function Navbar () {
             
 
             {/* ============================= DECKS ICON ================================ */}
-            <div className={page == 'decks' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('decks')}}> 
+            <div 
+                data-tutorial-id="nav-decks"
+                className={page == 'decks' ? 'nav-item-selected' : 'nav-item'} 
+                onClick={() => {pageNaviagte('decks')}}
+            > 
                 <TbCards strokeWidth={strokewidth} size={iconSize} 
                     className={page == 'decks' ? 'nav-icon-selected' : 'nav-icon'}
                     fill={page == 'decks' ? 'currentColor' : 'none'} />  
@@ -113,7 +129,11 @@ export default function Navbar () {
                 </div>
             )}
             
-            <div className={page == 'user/settings' ? (user.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" ? 'nav-bottom-selected' : 'nav-settings-selected') : (user.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" ? 'nav-bottom' : 'nav-settings')} onClick={() => {pageNaviagte('user/settings')}}> 
+            <div 
+                data-tutorial-id="nav-settings"
+                className={page == 'user/settings' ? (user.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" ? 'nav-bottom-selected' : 'nav-settings-selected') : (user.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" ? 'nav-bottom' : 'nav-settings')} 
+                onClick={() => {pageNaviagte('user/settings')}}
+            > 
                 <LuSettings strokeWidth={strokewidth} size={iconSize} 
                     className={page == 'user/settings' ? 'nav-icon-selected' : 'nav-icon'}
                     fill={page == 'user/settings' ? 'currentColor' : 'none'} />  

@@ -82,10 +82,10 @@
   --color-gruvboxSub: #665c54;
 
   /* Magic Girl */
-  --color-magicGirlBG: #ffffff;
-  --color-magicGirlAccent: #00ac8c;
-  --color-magicGirlPrimary: #f5b1cc;
-  --color-magicGirlSub: #93e8d3;
+  --color-magicGirlBG: #291f33;
+  --color-magicGirlAccent: #b3a1c4;
+  --color-magicGirlPrimary: #a982c4;
+  --color-magicGirlSub: #86679c;
 
   /* Menthol */
   --color-mentholBG: #00c18c;
@@ -155,6 +155,19 @@
   --color-blueberryDarkPrimary: #add7ff;
   --color-blueberryDarkSub: #5c7da5;
 
+  
+  /* Dark Fuchsia*/
+  --color-darkFuchsiaBG: #1f1319;
+  --color-darkFuchsiaAccent: #e00d7a;
+  --color-darkFuchsiaPrimary: #bf115a;
+  --color-darkFuchsiaSub: #d19bb1;
+
+  
+  /* Pastel Pink */
+  --color-pastelPinkBG: #f2cbdc;
+  --color-pastelPinkAccent: #ba3879;
+  --color-pastelPinkPrimary: #c4668d;
+  --color-pastelPinkSub: #c46695;
   /* Note: Do not change these randomly below styles must follow: 
   radius-out - radius-in = 2 * padding/margin */
 
@@ -277,27 +290,30 @@ math-field::part(virtual-keyboard-toggle) {
 }
 
 /* ========================================= COLOUR THEMES ====================================================== */ 
-@custom-variant dark (&:where([data-theme="dark"] *));
-@custom-variant markoblank (&:where([data-theme="markoblank"] *));
-@custom-variant tangerine (&:where([data-theme="tangerine"] *));
-@custom-variant icebergLight (&:where([data-theme="icebergLight"] *));
-@custom-variant icebergDark (&:where([data-theme="icebergDark"] *));
-@custom-variant husqy (&:where([data-theme="husqy"] *));
-@custom-variant shadow (&:where([data-theme="shadow"] *));
-@custom-variant modernInk (&:where([data-theme="modernInk"] *));
-@custom-variant gruvbox (&:where([data-theme="gruvbox"] *));
-@custom-variant magicGirl (&:where([data-theme="magicGirl"] *));
-@custom-variant menthol (&:where([data-theme="menthol"] *));
-@custom-variant lavendar (&:where([data-theme="lavendar"] *));
-@custom-variant airplane (&:where([data-theme="airplane"] *));
-@custom-variant nordLight (&:where([data-theme="nordLight"] *));
-@custom-variant nordDark (&:where([data-theme="nordDark"] *));
-@custom-variant sewingTinLight (&:where([data-theme="sewingTinLight"] *));
-@custom-variant camping (&:where([data-theme="camping"] *));
-@custom-variant paper (&:where([data-theme="paper"] *));
-@custom-variant aurora (&:where([data-theme="aurora"] *));
-@custom-variant blueberryLight (&:where([data-theme="blueberryLight"] *));
-@custom-variant blueberryDark (&:where([data-theme="blueberryDark"] *));
+@custom-variant dark (&:where([data-theme="dark"] &));
+@custom-variant markoblank (&:where([data-theme="markoblank"] &));
+@custom-variant tangerine (&:where([data-theme="tangerine"] &));
+@custom-variant icebergLight (&:where([data-theme="icebergLight"] &));
+@custom-variant icebergDark (&:where([data-theme="icebergDark"] &));
+@custom-variant husqy (&:where([data-theme="husqy"] &));
+@custom-variant shadow (&:where([data-theme="shadow"] &));
+@custom-variant modernInk (&:where([data-theme="modernInk"] &));
+@custom-variant gruvbox (&:where([data-theme="gruvbox"] &));
+@custom-variant magicGirl (&:where([data-theme="magicGirl"] &));
+@custom-variant menthol (&:where([data-theme="menthol"] &));
+@custom-variant lavendar (&:where([data-theme="lavendar"] &));
+@custom-variant airplane (&:where([data-theme="airplane"] &));
+@custom-variant nordLight (&:where([data-theme="nordLight"] &));
+@custom-variant nordDark (&:where([data-theme="nordDark"] &));
+@custom-variant sewingTinLight (&:where([data-theme="sewingTinLight"] &));
+@custom-variant camping (&:where([data-theme="camping"] &));
+@custom-variant paper (&:where([data-theme="paper"] &));
+@custom-variant aurora (&:where([data-theme="aurora"] &));
+@custom-variant blueberryLight (&:where([data-theme="blueberryLight"] &));
+@custom-variant blueberryDark (&:where([data-theme="blueberryDark"] &));
+@custom-variant darkFuchsia (&:where([data-theme="darkFuchsia"] &));
+@custom-variant pastelPink (&:where([data-theme="pastelPink"] &));
+
 
 @utility color-txt-main {
   @apply 
@@ -323,6 +339,8 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:text-auroraPrimary
     blueberryLight:text-blueberryLightPrimary
     blueberryDark:text-blueberryDarkPrimary
+    darkFuchsia:text-darkFuchsiaPrimary
+    pastelPink:text-pastelPinkPrimary
 }
 
 @utility color-txt-sub {
@@ -349,6 +367,8 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:text-auroraSub1
     blueberryLight:text-blueberryLightSub
     blueberryDark:text-blueberryDarkSub
+    darkFuchsia:text-darkFuchsiaSub
+    pastelPink:text-pastelPinkSub
 }
 
 @utility color-txt-accent {
@@ -375,6 +395,8 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:text-auroraAccent1
     blueberryLight:text-blueberryLightAccent
     blueberryDark:text-blueberryDarkAccent
+    darkFuchsia:text-darkFuchsiaAccent
+    pastelPink:text-pastelPinkAccent
 }
 
 @utility color-bg {
@@ -401,6 +423,8 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:bg-auroraBG
     blueberryLight:bg-blueberryLightBG
     blueberryDark:bg-blueberryDarkBG
+    darkFuchsia:bg-darkFuchsiaBG
+    pastelPink:bg-pastelPinkBG
 }
 
 @utility color-txt-invert {
@@ -427,6 +451,8 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:text-auroraBG
     blueberryLight:text-blueberryLightBG
     blueberryDark:text-blueberryDarkBG
+    darkFuchsia:text-darkFuchsiaBG
+    pastelPink:text-pastelPinkBG
 }
 
 
@@ -454,6 +480,8 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:bg-auroraSub1/5
     blueberryLight:bg-blueberryLightSub/5
     blueberryDark:bg-blueberryDarkSub/5
+    darkFuchsia:bg-darkFuchsiaSub/5
+    pastelPink:bg-pastelPinkSub/5
   
 }
 
@@ -481,6 +509,8 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:bg-auroraSub1/20
     blueberryLight:bg-blueberryLightSub/20
     blueberryDark:bg-blueberryDarkSub/20
+    darkFuchsia:bg-darkFuchsiaSub/20
+    pastelPink:bg-pastelPinkSub/20
 
 }
 
@@ -508,6 +538,8 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:bg-auroraAccent1/15
     blueberryLight:bg-blueberryLightAccent/15
     blueberryDark:bg-blueberryDarkAccent/15
+    darkFuchsia:bg-darkFuchsiaAccent/15
+    pastelPink:bg-pastelPinkAccent/15
 }
 
 @utility color-shadow {
@@ -534,7 +566,10 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:border-auroraSub1/20
     blueberryLight:border-blueberryLightSub/20
     blueberryDark:border-blueberryDarkSub/20
+    darkFuchsia:border-darkFuchsiaSub/20
+    pastelPink:border-pastelPinkSub/20;
 
+  @apply
     shadow-light-grey/40
     dark:shadow-grey/20
     markoblank:shadow-markobrown/20
@@ -557,6 +592,8 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:shadow-auroraSub1/20
     blueberryLight:shadow-blueberryLightSub/20
     blueberryDark:shadow-blueberryDarkSub/20
+    darkFuchsia:shadow-darkFuchsiaSub/20
+    pastelPink:shadow-pastelPinkSub/20
   
 }
 
@@ -583,7 +620,9 @@ math-field::part(virtual-keyboard-toggle) {
     paper:border-paperAccent
     aurora:border-auroraAccent1
     blueberryLight:border-blueberryLightAccent
-    blueberryDark:border-blueberryDarkAccent; 
+    blueberryDark:border-blueberryDarkAccent
+    darkFuchsia:border-darkFuchsiaAccent
+    pastelPink:border-pastelPinkAccent; 
     
     @apply
     shadow-blue
@@ -608,6 +647,8 @@ math-field::part(virtual-keyboard-toggle) {
     aurora:shadow-auroraAccent1
     blueberryLight:shadow-blueberryLightAccent
     blueberryDark:shadow-blueberryDarkAccent
+    darkFuchsia:shadow-darkFuchsiaAccent
+    pastelPink:shadow-pastelPinkAccent
     
 }
 
@@ -635,6 +676,8 @@ math-field::part(virtual-keyboard-toggle) {
     nordDark:bg-nordDarkAccent
     blueberryLight:bg-blueberryLightAccent
     blueberryDark:bg-blueberryDarkAccent
+    darkFuchsia:bg-darkFuchsiaAccent
+    pastelPink:bg-pastelPinkAccent
 }
 
 @utility image-invert {
@@ -661,6 +704,8 @@ math-field::part(virtual-keyboard-toggle) {
     nordDark:invert-0
     blueberryLight:invert-0
     blueberryDark:invert-0
+    darkFuchsia:invert-0
+    pastelPink:invert-0
 }
 
 @utility bg-gradient-bg-fade {
@@ -711,6 +756,11 @@ math-field::part(virtual-keyboard-toggle) {
     blueberryLight:via-blueberryLightBG/100
     blueberryDark:from-blueberryDarkBG/100
     blueberryDark:via-blueberryDarkBG/100
+    darkFuchsia:from-darkFuchsiaBG/100
+    darkFuchsia:via-darkFuchsiaBG/100
+    pastelPink:from-pastelPinkBG/100
+    pastelPink:via-pastelPinkBG/100
+
     z-1000;
 }
 
@@ -775,7 +825,12 @@ math-field::part(virtual-keyboard-toggle) {
         blueberryLight:bg-blueberryLightSub/40
         blueberryLight:hover:bg-blueberryLightSub/60
         blueberryDark:bg-blueberryDarkSub/40
-        blueberryDark:hover:bg-blueberryDarkSub/60;
+        blueberryDark:hover:bg-blueberryDarkSub/60
+        darkFuchsia:bg-darkFuchsiaSub/40
+        darkFuchsia:hover:bg-darkFuchsiaSub/60
+        pastelPink:bg-pastelPinkSub/40
+        pastelPink:hover:bg-pastelPinkSub/60
+        ;
   }
 
   /* Firefox */
@@ -863,6 +918,14 @@ math-field::part(virtual-keyboard-toggle) {
   }
 
   [data-theme="blueberryDark"] & {
+    scrollbar-color: rgb(173 215 255 / 0.4) transparent;
+  }
+
+  [data-theme="darkFuchsia"] & {
+    scrollbar-color: rgb(173 215 255 / 0.4) transparent;
+  }
+
+  [data-theme="pastelPink"] & {
     scrollbar-color: rgb(173 215 255 / 0.4) transparent;
   }
 }

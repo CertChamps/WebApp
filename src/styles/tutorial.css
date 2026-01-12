@@ -1,0 +1,301 @@
+@reference '../index.css';
+
+/* ==================== Tutorial Overlay Wrapper ==================== */
+.tutorial-overlay-wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.tutorial-overlay-wrapper > * {
+  pointer-events: auto;
+}
+
+/* ==================== Click Blocker ==================== */
+.tutorial-click-blocker {
+  position: fixed;
+  z-index: 2;
+  pointer-events: auto;
+  background: transparent;
+}
+
+/* ==================== Backdrop ==================== */
+.tutorial-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+.tutorial-spotlight-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.tutorial-backdrop-fill {
+  fill: rgba(0, 0, 0, 0.25);
+}
+
+/* ==================== Highlight Border ==================== */
+
+/* Dynamic theme-aware CSS custom properties that automatically use accent colors */
+.tutorial-highlight-border {
+  position: fixed;
+  border-radius: 12px;
+  z-index: 2;
+  pointer-events: none;
+  animation: tutorial-pulse 2s ease-in-out infinite;
+  
+  /* Use existing color utilities with CSS custom properties for dynamic theming */
+  --highlight-base: 0 0 0 3px;
+  --highlight-glow-base: 0 0 20px 4px;
+  --highlight-pulse: 0 0 0 4px;
+  --highlight-glow-pulse: 0 0 30px 8px;
+}
+
+/* Apply Tailwind's color-txt-accent utility to get the right accent color */
+.tutorial-highlight-border {
+  @apply color-txt-accent;
+  
+  /* Use currentColor (which gets the accent color from color-txt-accent) for the shadows */
+  box-shadow: 
+    var(--highlight-base) currentColor,
+    var(--highlight-glow-base) color-mix(in srgb, currentColor 40%, transparent);
+}
+
+@keyframes tutorial-pulse {
+  0%, 100% {
+    box-shadow: 
+      var(--highlight-base) currentColor,
+      var(--highlight-glow-base) color-mix(in srgb, currentColor 40%, transparent);
+  }
+  50% {
+    box-shadow: 
+      var(--highlight-pulse) currentColor,
+      var(--highlight-glow-pulse) color-mix(in srgb, currentColor 50%, transparent);
+  }
+}
+
+/* ==================== Progress Bar ==================== */
+.tutorial-progress-bar-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  z-index: 10;
+}
+
+.tutorial-progress-bar-fill {
+  height: 100%;
+  border-radius: 0 2px 2px 0;
+  transition: width 0.3s ease;
+}
+
+/* ==================== Tooltip Card ==================== */
+.tutorial-tooltip {
+  position: fixed;
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  padding: 20px;
+  border-radius: 16px;
+  z-index: 10;
+  border: 2px solid;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ==================== Close Button ==================== */
+.tutorial-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: transparent;
+}
+
+.tutorial-close:hover {
+  opacity: 0.7;
+  transform: rotate(90deg);
+}
+
+/* ==================== Step Counter ==================== */
+.tutorial-step-counter {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* ==================== Icon Wrapper ==================== */
+.tutorial-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0;
+}
+
+/* ==================== Title ==================== */
+.tutorial-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.3;
+  margin: 0;
+}
+
+/* ==================== Description ==================== */
+.tutorial-description {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ==================== Tip Box ==================== */
+.tutorial-tip-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.tutorial-tip-box svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ==================== Action Indicator ==================== */
+.tutorial-action-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-top: 4px;
+}
+
+/* ==================== Navigation ==================== */
+.tutorial-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.tutorial-skip-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 0.85rem;
+  transition: opacity 0.2s;
+}
+
+.tutorial-skip-link:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
+.tutorial-next-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px !important;
+  border-radius: 10px !important;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  margin-left: auto;
+  width: auto !important;
+}
+
+.tutorial-next-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* ==================== Step Dots ==================== */
+.tutorial-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.tutorial-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+/* ==================== Trigger Button ==================== */
+.tutorial-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tutorial-trigger-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+.tutorial-trigger-btn span {
+  flex: 1;
+  text-align: left;
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 640px) {
+  .tutorial-tooltip {
+    width: calc(100vw - 32px);
+    max-width: none;
+    padding: 20px;
+    left: 16px !important;
+    right: 16px;
+    top: auto !important;
+    bottom: 16px !important;
+    transform: none !important;
+  }
+
+  .tutorial-icon-wrapper {
+    width: 48px;
+    height: 48px;
+  }
+
+  .tutorial-title {
+    font-size: 1.1rem;
+  }
+
+  .tutorial-description {
+    font-size: 0.85rem;
+  }
+}

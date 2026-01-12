@@ -18,6 +18,8 @@ export type UserContextType = {
     decks: any[],
     streak: number,
     highestStreak: number,
+    hasCompletedTutorial: boolean,
+    isAdmin?: boolean,
     },
     setUser: React.Dispatch<React.SetStateAction<any>>
 }
@@ -39,6 +41,8 @@ export const UserContext = createContext<UserContextType>({
     decks: [],
     streak: 0,
     highestStreak: 0,
+    hasCompletedTutorial: false,
+    isAdmin: false,
     },
     setUser: () => {}
 })

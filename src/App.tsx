@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { UserContext } from "./context/UserContext";
 import { OptionsContext } from "./context/OptionsContext";
+import { TutorialProvider } from "./context/TutorialContext";
 import AppRouter from "./Router";
 import UsernamePrompt from "./components/prompts/username_prompt";
 //import CustomCursor from "./components/CustomCursor"
@@ -32,14 +33,16 @@ export default function App() {
     // ================ CONTEXT PROVIDERS ===================== //
     <OptionsContext.Provider value={{ options, setOptions }}>
       <UserContext.Provider value={{ user, setUser }}>
-        {/* // ================ DIV THEME WRAPPER ===================== // */}
-        <div id="themed-root" data-theme={options.theme}>
-          <div className="color-bg h-screen w-screen flex flex-row">
-            {/* <CustomCursor /> */}
-            <AppRouter />
-            <UsernamePrompt /> 
+        <TutorialProvider>
+          {/* // ================ DIV THEME WRAPPER ===================== // */}
+          <div id="themed-root" data-theme={options.theme}>
+            <div className="color-bg h-screen w-screen flex flex-row">
+              {/* <CustomCursor /> */}
+              <AppRouter />
+              <UsernamePrompt />
+            </div>
           </div>
-        </div>
+        </TutorialProvider>
       </UserContext.Provider>
     </OptionsContext.Provider>
   );

@@ -9,9 +9,18 @@ import Lottie from 'lottie-react';
 import Notifications from "./notifications";
 import { UserContext } from "../../context/UserContext";
 
+// Moderator user IDs
+const MODERATOR_UIDS = [
+  "NkN9UBqoPEYpE21MC89fipLn0SP2",
+  "gJIqKYlc1OdXUQGZQkR4IzfCIoL2"
+];
+
 export default function FriendsSearch() {
-  const { getSearch, sendFriendRequest } = useFriends();
+  const { getSearch, getAllUsers, sendFriendRequest } = useFriends();
   const { user } = useContext(UserContext)
+  
+  // Check if current user is a moderator
+  const isModerator = user?.uid && MODERATOR_UIDS.includes(user.uid);
 
   const [search, setSearch] = useState<string>('');
   const [usersFound, setUsersFound] = useState<any[]>([]);
@@ -30,6 +39,12 @@ export default function FriendsSearch() {
         const result = await getSearch(search);
         setUsersFound(result ?? []);
         setLoading(false);
+      } else if (isModerator) {
+        // For moderators, show all users when search is empty
+        setLoading(true);
+        const result = await getAllUsers();
+        setUsersFound(result ?? []);
+        setLoading(false);
       } else {
         // clear results when search is empty
         setUsersFound([]);
@@ -37,7 +52,7 @@ export default function FriendsSearch() {
     };
 
     runSearch();
-  }, [search]);
+  }, [search, isModerator]);
 
   // Close dropdowns when clicking or focusing outside the component
   useEffect(() => {
@@ -110,7 +125,7 @@ export default function FriendsSearch() {
         id="friends-search-dropdown"
         className={viewSearch ? "search-box-shown" : "search-box-hidden"}
       >
-        {search.length <= 0 ? (
+        {search.length <= 0 && !isModerator ? (
           <div className="flex-col w-h-container">
             <LuSearch size={64} strokeWidth={1} className="color-txt-sub" />
             <span className="txt-heading color-txt-sub">Search Friends</span>
