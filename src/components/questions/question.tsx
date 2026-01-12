@@ -1,6 +1,6 @@
 // Icons 
 import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuSearch, LuTimer, LuListOrdered, LuLayoutList} from "react-icons/lu";
-import { IoIosArrowBack, IoIosArrowForward } from "./RoundedArrows";
+import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import { TbCards } from "react-icons/tb";
 
 // Hooks 
