@@ -17,8 +17,8 @@ export default function Login() {
     const heading_style = "txt-sub text-xs font-bold w-9/12 mx-auto mb-1"
 
     return (
-        <div className=' h-full flex justify-center items-center w-full color-bg-grey-5' >
-            <div className=' py-8 w-72 h-10/12 color-shadow border-2 rounded-out color-bg' >
+        <div className=' h-full flex justify-center items-center w-full color-bg-grey-5 overflow-hidden' >
+            <div className=' py-8 w-72 h-9/12 color-shadow border-2 rounded-out color-bg' >
                 <img src={crown}  className='w-32 m-auto object-cover h-24'/>
                 <h1 className="txt-heading-colour text-center text-2xl mb-4" >Login</h1>
 

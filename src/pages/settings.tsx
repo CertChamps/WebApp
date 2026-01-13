@@ -14,7 +14,7 @@ import { useTutorialContext } from "../context/TutorialContext";
 import { TutorialTriggerButton } from "../components/tutorial/Tutorial";
 
 // Styles & Icons
-import { LuLogOut, LuRotateCcw } from "react-icons/lu";
+import { LuLogOut, LuRotateCcw, LuPencil } from "react-icons/lu";
 import '../styles/settings.css'
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import { doc, setDoc, updateDoc } from "firebase/firestore";
@@ -22,7 +22,7 @@ import Cropper from "react-easy-crop";
 
 export default function Settings() {
 
-    const { setOptions } = useContext(OptionsContext)
+    const { options, setOptions } = useContext(OptionsContext)
     const { user, setUser } = useContext(UserContext)
     const navigate = useNavigate()
     
@@ -235,6 +235,45 @@ export default function Settings() {
                 <span className="">Log Out</span>
                 <LuLogOut className="txt-heading-colour inline mx-1" strokeWidth={3}/>
         </span> 
+
+        {/* ====================================== QUESTION SETTINGS ========================================= */}
+        <div className="flex w-full items-center mt-6">
+            <h1 className="profile-heading">Question Settings</h1>
+            <div className="line-break"></div>
+        </div>
+
+        <div className="mx-6 my-4 max-w-md">
+            {/* Drawing Feature Toggle */}
+            <div className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full color-bg-grey-5 flex items-center justify-center">
+                        <LuPencil size={20} className="color-txt-sub" />
+                    </div>
+                    <div>
+                        <p className="txt-bold">Drawing Canvas</p>
+                        <p className="txt-sub">Draw notes on questions with touch or mouse</p>
+                    </div>
+                </div>
+                <button
+                    className={`w-14 h-8 rounded-full transition-all duration-200 relative ${
+                        options.drawingEnabled !== false 
+                            ? 'color-bg-accent' 
+                            : 'color-bg-grey-5'
+                    }`}
+                    onClick={() => setOptions((opts: any) => ({
+                        ...opts,
+                        drawingEnabled: opts.drawingEnabled === false ? true : false
+                    }))}
+                >
+                    <div 
+                        className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-200 ${
+                            options.drawingEnabled !== false ? 'right-1' : 'left-1'
+                        }`}
+                    />
+                </button>
+            </div>
+        </div>
+        {/* ======================================================================================== */}
 
         {/* ====================================== HELP & TUTORIAL ========================================= */}
         <div className="flex w-full items-center mt-6">

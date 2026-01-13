@@ -27,6 +27,9 @@ const THEMES = [
   { id: 'shadow', name: 'Shadow', bg: 'bg-shadowBG', accent: 'bg-shadowAccent', primary: 'bg-shadowPrimary', sub: 'bg-shadowSub' },
   { id: 'blueberryLight', name: 'Blueberry Light', bg: 'bg-blueberryLightBG', accent: 'bg-blueberryLightAccent', primary: 'bg-blueberryLightPrimary', sub: 'bg-blueberryLightSub' },
   { id: 'blueberryDark', name: 'Blueberry Dark', bg: 'bg-blueberryDarkBG', accent: 'bg-blueberryDarkAccent', primary: 'bg-blueberryDarkPrimary', sub: 'bg-blueberryDarkSub' },
+  { id: 'darkFuchsia', name: 'Dark Fuchsia', bg: 'bg-darkFuchsiaBG', accent: 'bg-darkFuchsiaAccent', primary: 'bg-darkFuchsiaPrimary', sub: 'bg-darkFuchsiaSub' },
+  { id: 'pastelPink', name: 'Pastel Pink', bg: 'bg-pastelPinkBG', accent: 'bg-pastelPinkAccent', primary: 'bg-pastelPinkPrimary', sub: 'bg-pastelPinkSub' },
+
 ]
 
 type ThemePickerProps = {

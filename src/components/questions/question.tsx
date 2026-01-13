@@ -27,6 +27,7 @@ import WrongAnswerNoti from "../math/wrongAnswerNoti";
 import StreakDisplay from "../streakDisplay";
 import Confetti from "../Confetti";
 import ThemePicker, { ThemePickerButton } from "../ThemePicker";
+import DrawingCanvas from "./DrawingCanvas";
 
 // Style Imports 
 import '../../styles/questions.css'
@@ -39,6 +40,7 @@ import XPFly from "./XPFly";
 // User Context
 import { useContext } from "react";
 import { UserContext } from "../../context/UserContext";
+import { OptionsContext } from "../../context/OptionsContext";
 import Filter from "../filter";
 
 // Component Props
@@ -110,6 +112,7 @@ export default function Question(props: questionsProps) {
 
     const rankRef = useRef<HTMLDivElement>(null);
     const partRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const cardContainerRef = useRef<HTMLDivElement>(null);
     const { rank, progress, streak, onCheck } = useRank({
         rankRef, 
         setIsRight, 
@@ -121,6 +124,7 @@ export default function Question(props: questionsProps) {
     });
 
     const { user } = useContext(UserContext)
+    const { options } = useContext(OptionsContext)
     const [attempts, setAttempts] = useState(0);
     
     const [canReveal, setCanReveal] = useState(false);
@@ -522,9 +526,12 @@ export default function Question(props: questionsProps) {
     { //============================= QUESTIONS CONTAINER ==================================// 
     props.questions[props.position]? ( 
     <div 
+        ref={cardContainerRef}
         data-tutorial-id="question-card"
         className={`card-container h-full items-end justify-start ${ (sideView == '' || sideView == 'filters') ? 'w-full' : 'w-7/12'}  
         transition-all duration-250 shrink-0 self-start justify-self-start origin-left relative`}>
+                {/* ================================= DRAWING CANVAS OVERLAY ================================ */}
+    <DrawingCanvas containerRef={cardContainerRef} enabled={options.drawingEnabled !== false} />
                 {/* ================================= XP FLYER OVERLAY ================================ */}
     <div className="pointer-events-none h-full w-full absolute flex justify-center items-center z-[300]">
     {xpFlyers.map((fly) => (

@@ -42,6 +42,16 @@
   mask-image: url("../assets/crown.png");
 }
 
+/* =============== DRAWING CANVAS ==================== */
+.drawing-canvas-active {
+  cursor: crosshair;
+}
+
+.drawing-controls button {
+  backdrop-filter: blur(8px);
+}
+/* =================================================== */
+
 /* =============== ATTEMPTS INDICATOR ================ */
 @keyframes pulse-opacity {
   0%, 100% {
