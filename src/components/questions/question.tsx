@@ -585,8 +585,8 @@ export default function Question(props: questionsProps) {
                               ))}
                           </div> 
 
-                          <div className="w-full h-3/4 overflow-y-auto scrollbar-minimal px-2 py-2">
-                              <RenderMath text={content?.[part]?.question ?? ''} className="txt text-xl" />
+                          <div className="w-full h-3/4 overflow-y-auto scrollbar-minimal px-2 py-2 ">
+                              <RenderMath text={content?.[part]?.question ?? ''} className="txt text" />
                               {content?.[part]?.image &&
                               <div className="w-100 h-auto relative">
                                   <img src={content?.[part].image} className="max-h-30 image-invert  brightness-0"/>
@@ -607,6 +607,13 @@ export default function Question(props: questionsProps) {
                                 <div className="mt-4 flex items-center justify-center">
                                   <span className="px-4 py-2 rounded-full color-bg-accent color-txt-accent font-semibold text-base">
                                     Introduction / Info only — no answer required for this part.
+                                  </span>
+                                </div>
+                              )}
+                              {(Array.isArray(content?.[part]?.inputs) && content[part].inputs.length === 1 && typeof content[part].inputs[0]?.answer === 'string' && content[part].inputs[0].answer.trim().toUpperCase() === 'DIAGRAM') && (
+                                <div className="mt-4 flex items-center justify-center">
+                                  <span className="px-4 py-2 rounded-full color-bg-accent color-txt-accent font-semibold text-base">
+                                    This part requires a diagram — no answer input needed.
                                   </span>
                                 </div>
                               )}
@@ -684,7 +691,7 @@ export default function Question(props: questionsProps) {
                   }
 
                   /* ---------- 2.  single box ---------- */
-                  if (answers.length === 1 && answers[0] != null && answers[0] !== 'NULL') {
+                  if (answers.length === 1 && answers[0] != null && answers[0].toUpperCase() !== 'NULL' && answers[0].toUpperCase() !== 'DIAGRAM') {
                     // For single input, prefix is [before, after]
                     const pfx =
                       prefixes.length >= 2
@@ -709,7 +716,7 @@ export default function Question(props: questionsProps) {
 
                   /* ---------- 3.  multiple boxes ---------- */
                   return answers.map((ans, idx) =>
-                    ans != null && ans !== 'null' && ans !== 'NULL' ? (
+                    ans != null && ans.toUpperCase() !== 'NULL' && ans.toUpperCase() !== 'DIAGRAM' ? (
                       <div
                         key={idx}
                         className={locked ? 'pointer-events-none opacity-50' : ''}
@@ -729,7 +736,8 @@ export default function Question(props: questionsProps) {
                {(Array.isArray(content?.[part]?.answer) &&
                   content[part].answer.length > 0 &&
                   content[part].answer[0] != null
-                  && content[part].answer[0] != 'NULL') && (
+                  && content[part].answer[0].toUpperCase() != 'NULL'
+                  && content[part].answer[0].toUpperCase() != 'DIAGRAM') && (
                   <div
                     id="check-btn"
                     className={`h-10 w-10 rounded-full color-bg-accent flex items-center
