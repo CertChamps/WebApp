@@ -1,5 +1,5 @@
 // Icons 
-import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuSearch, LuTimer, LuListOrdered, LuLayoutList} from "react-icons/lu";
+import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuPencil, LuSearch, LuTimer, LuListOrdered, LuLayoutList} from "react-icons/lu";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import { TbCards } from "react-icons/tb";
 
@@ -28,6 +28,7 @@ import StreakDisplay from "../streakDisplay";
 import Confetti from "../Confetti";
 import ThemePicker, { ThemePickerButton } from "../ThemePicker";
 import DrawingCanvas from "./DrawingCanvas";
+import TestDraw from "./test_draw";
 
 // Style Imports 
 import '../../styles/questions.css'
@@ -812,6 +813,12 @@ export default function Question(props: questionsProps) {
             </div>
         ) : null}
 
+        {sideView === 'canvas' ? (
+            <div className="h-full w-5/12">
+                <TestDraw/>
+            </div>
+        ) : null}
+
         {sideView === 'viewQuestions' ? (
           <div className="h-full w-5/12 overflow-hidden">
             <ViewQuestionsList
@@ -1022,6 +1029,28 @@ export default function Question(props: questionsProps) {
                  <Filter  viewFilter={viewFilter} setViewFilter={setViewFilter} setFilters={props.setFilters}/>
             </div>
             {/* ================================================================================ */}
+
+
+            {/* ===================================DRAWING ICON================================= */}
+             <div 
+                data-tutorial-id="sidebar-decks"
+                className={sideView == 'canvas' ? 'sidebar-selected  group' : 'sidebar  group'} 
+                onClick={() => {
+                    setSideView( (prev: any) => {
+                        if (prev != 'canvas') return 'canvas'
+                        else return '' 
+                    });
+                }}
+            >
+                <LuPencil strokeWidth={strokewidth} size={iconSize} 
+                    className={sideView == 'canvas' ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
+                    fill={sideView == 'canvas' ? 'currentColor' : 'none'} />
+
+                 <span className="tooltip">decks</span>
+                 
+            </div>
+            {/* ================================================================================ */}
+
 
             {props.deckmode ? (
             /* =============================== VIEW QUESTIONS ICON (DECK ONLY) ================================= */
