@@ -38,7 +38,8 @@
     "react-pdf": "^10.1.0",
     "react-router-dom": "^7.7.1",
     "react-simple-code-editor": "^0.14.1",
-    "sass": "^1.91.0"
+    "sass": "^1.91.0",
+    "tldraw": "^4.2.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
