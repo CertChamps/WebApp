@@ -716,7 +716,7 @@ export default function Question(props: questionsProps) {
 
                   /* ---------- 3.  multiple boxes ---------- */
                   return answers.map((ans, idx) =>
-                    ans != null && ans.toUpperCase() !== 'NULL' && ans.toUpperCase() !== 'DIAGRAM' ? (
+                    ans != null && ans !== 'null' && ans !== 'NULL' ? (
                       <div
                         key={idx}
                         className={locked ? 'pointer-events-none opacity-50' : ''}

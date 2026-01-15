@@ -111,7 +111,7 @@ export default function ThemePicker({ show, setShow }: ThemePickerProps) {
 
   return (
     <div 
-      className={`absolute left-0 top-0 w-[100vw] h-[100vh] color-bg-grey-10 z-50
+      className={`absolute left-0 top-0 w-[100vw] h-[100vh] color-bg-grey-10 z-[1000]
         flex items-center justify-center transition-opacity duration-300
         ${isVisible ? 'opacity-100' : 'opacity-0'}`}
     >
