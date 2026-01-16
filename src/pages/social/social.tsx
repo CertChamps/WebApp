@@ -53,8 +53,8 @@ export default function Social() {
         if (!message.trim() && !imageFile) return;
         
         // handle post length limit 
-        if (message.length > 300 ) {
-            setPostError('Post exceeds 300 character limit.');
+        if (message.length > 500 ) {
+            setPostError('Post exceeds 500 character limit.');
             return;
         }
 
