@@ -35,6 +35,9 @@ export default function Social() {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+    // Error handling 
+    const [postError, setPostError] = useState<string | null>(null);
+
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //
     const [page, setPage ]= useState<string>('practice')
     console.log(userFriends, page) // DELETE THIS
@@ -47,7 +50,13 @@ export default function Social() {
 
     //==========================================SEND POST DUH=====================================================//
     const sendPost = async () => {
-        if (!message.trim() && !imageFile) return; //.trim() removes whitespace so this just checks if the textbox has text in it if not it returns
+        if (!message.trim() && !imageFile) return;
+        
+        // handle post length limit 
+        if (message.length > 300 ) {
+            setPostError('Post exceeds 300 character limit.');
+            return;
+        }
 
         try {
             let uploadedUrl: string | null = null;
@@ -72,8 +81,9 @@ export default function Social() {
             setImageFile(null);
             setImagePreview(null);
             console.log('Post added!');
-            } catch (error) {
+        } catch (error) {
             console.error('Error sending post:', error);
+            setPostError('Error sending post. Please try again.');
         }
     };
     //==============================================================================================================//
@@ -274,6 +284,7 @@ export default function Social() {
     // -----------------------------------LISTEN TO REAL TIME CHANGES OF USER---------------------------------------//
     const cancelReply = () => {
         setMessage('');
+        setPostError('')
     };
     //=======================================================================
 
@@ -334,6 +345,7 @@ export default function Social() {
                         )}
                     </div>
                         <div>
+                            {postError && <p className="text-red-500 text-sm mr-4 inline">{postError}</p>} 
                             <button
                                 type="button"
                                 onClick={cancelReply}

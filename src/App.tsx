@@ -18,8 +18,6 @@ export default function App() {
     return storedOptions ? JSON.parse(storedOptions) : { theme: "light", drawingEnabled: true };
   });
 
-  
-
   // ===================== PERSISTENCE ====================== //
   useEffect(() => {
     localStorage.setItem("USER", JSON.stringify(user));
@@ -29,6 +27,9 @@ export default function App() {
     localStorage.setItem("OPTIONS", JSON.stringify(options));
   }, [options]);
 
+
+
+  
   return (
     // ================ CONTEXT PROVIDERS ===================== //
     <OptionsContext.Provider value={{ options, setOptions }}>

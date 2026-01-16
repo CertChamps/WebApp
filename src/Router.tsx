@@ -17,6 +17,8 @@ import { ProtectedRoute } from "./components/protectedRoute";
 import Progress from "./pages/progress/progress_main";
 import Tutorial from "./components/tutorial/Tutorial";
 import { useTutorialContext } from "./context/TutorialContext";
+import MobileRedirect from "./pages/mobileRedirect";
+import PhoneRedirect from "./components/PhoneRedirect";
 
 // Layout component that includes the Tutorial overlay
 function RootLayout() {
@@ -24,6 +26,7 @@ function RootLayout() {
   
   return (
     <>
+      <PhoneRedirect />
       <Outlet />
       <Tutorial
         isOpen={showTutorial}
@@ -33,6 +36,7 @@ function RootLayout() {
     </>
   );
 }
+
 
 const router = createHashRouter([
   {
@@ -182,6 +186,17 @@ const router = createHashRouter([
       </ProtectedRoute>
     ),
   },
+    {
+    path: "/mobileRedirect",
+    element: (
+      <ProtectedRoute>
+        <>
+          <MobileRedirect/>
+        </>
+      </ProtectedRoute>
+    ),
+  },
+
 
   // If you also want a root login page instead of SignUp, keep one root route only.
   // Remove duplicates from your original file to avoid conflicts.

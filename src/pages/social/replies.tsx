@@ -2,22 +2,30 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useReplies } from "../../hooks/useReplies";
 import useQuestions from "../../hooks/useQuestions";
+import usePosts from "../../hooks/usePosts";
 
 
 // Components
 import RenderMath from "../../components/math/mathdisplay";
+import ConfirmationPrompt from "../../components/prompts/confirmation";
 
 // Icons
-import { LuImage } from "react-icons/lu";
+import { LuImage, LuTrash } from "react-icons/lu";
 import useNotifications from "../../hooks/useNotifications";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { UserContext } from "../../context/UserContext";
+
+
 
 export default function Replies(
 ) {
   const { id } = useParams<{ id: string }>();
+  const { deletePost } = usePosts();
   const { timeAgoFormatter } = useNotifications()
   const { toRoman } = useQuestions()
   const navigate = useNavigate()
+  const { user } = useContext(UserContext);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   const {
     post,
@@ -61,6 +69,10 @@ export default function Replies(
 
   return (
     <div className="w-h-container p-4 pb-0 items-start">
+      <ConfirmationPrompt open={showConfirmDelete} onConfirm={() => {deletePost(post?.id ?? ""); setShowConfirmDelete(false);}} 
+        onCancel={() => setShowConfirmDelete(false)} title="Are you sure you want to delete this post? " message="you cannot revert this action" 
+        cancelText="No" confirmText="Yes"
+      />
       <div className="w-full h-full overflow-y-scroll scrollbar-minimal">
 
 
@@ -80,8 +92,18 @@ export default function Replies(
                 {/* <p className="post-card-user-rank">Level: {post.rank ?? 1}</p> */}
               </div>
               <span className="post-card-date">{timeAgoFormatter(post.timestamp)}</span>
+              {
+                user?.uid === post?.userId ? (
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmDelete(true)}
+                  className="cursor-target blue-btn p-2 w-10 flex justify-center items-center cursor-pointer"
+                >
+                  <LuTrash size={20} /> 
+                </button>) : (<></>)
+              }
             </div>
-
+              
 
 
             <div className="post-card-content">

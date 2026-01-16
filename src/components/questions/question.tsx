@@ -532,7 +532,7 @@ export default function Question(props: questionsProps) {
         className={`card-container h-full items-end justify-start ${ (sideView == '' || sideView == 'filters') ? 'w-full' : 'w-7/12'}  
         transition-all duration-250 shrink-0 self-start justify-self-start origin-left relative`}>
                 {/* ================================= DRAWING CANVAS OVERLAY ================================ */}
-    <DrawingCanvas containerRef={cardContainerRef} enabled={options.drawingEnabled !== false} />
+    {/* <DrawingCanvas containerRef={cardContainerRef} enabled={options.drawingEnabled !== false} /> */}
                 {/* ================================= XP FLYER OVERLAY ================================ */}
     <div className="pointer-events-none h-full w-full absolute flex justify-center items-center z-[300]">
     {xpFlyers.map((fly) => (
