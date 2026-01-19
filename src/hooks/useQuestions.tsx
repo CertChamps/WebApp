@@ -15,7 +15,7 @@ export default function useQuestions(props?: questionProps) {
     const [allQuestions, setAllQuestions] = useState<any[]>([])
 
     const getRandomQuestion = async (idExclude: string = '') => {
-        const coll = collection(db, 'certchamps-questions')
+        const coll = collection(db, "questions", "certchamps", "sequences-and-series")
         const filters = (props?.filters || []).slice(0, 10)
 
         // Step 1 — Get all IDs once
@@ -53,9 +53,14 @@ export default function useQuestions(props?: questionProps) {
 
 
     const fetchQuestion = async (id: string) => {
-        const properties = (await getDoc(doc(db, 'certchamps-questions', id))).data()
+        const properties = (await getDoc(
+            doc(db, "questions", "certchamps", "sequences-and-series", id)
+        )).data()
 
-        const contentSnap = (await getDocs(collection(db, 'certchamps-questions', id, 'content'))).docs
+        const contentSnap = (await getDocs(
+            collection(db, "questions", "certchamps", "sequences-and-series", id, "content")
+        )).docs
+
         const contentPromises = contentSnap.map(async (doc: any) => {
             const data = doc.data()
             if (data.image) {
@@ -66,7 +71,7 @@ export default function useQuestions(props?: questionProps) {
         })
 
         const content = await Promise.all(contentPromises)
-        console.log("fetched question:", id); 
+        console.log("fetched question:", id)
         return { id, properties, content }
     }
 
@@ -84,14 +89,19 @@ export default function useQuestions(props?: questionProps) {
 
     const fetchAllQuestions = async () => {
         // WARNING: Unbounded read. Use only for small collections or admin functions.
-        const questionsSnap = await getDocs(collection(db, 'certchamps-questions'))
+        const questionsSnap = await getDocs(
+            collection(db, "questions", "certchamps", "sequences-and-series")
+        )
 
         const questions = await Promise.all(
             questionsSnap.docs.map(async (docSnap) => {
                 const id = docSnap.id
                 const properties = docSnap.data()
 
-                const contentSnap = await getDocs(collection(db, 'certchamps-questions', id, 'content'))
+                const contentSnap = await getDocs(
+                    collection(db, "questions", "certchamps", "sequences-and-series", id, "content")
+                )
+
                 const contentPromises = contentSnap.docs.map(async (contentDoc: any) => {
                     const data = contentDoc.data()
                     if (data.image) {

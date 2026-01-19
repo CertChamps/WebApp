@@ -19,6 +19,7 @@ import '../styles/settings.css'
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import { doc, setDoc, updateDoc } from "firebase/firestore";
 import Cropper from "react-easy-crop";
+//import { set } from "nerdamer";
 
 export default function Settings() {
 
@@ -37,6 +38,8 @@ export default function Settings() {
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
     const [showCropper, setShowCropper] = useState(false);
+
+    const [ userNameError, setUserNameError ] = useState<string>("");
 
     // Username
     const [newUsername, setNewUsername] = useState<string>("");
@@ -136,9 +139,29 @@ export default function Settings() {
     const changeUsername = async (newUsername: string) => {
         const username = newUsername.trim();
 
-        setUser({...user, username: username})
-        await setDoc(doc(db, 'user-data', user.uid), {username: username}, {merge: true})
-        setNewUsername("");
+        if( username.length < 1 ) {
+            setUserNameError("username cannot be empty");
+            return;
+        }
+        else if ( username.length > 20 ) {
+            setUserNameError("username must be less than 20 characters");
+            return;
+        }
+        else {
+            try {     
+                setUser({...user, username: username})
+                await setDoc(doc(db, 'user-data', user.uid), {username: username}, {merge: true})
+                setNewUsername("");
+                setUserNameError("");
+                return;
+            }
+            catch (error) {
+                console.error("Error updating username: ", error);
+                setUserNameError("failed to update username, please try again");
+                return;
+            }
+        }
+
     }
     //=======================================================================
 
@@ -210,6 +233,7 @@ export default function Settings() {
             <div className="flex items-center mb-4">
                 <input type="text" className="txtbox max-w-md" value={newUsername} onChange={(e) => {setNewUsername(e.target.value)}}/>
                 <span className="update-btn" onClick={() => changeUsername(newUsername)}>Update</span>
+                <span className="text-red-500 ml-4">{userNameError}</span>
             </div>
 
             <p className="input-header">School</p>

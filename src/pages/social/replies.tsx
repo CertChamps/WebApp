@@ -2,22 +2,31 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useReplies } from "../../hooks/useReplies";
 import useQuestions from "../../hooks/useQuestions";
+import usePosts from "../../hooks/usePosts";
 
 
 // Components
 import RenderMath from "../../components/math/mathdisplay";
+import ConfirmationPrompt from "../../components/prompts/confirmation";
 
 // Icons
-import { LuImage } from "react-icons/lu";
+import { LuImage, LuTrash } from "react-icons/lu";
 import useNotifications from "../../hooks/useNotifications";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { UserContext } from "../../context/UserContext";
+
+
 
 export default function Replies(
 ) {
   const { id } = useParams<{ id: string }>();
+  const { deletePost } = usePosts();
   const { timeAgoFormatter } = useNotifications()
   const { toRoman } = useQuestions()
   const navigate = useNavigate()
+  const { user } = useContext(UserContext);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [ replyError, setReplyError ] = useState<string>("");
 
   const {
     post,
@@ -59,8 +68,34 @@ export default function Replies(
           setReplyPlaceholder(placeholders[randomIndex]);
       }, []);
 
+
+      const sendReply = () => {
+        const longestSegment = newReply
+          .split(" ")
+          .filter(Boolean)
+          .reduce((max, word) => Math.max(max, word.length), 0);
+
+
+        if (newReply.trim().length > 500) {
+          setReplyError("Reply cannot exceed 500 characters.");
+          return;
+        }
+        else if (longestSegment > 50) {
+          setReplyError("spam detected, why are you doing this?");
+          return;
+        }
+        else {
+          handleSendReply();
+          setReplyError("");
+        }
+      }
+
   return (
     <div className="w-h-container p-4 pb-0 items-start">
+      <ConfirmationPrompt open={showConfirmDelete} onConfirm={() => {deletePost(post?.id ?? ""); setShowConfirmDelete(false);}} 
+        onCancel={() => setShowConfirmDelete(false)} title="Are you sure you want to delete this post? " message="you cannot revert this action" 
+        cancelText="No" confirmText="Yes"
+      />
       <div className="w-full h-full overflow-y-scroll scrollbar-minimal">
 
 
@@ -80,8 +115,18 @@ export default function Replies(
                 {/* <p className="post-card-user-rank">Level: {post.rank ?? 1}</p> */}
               </div>
               <span className="post-card-date">{timeAgoFormatter(post.timestamp)}</span>
+              {
+                user?.uid === post?.userId ? (
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmDelete(true)}
+                  className="cursor-target blue-btn p-2 w-10 flex justify-center items-center cursor-pointer"
+                >
+                  <LuTrash size={20} /> 
+                </button>) : (<></>)
+              }
             </div>
-
+              
 
 
             <div className="post-card-content">
@@ -141,6 +186,7 @@ export default function Replies(
               )}
             </div>
             <div>
+              <span className="text-red-500 ml-4">{replyError}</span>
               <button
                 type="button"
                 onClick={() => {
@@ -154,7 +200,7 @@ export default function Replies(
               </button>
               <button
                 type="button"
-                onClick={handleSendReply}
+                onClick={sendReply}
                 disabled={!newReply.trim() && !attachPreview}
                 className="cursor-target compose-post-send-button"
               >
@@ -183,13 +229,13 @@ export default function Replies(
                 </div>
                 <span className="post-card-date">{timeAgoFormatter(reply.timestamp)}</span>
               </div>
-              <div className="reply-card-content">
+              <div className="reply-card-content"> 
                 <p className="post-card-content-txt">{reply.content}</p>
                 {reply.imageUrl && (
                   <img
                     src={reply.imageUrl}
                     alt="Reply attachment"
-                    className="w-full max-w-md rounded-lg object-cover mt-2"
+                    className="w-full rounded-lg object-contain mt-2 max-w-50 max-h-50"
                   />
                 )}
               </div>
