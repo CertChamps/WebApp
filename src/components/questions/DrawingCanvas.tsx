@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo, type JSX } from 'react';
 import { Stage, Layer, Line, Group } from 'react-konva';
 import Konva from 'konva';
 import { LuEraser, LuTrash2, LuPencil, LuGrid3X3, LuZoomIn, LuZoomOut, LuMove } from 'react-icons/lu';
