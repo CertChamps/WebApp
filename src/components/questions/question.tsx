@@ -27,7 +27,7 @@ import WrongAnswerNoti from "../math/wrongAnswerNoti";
 import StreakDisplay from "../streakDisplay";
 import Confetti from "../Confetti";
 import ThemePicker, { ThemePickerButton } from "../ThemePicker";
-//import DrawingCanvas from "./DrawingCanvas";
+import DrawingCanvas from "./DrawingCanvas";
 import TestDraw from "./test_draw";
 
 // Style Imports 
@@ -53,6 +53,7 @@ type questionsProps = {
     deckmode?: boolean;
     preview?: boolean;
     setFilters: React.Dispatch<React.SetStateAction<any>>;
+    setCollectionPaths: React.Dispatch<React.SetStateAction<any>>;
     onQuestionAnswered?: (questionId: string, isCorrect: boolean) => void;
     questionsAnswered?: any;
     friendsAnswered?: {
@@ -529,10 +530,10 @@ export default function Question(props: questionsProps) {
     <div 
         ref={cardContainerRef}
         data-tutorial-id="question-card"
-        className={`card-container h-full items-end justify-start ${ (sideView == '' || sideView == 'filters') ? 'w-full' : 'w-7/12'}  
+        className={`card-container h-full items-end justify-start ${ (sideView == '') ? 'w-full' : 'w-7/12'}  
         transition-all duration-250 shrink-0 self-start justify-self-start origin-left relative`}>
                 {/* ================================= DRAWING CANVAS OVERLAY ================================ */}
-    {/* <DrawingCanvas containerRef={cardContainerRef} enabled={options.drawingEnabled !== false} /> */}
+    {/* <DrawingCanvas containerRef={cardContainerRef} /> enabled={options.drawingEnabled !== false} /> */}
                 {/* ================================= XP FLYER OVERLAY ================================ */}
     <div className="pointer-events-none h-full w-full absolute flex justify-center items-center z-[300]">
     {xpFlyers.map((fly) => (
@@ -843,6 +844,20 @@ export default function Question(props: questionsProps) {
           </div>
         ) : null}
 
+        {sideView === 'filters' ? (
+              <div className="h-full w-5/12 overflow-hidden" data-tutorial-id="sideview-filters">
+                  <Filter 
+                      onApply={(tags, paths) => {
+                          props.setFilters(tags);
+                          props.setCollectionPaths(paths);
+                          // If you want to update the hook paths, you can handle that here or in parent
+                          setSideView(''); 
+                      }}
+                      onClose={() => setSideView('')}
+                  />
+              </div>
+          ) : null}
+
         {sideView === 'questionParts' ? (
           <div className="h-full w-5/12 overflow-hidden">
             <div className="w-full h-full rounded-2xl p-4 flex flex-col overflow-hidden">
@@ -1018,19 +1033,17 @@ export default function Question(props: questionsProps) {
             {/* =============================== FILTER ICON ================================= */}
             <div 
                 data-tutorial-id="sidebar-filter"
-                className={viewFilter ? 'sidebar-selected group' : 'sidebar group'} 
-                onMouseDown={(e) => {
-                    e.stopPropagation();
-                    setViewFilter(prev => !prev);
+                className={sideView === 'filters' ? 'sidebar-selected group' : 'sidebar group'} 
+                onClick={() => {
+                    setSideView(prev => prev === 'filters' ? '' : 'filters');
+                    setShowSearch(false);
                 }}
-
             >
                 <LuFilter strokeWidth={strokewidth} size={iconSize} 
-                    className={viewFilter ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
-                    fill={viewFilter ? 'currentColor' : 'none'} />
+                    className={sideView === 'filters' ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
+                    fill={sideView === 'filters' ? 'currentColor' : 'none'} />
 
-                 <span className="tooltip">filter</span>
-                 <Filter  viewFilter={viewFilter} setViewFilter={setViewFilter} setFilters={props.setFilters}/>
+                <span className="tooltip">filter</span>
             </div>
             {/* ================================================================================ */}
 

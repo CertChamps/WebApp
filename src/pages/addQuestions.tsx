@@ -515,7 +515,7 @@ export default function AddQuestions() {
     setIsUploading(true)
     setUploadProgress('Starting upload...')
     
-    const COLLECTION_NAME = 'certchamps-questions'
+    const COLLECTION_NAME = 'questions/exam-papers/2025-Paper1'
     
     try {
       for (let qIdx = 0; qIdx < parsedQuestions.length; qIdx++) {
@@ -1055,7 +1055,7 @@ export default function AddQuestions() {
                         }`}
                         title={q.name}
                       >
-                        {q.id.replace('CCQ', 'Q').replace(/^Q0+/, 'Q')}
+                        {q.id.replace(/^[A-Za-z]{3}/, 'Q').replace(/^Q0+/, 'Q')}
                       </button>
                     ))}
                   </div>
