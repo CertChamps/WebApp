@@ -20,6 +20,7 @@ export type UserContextType = {
     highestStreak: number,
     hasCompletedTutorial: boolean,
     isAdmin?: boolean,
+    emailVerified: boolean,
     },
     setUser: React.Dispatch<React.SetStateAction<any>>
 }
@@ -43,6 +44,7 @@ export const UserContext = createContext<UserContextType>({
     highestStreak: 0,
     hasCompletedTutorial: false,
     isAdmin: false,
+    emailVerified: false,
     },
     setUser: () => {}
 })

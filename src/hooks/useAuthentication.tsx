@@ -1,295 +1,270 @@
-import { useContext, useEffect, useState } from "react"
+import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserContext } from "../context/UserContext"
+import { UserContext } from "../context/UserContext";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { setDoc, doc, getDoc, getDocs, collection } from "firebase/firestore";
-import { db }from '../../firebase'
-import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { setDoc, doc, getDoc, getDocs, collection, updateDoc } from "firebase/firestore";
+import { db } from "../../firebase";
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  sendEmailVerification,
+} from "firebase/auth";
 import { auth } from "../../firebase";
 
-type authprops = {
-    prevRoute?: string
-}
+type authprops = { prevRoute?: string };
 
-export default function useAuthentication (props?: authprops) {
+export default function useAuthentication(props?: authprops) {
+  const { setUser } = useContext(UserContext);
+  const [error, setError] = useState<any>({});
+  
+  // Track if we are currently handling a manual login to prevent the listener from interfering
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-    // =============================== CONTEXT AND STATE ==================================== // 
-    const { setUser } = useContext(UserContext)
-    const [error, setError] = useState<any>({}) // object that holds all errors 
+  const storage = getStorage();
+  const navigate = useNavigate();
 
-    // useEffect(() => {console.log(error)}, [error])
-
-    // Initialise storage & router
-    const storage = getStorage()
-    const navigate = useNavigate()
-
-    // =============================== CREATING A USER ==================================== // 
-    const createUser = async (uid: string, username: string, email: string) => {
-
-        // Fetch default image from firebase
-        const imageUrl = await getDownloadURL( ref(storage, 'crown.png') )
-
-
-        // Initialise the User Context 
-        setUser({
-            uid: uid, username: username, email: email, picture: imageUrl,
-            friends: [], pendingFriends: [],
-            notifications: [],
-            rank: 0, xp: 0,
-            streak: 0,
-            highestStreak: 0,
-            savedQuestions: [], decks: [], 
-        })
-
-        // Add initial user data to the database
-        await setDoc(doc(db, 'user-data', uid), {
-            uid: uid, username: username, email: email, picture: 'crown.png',
-            friends: [], pendingFriends: [],
-            notifications: [],
-            rank: 0, xp: 0,
-            streak: 0,
-            highestStreak: 0,
-            savedQuestions: [],
-        })
-
-        // Go to the dashboard or previous route if it exists
-            props?.prevRoute ? navigate(`${props.prevRoute}`) : navigate('/practice')
+  /** ==================== CREATE / SETUP USER ==================== */
+  const createUser = async (uid: string, username: string, email: string, emailVerified: boolean = false) => {
+    // FALLBACK: If "crown.png" is missing, use a placeholder to prevent crash
+    let imageUrl = "";
+    try {
+        imageUrl = await getDownloadURL(ref(storage, "crown.png"));
+    } catch (e) {
+        console.warn("Default image 'crown.png' not found. Using placeholder.");
+        imageUrl = "https://via.placeholder.com/150"; 
     }
-    // =======================================================================================//
 
-    // =============================== SETTING A USER UP ==================================== // 
-    const userSetup  = async (uid: string, username: string, email: string) => {
-        try { 
-            // Grab user info from the database 
-            const user = await getDoc(doc(db, 'user-data', uid))
-
-            // Load User Decks and store in an array 
-            const decksRef = collection(db, "user-data", uid, "decks")
-            const deckSnapshot = await getDocs(decksRef)
-            const decks = deckSnapshot.docs.map( (doc: any) => ({
-                id: doc.id,
-                ...doc.data()
-            }))
-
-            if ( user.exists() ) {
-
-                // Fetch users image from firebase
-                const imageUrl = await getDownloadURL( ref(storage, user.data().picture) )
-
-                // Set user context
-                setUser({
-                    uid: user.id, username: user.data().username, email: user.data().email,
-                    picture: imageUrl,
-                    friends: user.data().friends, pendingFriends: user.data().pendingFriends,
-                    notifications: user.data().notifications,
-                    rank: user.data().rank, xp: user.data().xp,
-                    streak: user.data().streak,
-                    highestStreak: user.data().highestStreak || 0,
-                    savedQuestions: user.data().savedQuestions, decks: decks,
-                })     
-            }
-            // Otherwise we are creating a new user
-            else {
-                createUser(uid, username, email)
-            }
-        }
-
-        // log any errors 
-        catch (err) {
-            console.log(err)
-        }
-
-        // Go to the dashboard or previous route if it exists
-        props?.prevRoute ? navigate(`${props.prevRoute}`) : navigate('/practice')
-
-    }
-    // =======================================================================================//
-
-
-    //================================== GOOGLE SERVICES ======================================//
-    const loginWithGoogle = async ( ) => {
-
-        // Get google provider 
-        const provider = new GoogleAuthProvider()
-
-        try {
-
-            // Prompt user to sign in and wait for a result
-            const result = await signInWithPopup(auth, provider)
-            const user = result.user
-
-            if ( user && user.email ) {
-
-                // Setup User 
-                userSetup(user.uid, user.displayName ?? 'newUser', user.email) 
-
-            }
-        } 
-        // Log any errors
-        catch (error) {
-            // console.log(error)
-            setError((prevError: any) => ({
-                ...prevError,
-                general: "Something went wrong. Please try again"
-            }));
-        }
+    const userData = {
+      uid,
+      username,
+      email,
+      picture: "crown.png",
+      friends: [],
+      pendingFriends: [],
+      notifications: [],
+      rank: 0,
+      xp: 0,
+      streak: 0,
+      highestStreak: 0,
+      savedQuestions: [],
+      emailVerified,
     };
-    // ======================================================================================= //
 
-    // ======================================== SIGN UP ======================================= //
-    const signUpWithEmail = async (username: string, email: string, password: string) => {
-        // Clear previous errors
-        setError({})
+    // 1. Set Context
+    setUser({ ...userData, picture: imageUrl, decks: [] });
 
-        // Validate username length
-        if (username.length < 2) {
-            setError((prevError: any) => ({
-            ...prevError,
-            username: "Username is too short. Min 2 char."
-            }))
-            return
-        }
-        if (username.length > 10) {
-            setError((prevError: any) => ({
-            ...prevError,
-            username: "Username is too long. Max 10 char."
-            }))
-            return
-        }
+    // 2. Write to DB
+    await setDoc(doc(db, "user-data", uid), userData);
 
-        try {
-            // Sign up with email and password 
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-            const user = userCredential.user
-            
-            // Create the user on our system
-            if ( user ) {
-                createUser(user.uid, username, email)
-            }
-        }
-        catch (err: any) {
-            // Handle Firebase errors (e.g., weak password, invalid email)
-            const errorCode = err.code;
-            const errorMessage = err.message;
-
-            // Firebase error codes
-            if (errorCode === 'auth/email-already-in-use') {
-                setError((prevError: any) => ({
-                    ...prevError,
-                    email: "This email is already in use."
-                }));
-            } else if (errorCode === 'auth/invalid-email') {
-                setError((prevError: any) => ({
-                    ...prevError,
-                    email: "The email address is not valid."
-                }));
-            } else if (errorCode === 'auth/weak-password') {
-                setError((prevError: any) => ({
-                    ...prevError,
-                    password: "Password too short. Min 6 chars"
-                }));
-            } else if (errorMessage === 'Firebase: Error (auth/missing-password).') {
-                setError((prevError: any) => ({
-                    ...prevError,
-                    password: "Please enter a password"
-                }));
-            } else {
-                setError((prevError: any) => ({
-                    ...prevError,
-                    general: "Something went wrong. Please try again"
-                }));
-            }
-        }
+    // 3. Redirect
+    if (!emailVerified) {
+      navigate("/verify-email");
+    } else {
+      props?.prevRoute ? navigate(props.prevRoute) : navigate("/practice");
     }
-    // ======================================================================================= //
+  };
 
-    // ======================================== SIGN IN ======================================= //
-    const signInWithEmail = async (email: string, password: string) => {
-        // Clear previous errors
-        setError({})
+/** ==================== SETUP EXISTING / NEW USER ==================== */
+const userSetup = async (uid: string, username: string, email: string) => {
+  const currentPath = window.location.pathname;
+  console.log("1. Starting userSetup. Current Path:", currentPath);
 
-        try {
-            // Sign in with email and password 
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-            
-            // Setup the user on our system
-            if (user) {
-                userSetup(user.uid, '', email)
-            }
-        } catch (err: any) {
-            // Handle Firebase errors (e.g., incorrect email/password)
-            const errorCode = err.code;
-            const errorMessage = err.message;
+  try {
+    const userDoc = await getDoc(doc(db, "user-data", uid));
+    const currentUser = auth.currentUser;
+    const isEmailVerified = currentUser?.emailVerified ?? false;
 
-            // Firebase error codes
-            if (errorCode === 'auth/user-not-found') {
-                setError((prevError: any) => ({
-                    ...prevError,
-                    email: "No account found with this email address."
-                }));
-            } else if (errorCode === 'auth/wrong-password') {
-                setError((prevError: any) => ({
-                    ...prevError,
-                    password: "Incorrect password. Please try again."
-                }));
-            } else if (errorCode === 'auth/invalid-email') {
-                setError((prevError: any) => ({
-                    ...prevError,
-                    email: "The email address is not valid."
-                }));
-            } else if (errorMessage === 'Firebase: Error (auth/missing-password).') {
-                setError((prevError: any) => ({
-                    ...prevError,
-                    password: "Please enter a password."
-                }));
-            } else if (errorCode === 'auth/invalid-credential') {
-                setError((prevError: any) => ({
-                    ...prevError,
-                    email: "User not found"
-                }));
-            } else {
-                // console.log(errorCode)
-                setError((prevError: any) => ({
-                    ...prevError,
-                    general: "Something went wrong. Please try again."
-                }));
-            }
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      
+      // Safe Image Loading
+      let imageUrl = "";
+      const picPath = userData.picture || "crown.png";
+      try {
+        imageUrl = await getDownloadURL(ref(storage, picPath));
+      } catch (e) {
+        imageUrl = "https://via.placeholder.com/150";
+      }
+
+      const decksRef = collection(db, "user-data", uid, "decks");
+      const deckSnapshot = await getDocs(decksRef);
+      const decks = deckSnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      setUser({
+        uid: userDoc.id,
+        username: userData.username || username,
+        email: userData.email || email,
+        picture: imageUrl,
+        friends: userData.friends || [],
+        pendingFriends: userData.pendingFriends || [],
+        notifications: userData.notifications || [],
+        rank: userData.rank || 0,
+        xp: userData.xp || 0,
+        streak: userData.streak || 0,
+        highestStreak: userData.highestStreak || 0,
+        savedQuestions: userData.savedQuestions || [],
+        decks,
+        emailVerified: isEmailVerified,
+      });
+
+      console.log("2. Context Set. Verified:", isEmailVerified);
+
+      // --- NAVIGATION LOGIC ---
+      if (!isEmailVerified) {
+        console.log("3. Redirecting to verify-email");
+        navigate("/verify-email");
+      } else {
+        // Broaden the check: If we are on ANY auth-related page, move to app
+        const authPages = ['/login', '/signup', '/']; 
+        const isAuthPage = authPages.some(path => currentPath === path || currentPath === path + '/');
+
+        if (isAuthPage) {
+          console.log("3. Redirecting to practice");
+          props?.prevRoute ? navigate(props.prevRoute) : navigate("/practice");
+        } else {
+          console.log("3. Already on a protected page, no redirect needed.");
         }
+      }
+
+    } else {
+      console.log("2. New user detected, creating profile...");
+      await createUser(uid, username, email, isEmailVerified);
     }
-    // ======================================================================================= //
-    // ======================================================================================= //
+  } catch (err) {
+    console.error("CRITICAL ERROR in userSetup:", err);
+  }
+};
 
-    // ======================================== EXISTING USERS ======================================= //
-    useEffect(() => {
+/** ==================== AUTH LISTENER ==================== */
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    // We only want the auto-listener to run if the user is NOT in the middle 
+    // of a manual Google Login button click.
+    if (user && user.email && !isLoggingIn) {
+      console.log("Auth State Changed (Auto-Login)");
+      await userSetup(user.uid, user.displayName || "", user.email);
+    }
+  });
+  return () => unsubscribe();
+}, [isLoggingIn]); // Listener restarts if isLoggingIn changes
 
-        // Listen for changes in Authentication 
-        const unsubscribe = onAuthStateChanged(auth, currentUser => {
-            checkExistingUser(currentUser)
-        });
 
-        // Listener Clean Up
-        return () => unsubscribe();
+  /** ==================== GOOGLE LOGIN ==================== */
+  const loginWithGoogle = async () => {
+    setIsLoggingIn(true); // Stop auto-listener
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      if (user && user.email) {
+          // Await the setup so we know when it's done
+          await userSetup(user.uid, user.displayName ?? "newUser", user.email);
+      }
+    } catch (err: any) {
+      console.error("Google Login Error:", err);
+      setError((prev: any) => ({ ...prev, general: "Failed to login with Google." }));
+    } finally {
+        setIsLoggingIn(false);
+    }
+  };
 
-    }, [])
+  /** ==================== SIGN UP EMAIL ==================== */
+  const signUpWithEmail = async (
+    username: string,
+    email: string,
+    password: string,
+    captchaToken: string
+  ) => {
+    setError({});
 
-    const checkExistingUser = async (user: any) => {
+    // --- CAPTCHA CHECKS RESTORED ---
+    if (!captchaToken) {
+      setError((prev: any) => ({ ...prev, general: "Please complete CAPTCHA first." }));
+      return;
+    }
 
-        // if a user exists, currently logged in 
-        if (user && user.email && user.uid ) {
-            
-            // Setup the user 
-            await userSetup(user.uid, '', user.email)
+    // 1️⃣ Verify captcha server-side
+    try {
+        const verify = await fetch(
+          "https://us-central1-certchamps-a7527.cloudfunctions.net/verifyCaptcha",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: captchaToken }),
+          }
+        ).then((res) => res.json());
 
-            // Navigate to home page or previous route if it exists
-            props?.prevRoute ? navigate(`${props.prevRoute}`) : navigate('/practice')
-            // console.log(`User Exists ✅: ${user.uid}`)
-        } 
+        if (!verify.success) {
+          setError((prev: any) => ({ ...prev, general: "Captcha verification failed." }));
+          return;
+        }
+    } catch (err) {
+        setError((prev: any) => ({ ...prev, general: "Captcha server error." }));
+        return;
+    }
 
-    };
-    // ================================================================================================= //
+    // 2️⃣ Validate username
+    if (username.length < 2) return setError((prev: any) => ({ ...prev, username: "Too short" }));
+    if (username.length > 10) return setError((prev: any) => ({ ...prev, username: "Too long" }));
+    // -------------------------------
 
-  return { loginWithGoogle, signUpWithEmail, signInWithEmail, userSetup, error }
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
+      if (user) {
+        await sendEmailVerification(user);
+        // 3️⃣ Create user in Firestore
+        await createUser(user.uid, username, email, false);
+      }
+    } catch (err: any) {
+      const code = err.code;
+      if (code === "auth/email-already-in-use")
+        setError((prev: any) => ({ ...prev, email: "Email already in use." }));
+      else if (code === "auth/weak-password")
+        setError((prev: any) => ({ ...prev, password: "Password too weak." }));
+      else setError((prev: any) => ({ ...prev, general: "Something went wrong. Try again." }));
+    }
+  };
+
+  /** ==================== SIGN IN EMAIL ==================== */
+  const signInWithEmail = async (email: string, password: string) => {
+    setError({});
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      if (user) {
+        if (!user.emailVerified) {
+          await userSetup(user.uid, "", email);
+          navigate("/verify-email");
+        } else {
+          await userSetup(user.uid, "", email);
+          props?.prevRoute ? navigate(props.prevRoute) : navigate("/practice");
+        }
+      }
+    } catch (err: any) {
+      setError((prev: any) => ({ ...prev, general: "Invalid email or password." }));
+    }
+  };
+
+  /** ==================== EXISTING USERS ==================== */
+  // useEffect(() => {
+  //   const unsubscribe = onAuthStateChanged(auth, async (user) => {
+  //     // Only run auto-setup if we aren't manually logging in right now
+  //     if (user && user.email && user.uid && !isLoggingIn) {
+  //        try {
+  //          await userSetup(user.uid, "", user.email);
+  //        } catch(e) {
+  //          console.log("Auto-login setup failed", e);
+  //        }
+  //     }
+  //   });
+  //   return () => unsubscribe();
+  // }, [isLoggingIn]); 
+
+  return { loginWithGoogle, signUpWithEmail, signInWithEmail, userSetup, error, setError };
 }

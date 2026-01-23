@@ -42,7 +42,7 @@ export default function Questions() {
 
     useEffect(() => {
         loadQuestions() // load new question in 
-        setPosition(prev => prev + 1)
+        setPosition(prev => prev + 1 )
     }, [filters])
     //===================================> useEffect First Render <=================================//
     useEffect(() => {

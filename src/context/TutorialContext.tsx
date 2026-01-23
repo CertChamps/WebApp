@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { UserContext } from './UserContext';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { db, auth } from '../../firebase';
 
 type TutorialContextType = {
   showTutorial: boolean;
@@ -25,6 +25,16 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkTutorialStatus = async () => {
       if (!user?.uid) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Don't show tutorial if email is not verified (for email/password users)
+      const firebaseUser = auth.currentUser;
+      const isEmailPasswordUser = firebaseUser?.providerData.some(
+        (provider) => provider.providerId === "password"
+      );
+      if (isEmailPasswordUser && !firebaseUser?.emailVerified) {
         setIsLoading(false);
         return;
       }
@@ -70,7 +80,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     };
 
     checkTutorialStatus();
-  }, [user?.uid]);
+  }, [user?.uid, user?.emailVerified]);
 
   const completeTutorial = useCallback(async () => {
     if (!user?.uid) return;
