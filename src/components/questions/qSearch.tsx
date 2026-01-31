@@ -12,18 +12,24 @@ type searchProps = {
 }
 
 export default function QSearch(props: searchProps) {
-    const { fetchAllQuestions } = useQuestions()
+   
     const [results, setResults] = useState([])
     const [search, setSearch] = useState('')
     const [isVisible, setIsVisible] = useState(false)
     const searchContainerRef = useRef<any>(null)
     const inputRef = useRef<HTMLInputElement>(null);
 
+    const collectionPaths = [// Default paths
+        "questions/certchamps",
+        "questions/exam-papers",
+    ]
+
+    const { fetchAllQuestions } = useQuestions({ collectionPaths })
     const fuse = useRef<any>(null)
 
     const searchOptions = {
         keys: [
-            //"content.question", 
+            "content.question", 
             "properties.name"
         ], 
         isCaseSensitive: false
@@ -37,6 +43,7 @@ export default function QSearch(props: searchProps) {
         const init = async () => {
             // set questions 
             const q = await fetchAllQuestions()
+            console.log("Fetched questions for search:", q?.length)
 
             // set up fuse 
             fuse.current = new Fuse(q, searchOptions)

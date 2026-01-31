@@ -1,733 +1,470 @@
-import React, { useRef, useState, useEffect, useCallback, useMemo, type JSX } from 'react';
-import { Stage, Layer, Line, Group } from 'react-konva';
-import Konva from 'konva';
-import { LuEraser, LuTrash2, LuPencil, LuGrid3X3, LuZoomIn, LuZoomOut, LuMove } from 'react-icons/lu';
+import React, { useRef, useEffect, useState } from "react";
 
-type DrawingMode = 'draw' | 'erase' | 'none';
+type Props = {
+  containerRef: React.RefObject<HTMLElement>;
+};
 
-interface LineData {
-  id: string;
-  points: number[];
-  stroke: string;
-  strokeWidth: number;
-  tool: 'draw' | 'erase';
-  tension: number;
-  lineCap: 'round';
-  lineJoin: 'round';
-  globalCompositeOperation: 'source-over' | 'destination-out';
-}
+export default function DrawingCanvas({ containerRef }: Props) {
+  const gridRef = useRef<HTMLCanvasElement | null>(null);
+  const drawRef = useRef<HTMLCanvasElement | null>(null);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const lastPointRef = useRef<{x: number; y: number; pressure: number} | null>(null);
 
-interface DrawingCanvasProps {
-  containerRef: React.RefObject<HTMLDivElement | null>;
-  enabled?: boolean;
-}
+  const [tool, setTool] = useState<"pen" | "eraser">("pen");
+  const [drawing, setDrawing] = useState(false);
+  
+  // Pinch zoom/pan state
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const transformRef = useRef({ x: 0, y: 0, scale: 1 });
+  const pinchRef = useRef<{
+    initialDistance: number;
+    initialScale: number;
+    initialCenterX: number;
+    initialCenterY: number;
+    initialX: number;
+    initialY: number;
+  } | null>(null);
 
-export default function DrawingCanvas({ containerRef, enabled = true }: DrawingCanvasProps) {
-  const stageRef = useRef<Konva.Stage>(null);
-  const colorProbeRef = useRef<HTMLSpanElement>(null);
-  
-  const [mode, setMode] = useState<DrawingMode>('none');
-  const [penColor, setPenColor] = useState('#27548a');
-  const [lines, setLines] = useState<LineData[]>([]);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [showGrid, setShowGrid] = useState(true);
-  
-  // Stage dimensions and transform
-  const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
-  const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  
-  // Refs for smooth animations (avoid React re-renders during gestures)
-  const scaleRef = useRef(1);
-  const positionRef = useRef({ x: 0, y: 0 });
-  
-  // Keep refs in sync with state
+  const gridSize = 32;
+  const penColor = "#ffffff";
+  const penWidth = 5;
+  const eraserWidth = 24;
+
+  // Sync ref with state for use in event handlers
   useEffect(() => {
-    scaleRef.current = scale;
-    positionRef.current = position;
-  }, [scale, position]);
-  
-  // Track current line for pressure sensitivity
-  const currentLineRef = useRef<LineData | null>(null);
-  const lastPressureRef = useRef(0.5);
-  
-  // Track touch count for pinch zoom detection
-  const touchCountRef = useRef(0);
-  const isPinchingRef = useRef(false);
-  
-  // Panning state
-  const [isPanning, setIsPanning] = useState(false);
-  const isPanningRef = useRef(false);
-  const lastPointerPosRef = useRef({ x: 0, y: 0 });
+    transformRef.current = transform;
+  }, [transform]);
 
-  // Grid settings
-  const gridSize = 30;
-  const gridColor = 'rgba(128, 128, 128, 0.15)';
+  // Procreate-style pressure curve
+  const getPressureWidth = (pressure: number) => {
+    const curved = Math.pow(Math.min(1, Math.max(0, pressure)), 3);
+    return Math.max(0.5, penWidth * 0.2 + penWidth * 0.8 * curved);
+  };
 
-  // Get the themed accent color from the hidden probe element
-  useEffect(() => {
-    const updatePenColor = () => {
-      if (colorProbeRef.current) {
-        const computedColor = getComputedStyle(colorProbeRef.current).color;
-        if (computedColor && computedColor !== 'rgb(0, 0, 0)') {
-          setPenColor(computedColor);
-        }
-      }
-    };
+  const addBlockingListeners = () => {
+    document.body.style.userSelect = "none";
+    document.body.style.webkitUserSelect = "none";
+    document.body.style.msUserSelect = "none";
+    document.addEventListener("selectstart", preventDefaultCapture, true);
+    document.addEventListener("contextmenu", preventDefaultCapture, true);
+    document.addEventListener("gesturestart", preventDefaultCapture as any, true);
+    document.addEventListener("touchstart", touchPreventDefault, { passive: false, capture: true });
+    document.addEventListener("touchmove", touchPreventDefault, { passive: false, capture: true });
+  };
 
-    updatePenColor();
-    
-    const themedRoot = document.getElementById('themed-root');
-    if (themedRoot) {
-      const observer = new MutationObserver(updatePenColor);
-      observer.observe(themedRoot, { 
-        attributes: true, 
-        attributeFilter: ['data-theme'] 
-      });
-      return () => observer.disconnect();
+  const removeBlockingListeners = () => {
+    document.body.style.userSelect = "";
+    document.body.style.webkitUserSelect = "";
+    document.body.style.msUserSelect = "";
+    document.removeEventListener("selectstart", preventDefaultCapture, true);
+    document.removeEventListener("contextmenu", preventDefaultCapture, true);
+    document.removeEventListener("gesturestart", preventDefaultCapture as any, true);
+    document.removeEventListener("touchstart", touchPreventDefault, { passive: false, capture: true } as any);
+    document.removeEventListener("touchmove", touchPreventDefault, { passive: false, capture: true } as any);
+  };
+
+  function preventDefaultCapture(e: Event) {
+    e.preventDefault();
+  }
+  function touchPreventDefault(e: Event) {
+    if (drawing) {
+      e.preventDefault();
     }
+  }
+
+  const resizeCanvas = () => {
+    const grid = gridRef.current;
+    const draw = drawRef.current;
+    const cont = containerRef.current;
+    if (!grid || !draw || !cont) return;
+
+    const rect = cont.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    const tmp = document.createElement("canvas");
+    tmp.width = draw.width;
+    tmp.height = draw.height;
+    const tctx = tmp.getContext("2d");
+    if (tctx) tctx.drawImage(draw, 0, 0);
+
+    grid.style.width = `${rect.width}px`;
+    grid.style.height = `${rect.height}px`;
+    draw.style.width = `${rect.width}px`;
+    draw.style.height = `${rect.height}px`;
+
+    grid.width = Math.max(1, Math.floor(rect.width * dpr));
+    grid.height = Math.max(1, Math.floor(rect.height * dpr));
+    draw.width = Math.max(1, Math.floor(rect.width * dpr));
+    draw.height = Math.max(1, Math.floor(rect.height * dpr));
+
+    const gctx = grid.getContext("2d");
+    const dctx = draw.getContext("2d");
+    if (!gctx || !dctx) return;
+    gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    dctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    drawGrid(gctx, rect.width, rect.height);
+
+    if (tmp.width && tmp.height) {
+      dctx.clearRect(0, 0, rect.width, rect.height);
+      dctx.drawImage(tmp, 0, 0, tmp.width / (dpr || 1), tmp.height / (dpr || 1));
+    }
+
+    ctxRef.current = dctx;
+  };
+
+  const drawGrid = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+    ctx.clearRect(0, 0, w, h);
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= w; x += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(x + 0.5, 0);
+      ctx.lineTo(x + 0.5, h);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= h; y += gridSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(w, y + 0.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  useEffect(() => {
+    resizeCanvas();
+    const ro = new ResizeObserver(resizeCanvas);
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
   }, []);
 
-  // Resize canvas to match container with ResizeObserver for better reliability
-  const resizeCanvas = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
+  // Pinch zoom helpers
+  const getTouchDistance = (t1: Touch, t2: Touch) => {
+    return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+  };
 
-    const rect = container.getBoundingClientRect();
-    const width = Math.max(rect.width, 100);
-    const height = Math.max(rect.height, 100);
-    
-    setStageSize({ width, height });
-    
-    // Force stage to update immediately
-    if (stageRef.current) {
-      stageRef.current.width(width);
-      stageRef.current.height(height);
-      stageRef.current.batchDraw();
+  const getTouchCenter = (t1: Touch, t2: Touch) => ({
+    x: (t1.clientX + t2.clientX) / 2,
+    y: (t1.clientY + t2.clientY) / 2,
+  });
+
+  const handleTouchStart = (e: TouchEvent) => {
+    if (drawing) return; // Don't pinch while drawing
+    if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = getTouchDistance(t1, t2);
+      const center = getTouchCenter(t1, t2);
+      const t = transformRef.current;
+      
+      pinchRef.current = {
+        initialDistance: dist,
+        initialScale: t.scale,
+        initialCenterX: center.x,
+        initialCenterY: center.y,
+        initialX: t.x,
+        initialY: t.y,
+      };
     }
-  }, [containerRef]);
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      e.preventDefault();
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = getTouchDistance(t1, t2);
+      const center = getTouchCenter(t1, t2);
+      const p = pinchRef.current;
+      
+      const newScale = Math.max(0.1, Math.min(5, p.initialScale * (dist / p.initialDistance)));
+      const scaleRatio = newScale / p.initialScale;
+      
+      // Maintain focus point under fingers during zoom
+      const newX = center.x - (p.initialCenterX - p.initialX) * scaleRatio;
+      const newY = center.y - (p.initialCenterY - p.initialY) * scaleRatio;
+      
+      const newTransform = { x: newX, y: newY, scale: newScale };
+      setTransform(newTransform);
+    }
+  };
+
+  const handleTouchEnd = (e: TouchEvent) => {
+    if (e.touches.length < 2) {
+      pinchRef.current = null;
+    }
+  };
+
+  // Update getPointerInfo to account for zoom/pan transform
+  const getPointerInfo = (e: PointerEvent) => {
+    const draw = drawRef.current!;
+    const rect = draw.getBoundingClientRect();
+    const t = transformRef.current;
+    
+    // Convert screen coordinates to canvas coordinates accounting for zoom/pan
+    const x = (e.clientX - rect.left) / t.scale;
+    const y = (e.clientY - rect.top) / t.scale;
+    
+    const pressure = e.pressure === 0 ? 0.5 : e.pressure ?? 1;
+    return { x, y, pressure, isPen: e.pointerType === "pen" };
+  };
+
+  const handlePointerDown = (e: PointerEvent) => {
+    // Don't start drawing if currently pinching
+    if (pinchRef.current) return;
+    
+    const draw = drawRef.current;
+    if (!draw) return;
+    e.preventDefault();
+    try { draw.setPointerCapture(e.pointerId); } catch (_) {}
+
+    const info = getPointerInfo(e);
+    const ctx = ctxRef.current;
+    if (!ctx) return;
+
+    lastPointRef.current = { x: info.x, y: info.y, pressure: info.pressure };
+
+    if (tool === "pen") {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = penColor;
+      ctx.lineWidth = getPressureWidth(info.pressure);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+    } else {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.lineWidth = eraserWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(info.x, info.y);
+
+    setDrawing(true);
+    addBlockingListeners();
+  };
+
+  let rafId = 0;
+  const queued: { x: number; y: number; pressure?: number; tool?: string }[] = [];
+
+  const handlePointerMove = (e: PointerEvent) => {
+    if (!drawing) return;
+    e.preventDefault();
+    const info = getPointerInfo(e);
+    queued.push({ x: info.x, y: info.y, pressure: info.pressure, tool });
+
+    if (!rafId) {
+      rafId = requestAnimationFrame(() => {
+        const ctx = ctxRef.current;
+        if (!ctx) { rafId = 0; queued.length = 0; return; }
+
+        while (queued.length) {
+          const p = queued.shift()!;
+          const prev = lastPointRef.current;
+          
+          if (!prev) continue;
+          
+          const avgPressure = (prev.pressure + (p.pressure ?? 1)) / 2;
+          
+          if (p.tool === "pen") {
+            ctx.globalCompositeOperation = "source-over";
+            ctx.strokeStyle = penColor;
+            ctx.lineWidth = getPressureWidth(avgPressure);
+          } else {
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.lineWidth = eraserWidth;
+          }
+          
+          ctx.beginPath();
+          ctx.moveTo(prev.x, prev.y);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+          
+          lastPointRef.current = { x: p.x, y: p.y, pressure: p.pressure ?? 1 };
+        }
+        rafId = 0;
+      });
+    }
+  };
+
+  const stopPointer = (e?: PointerEvent) => {
+    try {
+      if (e && drawRef.current) drawRef.current.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+    setDrawing(false);
+    lastPointRef.current = null;
+    removeBlockingListeners();
+    const ctx = ctxRef.current;
+    if (ctx) {
+      ctx.closePath();
+    }
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+    queued.length = 0;
+  };
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const canvas = drawRef.current;
+    if (!canvas) return;
 
-    // Initial resize
-    resizeCanvas();
+    canvas.style.position = "absolute";
+    canvas.style.inset = "0";
+    canvas.style.zIndex = "1100";
+    canvas.style.touchAction = "none";
+    canvas.style.webkitTouchCallout = "none";
+    canvas.style.webkitUserSelect = "none";
 
-    // Use ResizeObserver for more reliable container size tracking
-    const resizeObserver = new ResizeObserver(() => {
-      resizeCanvas();
-    });
-    
-    resizeObserver.observe(container);
+    canvas.addEventListener("pointerdown", handlePointerDown, { passive: false });
+    canvas.addEventListener("pointermove", handlePointerMove, { passive: false });
+    canvas.addEventListener("pointerup", stopPointer, { passive: false });
+    canvas.addEventListener("pointercancel", stopPointer, { passive: false });
+    canvas.addEventListener("pointerleave", stopPointer, { passive: false });
+    canvas.addEventListener("contextmenu", (ev) => ev.preventDefault());
 
-    // Fallback to window resize
-    window.addEventListener('resize', resizeCanvas);
-    
-    // Also resize on orientation change (important for tablets)
-    window.addEventListener('orientationchange', resizeCanvas);
+    // Pinch zoom listeners
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+    canvas.addEventListener("touchend", handleTouchEnd);
+    canvas.addEventListener("touchcancel", handleTouchEnd);
+
+    const touchStart = (ev: TouchEvent) => { if (drawing) ev.preventDefault(); };
+    document.addEventListener("touchstart", touchStart, { passive: false, capture: true });
 
     return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener('resize', resizeCanvas);
-      window.removeEventListener('orientationchange', resizeCanvas);
-    };
-  }, [resizeCanvas]);
-
-  // Generate grid lines - memoized for performance
-  const gridLines = useMemo(() => {
-    const lines: JSX.Element[] = [];
-    
-    // Fixed grid that covers a large area (simpler, more performant)
-    const gridExtent = 5000; // Large enough for most zoom levels
-    const startX = -gridExtent;
-    const startY = -gridExtent;
-    const endX = gridExtent;
-    const endY = gridExtent;
-
-    // Vertical lines
-    for (let x = startX; x <= endX; x += gridSize) {
-      lines.push(
-        <Line
-          key={`v-${x}`}
-          points={[x, startY, x, endY]}
-          stroke={gridColor}
-          strokeWidth={1}
-          listening={false}
-          perfectDrawEnabled={false}
-        />
-      );
-    }
-
-    // Horizontal lines
-    for (let y = startY; y <= endY; y += gridSize) {
-      lines.push(
-        <Line
-          key={`h-${y}`}
-          points={[startX, y, endX, y]}
-          stroke={gridColor}
-          strokeWidth={1}
-          listening={false}
-          perfectDrawEnabled={false}
-        />
-      );
-    }
-
-    return lines;
-  }, [gridSize]);
-
-  // Get pointer position relative to stage
-  const getPointerPosition = () => {
-    const stage = stageRef.current;
-    if (!stage) return null;
-
-    const pointerPos = stage.getPointerPosition();
-    if (!pointerPos) return null;
-
-    // Transform to account for scale and position
-    return {
-      x: (pointerPos.x - position.x) / scale,
-      y: (pointerPos.y - position.y) / scale,
-    };
-  };
-
-  // Handle pointer down
-  const handlePointerDown = (e: Konva.KonvaEventObject<PointerEvent>) => {
-    const stage = stageRef.current;
-    
-    // Track touch count
-    if (e.evt.pointerType === 'touch') {
-      touchCountRef.current++;
+      canvas.removeEventListener("pointerdown", handlePointerDown);
+      canvas.removeEventListener("pointermove", handlePointerMove);
+      canvas.removeEventListener("pointerup", stopPointer);
+      canvas.removeEventListener("pointercancel", stopPointer);
+      canvas.removeEventListener("pointerleave", stopPointer);
+      canvas.removeEventListener("contextmenu", (ev) => ev.preventDefault());
       
-      // If we have 2+ touches, cancel any current drawing and enter pinch mode
-      if (touchCountRef.current >= 2) {
-        isPinchingRef.current = true;
-        if (isDrawing) {
-          // Remove the last line that was started
-          setLines(prev => prev.slice(0, -1));
-          setIsDrawing(false);
-          currentLineRef.current = null;
-        }
-        return;
-      }
-    }
-    
-    // Middle mouse button or none mode = panning
-    if (e.evt.button === 1 || (mode === 'none' && e.evt.pointerType !== 'touch')) {
-      e.evt.preventDefault();
-      isPanningRef.current = true;
-      setIsPanning(true);
-      const pointer = stage?.getPointerPosition();
-      if (pointer) {
-        lastPointerPosRef.current = pointer;
-      }
-      return;
-    }
-    
-    if (mode === 'none' || isPinchingRef.current) return;
-
-    const pos = getPointerPosition();
-    if (!pos) return;
-
-    setIsDrawing(true);
-    
-    // Get pressure with better stylus/Apple Pencil support
-    // Apple Pencil typically reports pressure values, but some browsers need fallback
-    let pressure = 0.5;
-    if (e.evt.pressure > 0 && e.evt.pressure <= 1) {
-      pressure = e.evt.pressure;
-    } else if (e.evt.pointerType === 'pen') {
-      // If it's a pen but pressure is 0, assume medium pressure
-      pressure = 0.7;
-    }
-    lastPressureRef.current = pressure;
-
-    const baseWidth = mode === 'erase' ? 30 : 3;
-    const strokeWidth = baseWidth * (0.5 + pressure);
-
-    const newLine: LineData = {
-      id: Date.now().toString(),
-      points: [pos.x, pos.y],
-      stroke: mode === 'erase' ? '#000000' : penColor,
-      strokeWidth: strokeWidth,
-      tool: mode,
-      tension: 0.5,
-      lineCap: 'round',
-      lineJoin: 'round',
-      globalCompositeOperation: mode === 'erase' ? 'destination-out' : 'source-over',
+      canvas.removeEventListener("touchstart", handleTouchStart);
+      canvas.removeEventListener("touchmove", handleTouchMove);
+      canvas.removeEventListener("touchend", handleTouchEnd);
+      canvas.removeEventListener("touchcancel", handleTouchEnd);
+      
+      document.removeEventListener("touchstart", touchStart, { passive: false, capture: true } as any);
     };
+  }, [drawing, tool]);
 
-    currentLineRef.current = newLine;
-    setLines(prev => [...prev, newLine]);
+  const toolbarStyle: React.CSSProperties = {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 1200,
+    display: "flex",
+    gap: 8,
+    background: "rgba(0,0,0,0.25)",
+    padding: 6,
+    borderRadius: 8,
+    alignItems: "center",
   };
-
-  // Handle pointer move
-  const handlePointerMove = (e: Konva.KonvaEventObject<PointerEvent>) => {
-    const stage = stageRef.current;
-    
-    // Handle panning
-    if (isPanningRef.current && stage) {
-      const pointer = stage.getPointerPosition();
-      if (pointer) {
-        const dx = pointer.x - lastPointerPosRef.current.x;
-        const dy = pointer.y - lastPointerPosRef.current.y;
-        
-        const newPosition = {
-          x: positionRef.current.x + dx,
-          y: positionRef.current.y + dy,
-        };
-        
-        positionRef.current = newPosition;
-        stage.x(newPosition.x);
-        stage.y(newPosition.y);
-        stage.batchDraw();
-        
-        lastPointerPosRef.current = pointer;
-      }
-      return;
-    }
-    
-    // Don't draw during pinch zoom
-    if (!isDrawing || mode === 'none' || isPinchingRef.current) return;
-
-    const pos = getPointerPosition();
-    if (!pos) return;
-
-    // Get pressure for pressure-sensitive stroke width with better pen/stylus support
-    let pressure = lastPressureRef.current;
-    if (e.evt.pressure > 0 && e.evt.pressure <= 1) {
-      pressure = e.evt.pressure;
-    } else if (e.evt.pointerType === 'pen') {
-      // Stylus detected but no pressure - use last known or default
-      pressure = lastPressureRef.current > 0 ? lastPressureRef.current : 0.7;
-    }
-    lastPressureRef.current = pressure;
-
-    setLines(prev => {
-      const lastLine = prev[prev.length - 1];
-      if (!lastLine) return prev;
-
-      // Add new points
-      const newPoints = [...lastLine.points, pos.x, pos.y];
-      
-      // Update stroke width based on pressure
-      const baseWidth = mode === 'erase' ? 30 : 3;
-      const strokeWidth = baseWidth * (0.5 + pressure);
-
-      const updatedLine = {
-        ...lastLine,
-        points: newPoints,
-        strokeWidth: (lastLine.strokeWidth + strokeWidth) / 2, // Smooth transition
-      };
-
-      return [...prev.slice(0, -1), updatedLine];
-    });
-  };
-
-  // Handle pointer up
-  const handlePointerUp = (e: Konva.KonvaEventObject<PointerEvent>) => {
-    // End panning
-    if (isPanningRef.current) {
-      isPanningRef.current = false;
-      setIsPanning(false);
-      setPosition(positionRef.current);
-    }
-    
-    // Track touch count
-    if (e.evt.pointerType === 'touch') {
-      touchCountRef.current = Math.max(0, touchCountRef.current - 1);
-      
-      // Reset pinch mode when all fingers are lifted
-      if (touchCountRef.current === 0) {
-        isPinchingRef.current = false;
-      }
-    }
-    
-    setIsDrawing(false);
-    currentLineRef.current = null;
-  };
-
-  // Handle wheel for zoom
-  const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
-    e.evt.preventDefault();
-
-    const stage = stageRef.current;
-    if (!stage) return;
-
-    const oldScale = scaleRef.current;
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-
-    const mousePointTo = {
-      x: (pointer.x - positionRef.current.x) / oldScale,
-      y: (pointer.y - positionRef.current.y) / oldScale,
-    };
-
-    // Zoom in/out
-    const direction = e.evt.deltaY > 0 ? -1 : 1;
-    const scaleBy = 1.1;
-    const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-
-    // Clamp scale
-    const clampedScale = Math.max(0.1, Math.min(5, newScale));
-    
-    const newPosition = {
-      x: pointer.x - mousePointTo.x * clampedScale,
-      y: pointer.y - mousePointTo.y * clampedScale,
-    };
-
-    // Update refs
-    scaleRef.current = clampedScale;
-    positionRef.current = newPosition;
-
-    // Apply directly to stage for smooth animation
-    stage.scaleX(clampedScale);
-    stage.scaleY(clampedScale);
-    stage.x(newPosition.x);
-    stage.y(newPosition.y);
-    stage.batchDraw();
-
-    // Debounce state update
-    setScale(clampedScale);
-    setPosition(newPosition);
-  };
-
-  // Handle touch for pinch zoom
-  const lastDistRef = useRef(0);
-  const lastCenterRef = useRef({ x: 0, y: 0 });
-
-  const handleTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
-    // Immediately detect multi-touch and cancel drawing
-    if (e.evt.touches.length >= 2) {
-      isPinchingRef.current = true;
-      touchCountRef.current = e.evt.touches.length;
-      
-      // Initialize pinch tracking
-      const touch1 = e.evt.touches[0];
-      const touch2 = e.evt.touches[1];
-      lastDistRef.current = Math.sqrt(
-        Math.pow(touch2.clientX - touch1.clientX, 2) +
-        Math.pow(touch2.clientY - touch1.clientY, 2)
-      );
-      lastCenterRef.current = {
-        x: (touch1.clientX + touch2.clientX) / 2,
-        y: (touch1.clientY + touch2.clientY) / 2,
-      };
-      
-      // Cancel any active drawing
-      if (isDrawing) {
-        setLines(prev => prev.slice(0, -1));
-        setIsDrawing(false);
-        currentLineRef.current = null;
-      }
-    }
-  };
-
-  const handleTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
-    const touch1 = e.evt.touches[0];
-    const touch2 = e.evt.touches[1];
-
-    if (touch1 && touch2 && isPinchingRef.current) {
-      e.evt.preventDefault();
-
-      const stage = stageRef.current;
-      if (!stage) return;
-
-      // Calculate distance between two fingers
-      const dist = Math.sqrt(
-        Math.pow(touch2.clientX - touch1.clientX, 2) +
-        Math.pow(touch2.clientY - touch1.clientY, 2)
-      );
-
-      // Calculate center point
-      const center = {
-        x: (touch1.clientX + touch2.clientX) / 2,
-        y: (touch1.clientY + touch2.clientY) / 2,
-      };
-
-      if (lastDistRef.current === 0) {
-        lastDistRef.current = dist;
-        lastCenterRef.current = center;
-        return;
-      }
-
-      const stageRect = stage.container().getBoundingClientRect();
-      const stageCenter = {
-        x: center.x - stageRect.left,
-        y: center.y - stageRect.top,
-      };
-
-      // Calculate new scale
-      const scaleChange = dist / lastDistRef.current;
-      const oldScale = scaleRef.current;
-      const newScale = Math.max(0.1, Math.min(5, oldScale * scaleChange));
-
-      // Calculate new position
-      const mousePointTo = {
-        x: (stageCenter.x - positionRef.current.x) / oldScale,
-        y: (stageCenter.y - positionRef.current.y) / oldScale,
-      };
-
-      // Calculate position change for panning
-      const centerDelta = {
-        x: center.x - lastCenterRef.current.x,
-        y: center.y - lastCenterRef.current.y,
-      };
-
-      const newPosition = {
-        x: stageCenter.x - mousePointTo.x * newScale + centerDelta.x,
-        y: stageCenter.y - mousePointTo.y * newScale + centerDelta.y,
-      };
-
-      // Update refs immediately
-      scaleRef.current = newScale;
-      positionRef.current = newPosition;
-
-      // Apply directly to stage for smooth animation (bypass React)
-      stage.scaleX(newScale);
-      stage.scaleY(newScale);
-      stage.x(newPosition.x);
-      stage.y(newPosition.y);
-      stage.batchDraw();
-
-      lastDistRef.current = dist;
-      lastCenterRef.current = center;
-    }
-  };
-
-  const handleTouchEnd = (e: Konva.KonvaEventObject<TouchEvent>) => {
-    // Sync React state with final values when gesture ends
-    if (isPinchingRef.current && e.evt.touches.length < 2) {
-      setScale(scaleRef.current);
-      setPosition(positionRef.current);
-    }
-    
-    lastDistRef.current = 0;
-    lastCenterRef.current = { x: 0, y: 0 };
-    
-    // Reset touch tracking
-    touchCountRef.current = e.evt.touches.length;
-    
-    // Small delay before allowing drawing again to prevent accidental strokes
-    if (e.evt.touches.length === 0) {
-      setTimeout(() => {
-        isPinchingRef.current = false;
-        touchCountRef.current = 0;
-      }, 50);
-    }
-  };
-
-  // Clear canvas
-  const clearCanvas = () => {
-    setLines([]);
-  };
-
-  // Zoom controls
-  const zoomIn = () => {
-    const newScale = Math.min(5, scale * 1.2);
-    const centerX = stageSize.width / 2;
-    const centerY = stageSize.height / 2;
-    
-    setScale(newScale);
-    setPosition({
-      x: centerX - (centerX - position.x) * (newScale / scale),
-      y: centerY - (centerY - position.y) * (newScale / scale),
-    });
-  };
-
-  const zoomOut = () => {
-    const newScale = Math.max(0.1, scale / 1.2);
-    const centerX = stageSize.width / 2;
-    const centerY = stageSize.height / 2;
-    
-    setScale(newScale);
-    setPosition({
-      x: centerX - (centerX - position.x) * (newScale / scale),
-      y: centerY - (centerY - position.y) * (newScale / scale),
-    });
-  };
-
-  const resetZoom = () => {
-    setScale(1);
-    setPosition({ x: 0, y: 0 });
-  };
-
-  // Toggle mode
-  const toggleMode = (newMode: DrawingMode) => {
-    setMode(prev => prev === newMode ? 'none' : newMode);
-  };
-
-  // Don't render anything if disabled
-  if (!enabled) return null;
 
   return (
     <>
-      {/* Hidden element to probe the themed accent color */}
-      <span 
-        ref={colorProbeRef} 
-        className="color-txt-accent absolute opacity-0 pointer-events-none" 
-        aria-hidden="true"
-      />
-      
-      {/* Konva Stage */}
-      <div 
-        className={`absolute inset-0 z-[50] rounded-out overflow-hidden ${
-          mode === 'none' ? 'pointer-events-none' : ''
-        }`}
-        style={{
-          touchAction: mode === 'none' ? 'auto' : 'none',
-          width: '100%',
-          height: '100%',
-        }}
-      >
-        <Stage
-          ref={stageRef}
-          width={stageSize.width}
-          height={stageSize.height}
-          scaleX={scale}
-          scaleY={scale}
-          x={position.x}
-          y={position.y}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onWheel={handleWheel}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+      {/* Toolbar */}
+      <div style={toolbarStyle}>
+        <button
+          onClick={() => setTool("pen")}
           style={{
-            cursor: isPanning ? 'grabbing' : mode === 'draw' ? 'crosshair' : mode === 'erase' ? 'cell' : 'grab',
-            display: 'block',
-            width: '100%',
-            height: '100%',
+            padding: "6px 10px",
+            background: tool === "pen" ? "#4ade80" : "transparent",
+            border: "none",
+            borderRadius: 6,
+            color: "white",
+            cursor: "pointer",
+          }}
+          aria-pressed={tool === "pen"}
+        >
+          ✏️
+        </button>
+        <button
+          onClick={() => setTool("eraser")}
+          style={{
+            padding: "6px 10px",
+            background: tool === "eraser" ? "#4ade80" : "transparent",
+            border: "none",
+            borderRadius: 6,
+            color: "white",
+            cursor: "pointer",
+          }}
+          aria-pressed={tool === "eraser"}
+        >
+          🧽
+        </button>
+        <button
+          onClick={() => {
+            const ctx = ctxRef.current;
+            const draw = drawRef.current;
+            if (!ctx || !draw || !containerRef.current) return;
+            const rect = containerRef.current.getBoundingClientRect();
+            ctx.clearRect(0, 0, rect.width, rect.height);
+          }}
+          style={{
+            padding: "6px 10px",
+            background: "transparent",
+            border: "none",
+            borderRadius: 6,
+            color: "white",
+            cursor: "pointer",
           }}
         >
-          {/* Grid Layer */}
-          {showGrid && (
-            <Layer listening={false}>
-              <Group>
-                {gridLines}
-              </Group>
-            </Layer>
-          )}
-
-          {/* Drawing Layer */}
-          <Layer>
-            {lines.map((line) => (
-              <Line
-                key={line.id}
-                points={line.points}
-                stroke={line.stroke}
-                strokeWidth={line.strokeWidth}
-                tension={line.tension}
-                lineCap={line.lineCap}
-                lineJoin={line.lineJoin}
-                globalCompositeOperation={line.globalCompositeOperation}
-                perfectDrawEnabled={false}
-                shadowForStrokeEnabled={false}
-              />
-            ))}
-          </Layer>
-        </Stage>
+          🗑️
+        </button>
+        <button
+          onClick={() => setTransform({ x: 0, y: 0, scale: 1 })}
+          style={{
+            padding: "6px 10px",
+            background: "transparent",
+            border: "none",
+            borderRadius: 6,
+            color: "white",
+            cursor: "pointer",
+            fontSize: 12,
+          }}
+          title="Reset Zoom"
+        >
+          ⌖
+        </button>
       </div>
 
-      {/* Drawing Controls - Fixed to bottom left of viewport */}
-      <div className="fixed bottom-[3.5%] left-[5%] z-[101] flex gap-2">
-        {/* Draw Mode Toggle */}
-        <button
-          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
-            mode === 'draw' 
-              ? 'color-bg-accent color-txt-accent shadow-md scale-110' 
-              : 'color-bg-grey-5 color-txt-sub hover:scale-105'
-          }`}
-          onClick={() => toggleMode('draw')}
-          onTouchEnd={(e) => { e.preventDefault(); toggleMode('draw'); }}
-          title="Draw"
-        >
-          <LuPencil size={18} strokeWidth={2} />
-        </button>
+      {/* Transform wrapper for zoom/pan */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+          transformOrigin: "0 0",
+          zIndex: 1000,
+          touchAction: "none",
+        }}
+      >
+        {/* Grid canvas */}
+        <canvas
+          ref={gridRef}
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 1000,
+            pointerEvents: "none",
+          }}
+        />
 
-        {/* Eraser Mode Toggle */}
-        <button
-          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
-            mode === 'erase' 
-              ? 'color-bg-accent color-txt-accent shadow-md scale-110' 
-              : 'color-bg-grey-5 color-txt-sub hover:scale-105'
-          }`}
-          onClick={() => toggleMode('erase')}
-          onTouchEnd={(e) => { e.preventDefault(); toggleMode('erase'); }}
-          title="Eraser"
-        >
-          <LuEraser size={18} strokeWidth={2} />
-        </button>
-
-        {/* Pan Mode Toggle */}
-        <button
-          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
-            mode === 'none' 
-              ? 'color-bg-accent color-txt-accent shadow-md scale-110' 
-              : 'color-bg-grey-5 color-txt-sub hover:scale-105'
-          }`}
-          onClick={() => setMode('none')}
-          onTouchEnd={(e) => { e.preventDefault(); setMode('none'); }}
-          title="Pan (drag to move canvas)"
-        >
-          <LuMove size={18} strokeWidth={2} />
-        </button>
-
-        {/* Grid Toggle */}
-        <button
-          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
-            showGrid 
-              ? 'color-bg-accent color-txt-accent shadow-md scale-110' 
-              : 'color-bg-grey-5 color-txt-sub hover:scale-105'
-          }`}
-          onClick={() => setShowGrid(!showGrid)}
-          onTouchEnd={(e) => { e.preventDefault(); setShowGrid(!showGrid); }}
-          title="Toggle Grid"
-        >
-          <LuGrid3X3 size={18} strokeWidth={2} />
-        </button>
-
-        {/* Zoom In */}
-        <button
-          className="w-9 h-9 rounded-full flex items-center justify-center color-bg-grey-5 color-txt-sub hover:scale-105 transition-all duration-200"
-          onClick={zoomIn}
-          onTouchEnd={(e) => { e.preventDefault(); zoomIn(); }}
-          title="Zoom In"
-        >
-          <LuZoomIn size={18} strokeWidth={2} />
-        </button>
-
-        {/* Zoom Out */}
-        <button
-          className="w-9 h-9 rounded-full flex items-center justify-center color-bg-grey-5 color-txt-sub hover:scale-105 transition-all duration-200"
-          onClick={zoomOut}
-          onTouchEnd={(e) => { e.preventDefault(); zoomOut(); }}
-          title="Zoom Out"
-        >
-          <LuZoomOut size={18} strokeWidth={2} />
-        </button>
-
-        {/* Reset Zoom */}
-        <button
-          className="w-9 h-9 rounded-full flex items-center justify-center color-bg-grey-5 color-txt-sub hover:scale-105 transition-all duration-200 text-xs font-bold"
-          onClick={resetZoom}
-          onTouchEnd={(e) => { e.preventDefault(); resetZoom(); }}
-          title="Reset Zoom (100%)"
-        >
-          {Math.round(scale * 100)}%
-        </button>
-
-        {/* Clear All */}
-        <button
-          className="w-9 h-9 rounded-full flex items-center justify-center color-bg-grey-5 color-txt-sub hover:scale-105 transition-all duration-200"
-          onClick={clearCanvas}
-          onTouchEnd={(e) => { e.preventDefault(); clearCanvas(); }}
-          title="Clear All"
-        >
-          <LuTrash2 size={18} strokeWidth={2} />
-        </button>
+        {/* Draw canvas */}
+        <canvas
+          ref={drawRef}
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 1100,
+            touchAction: "none",
+            userSelect: "none",
+          }}
+        />
       </div>
     </>
   );
