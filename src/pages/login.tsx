@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import crown from '../assets/logo.png'
 import { FaGoogle } from 'react-icons/fa'
 import useAuthentication from '../hooks/useAuthentication'

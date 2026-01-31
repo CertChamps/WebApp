@@ -15,16 +15,34 @@ import '../styles/navbar.css'
 export default function Questions() {
 
     //=================================> State, Hooks, and Context <================================//
-    const [questions, setQuestions] = useState<any[]>([])
     const [filters, setFilters] = useState<any[]>([])
     const [position, setPosition] = useState(0) // position of question in the array
-    const { loadQuestions } = useQuestions({ setQuestions, filters })
+    const [questions, setQuestions] = useState<any[]>([]);
+    const [collectionPaths, setCollectionPaths] = useState<string[]>([ // Default paths
+        "questions/certchamps",
+        "questions/exam-papers",
+    ]);
+
+
+    useEffect(() => {
+        console.log("Collection Paths updated:", collectionPaths);
+    }, [collectionPaths])
+
+    useEffect(() => {
+        console.log("Position updated:", position, questions);
+    }, [position, questions])
+
+    const { loadQuestions } = useQuestions({ 
+        setQuestions, 
+        filters,
+        collectionPaths, // Use the state variable here
+    });
     const { id } = useParams()
 
 
     useEffect(() => {
-        setQuestions([]) // reset questions 
         loadQuestions() // load new question in 
+        setPosition(prev => prev + 1 )
     }, [filters])
     //===================================> useEffect First Render <=================================//
     useEffect(() => {
@@ -65,6 +83,7 @@ export default function Questions() {
                 setPosition={setPosition}    // optional but handy
                 nextQuestion={nextQuestion}  // <-- pass this
                 setFilters={setFilters}
+                setCollectionPaths={setCollectionPaths}
             />
 
         </div>

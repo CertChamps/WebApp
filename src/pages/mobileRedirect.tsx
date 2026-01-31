@@ -1,5 +1,4 @@
- import { useState } from 'react'
-import crown from '../assets/Rank2-CCOkr3g2.png'
+ import crown from '../assets/Rank2-CCOkr3g2.png'
 
  export default function MobileRedirect() {
 

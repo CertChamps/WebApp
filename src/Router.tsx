@@ -2,6 +2,7 @@
 import { createHashRouter, RouterProvider, Outlet } from "react-router-dom";
 import Login from "./pages/login";
 import SignUp from "./pages/signup";
+import VerifyEmail from "./pages/verifyEmail";
 import Questions from "./pages/questions";
 import Social from "./pages/social/social";
 import Games from "./pages/games";
@@ -44,6 +45,7 @@ const router = createHashRouter([
     children: [
       { path: "/", element: <SignUp /> },
       { path: "/login", element: <Login /> },
+      { path: "/verify-email", element: <VerifyEmail /> },
 
       // Protected routes
       {

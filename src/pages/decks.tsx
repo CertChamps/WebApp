@@ -228,7 +228,7 @@ export default function Decks() {
 					) : (
 						<div className="flex flex-wrap gap-4 py-4 pl-4 ">
 							{filteredDecks?.map((deck: any) => (
-								<div key={deck.id} className='w-[32%] '>
+								<div key={deck.id} className=''>
 									<DeckCard deck={deck} />
 								</div>
 							))}

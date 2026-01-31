@@ -32,6 +32,7 @@ type questionType = {
 const QThread = (props: questionType) => {
   const { user } = useContext(UserContext);
   const [message, setMessage] = useState('');
+  const [textError, setTextError] = useState<string>('');
   const [replyingTo, setReplyingTo] = useState<
     { id: string; username: string; type: 'question' | 'reply' } | null
   >(null);
@@ -129,6 +130,23 @@ const QThread = (props: questionType) => {
   //========================================SEND POST!!!=====================================
   const sendPost = async () => {
     if (!message.trim()) return;
+    const longestSegment = message
+          .split(" ")
+          .filter(Boolean)
+          .reduce((max, word) => Math.max(max, word.length), 0);
+
+
+        if (message.trim().length > 200) {
+          setTextError("Reply cannot exceed 200 characters.");
+          return;
+        }
+        else if (longestSegment > 50) {
+          setTextError("spam detected, why are you doing this?");
+          return;
+        }
+        else {
+          setTextError("");
+        }
 
     try {
       const image = await getImage();
@@ -233,6 +251,7 @@ const QThread = (props: questionType) => {
         />
 
         <div className="composer-footer-wrapper flex items-center justify-between mt-2">
+          {textError && <p className="text-sm text-red-500">{textError}</p>}
           <button type="button" onClick={cancelReply} className="composer-clear text-sm px-3 py-1">
             Clear
           </button>

@@ -41,7 +41,7 @@ import XPFly from "./XPFly";
 // User Context
 import { useContext } from "react";
 import { UserContext } from "../../context/UserContext";
-import { OptionsContext } from "../../context/OptionsContext";
+//import { OptionsContext } from "../../context/OptionsContext";
 import Filter from "../filter";
 
 // Component Props
@@ -53,6 +53,7 @@ type questionsProps = {
     deckmode?: boolean;
     preview?: boolean;
     setFilters: React.Dispatch<React.SetStateAction<any>>;
+    setCollectionPaths: React.Dispatch<React.SetStateAction<any>>;
     onQuestionAnswered?: (questionId: string, isCorrect: boolean) => void;
     questionsAnswered?: any;
     friendsAnswered?: {
@@ -125,7 +126,7 @@ export default function Question(props: questionsProps) {
     });
 
     const { user } = useContext(UserContext)
-    const { options } = useContext(OptionsContext)
+    //const { options } = useContext(OptionsContext)
     const [attempts, setAttempts] = useState(0);
     
     const [canReveal, setCanReveal] = useState(false);
@@ -529,10 +530,10 @@ export default function Question(props: questionsProps) {
     <div 
         ref={cardContainerRef}
         data-tutorial-id="question-card"
-        className={`card-container h-full items-end justify-start ${ (sideView == '' || sideView == 'filters') ? 'w-full' : 'w-7/12'}  
+        className={`card-container h-full items-end justify-start ${ (sideView == '') ? 'w-full' : 'w-7/12'}  
         transition-all duration-250 shrink-0 self-start justify-self-start origin-left relative`}>
                 {/* ================================= DRAWING CANVAS OVERLAY ================================ */}
-    {/* <DrawingCanvas containerRef={cardContainerRef} enabled={options.drawingEnabled !== false} /> */}
+    {/* <DrawingCanvas containerRef={cardContainerRef} /> enabled={options.drawingEnabled !== false} /> */}
                 {/* ================================= XP FLYER OVERLAY ================================ */}
     <div className="pointer-events-none h-full w-full absolute flex justify-center items-center z-[300]">
     {xpFlyers.map((fly) => (
@@ -650,6 +651,7 @@ export default function Question(props: questionsProps) {
             <div>
             {/* =============================== MATH INPUT ================================= */}
             
+
             {/* Attempts indicator - single one per question */}
             {!props.preview && attempts > 0 && (
               <div className="flex justify-start mb-2">
@@ -665,45 +667,48 @@ export default function Question(props: questionsProps) {
                 </div>
               </div>
             )}
-            
-            <div className="flex items-centerw-3/4 space-y-5 flex-wrap">
-                            {!props.preview &&
+
+            <div className="flex items-center w-3/4 space-y-5 flex-wrap">
+              {!props.preview &&
                 (() => {
-                  /* ---------- 1.  bail-out conditions ---------- */
-                  const answers = content?.[part]?.answer;          // keep null/undefined
-                  if (!Array.isArray(answers) || answers.length === 0 || answers[0] == null) {
-                    return null;                                    // ← nothing to show
-                  }
+                  const answers = Array.isArray(content?.[part]?.answer)
+                    ? content[part].answer
+                    : [];
+
+                  if (!Array.isArray(answers) || answers.length === 0) return null;
 
                   const prefixes = Array.isArray(content?.[part]?.prefix)
-                    ? content?.[part]?.prefix
+                    ? content[part].prefix
                     : [];
-                  
-                  // Helper to extract [before, after] from prefix data
-                  // Supports: [before, after], [[b1,a1],[b2,a2]], or [{before,after},{before,after}]
+
                   const getPrefixPair = (prefixItem: any): [string, string] | string => {
                     if (Array.isArray(prefixItem)) {
-                      return [String(prefixItem[0] ?? ''), String(prefixItem[1] ?? '')]
+                      return [String(prefixItem[0] ?? ''), String(prefixItem[1] ?? '')];
                     }
                     if (prefixItem && typeof prefixItem === 'object' && 'before' in prefixItem) {
-                      return [String(prefixItem.before ?? ''), String(prefixItem.after ?? '')]
+                      return [String(prefixItem.before ?? ''), String(prefixItem.after ?? '')];
                     }
-                    return prefixItem ?? ''
-                  }
+                    return prefixItem ?? '';
+                  };
 
-                  /* ---------- 2.  single box ---------- */
-                  if (answers.length === 1 && answers[0] != null && answers[0].toUpperCase() !== 'NULL' && answers[0].toUpperCase() !== 'DIAGRAM') {
-                    // For single input, prefix is [before, after]
+                  // ---- FIXED: prevent crash when firstAnswer is not a string ----
+                  const firstAnswer = answers[0];
+                  const firstAnswerStr = typeof firstAnswer === 'string' ? firstAnswer : String(firstAnswer ?? '');
+
+                  // ---- SINGLE INPUT CASE ----
+                  if (
+                    answers.length === 1 &&
+                    firstAnswer != null &&
+                    firstAnswerStr.toUpperCase() !== 'NULL' &&
+                    firstAnswerStr.toUpperCase() !== 'DIAGRAM'
+                  ) {
                     const pfx =
                       prefixes.length >= 2
                         ? [String(prefixes[0] ?? ''), String(prefixes[1] ?? '')]
                         : getPrefixPair(prefixes[0]);
 
                     return (
-                      <div
-                        key={0}
-                        className={locked ? 'pointer-events-none opacity-50' : ''}
-                      >
+                      <div key={0} className={locked ? 'pointer-events-none opacity-50' : ''}>
                         <MathInput
                           index={0}
                           prefix={pfx}
@@ -715,13 +720,10 @@ export default function Question(props: questionsProps) {
                     );
                   }
 
-                  /* ---------- 3.  multiple boxes ---------- */
+                  // ---- MULTIPLE INPUT CASE ----
                   return answers.map((ans, idx) =>
-                    ans != null && ans !== 'null' && ans !== 'NULL' ? (
-                      <div
-                        key={idx}
-                        className={locked ? 'pointer-events-none opacity-50' : ''}
-                      >
+                    ans != null && ans !== 'null' && String(ans).toUpperCase() !== 'NULL' ? (
+                      <div key={idx} className={locked ? 'pointer-events-none opacity-50' : ''}>
                         <MathInput
                           index={idx}
                           prefix={getPrefixPair(prefixes[idx])}
@@ -733,12 +735,12 @@ export default function Question(props: questionsProps) {
                     ) : null
                   );
                 })()}
-                              
-               {(Array.isArray(content?.[part]?.answer) &&
-                  content[part].answer.length > 0 &&
-                  content[part].answer[0] != null
-                  && content[part].answer[0].toUpperCase() != 'NULL'
-                  && content[part].answer[0].toUpperCase() != 'DIAGRAM') && (
+
+              {Array.isArray(content?.[part]?.answer) &&
+                content[part].answer.length > 0 &&
+                content[part].answer[0] != null &&
+                String(content[part].answer[0]).toUpperCase() !== 'NULL' &&
+                String(content[part].answer[0]).toUpperCase() !== 'DIAGRAM' && (
                   <div
                     id="check-btn"
                     className={`h-10 w-10 rounded-full color-bg-accent flex items-center
@@ -752,6 +754,9 @@ export default function Question(props: questionsProps) {
                   </div>
                 )}
             </div>
+
+            {/* ============================================================================ */}
+
   
             {/* ============================================================================ */}
             </div>
@@ -838,6 +843,20 @@ export default function Question(props: questionsProps) {
             />
           </div>
         ) : null}
+
+        {sideView === 'filters' ? (
+              <div className="h-full w-5/12 overflow-hidden" data-tutorial-id="sideview-filters">
+                  <Filter 
+                      onApply={(tags, paths) => {
+                          props.setFilters(tags);
+                          props.setCollectionPaths(paths);
+                          // If you want to update the hook paths, you can handle that here or in parent
+                          setSideView(''); 
+                      }}
+                      onClose={() => setSideView('')}
+                  />
+              </div>
+          ) : null}
 
         {sideView === 'questionParts' ? (
           <div className="h-full w-5/12 overflow-hidden">
@@ -1014,19 +1033,17 @@ export default function Question(props: questionsProps) {
             {/* =============================== FILTER ICON ================================= */}
             <div 
                 data-tutorial-id="sidebar-filter"
-                className={viewFilter ? 'sidebar-selected group' : 'sidebar group'} 
-                onMouseDown={(e) => {
-                    e.stopPropagation();
-                    setViewFilter(prev => !prev);
+                className={sideView === 'filters' ? 'sidebar-selected group' : 'sidebar group'} 
+                onClick={() => {
+                    setSideView(prev => prev === 'filters' ? '' : 'filters');
+                    setShowSearch(false);
                 }}
-
             >
                 <LuFilter strokeWidth={strokewidth} size={iconSize} 
-                    className={viewFilter ? 'nav-icon-selected  icon-anim' : 'nav-icon icon-anim'}
-                    fill={viewFilter ? 'currentColor' : 'none'} />
+                    className={sideView === 'filters' ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
+                    fill={sideView === 'filters' ? 'currentColor' : 'none'} />
 
-                 <span className="tooltip">filter</span>
-                 <Filter  viewFilter={viewFilter} setViewFilter={setViewFilter} setFilters={props.setFilters}/>
+                <span className="tooltip">filter</span>
             </div>
             {/* ================================================================================ */}
 

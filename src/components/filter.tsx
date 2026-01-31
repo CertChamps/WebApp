@@ -1,128 +1,117 @@
-// SearchandFilter.tsx
+import { useState } from 'react';
 import useFilters from '../hooks/useFilters';
-
-// Styles & Icons
 import { HiOutlineX } from "react-icons/hi";
-import '../styles/filters.css';
-import { useEffect, useRef } from 'react';
+import { LuCheck, LuRefreshCw, LuSearch, LuChevronDown } from "react-icons/lu";
 
-type filterProps = {
-  setFilters: React.Dispatch<React.SetStateAction<any>>,
-  viewFilter: boolean,
-  setViewFilter: React.Dispatch<React.SetStateAction<any>>
+type FilterProps = {
+    onApply: (tags: string[], paths: string[]) => void;
+    onClose: () => void;
 }
 
-export default function Filter(props: filterProps) {
-  const {
-    selectTopic,
-    unselectTopic,
-    selectSubTopic,
-    unselectSubTopic,
-    selectedTopics,
-    unselectedTopics, 
-    selectedSubTopics,
-    unselectedSubTopics,
-    localFilters,
-  } = useFilters();
+export default function Filter({ onApply, onClose }: FilterProps) {
+    const {
+        loading,
+        availableSets, // Array of sets, e.g., [{ id: '1', title: 'Certchamps', sections: [...] }]
+        selectedSetIds,
+        selectedSections,
+        selectedTags,
+        toggleSet,
+        toggleSection,
+        toggleTag,
+        getCollectionPaths
+    } = useFilters();
 
-  // ref for the whole search + filter area (input + dropdown)
-  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Close dropdown when clicking outside the component
-  useEffect(() => {
-    function handleOutside(e: MouseEvent) {
-      const target = e.target as Node | null;
-      // Only close if clicking outside the filter container
-      if (containerRef.current && !containerRef.current.contains(target)) {
-        props.setViewFilter(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleOutside);
-
-    return () => {
-      document.removeEventListener('mousedown', handleOutside);
-    };
-  }, [props.setViewFilter]);
-
-  // Remove the focusin event listener as it's causing issues with filter interactions
-
-  // applying filters 
-  const applyFilter = () => {
-    props.setFilters(localFilters);
-    props.setViewFilter(false);
-  } 
-  
-  // Set filters 
-
-  return (
-    <div ref={containerRef} onMouseDown={(e) => e.stopPropagation()}>
-        {/* DROPDOWN (or dropup in this case haha) */}
-        <div 
-          className={props.viewFilter ? 'filter-container-shown' : 'filter-container-hidden'}
-          data-tutorial-id="sideview-filter"
-        >
-          <p className="filter-header">topic</p>
-          <div className="selection-container">
-            {selectedTopics.map((topic) => (
-              <div
-                onClick={() => unselectTopic(topic)}
-                className="selected"
-                key={topic.topic}
-              >
-                <span>{topic.topic}</span>
-                <HiOutlineX size={12} strokeWidth={3} className="mx-0.5" />
-              </div>
-            ))}
-            {unselectedTopics.map((topic) => (
-              <div
-                onClick={() => selectTopic(topic)}
-                className="unselected"
-                key={topic.topic}
-              >
-                <span>{topic.topic}</span>
-              </div>
-            ))}
-          </div>
-
-          <p className="filter-header">subtopic</p>
-          {(selectedSubTopics.length > 0 || unselectedSubTopics.length > 0) ? (
-            <div className="selection-container">
-              {selectedSubTopics.map((topic) => (
-                <div
-                  onClick={() => unselectSubTopic(topic)}
-                  className="selected"
-                  key={topic.topic}
-                >
-                  <span>{topic.topic}</span>
-                  <HiOutlineX size={12} strokeWidth={3} className="mx-0.5" />
-                </div>
-              ))}
-              {unselectedSubTopics.map((topic) => (
-                <div
-                  onClick={() => selectSubTopic(topic)}
-                  className="unselected"
-                  key={topic.topic}
-                >
-                  <span>{topic.topic}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="filler">
-              select a topic to see subtopics <br /> 
-            </p>
-          )}
-
-          <p
-            className="apply"
-            onClick={() => {
-              applyFilter()
-            }}
-          >
-            Apply
-          </p>
+    if (loading) return (
+        <div className="w-full h-full flex justify-center items-center color-bg shadow-small">
+            <LuRefreshCw size={24} className="animate-spin " />
         </div>
-      </div>
-  );
+    );
+
+    return (
+        <div className="w-[95%] m-auto h-full flex flex-col color-bg shadow-small rounded-out  p-5 overflow-hidden">
+            
+            {/* --- HEADER --- */}
+            <div className="flex justify-between items-center mb-3">
+                <h2 className="text-xl font-bold txt-heading-colour tracking-tight">Filters</h2>
+                <button onClick={onClose} className="p-1 rounded-full color-bg-grey transition-colors">
+                    <HiOutlineX size={20}  className='txt-sub'/>
+                </button>
+            </div>
+
+
+            <div className="flex-1 overflow-y-auto pr-1 space-y-6 scrollbar-minimal">
+                
+                {/* --- NESTED DECK & TOPIC SECTION --- */}
+                <div className="space-y-4">
+                    <h3 className="text-sm font-bold txt-sub ">Question Sets</h3>
+                    
+                    <div className="space-y-5">
+                        {availableSets.map((set: any) => (
+                            <div key={set.id} className="space-y-3">
+                                
+                                {/* PARENT: The Question Set */}
+                                <label className="flex items-center gap-3 group cursor-pointer">
+                                    <div className={`w-5 h-5 rounded border-1 color-shadow flex items-center justify-center transition-all ${
+                                        selectedSetIds.includes(set.id) 
+                                        ? 'color-bg-accent' 
+                                        : 'color-bg-grey-10 '
+                                    }`}>
+                                        {selectedSetIds.includes(set.id) && <LuCheck size={14} className="color-txt-accent" strokeWidth={4} />}
+                                    </div>
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only" 
+                                        checked={selectedSetIds.includes(set.id)}
+                                        onChange={() => toggleSet(set.id)}
+                                    />
+                                    <span className={`text-[1rem] ${selectedSetIds.includes(set.id) ? 'color-txt-accent font-semibold' : 'color-txt-sub'}`}>
+                                        {set.title}
+                                    </span>
+                                </label>
+
+                                {/* CHILDREN: Indented Topics (Threaded design) */}
+                                {selectedSetIds.includes(set.id) && (
+                                    <div className="ml-2 pl-2 border-l-2 color-shadow space-y-3 animate-in fade-in slide-in-from-left-2 duration-300">
+                                        {set.sections?.map((section: string) => (
+                                            <label key={section} className="flex items-center gap-3 group cursor-pointer">
+                                                <div className={`w-4 h-4 rounded flex items-center justify-center transition-all ${
+                                                    selectedSections.includes(section) 
+                                                    ? 'color-bg-accent ' 
+                                                    : 'color-bg-grey-10'
+                                                }`}>
+                                                    {selectedSections.includes(section) && <LuCheck size={12} className="color-txt-accent" strokeWidth={4} />}
+                                                </div>
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="sr-only" 
+                                                    checked={selectedSections.includes(section)}
+                                                    onChange={() => toggleSection(section)}
+                                                />
+                                                <span className={`text-sm capitalize transition-colors ${selectedSections.includes(section) ? 'color-txt-main' : 'color-txt-sub'}`}>
+                                                    {section.replace(/-/g, ' ')}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+            </div>
+
+            {/* --- ACTION BUTTON --- */}
+            <div className="mt-6 pt-4 ">
+                <button 
+                    disabled={selectedSetIds.length === 0}
+                    onClick={() => onApply(selectedTags, getCollectionPaths())}
+                    className="w-full py-3.5 rounded-xl color-bg-accent color-txt-accent font-bold transition-all disabled:opacity-20 disabled:grayscale shadow-lg shadow-blue-900/10"
+                >
+                    Apply Selection
+                </button>
+            </div>
+        </div>
+    );
 }

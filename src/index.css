@@ -293,7 +293,7 @@ math-field::part(virtual-keyboard-toggle) {
 
 /* ================== Shadows ================== */ 
 @utility shadow-small {
-  @apply shadow-[2px_2px_0px_0px] color-shadow border-2 rounded-in
+  @apply shadow-[0px_1px_0px_0px] color-shadow border-2 rounded-in
 }
 
 @utility shadow-big {
