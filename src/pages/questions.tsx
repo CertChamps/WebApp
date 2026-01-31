@@ -1,12 +1,12 @@
-// React
-import { useParams } from "react-router-dom";
-
 // Hooks 
+import { useEffect, useRef, useState } from "react";
 import useQuestions from "../hooks/useQuestions";
-import { useEffect, useState } from "react";
+
 
 // Components
-import Question from "../components/questions/question";
+import QuestionSelector from "../components/questions/questionSelector";
+import QSearch from "../components/questions/qSearch";
+import DrawingCanvas from "../components/questions/DrawingCanvas";
 
 // Style Imports 
 import '../styles/questions.css'
@@ -14,77 +14,82 @@ import '../styles/navbar.css'
 
 export default function Questions() {
 
-    //=================================> State, Hooks, and Context <================================//
-    const [filters, setFilters] = useState<any[]>([])
+    //==============================================> State <========================================//
+    const [filters, setFilters] = useState<Record<string, string[]>>({})
     const [position, setPosition] = useState(0) // position of question in the array
     const [questions, setQuestions] = useState<any[]>([]);
-    const [collectionPaths, setCollectionPaths] = useState<string[]>([ // Default paths
+
+    const [showSearch, setShowSearch] = useState(false)
+
+    const [collectionPaths, setCollectionPaths] = useState<string[]>([ 
         "questions/certchamps",
-        "questions/exam-papers",
     ]);
 
+    const cardContainerRef = useRef<HTMLElement | null>(null)
+    //===============================================================================================//
 
-    useEffect(() => {
-        console.log("Collection Paths updated:", collectionPaths);
-    }, [collectionPaths])
-
-    useEffect(() => {
-        console.log("Position updated:", position, questions);
-    }, [position, questions])
-
+    //==============================================> Hooks <========================================//
     const { loadQuestions } = useQuestions({ 
         setQuestions, 
-        filters,
         collectionPaths, // Use the state variable here
     });
-    const { id } = useParams()
 
+    //const { id } = useParams() -- will be used to load questions from a specific deck later on!
 
+    //==============================================================================================//
+
+    //====================================> useEffect First Render <================================//
+
+    // load questions at start and on filter change
     useEffect(() => {
         loadQuestions() // load new question in 
         setPosition(prev => prev + 1 )
     }, [filters])
-    //===================================> useEffect First Render <=================================//
-    useEffect(() => {
-  
-        // load questions 
-        if ( id )
-            loadQuestions(id) 
-        else 
-            loadQuestions()
 
-
-    }, [])
     //===============================================================================================//
 
+    //===========================================> Next Question <===================================//
     const nextQuestion = async () => {
-        // If we’re at the end of the loaded array, load one more first
         if (position + 1 >= questions.length) {
           await loadQuestions();
         }
         setPosition((p) => p + 1);
     };
+    //===============================================================================================//
+
+    //===========================================> Previous Question <================================//
+    const previousQuestion = () => {
+        setPosition((p) => Math.max(0, p - 1));
+    };
+    //===============================================================================================//
 
 
     return (
-        <div className="w-h-container flex-row justify-end items-center">
+        <div className="p-4 w-full h-full">
 
-            {/* ======================================== TOP PAGE INFORMATION ========================================== */}
-            <div className="flex items-end justify-end">
-                
-                {/* ======================================== SEARCH AND FILTER ========================================== */}
-            
-                    {/* <SearchandFilter setFilters={setFilters} /> */}
+            <div className="w-[22.5%] h-full min-w-72"> 
+                <QuestionSelector
+                    question={questions[position - 1]}
+                    nextQuestion={nextQuestion}
+                    previousQuestion={previousQuestion}
+                    setShowSearch={setShowSearch}
+                />
             </div>
-            {/* ===================================================================================================== */}
-            <Question
-                questions={questions}
-                position={position}
-                setPosition={setPosition}    // optional but handy
-                nextQuestion={nextQuestion}  // <-- pass this
-                setFilters={setFilters}
-                setCollectionPaths={setCollectionPaths}
-            />
+
+            {/*===================================> OVERLAY COMPONENTS <===================================*/}
+            
+            {showSearch ? (
+                <QSearch
+                    setShowSearch={setShowSearch}
+                    questions={questions}
+                    position={position}
+                    setPosition={setPosition}
+                />
+            ) : null}
+
+            <DrawingCanvas containerRef={cardContainerRef as unknown as React.RefObject<HTMLElement>} />
+
+            {/*===============================================================================================*/}
 
         </div>
     )

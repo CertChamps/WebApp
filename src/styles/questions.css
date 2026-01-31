@@ -1,64 +1,24 @@
 @reference '../index.css';
 
-/* ================== SEARCH BAR ===================== */
-.search-container {
-    @apply flex items-center justify-between txtbox w-9/12 max-w-xs;
+
+.questions-advance {
+  @apply color-bg-grey-5 color-txt-sub flex h-6 w-6 min-h-[2.5rem] min-w-[2.5rem] 
+  shrink-0 items-center justify-center rounded-full border border-transparent transition-all 
+  cursor-pointer hover:opacity-85 duration-250 
 }
 
-.search-input {
-    @apply  w-full p-1 outline-none border-none;
+.question-selector-button {
+    @apply color-bg-grey-5 color-txt-sub flex items-center justify-center gap-2 rounded-out 
+    px-3 py-1.5 text-sm font-semibold transition-all hover:opacity-85 cursor-pointer
 }
 
-.search-icon {
-    @apply color-txt-sub;
-}
-/* =================================================== */
-
-/* ================== QUESTION CARD ================== */
-.card-container {
-    @apply h-full rounded-out m-auto border-2
-    shadow-small color-bg;
+.question-selector-button-active {
+  @apply color-bg-accent color-txt-accent 
 }
 
-.part-number {
-    @apply txt mx-2 rounded-out cursor-pointer px-3 py-1 color-txt-sub;
+/* Single-line truncation with ellipsis for question title and tags */
+.question-selector-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-/* =================================================== */
-
-/* ===================== RANK BAR ==================== */
-  .progress-bar {
-    @apply w-full h-4 rounded-2xl border-2 color-shadow overflow-hidden color-bg 
-  }
-  
-  .progress-fill {
-    @apply h-full rounded-2xl color-cursor transition-all
-  }
-  
-/* =================================================== */
-
-
-.f {
-  mask-image: url("../assets/crown.png");
-}
-
-/* =============== DRAWING CANVAS ==================== */
-.drawing-canvas-active {
-  cursor: crosshair;
-}
-
-.drawing-controls button {
-  backdrop-filter: blur(8px);
-}
-/* =================================================== */
-
-/* =============== ATTEMPTS INDICATOR ================ */
-@keyframes pulse-opacity {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
-/* =================================================== */
