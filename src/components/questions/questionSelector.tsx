@@ -28,18 +28,18 @@ export default function QuestionSelector({ question, nextQuestion, previousQuest
   const tagsDisplay = formatTags(question?.properties?.tags);
 
   return (
-    <div className="flex flex-col gap-2 rounded-out">
+    <div className="flex flex-col gap-2 rounded-out px-4 py-2 backdrop-blur-sm ">
 
 
       <div className="flex w-full items-center  justify-between">
 
         {/* ========================================== TOP SECTION ========================================== */}
 
-        {/* Left: previous question (circular) */}
+        {/* Left: previous question (circular) - pointer-events-auto so button works when column has pointer-events-none (canvas draw-through) */}
         <button
           type="button"
           aria-label="Previous question"
-          className="questions-advance"
+          className="questions-advance pointer-events-auto"
           onClick={previousQuestion}
         >
           <LuChevronLeft size={16} strokeWidth={2.5} />
@@ -78,7 +78,7 @@ export default function QuestionSelector({ question, nextQuestion, previousQuest
         <button
           type="button"
           aria-label="Next question"
-          className="questions-advance"
+          className="questions-advance pointer-events-auto"
           onClick={nextQuestion}
         >
           <LuChevronRight size={16} strokeWidth={2.5} />
@@ -95,7 +95,7 @@ export default function QuestionSelector({ question, nextQuestion, previousQuest
         <button
           type="button"
           aria-label="Random question"
-          className="question-selector-button-active question-selector-button"
+          className="question-selector-button-active question-selector-button pointer-events-auto"
         >
           <TbDice5 size={20} strokeWidth={1.8} />
           <span>randomize</span>
@@ -105,7 +105,7 @@ export default function QuestionSelector({ question, nextQuestion, previousQuest
         <button
           type="button"
           aria-label="Filter questions"
-          className="question-selector-button"
+          className="question-selector-button pointer-events-auto"
         >
           <LuFilter size={18} strokeWidth={2} />
           <span>filter</span>
@@ -115,7 +115,7 @@ export default function QuestionSelector({ question, nextQuestion, previousQuest
         <button
           type="button"
           aria-label="Search questions"
-          className="question-selector-button"
+          className="question-selector-button pointer-events-auto"
           onClick={() => setShowSearch(true)}
         >
           <LuSearch size={18} strokeWidth={2} />

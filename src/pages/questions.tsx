@@ -7,6 +7,7 @@ import useQuestions from "../hooks/useQuestions";
 import QuestionSelector from "../components/questions/questionSelector";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas from "../components/questions/DrawingCanvas";
+import RenderMath from "../components/math/mathdisplay";
 
 // Style Imports 
 import '../styles/questions.css'
@@ -65,9 +66,9 @@ export default function Questions() {
 
 
     return (
-        <div className="p-4 w-full h-full">
-
-            <div className="w-[22.5%] h-full min-w-72"> 
+        <div className="relative flex  w-full h-full gap-4">
+    
+            <div className="w-[22.5%] h-full min-w-80 shrink-0 z-10 pointer-events-none"> 
                 <QuestionSelector
                     question={questions[position - 1]}
                     nextQuestion={nextQuestion}
@@ -76,8 +77,17 @@ export default function Questions() {
                 />
             </div>
 
+          
+            <div className="z-10 w-1/2 p-4 pointer-events-none">
+                <RenderMath text={questions[position - 1]?.content?.[0]?.question ?? 'ughhhh no question'} className="font-bold text-sm txt" />
+            </div>
+
             {/*===================================> OVERLAY COMPONENTS <===================================*/}
             
+            <div className="w-full h-full absolute inset-0 z-0">
+                <DrawingCanvas />
+            </div>
+
             {showSearch ? (
                 <QSearch
                     setShowSearch={setShowSearch}
@@ -87,10 +97,7 @@ export default function Questions() {
                 />
             ) : null}
 
-            <DrawingCanvas containerRef={cardContainerRef as unknown as React.RefObject<HTMLElement>} />
-
             {/*===============================================================================================*/}
-
         </div>
     )
 }
