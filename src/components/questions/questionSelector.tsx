@@ -1,7 +1,6 @@
 // Icons 
-import { LuChevronLeft, LuChevronRight, LuFilter, LuSearch } from "react-icons/lu";
+import {LuChevronLeft, LuChevronRight, LuFilter, LuSearch } from "react-icons/lu";
 import { TbDice5 } from "react-icons/tb";
-import { Pencil } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 // Style Imports 
@@ -13,8 +12,6 @@ export type QuestionSelectorProps = {
     nextQuestion: () => void;
     previousQuestion: () => void;
     setShowSearch: (show: boolean) => void;
-    canvasMode: boolean;
-    setCanvasMode: (show: boolean) => void;
 };
 
 // Formatting tags for display
@@ -24,7 +21,7 @@ function formatTags(tags: string[] | string | undefined): string {
   return list.filter(Boolean).map((t) => `#${t}`).join(", ");
 }
 
-export default function QuestionSelector({ question, nextQuestion, previousQuestion, setShowSearch, canvasMode, setCanvasMode }: QuestionSelectorProps) {
+export default function QuestionSelector({ question, nextQuestion, previousQuestion, setShowSearch }: QuestionSelectorProps) {
 
   // Title and tags from question document (properties = Firestore doc data)
   const title = question?.properties?.name ?? '...';
@@ -123,17 +120,6 @@ export default function QuestionSelector({ question, nextQuestion, previousQuest
         >
           <LuSearch size={18} strokeWidth={2} />
           <span>search</span>
-        </button>
-
-        {/* Canvas: toggle drawing mode */}
-        <button
-          type="button"
-          aria-label="Toggle canvas mode"
-          className={`question-selector-button pointer-events-auto ${canvasMode ? "question-selector-button-active" : ""}`}
-          onClick={() => setCanvasMode(!canvasMode)}
-        >
-          <Pencil size={18} strokeWidth={2} />
-          <span>canvas</span>
         </button>
       </div>
       {/* ================================================================================================== */}
