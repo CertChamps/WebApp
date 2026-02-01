@@ -2,6 +2,8 @@ import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import cors from "cors";
 import fetch from "node-fetch";
+import { createOpenAI } from "@ai-sdk/openai";
+import { generateText } from "ai";
 
 admin.initializeApp();
 
@@ -40,3 +42,34 @@ export const verifyCaptcha = functions.https.onRequest(
         });
     }
 );
+
+const openrouter = createOpenAI({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: process.env.OPENROUTER_API_KEY,
+  });
+  
+  export const chat = functions.https.onRequest({ 
+    cors: true, 
+    secrets: ["OPENROUTER_API_KEY"] 
+  }, async (req, res) => {
+    const { prompt } = req.body; // Usually simpler for non-streaming
+  
+    try {
+      const { text } = await generateText({
+        model: openrouter("openai/gpt-4.1-mini"), // Exact OpenRouter ID
+        prompt: prompt,
+        maxOutputTokens: 1000,
+        
+      });
+  
+      // This fulfills your request to log the text on the backend
+      console.log("AI Response:", text);
+  
+      // Send the final text back as a simple JSON object
+      res.status(200).json({ output: text });
+  
+    } catch (error) {
+      console.error("AI Error:", error);
+      res.status(500).json({ error: "Failed to generate text" });
+    }
+  });

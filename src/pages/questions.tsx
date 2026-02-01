@@ -8,6 +8,7 @@ import QuestionSelector from "../components/questions/questionSelector";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas from "../components/questions/DrawingCanvas";
 import RenderMath from "../components/math/mathdisplay";
+import AIChat from "../components/questions/aiChat";
 
 // Style Imports 
 import '../styles/questions.css'
@@ -80,6 +81,10 @@ export default function Questions() {
           
             <div className="z-10 w-1/2 p-4 pointer-events-none">
                 <RenderMath text={questions[position - 1]?.content?.[0]?.question ?? 'ughhhh no question'} className="font-bold text-sm txt" />
+            </div>
+
+            <div className="z-10 w-1/2 p-4 h-full color-bg-grey-10">
+                <AIChat />
             </div>
 
             {/*===================================> OVERLAY COMPONENTS <===================================*/}
