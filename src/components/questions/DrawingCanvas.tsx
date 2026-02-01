@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Pencil, Eraser, Grid3X3, Trash2, X } from "lucide-react";
+import { motion } from "framer-motion";
 
 type Point = { x: number; y: number; pressure: number };
 type Stroke = { points: Point[]; tool: "pen" | "eraser" };
@@ -361,47 +362,56 @@ export default function DrawingCanvas({ onClose }: DrawingCanvasProps) {
 						WebkitTapHighlightColor: "transparent",
 					}}
 				/>
-				{/* Floating bar - mostly transparent with blur */}
-				<div
+				{/* Floating bar - bar and icons rise as one unit */}
+				<motion.div
 					className="drawing-canvas-toolbar absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center gap-1 py-1.5 px-2 rounded-[var(--radius-out)] border color-shadow"
 					style={{
 						background: "rgba(128, 128, 128, 0.05)",
 						backdropFilter: "blur(6px)",
 						WebkitBackdropFilter: "blur(6px)",
 					}}
+					initial={{ y: 24 }}
+					animate={{ y: 0 }}
+					exit={{ y: 24, opacity: 0 }}
+					transition={{ type: "spring", stiffness: 400, damping: 28 }}
 				>
-				<button
-					type="button"
-					onClick={() => setTool("pen")}
-					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${tool === "pen" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
-					title="Pen"
-				>
-					<Pencil size={18} strokeWidth={2} />
-				</button>
-				<button
-					type="button"
-					onClick={() => setTool("eraser")}
-					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${tool === "eraser" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
-					title="Eraser"
-				>
-					<Eraser size={18} strokeWidth={2} />
-				</button>
-				<button
-					type="button"
-					onClick={() => setShowGrid((g) => !g)}
-					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${showGrid ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
-					title="Toggle grid"
-				>
-					<Grid3X3 size={18} strokeWidth={2} />
-				</button>
-				<button
-					type="button"
-					onClick={clearCanvas}
-					className="p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 hover:color-bg-grey-10"
-					title="Clear canvas"
-				>
-					<Trash2 size={18} strokeWidth={2} />
-				</button>
+				{[
+					{ icon: Pencil, tool: "pen" as const },
+					{ icon: Eraser, tool: "eraser" as const },
+					{ icon: Grid3X3, isGrid: true },
+					{ icon: Trash2, isClear: true },
+				].map((item, i) => {
+					const Icon = item.icon;
+					return (
+						<button
+							key={i}
+							type="button"
+							onClick={() => {
+								if ("tool" in item && item.tool) setTool(item.tool);
+								else if ("isGrid" in item) setShowGrid((g) => !g);
+								else if ("isClear" in item) clearCanvas();
+							}}
+							className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${
+								"tool" in item && tool === item.tool
+									? "color-bg-accent color-txt-accent"
+									: "isGrid" in item && item.isGrid && showGrid
+										? "color-bg-accent color-txt-accent"
+										: "hover:color-bg-grey-10"
+							}`}
+							title={
+								"tool" in item
+									? item.tool === "pen"
+										? "Pen"
+										: "Eraser"
+									: "isGrid" in item
+										? "Toggle grid"
+										: "Clear canvas"
+							}
+						>
+							<Icon size={18} strokeWidth={2} />
+						</button>
+					);
+				})}
 				{onClose && (
 					<button
 						type="button"
@@ -412,7 +422,7 @@ export default function DrawingCanvas({ onClose }: DrawingCanvasProps) {
 						<X size={18} strokeWidth={2} />
 					</button>
 				)}
-				</div>
+				</motion.div>
 			</div>
 		</div>
 	);

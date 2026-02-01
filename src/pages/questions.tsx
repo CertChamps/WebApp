@@ -1,9 +1,10 @@
 // Hooks 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import useQuestions from "../hooks/useQuestions";
 
 
 // Components
+import { AnimatePresence, motion } from "framer-motion";
 import QuestionSelector from "../components/questions/questionSelector";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas from "../components/questions/DrawingCanvas";
@@ -21,12 +22,12 @@ export default function Questions() {
     const [questions, setQuestions] = useState<any[]>([]);
 
     const [showSearch, setShowSearch] = useState(false)
+    const [canvasMode, setCanvasMode] = useState(false)
 
     const [collectionPaths, setCollectionPaths] = useState<string[]>([ 
         "questions/certchamps",
     ]);
 
-    const cardContainerRef = useRef<HTMLElement | null>(null)
     //===============================================================================================//
 
     //==============================================> Hooks <========================================//
@@ -74,6 +75,8 @@ export default function Questions() {
                     nextQuestion={nextQuestion}
                     previousQuestion={previousQuestion}
                     setShowSearch={setShowSearch}
+                    canvasMode={canvasMode}
+                    setCanvasMode={setCanvasMode}
                 />
             </div>
 
@@ -84,9 +87,20 @@ export default function Questions() {
 
             {/*===================================> OVERLAY COMPONENTS <===================================*/}
             
-            <div className="w-full h-full absolute inset-0 z-0">
-                <DrawingCanvas />
-            </div>
+            <AnimatePresence>
+                {canvasMode && (
+                    <motion.div
+                        key="drawing-canvas"
+                        className="w-full h-full absolute inset-0 z-0"
+                        initial={{ opacity: 1 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ y: 16, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1], when: "afterChildren" }}
+                    >
+                        <DrawingCanvas />
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {showSearch ? (
                 <QSearch
