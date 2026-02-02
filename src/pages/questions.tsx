@@ -8,7 +8,7 @@ import QuestionSelector from "../components/questions/questionSelector";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas from "../components/questions/DrawingCanvas";
 import RenderMath from "../components/math/mathdisplay";
-import AIChat from "../components/questions/aiChat";
+import { AIChat } from "../components/ai";
 
 // Style Imports 
 import '../styles/questions.css'
@@ -78,17 +78,22 @@ export default function Questions() {
                 />
             </div>
 
-          
-            <div className="z-10 w-1/2 p-4 pointer-events-none">
-                <RenderMath text={questions[position - 1]?.content?.[0]?.question ?? 'ughhhh no question'} className="font-bold text-sm txt" />
+            <div className="w-full h-full z-10 flex justify-between items-start pointer-events-none">
+                <div className="z-10  p-4 pointer-events-none">
+                    <RenderMath text={questions[position - 1]?.content?.[0]?.question ?? 'ughhhh no question'} className="font-bold text-sm txt" />
+                </div>
+                {/* Placeholder for layout - AIChat is a sibling below so it can receive pointer events */}
+                <div className="min-w-80 max-w-96 w-1/2 shrink-0" aria-hidden />
             </div>
 
-            <div className="z-10 w-1/2 p-4 h-full color-bg-grey-10">
-                <AIChat />
+            {/* AIChat as sibling (not under pointer-events-none) so it receives clicks */}
+            <div className="absolute right-0 h-full top-0 bottom-0 z-20 min-w-96 max-w-120 w-1/2 pointer-events-auto">
+                <div className="h-full w-full backdrop-blur-3xl border-l-1 color-shadow rounded-xl overflow-hidden">
+                    <AIChat question={questions[position - 1]} />
+                </div>
             </div>
 
             {/*===================================> OVERLAY COMPONENTS <===================================*/}
-            
             <div className="w-full h-full absolute inset-0 z-0">
                 <DrawingCanvas />
             </div>

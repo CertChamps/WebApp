@@ -22,3 +22,21 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* AI Chat markdown & math */
+.chat-markdown {
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+/* KaTeX in chat - ensure visible rendering */
+.chat-markdown .katex {
+  font-size: 1em;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.chat-markdown .katex-display {
+  margin: 0.5em 0;
+  overflow-x: auto;
+}
