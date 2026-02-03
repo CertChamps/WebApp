@@ -11,7 +11,7 @@ import { UserContext } from '../../context/UserContext';
 
 // Firebase
 import { db }from '../../../firebase'
-import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import FriendsSearch from "../../components/social/friendsSearch";
 
@@ -94,7 +94,7 @@ export default function Social() {
     useEffect(() => {
         // -----------------------------------FETCHING POSTS FROM DATABASE---------------------------------------//
         const fetchPostsWithUserData = async () => {
-            const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
+            const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'), limit(50));
   
             const unsubscribe = onSnapshot(q, async (snapshot) => {
                 const postData = await Promise.all(
@@ -134,8 +134,8 @@ export default function Social() {
                         //We want to set replyCount to the amount of flashcard replies if its a flashcard thread
                         if (post.flashcardId) {
                             //If it's a flashcard, fetch the flashcard data
-                            repliesSnap = await getDocs(collection(db, 'certchamps-questions', post.flashcardId, 'replies', post.replyId, 'replies'));
-                            replyCount = repliesSnap.size;
+                            // repliesSnap = await getDocs(collection(db, 'certchamps-questions', post.flashcardId, 'replies', post.replyId, 'replies'));
+                            // replyCount = repliesSnap.size;
                         }
 
                         return {

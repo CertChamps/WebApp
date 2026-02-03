@@ -73,6 +73,7 @@ const userSetup = async (uid: string, username: string, email: string) => {
   console.log("1. Starting userSetup. Current Path:", currentPath);
 
   try {
+
     const userDoc = await getDoc(doc(db, "user-data", uid));
     const currentUser = auth.currentUser;
     const isEmailVerified = currentUser?.emailVerified ?? false;
@@ -89,9 +90,9 @@ const userSetup = async (uid: string, username: string, email: string) => {
         imageUrl = "https://via.placeholder.com/150";
       }
 
-      const decksRef = collection(db, "user-data", uid, "decks");
-      const deckSnapshot = await getDocs(decksRef);
-      const decks = deckSnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // const decksRef = collection(db, "user-data", uid, "decks");
+      // const deckSnapshot = await getDocs(decksRef);
+      // const decks = deckSnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
       setUser({
         uid: userDoc.id,
@@ -106,7 +107,7 @@ const userSetup = async (uid: string, username: string, email: string) => {
         streak: userData.streak || 0,
         highestStreak: userData.highestStreak || 0,
         savedQuestions: userData.savedQuestions || [],
-        decks,
+        //decks,
         emailVerified: isEmailVerified,
       });
 

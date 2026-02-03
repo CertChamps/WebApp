@@ -16,7 +16,7 @@ export default function useFilters() {
     // User Selections
     const [selectedSetIds, setSelectedSetIds] = useState<string[]>([]);
     const [selectedSections, setSelectedSections] = useState<string[]>([]);
-    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [selectedTags, setSelectedTags] = useState<Record<string, string[]>>({});
 
     // 1. Fetch available sets on mount
     useEffect(() => {
@@ -53,12 +53,15 @@ export default function useFilters() {
         );
     };
 
-    const toggleTag = (tag: string) => {
-        setSelectedTags(prev => 
-            prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-        );
+    const toggleTag = (setId: string, tag: string) => {
+        setSelectedTags(prev => {
+            const currentTags = prev[setId] || [];
+            const newTags = currentTags.includes(tag)
+                ? currentTags.filter(t => t !== tag)
+                : [...currentTags, tag];
+            return { ...prev, [setId]: newTags };
+        });
     };
-
     // 3. Derived State for UI
     // Only show sections belonging to selected Sets
     const activeSectionsList = availableSets

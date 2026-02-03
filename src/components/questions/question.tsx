@@ -496,10 +496,10 @@ export default function Question(props: questionsProps) {
           </div>
         </div>
       ) : null}
-
+{/* 
       <div className="flex w-full" ref={rankRef}>
           <RankBar rank={rank} progress={progress} />
-      </div>
+      </div> */}
 
 <div className="flex h-[90%] w-full mt-4 justify-center items-center relative">
   <div className="color-bg-grey-5 mx-4 w-10 h-10 min-w-[2.5rem] min-h-[2.5rem] aspect-square flex items-center group relative justify-center rounded-full hover:scale-95 duration-250 transition-all"
@@ -533,7 +533,7 @@ export default function Question(props: questionsProps) {
         className={`card-container h-full items-end justify-start ${ (sideView == '') ? 'w-full' : 'w-7/12'}  
         transition-all duration-250 shrink-0 self-start justify-self-start origin-left relative`}>
                 {/* ================================= DRAWING CANVAS OVERLAY ================================ */}
-    {/* <DrawingCanvas containerRef={cardContainerRef} /> enabled={options.drawingEnabled !== false} /> */}
+    {/* <DrawingCanvas containerRef={cardContainerRef} />  */}
                 {/* ================================= XP FLYER OVERLAY ================================ */}
     <div className="pointer-events-none h-full w-full absolute flex justify-center items-center z-[300]">
     {xpFlyers.map((fly) => (
@@ -818,11 +818,11 @@ export default function Question(props: questionsProps) {
             </div>
         ) : null}
 
-        {sideView === 'canvas' ? (
+        {/* {sideView === 'canvas' ? (
             <div className="h-full w-5/12">
                 <TestDraw/>
             </div>
-        ) : null}
+        ) : null} */}
 
         {sideView === 'viewQuestions' ? (
           <div className="h-full w-5/12 overflow-hidden">
@@ -1049,7 +1049,7 @@ export default function Question(props: questionsProps) {
 
 
             {/* ===================================DRAWING ICON================================= */}
-             <div 
+             {/* <div 
                 data-tutorial-id="sidebar-decks"
                 className={sideView == 'canvas' ? 'sidebar-selected  group' : 'sidebar  group'} 
                 onClick={() => {
@@ -1065,7 +1065,7 @@ export default function Question(props: questionsProps) {
 
                  <span className="tooltip">decks</span>
                  
-            </div>
+            </div> */}
             {/* ================================================================================ */}
 
 

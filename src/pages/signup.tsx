@@ -64,8 +64,8 @@ export default function SignUp() {
 
   return (
     <div className="h-full flex justify-center items-center w-full color-bg-grey-5 overflow-hidden">
-      <div className="w-72 py-5 h-9/12 color-shadow border-2 rounded-out color-bg">
-        <img src={crown} className="w-32 m-auto object-cover h-24 mb-4" />
+      <div className="w-72 py-5 h-min-9/12 color-shadow border-2 rounded-out color-bg">
+        <img src={crown} className="w-28 m-auto object-contain h-20 mb-4" />
         <h1 className="txt-heading-colour text-center text-2xl mb-4">Sign Up</h1>
 
         <p className="font-light text-red ml-0.5 text-center">{error?.general || ""}</p>

@@ -9,8 +9,8 @@ type QuestionLocation = {
 }
 
 type QuestionProps = {
-    setQuestions: React.Dispatch<React.SetStateAction<any>>
-    filters: string[]
+    setQuestions?: React.Dispatch<React.SetStateAction<any>>
+    filters?: Record<string, string[]>
     // Can be full collection paths OR parent document paths
     collectionPaths: string[] 
     // The field name in your parent doc that lists subcollections (default: 'sections')
@@ -71,83 +71,51 @@ export default function useQuestions(props?: QuestionProps) {
         }))
 
         resolvedPathsCache.current = finalPaths
+        console.log("Resolved Paths:", finalPaths);
+
         return finalPaths
     }
 
+// Inside useQuestions.tsx
+
     const getRandomQuestion = async (idExclude: string = ''): Promise<QuestionLocation> => {
-        const rawPaths = props?.collectionPaths || []
-        if (rawPaths.length === 0) throw new Error("No paths provided")
-
-        // Step 0 — Resolve Paths (Expand headings to subcollections)
-        const targetPaths = await resolvePaths(rawPaths)
-
-        if (targetPaths.length === 0) {
-            throw new Error("No valid collection paths found after resolving parents.")
-        }
-
-        const filters = (props?.filters || []).slice(0, 10)
-
-        // Step 1 — Get all IDs from ALL resolved paths
-        if (!allIdsCache.current) {
-            const fetchPromises = targetPaths.map(async (path) => {
-                const coll = collection(db, path)
-                const snap = await getDocs(query(coll, orderBy('__name__')))
-                return snap.docs.map(d => ({ id: d.id, path: path }))
-            })
-
-            const results = await Promise.all(fetchPromises)
-            allIdsCache.current = results.flat()
-        }
-
-        const allLocations = (allIdsCache.current || []).filter(loc => loc.id !== idExclude)
-
-        if (allLocations.length === 0) throw new Error("No questions available")
-
-        // Step 2 — If no filters → pure random
-        if (filters.length === 0) {
-            const randomIndex = Math.floor(Math.random() * allLocations.length)
-            return allLocations[randomIndex]
-        }
-
-        // Step 3 — Apply filters across resolved paths
-        const CHUNK_SIZE = 10
-        const filterChunks: string[][] = []
-        for (let i = 0; i < filters.length; i += CHUNK_SIZE) {
-            filterChunks.push(filters.slice(i, i + CHUNK_SIZE))
-        }
-
-        const matchingLocationsSet = new Map<string, QuestionLocation>()
+        const targetPaths = await resolvePaths(props?.collectionPaths || []);
         
-        const queryPromises = []
-        for (const path of targetPaths) {
-            const coll = collection(db, path)
-            for (const chunk of filterChunks) {
-                const q = query(coll, where("tags", "array-contains-any", chunk))
-                queryPromises.push(getDocs(q).then(snap => ({ snap, path })))
+
+        // props.filters is now Record<string, string[]>
+        const localizedFilters: Record<string, string[]> = props?.filters || {};
+
+        const allMatchingLocations: QuestionLocation[] = [];
+
+        const queryPromises = targetPaths.map(async (path) => {
+            // Extract setId from path: "questions/certchamps/algebra" -> "certchamps"
+            const segments = path.split('/');
+            const setId = segments[1]; 
+
+            // Get tags specifically for THIS set
+            const tagsForThisSet = (localizedFilters && setId in localizedFilters) ? localizedFilters[setId] : [];
+            const coll = collection(db, path);
+
+            if (tagsForThisSet.length > 0) {
+                // ONLY fetch questions from this path that match these tags
+                const q = query(coll, where("tags", "array-contains-any", tagsForThisSet.slice(0, 10)));
+                const snap = await getDocs(q);
+                return snap.docs.map(d => ({ id: d.id, path }));
+            } else {
+                // No tags for this set? Fetch all IDs from this path
+                const snap = await getDocs(query(coll, orderBy('__name__')));
+                return snap.docs.map(d => ({ id: d.id, path }));
             }
-        }
+        });
 
-        const queryResults = await Promise.all(queryPromises)
+        const results = await Promise.all(queryPromises);
+        const flattened = results.flat().filter(loc => loc.id !== idExclude);
 
-        queryResults.forEach(({ snap, path }) => {
-            snap.docs.forEach(d => {
-                if (d.id !== idExclude) {
-                    matchingLocationsSet.set(d.id, { id: d.id, path })
-                }
-            })
-        })
+        if (flattened.length === 0) throw new Error("No questions match these localized filters.");
 
-        const matchingLocations = Array.from(matchingLocationsSet.values())
-
-        if (matchingLocations.length > 0) {
-            const randomIndex = Math.floor(Math.random() * matchingLocations.length)
-            return matchingLocations[randomIndex]
-        }
-
-        console.warn("No question matched filters, returning random one")
-        const randomIndex = Math.floor(Math.random() * allLocations.length)
-        return allLocations[randomIndex]
-    }
+        const randomIndex = Math.floor(Math.random() * flattened.length);
+        return flattened[randomIndex];
+    };
 
     const fetchQuestion = async (id: string, path: string) => {
         try {
@@ -224,21 +192,39 @@ export default function useQuestions(props?: QuestionProps) {
         }
     }
 
-    const fetchAllQuestions = async () => {
+const fetchAllQuestions = async () => {
         try {
+            // 1. Get the base paths (e.g., ["questions/certchamps", "questions/exam-papers"])
+            // We use the raw paths because we want EVERY question in these sets
             const rawPaths = props?.collectionPaths || []
+            
+            // 2. Resolve paths expands parent docs into their section subcollections
+            // (e.g. "questions/certchamps" becomes ["questions/certchamps/algebra", "questions/certchamps/calculus"])
             const targetPaths = await resolvePaths(rawPaths)
 
             const allPromises = targetPaths.map(async (path) => {
-                const questionsSnap = await getDocs(collection(db, path))
+                const coll = collection(db, path);
+                
+                // NO QUERY, NO WHERE, NO FILTERS
+                // This gets every document in the collection
+                const questionsSnap = await getDocs(coll);
+                
+                console.log(`Fetched ${questionsSnap.docs.length} questions from ${path}`);
+
                 return Promise.all(questionsSnap.docs.map(async (docSnap) => {
                     const id = docSnap.id
                     const properties = docSnap.data()
+                    
+                    // Fetch the content sub-collection
                     const contentSnap = await getDocs(collection(db, path, id, "content"))
                     
                     const content = await Promise.all(contentSnap.docs.map(async (cDoc) => {
                         const data = cDoc.data()
-                        if (data.image) data.image = await fetchImage(data.image).catch(e => data.image)
+                        if (data.image) {
+                            try {
+                                data.image = await fetchImage(data.image)
+                            } catch (e) { console.warn("Image fail:", e) }
+                        }
                         return data
                     }))
                     return { id, path, properties, content }
@@ -247,10 +233,12 @@ export default function useQuestions(props?: QuestionProps) {
 
             const results = await Promise.all(allPromises)
             const flattened = results.flat()
+            
             setAllQuestions(flattened)
+            console.log("✅ BULK FETCH COMPLETE. Total Questions:", flattened.length);
             return flattened
         } catch (error) {
-            console.error(error)
+            console.error("Critical error in fetchAllQuestions:", error)
             throw error
         }
     }
