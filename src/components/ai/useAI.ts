@@ -2,6 +2,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 
 export type Message = { role: "user" | "assistant"; content: string };
 
+/** Optional: return current drawing as PNG data URL (e.g. from canvas) so the AI can see it. */
+export type GetDrawingSnapshot = () => string | null;
+
 const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
 
 function buildQuestionContext(question: any): string | undefined {
@@ -18,7 +21,7 @@ function buildQuestionContext(question: any): string | undefined {
   return parts.length ? parts.join("\n") : undefined;
 }
 
-export function useAI(question?: any) {
+export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streamingContent, setStreamingContent] = useState("");
   const [input, setInput] = useState("");
@@ -55,10 +58,21 @@ export function useAI(question?: any) {
     setLoading(true);
 
     try {
+      const imageDataUrl = getDrawingSnapshot?.() ?? null;
       const apiMessages = [...messages, userMessage].map((m) => ({
         role: m.role,
         content: m.content,
       }));
+      const lastUserContent = apiMessages[apiMessages.length - 1].content;
+      if (imageDataUrl && lastUserContent !== undefined) {
+        apiMessages[apiMessages.length - 1] = {
+          role: "user",
+          content: [
+            { type: "text", text: lastUserContent },
+            { type: "image_url", image_url: { url: imageDataUrl } },
+          ],
+        } as any;
+      }
       const context = buildQuestionContext(question);
       const res = await fetch(CHAT_API_URL, {
         method: "POST",
@@ -116,7 +130,7 @@ export function useAI(question?: any) {
       setLoading(false);
       inputRef.current?.focus();
     }
-  }, [messages, question, loading]);
+  }, [messages, question, loading, getDrawingSnapshot]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

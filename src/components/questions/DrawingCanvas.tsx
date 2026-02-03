@@ -10,11 +10,16 @@ const GRID_STEP = 40;
 const ERASER_WIDTH = 24;
 const BASE_PEN_WIDTH = 2;
 
+/** Call with a function that returns the current drawing as PNG data URL, or null. Called on mount, cleared on unmount. */
+export type RegisterDrawingSnapshot = (getSnapshot: (() => string | null) | null) => void;
+
 type DrawingCanvasProps = {
 	onClose?: () => void;
+	/** Register a getter for the current canvas image (so e.g. AI can include it). */
+	registerDrawingSnapshot?: RegisterDrawingSnapshot;
 };
 
-export default function DrawingCanvas({ onClose }: DrawingCanvasProps) {
+export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const colorSampleRef = useRef<HTMLDivElement>(null);
@@ -140,6 +145,20 @@ export default function DrawingCanvas({ onClose }: DrawingCanvasProps) {
 	useEffect(() => {
 		draw();
 	}, [draw]);
+
+	// Expose current canvas as PNG for AI/vision; draw once so snapshot is up to date
+	const getSnapshot = useCallback(() => {
+		if (strokes.length === 0 && !currentStroke) return null;
+		draw();
+		const canvas = canvasRef.current;
+		if (!canvas || canvas.width === 0 || canvas.height === 0) return null;
+		return canvas.toDataURL("image/png");
+	}, [draw, strokes.length, currentStroke]);
+	useEffect(() => {
+		if (!registerDrawingSnapshot) return;
+		registerDrawingSnapshot(getSnapshot);
+		return () => registerDrawingSnapshot(null);
+	}, [registerDrawingSnapshot, getSnapshot]);
 
 	function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
 		if (stroke.points.length < 2) return;

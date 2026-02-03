@@ -71,7 +71,21 @@ export const chat = functions.https.onRequest({
         }
         : null;
 
-    const apiMessages = systemMessage ? [systemMessage, ...messages] : messages;
+    // Normalize messages: support multimodal content (text + image_url for vision)
+    const apiMessages = (systemMessage ? [systemMessage, ...messages] : messages).map((m: { role: string; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }) => {
+        if (typeof m.content === "string") return m;
+        if (Array.isArray(m.content)) {
+            return {
+                role: m.role,
+                content: m.content.map((part: any) => {
+                    if (part.type === "text" && typeof part.text === "string") return { type: "text", text: part.text };
+                    if (part.type === "image_url" && part.image_url?.url) return { type: "image_url", image_url: { url: part.image_url.url } };
+                    return part;
+                }).filter(Boolean),
+            };
+        }
+        return m;
+    });
 
     try {
         const response = await fetch(OPENROUTER_URL, {

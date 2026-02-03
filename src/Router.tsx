@@ -52,10 +52,10 @@ const router = createHashRouter([
         path: "/practice",
         element: (
           <ProtectedRoute>
-            <>
+            <div className="flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
               <Navbar />
               <Questions />
-            </>
+            </div>
           </ProtectedRoute>
         ),
       },
@@ -63,10 +63,10 @@ const router = createHashRouter([
     path: "/practice/:id",
     element: (
       <ProtectedRoute>
-        <>
+        <div className="flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <Questions />
-        </>
+        </div>
       </ProtectedRoute>
     ),
   },

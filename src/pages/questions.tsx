@@ -1,18 +1,18 @@
-// Hooks 
-import { useEffect, useRef, useState } from "react";
+// Hooks
+import { useCallback, useEffect, useRef, useState } from "react";
 import useQuestions from "../hooks/useQuestions";
-
 
 // Components
 import QuestionSelector from "../components/questions/questionSelector";
 import QSearch from "../components/questions/qSearch";
-import DrawingCanvas from "../components/questions/DrawingCanvas";
+import DrawingCanvas, { type RegisterDrawingSnapshot } from "../components/questions/DrawingCanvas";
 import RenderMath from "../components/math/mathdisplay";
-import { AIChat } from "../components/ai";
+import { CollapsibleSidebar } from "../components/sidebar";
 
 // Style Imports 
 import '../styles/questions.css'
 import '../styles/navbar.css'
+import '../styles/sidebar.css'
 
 export default function Questions() {
 
@@ -27,7 +27,12 @@ export default function Questions() {
         "questions/certchamps",
     ]);
 
-    const cardContainerRef = useRef<HTMLElement | null>(null)
+    const cardContainerRef = useRef<HTMLElement | null>(null);
+    const getDrawingSnapshotRef = useRef<(() => string | null) | null>(null);
+    const registerDrawingSnapshot = useCallback<RegisterDrawingSnapshot>((getSnapshot) => {
+        getDrawingSnapshotRef.current = getSnapshot;
+    }, []);
+    const getDrawingSnapshot = useCallback(() => getDrawingSnapshotRef.current?.() ?? null, []);
     //===============================================================================================//
 
     //==============================================> Hooks <========================================//
@@ -82,20 +87,18 @@ export default function Questions() {
                 <div className="z-10  p-4 pointer-events-none">
                     <RenderMath text={questions[position - 1]?.content?.[0]?.question ?? 'ughhhh no question'} className="font-bold text-sm txt" />
                 </div>
-                {/* Placeholder for layout - AIChat is a sibling below so it can receive pointer events */}
+                {/* Placeholder for layout - sidebar is a sibling below so it can receive pointer events */}
                 <div className="min-w-80 max-w-96 w-1/2 shrink-0" aria-hidden />
             </div>
 
-            {/* AIChat as sibling (not under pointer-events-none) so it receives clicks */}
-            <div className="absolute right-0 h-full top-0 bottom-0 z-20 min-w-96 max-w-120 w-1/2 pointer-events-auto">
-                <div className="h-full w-full backdrop-blur-3xl border-l-1 color-shadow rounded-xl overflow-hidden">
-                    <AIChat question={questions[position - 1]} />
-                </div>
+            {/* Collapsible sidebar: collapse button + swipe right to close */}
+            <div className="absolute right-0 top-0 bottom-0 z-20 h-full pointer-events-auto">
+                <CollapsibleSidebar question={questions[position - 1]} getDrawingSnapshot={getDrawingSnapshot} />
             </div>
 
             {/*===================================> OVERLAY COMPONENTS <===================================*/}
             <div className="w-full h-full absolute inset-0 z-0">
-                <DrawingCanvas />
+                <DrawingCanvas registerDrawingSnapshot={registerDrawingSnapshot} />
             </div>
 
             {showSearch ? (
@@ -112,3 +115,4 @@ export default function Questions() {
     )
 }
 
+ 

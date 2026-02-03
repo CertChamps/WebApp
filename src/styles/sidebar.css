@@ -1,0 +1,8 @@
+.sidebar-tile-manager__tile .scrollbar-minimal {
+  scrollbar-gutter: stable;
+}
+
+/* Stack gap between two window tiles */
+.sidebar-tile-manager__stack {
+  gap: 0.5rem;
+}

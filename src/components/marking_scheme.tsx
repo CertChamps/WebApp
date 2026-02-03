@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState, createRef } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
-import pdfWorker from "pdfjs-dist/build/pdf.worker?url";
+import { Document, Page } from "react-pdf";
 import React from "react";
 import Lottie from "lottie-react";
 import loadingAnim from "../assets/animations/loading.json";
 
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
+// Worker is set in main.tsx so it loads reliably (CDN)
 
 type QuestionType = {
   year: string;

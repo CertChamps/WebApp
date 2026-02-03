@@ -2,9 +2,13 @@ import { AnimatePresence } from "framer-motion";
 import { useAI } from "./useAI";
 import { ChatMessage, ChatMessageLoading } from "./ChatMessage";
 
-type AIChatProps = { question?: any };
+type AIChatProps = {
+  question?: any;
+  /** Optional: return current drawing as PNG data URL so the AI can see handwriting/maths. */
+  getDrawingSnapshot?: (() => string | null) | null;
+};
 
-export function AIChat({ question }: AIChatProps) {
+export function AIChat({ question, getDrawingSnapshot }: AIChatProps) {
   const {
     messages,
     streamingContent,
@@ -17,11 +21,11 @@ export function AIChat({ question }: AIChatProps) {
     messagesEndRef,
     inputRef,
     hasQuestion,
-  } = useAI(question);
+  } = useAI(question, getDrawingSnapshot);
 
   const emptyMessage = hasQuestion
-    ? "Ask about this question—I can explain concepts, give hints, or walk through steps."
-    : "Ask a question about the problem. I can help explain concepts, hints, or steps.";
+    ? "Ask about this question—I can explain concepts, give hints, or walk through steps. If you draw maths or handwriting on the canvas, I can see it too."
+    : "Ask a question about the problem. I can help explain concepts, hints, or steps. Draw on the canvas and I’ll recognise it.";
 
   return (
     <div className="pointer-events-auto flex h-full flex-col overflow-hidden">
