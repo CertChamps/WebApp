@@ -7,25 +7,40 @@ import QuestionSelector from "../components/questions/questionSelector";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas, { type RegisterDrawingSnapshot } from "../components/questions/DrawingCanvas";
 import RenderMath from "../components/math/mathdisplay";
+import PaperPdfPlaceholder from "../components/questions/PaperPdfPlaceholder";
 import { CollapsibleSidebar } from "../components/sidebar";
 
-// Style Imports 
-import '../styles/questions.css'
-import '../styles/navbar.css'
-import '../styles/sidebar.css'
+// Style Imports
+import "../styles/questions.css";
+import "../styles/navbar.css";
+import "../styles/sidebar.css";
+
+const QUESTIONS_MODE_KEY = "questions-page-mode";
+
+export type QuestionsMode = "certchamps" | "pastpaper";
+
+const MODE_TO_PATHS: Record<QuestionsMode, string[]> = {
+  certchamps: ["questions/certchamps"],
+  pastpaper: ["questions/exam-papers"],
+};
+
+function getStoredMode(): QuestionsMode {
+  try {
+    const s = localStorage.getItem(QUESTIONS_MODE_KEY);
+    if (s === "certchamps" || s === "pastpaper") return s;
+  } catch (_) {}
+  return "certchamps";
+}
 
 export default function Questions() {
+  //==============================================> State <========================================//
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const [position, setPosition] = useState(0);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
 
-    //==============================================> State <========================================//
-    const [filters, setFilters] = useState<Record<string, string[]>>({})
-    const [position, setPosition] = useState(0) // position of question in the array
-    const [questions, setQuestions] = useState<any[]>([]);
-
-    const [showSearch, setShowSearch] = useState(false)
-
-    const [collectionPaths, setCollectionPaths] = useState<string[]>([ 
-        "questions/certchamps",
-    ]);
+  const [mode, setMode] = useState<QuestionsMode>(getStoredMode);
+  const [collectionPaths, setCollectionPaths] = useState<string[]>(() => MODE_TO_PATHS[getStoredMode()]);
 
     const cardContainerRef = useRef<HTMLElement | null>(null);
     const getDrawingSnapshotRef = useRef<(() => string | null) | null>(null);
@@ -49,9 +64,28 @@ export default function Questions() {
 
     // load questions at start and on filter change
     useEffect(() => {
-        loadQuestions() // load new question in 
-        setPosition(prev => prev + 1 )
-    }, [filters])
+        loadQuestions();
+        setPosition((prev) => prev + 1);
+    }, [filters]);
+
+    // Sync mode -> collectionPaths and reload when mode changes
+    useEffect(() => {
+        const paths = MODE_TO_PATHS[mode];
+        setCollectionPaths(paths);
+        try {
+            localStorage.setItem(QUESTIONS_MODE_KEY, mode);
+        } catch (_) {}
+    }, [mode]);
+
+    const isInitialPathsRef = useRef(true);
+    useEffect(() => {
+        if (isInitialPathsRef.current) {
+            isInitialPathsRef.current = false;
+            return;
+        }
+        loadQuestions();
+        setPosition(1);
+    }, [collectionPaths]);
 
     //===============================================================================================//
 
@@ -71,34 +105,64 @@ export default function Questions() {
     //===============================================================================================//
 
 
+    const currentQuestion = questions[position - 1];
+    const msCode = currentQuestion?.properties?.markingScheme
+        ? String(currentQuestion.properties.markingScheme)
+        : "";
+    const msYear = msCode.length >= 2 ? msCode.substring(0, 2) : (mode === "pastpaper" ? "25" : "");
+
     return (
-        <div className="relative flex  w-full h-full gap-4">
-    
-            <div className="w-[22.5%] h-full min-w-80 shrink-0 z-10 pointer-events-none"> 
-                <QuestionSelector
-                    question={questions[position - 1]}
-                    nextQuestion={nextQuestion}
-                    previousQuestion={previousQuestion}
-                    setShowSearch={setShowSearch}
-                />
+        <div className="relative flex w-full h-full flex-col gap-0">
+            {/* Drawing canvas: render first so it sits behind (z-0) */}
+            <div className="absolute inset-0 z-0">
+                <DrawingCanvas registerDrawingSnapshot={registerDrawingSnapshot} />
             </div>
 
-            <div className="w-full h-full z-10 flex justify-between items-start pointer-events-none">
-                <div className="z-10  p-4 pointer-events-none">
-                    <RenderMath text={questions[position - 1]?.content?.[0]?.question ?? 'ughhhh no question'} className="font-bold text-sm txt" />
+            {/* Foreground: top-left block on top, then PDF underneath. pointer-events-none so drawing passes through; bar and PDF opt back in. */}
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-4 items-start pointer-events-none">
+                {/* Top left: dropdown, question selector (title + arrows + buttons), question text - no background or border */}
+                <div className="shrink-0 flex flex-col gap-2 pt-4 pl-4 max-w-md pointer-events-auto">
+                    <label htmlFor="questions-mode" className="sr-only">Question source</label>
+                    <select
+                        id="questions-mode"
+                        value={mode}
+                        onChange={(e) => setMode(e.target.value as QuestionsMode)}
+                        className="w-fit rounded border-0 bg-transparent color-txt-main py-1 pr-6 text-sm focus:outline-none focus:ring-0"
+                    >
+                        <option value="certchamps">CertChamps questions</option>
+                        <option value="pastpaper">Past paper questions</option>
+                    </select>
+                    <QuestionSelector
+                        question={currentQuestion}
+                        nextQuestion={nextQuestion}
+                        previousQuestion={previousQuestion}
+                        setShowSearch={setShowSearch}
+                    />
+                    <RenderMath text={currentQuestion?.content?.[0]?.question ?? "ughhhh no question"} className="font-bold text-sm txt" />
                 </div>
-                {/* Placeholder for layout - sidebar is a sibling below so it can receive pointer events */}
-                <div className="min-w-80 max-w-96 w-1/2 shrink-0" aria-hidden />
+
+                {/* PDF panel: directly underneath the top-left block when past paper mode */}
+                {mode === "pastpaper" && (
+                    <div className="flex min-h-[420px] w-full max-w-[380px] shrink-0 flex-col overflow-hidden color-bg-grey-5 pl-4 pointer-events-auto">
+                        <div className="flex shrink-0 items-center border-b border-grey/20 px-3 py-2">
+                            <span className="color-txt-sub text-sm font-medium">Paper / marking scheme</span>
+                        </div>
+                        <div className="flex min-h-[420px] min-w-0 flex-1 flex-col overflow-hidden p-2">
+                            {msYear ? (
+                                <PaperPdfPlaceholder year={msYear} />
+                            ) : (
+                                <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
+                                    <p className="color-txt-sub text-sm">Select a question to view the paper.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Collapsible sidebar: collapse button + swipe right to close */}
             <div className="absolute right-0 top-0 bottom-0 z-20 h-full pointer-events-auto">
-                <CollapsibleSidebar question={questions[position - 1]} getDrawingSnapshot={getDrawingSnapshot} />
-            </div>
-
-            {/*===================================> OVERLAY COMPONENTS <===================================*/}
-            <div className="w-full h-full absolute inset-0 z-0">
-                <DrawingCanvas registerDrawingSnapshot={registerDrawingSnapshot} />
+                <CollapsibleSidebar question={currentQuestion} getDrawingSnapshot={getDrawingSnapshot} />
             </div>
 
             {showSearch ? (

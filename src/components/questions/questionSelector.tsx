@@ -28,7 +28,7 @@ export default function QuestionSelector({ question, nextQuestion, previousQuest
   const tagsDisplay = formatTags(question?.properties?.tags);
 
   return (
-    <div className="flex flex-col gap-2 rounded-out px-4 py-2 backdrop-blur-sm ">
+    <div className="flex flex-col gap-2">
 
 
       <div className="flex w-full items-center  justify-between">
