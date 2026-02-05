@@ -51,7 +51,7 @@ export function CollapsibleSidebar({
       </motion.button>
 
       <motion.div
-        className="collapsible-sidebar__panel absolute right-0 top-0 z-20 flex h-full min-w-[40rem] max-w-[min(56rem,75%)] w-[70%]"
+        className="collapsible-sidebar__panel absolute right-0 top-1/2 z-20 flex -translate-y-1/2 h-[82vh] max-h-full min-w-[28rem] max-w-[min(40rem,55%)] w-[55%]"
         initial={false}
         animate={{ x: isOpen ? 0 : "100%" }}
         transition={SIDEBAR_TRANSITION}

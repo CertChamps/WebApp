@@ -4,6 +4,8 @@ export type Message = { role: "user" | "assistant"; content: string };
 
 /** Optional: return current drawing as PNG data URL (e.g. from canvas) so the AI can see it. */
 export type GetDrawingSnapshot = () => string | null;
+/** Optional: return current exam paper (first page) as image data URL so the AI can see the paper. */
+export type GetPaperSnapshot = () => string | null;
 
 const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
 
@@ -21,7 +23,7 @@ function buildQuestionContext(question: any): string | undefined {
   return parts.length ? parts.join("\n") : undefined;
 }
 
-export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | null) {
+export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | null, getPaperSnapshot?: GetPaperSnapshot | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streamingContent, setStreamingContent] = useState("");
   const [input, setInput] = useState("");
@@ -58,18 +60,20 @@ export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | 
     setLoading(true);
 
     try {
-      const imageDataUrl = getDrawingSnapshot?.() ?? null;
+      const drawingDataUrl = getDrawingSnapshot?.() ?? null;
+      const paperDataUrl = getPaperSnapshot?.() ?? null;
       const apiMessages = [...messages, userMessage].map((m) => ({
         role: m.role,
         content: m.content,
       }));
       const lastUserContent = apiMessages[apiMessages.length - 1].content;
-      if (imageDataUrl && lastUserContent !== undefined) {
+      const imageUrls = [drawingDataUrl, paperDataUrl].filter((url): url is string => Boolean(url));
+      if (imageUrls.length > 0 && lastUserContent !== undefined) {
         apiMessages[apiMessages.length - 1] = {
           role: "user",
           content: [
             { type: "text", text: lastUserContent },
-            { type: "image_url", image_url: { url: imageDataUrl } },
+            ...imageUrls.map((url) => ({ type: "image_url" as const, image_url: { url } })),
           ],
         } as any;
       }
@@ -130,7 +134,7 @@ export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | 
       setLoading(false);
       inputRef.current?.focus();
     }
-  }, [messages, question, loading, getDrawingSnapshot]);
+  }, [messages, question, loading, getDrawingSnapshot, getPaperSnapshot]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

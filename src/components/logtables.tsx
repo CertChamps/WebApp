@@ -52,7 +52,7 @@ const LogTables = ({ pgNumber }: QuestionType) => {
   return (
     <div
       className="flex flex-col items-center shadow-small rounded-lg color-bg relative ml-5 overflow-hidden"
-      style={{ height: "77vh", width: "650px" }}
+      style={{ height: "70vh", width: "520px" }}
     >
       {/* ================= 1. TOP BAR ================= */}
       {/* This is now the first element, so it sits at the top naturally. */}
@@ -132,7 +132,7 @@ const LogTables = ({ pgNumber }: QuestionType) => {
               >
                 <Page
                   pageNumber={index + 1}
-                  width={600}
+                  width={480}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                   onRenderSuccess={() =>

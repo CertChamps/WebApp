@@ -32,6 +32,8 @@ export type SidebarTileManagerProps = {
   onCollapse?: () => void;
   /** Optional: return current drawing as PNG data URL so AI can see handwriting/maths. */
   getDrawingSnapshot?: (() => string | null) | null;
+  /** Optional: return current exam paper (first page) as image data URL so AI can see the paper. */
+  getPaperSnapshot?: (() => string | null) | null;
 };
 
 export function SidebarTileManager({
@@ -40,6 +42,7 @@ export function SidebarTileManager({
   onOpenPanelsChange,
   onCollapse,
   getDrawingSnapshot,
+  getPaperSnapshot,
 }: SidebarTileManagerProps) {
   const [internalOpen, setInternalOpen] = useState<[SidebarPanelId | null, SidebarPanelId | null]>([
     "ai",
@@ -154,7 +157,7 @@ export function SidebarTileManager({
                 transition={TILE_TRANSITION}
               >
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-                  <TileContent panelId={id} question={question} getDrawingSnapshot={getDrawingSnapshot} />
+                  <TileContent panelId={id} question={question} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />
                 </div>
               </motion.div>
             );
@@ -191,10 +194,12 @@ function TileContent({
   panelId,
   question,
   getDrawingSnapshot,
+  getPaperSnapshot,
 }: {
   panelId: SidebarPanelId;
   question?: any;
   getDrawingSnapshot?: (() => string | null) | null;
+  getPaperSnapshot?: (() => string | null) | null;
 }) {
   const part = 0;
   const pgNumber = question?.content?.[part]?.logtables != null
@@ -204,7 +209,7 @@ function TileContent({
 
   switch (panelId) {
     case "ai":
-      return <AIChat question={question} getDrawingSnapshot={getDrawingSnapshot} />;
+      return <AIChat question={question} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />;
     case "logtables":
       return (
         <TileErrorBoundary

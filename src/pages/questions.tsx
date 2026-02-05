@@ -164,8 +164,18 @@ export default function Questions() {
                 <DrawingCanvas registerDrawingSnapshot={registerDrawingSnapshot} />
             </div>
 
-            {/* Foreground: top-left block on top, then PDF underneath. pointer-events-none so drawing passes through; bar and PDF opt back in. */}
-            <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-4 items-start pointer-events-none">
+            {/* Sidebar: outside scaled area so it sits at viewport right edge */}
+            <div className="absolute right-0 top-0 bottom-0 z-20 h-full pointer-events-auto">
+                <CollapsibleSidebar question={currentQuestion} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />
+            </div>
+
+            {/* Full-width scaled layout: question + PDF on the left (no centering) */}
+            <div
+                className="absolute inset-0 z-10 flex flex-col items-start pointer-events-none"
+                style={{ transform: "scale(0.82)", transformOrigin: "0 0" }}
+            >
+            {/* Foreground: top-left block on top, then PDF underneath. */}
+            <div className="relative flex min-h-0 flex-1 flex-col gap-4 items-start w-full">
                 {/* Top left: dropdown, question selector (title + arrows + buttons), question text - no background or border */}
                 <div className="shrink-0 flex flex-col gap-2 pt-4 pl-4 max-w-md pointer-events-auto">
                     <label htmlFor="questions-mode" className="sr-only">Question source</label>
@@ -183,35 +193,24 @@ export default function Questions() {
                         nextQuestion={nextQuestion}
                         previousQuestion={previousQuestion}
                         setShowSearch={setShowSearch}
+                        overrideTitle={mode === "pastpaper" ? (papersLoading ? "Loading…" : papersError ? "Failed to load" : selectedPaper?.label ?? "Select a paper") : undefined}
+                        overrideOnPrevious={mode === "pastpaper" ? () => {
+                            const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
+                            if (idx > 0) setSelectedPaper(papers[idx - 1]);
+                        } : undefined}
+                        overrideOnNext={mode === "pastpaper" ? () => {
+                            const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
+                            if (idx >= 0 && idx < papers.length - 1) setSelectedPaper(papers[idx + 1]);
+                        } : undefined}
                     />
-                    <RenderMath text={currentQuestion?.content?.[0]?.question ?? "ughhhh no question"} className="font-bold text-sm txt" />
+                    {mode !== "pastpaper" && (
+                        <RenderMath text={currentQuestion?.content?.[0]?.question ?? "ughhhh no question"} className="font-bold text-sm txt" />
+                    )}
                 </div>
 
-                {/* PDF panel: paper dropdown + viewer when past paper mode */}
+                {/* PDF panel: viewer when past paper mode */}
                 {mode === "pastpaper" && (
                     <div className="flex h-[740px] max-h-[75vh] w-full max-w-[520px] shrink-0 flex-col overflow-hidden pl-4 pointer-events-auto">
-                        <div className="shrink-0 flex flex-col gap-2 py-2">
-                            <label htmlFor="exam-paper-select" className="color-txt-sub text-sm font-medium">
-                                Paper
-                            </label>
-                            <select
-                                id="exam-paper-select"
-                                value={selectedPaper?.id ?? ""}
-                                onChange={(e) => {
-                                    const paper = papers.find((p) => p.id === e.target.value) ?? null;
-                                    setSelectedPaper(paper);
-                                }}
-                                className="w-full max-w-xs rounded-lg border border-grey/25 color-bg color-txt-main px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-grey/30"
-                                disabled={papersLoading}
-                            >
-                                <option value="">{papersLoading ? "Loading…" : papersError ? "Failed to load" : "Select a paper"}</option>
-                                {papers.map((p) => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
                         <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden p-2">
                             {paperLoadError && (
                                 <div className="shrink-0 py-2 text-sm color-txt-sub">
@@ -238,11 +237,6 @@ export default function Questions() {
                 )}
             </div>
 
-            {/* Collapsible sidebar: collapse button + swipe right to close */}
-            <div className="absolute right-0 top-0 bottom-0 z-20 h-full pointer-events-auto">
-                <CollapsibleSidebar question={currentQuestion} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />
-            </div>
-
             {showSearch ? (
                 <QSearch
                     setShowSearch={setShowSearch}
@@ -252,6 +246,7 @@ export default function Questions() {
                 />
             ) : null}
 
+            </div>
             {/*===============================================================================================*/}
         </div>
     )

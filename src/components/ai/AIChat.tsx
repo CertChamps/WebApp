@@ -6,9 +6,11 @@ type AIChatProps = {
   question?: any;
   /** Optional: return current drawing as PNG data URL so the AI can see handwriting/maths. */
   getDrawingSnapshot?: (() => string | null) | null;
+  /** Optional: return current exam paper (first page) as image so the AI can see the paper. */
+  getPaperSnapshot?: (() => string | null) | null;
 };
 
-export function AIChat({ question, getDrawingSnapshot }: AIChatProps) {
+export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AIChatProps) {
   const {
     messages,
     streamingContent,
@@ -21,11 +23,11 @@ export function AIChat({ question, getDrawingSnapshot }: AIChatProps) {
     messagesEndRef,
     inputRef,
     hasQuestion,
-  } = useAI(question, getDrawingSnapshot);
+  } = useAI(question, getDrawingSnapshot, getPaperSnapshot);
 
   const emptyMessage = hasQuestion
-    ? "Ask about this question—I can explain concepts, give hints, or walk through steps. If you draw maths or handwriting on the canvas, I can see it too."
-    : "Ask a question about the problem. I can help explain concepts, hints, or steps. Draw on the canvas and I’ll recognise it.";
+    ? "Ask about this question—I can explain concepts, give hints, or walk through steps. If you draw maths or handwriting on the canvas, I can see it too. If you have a past paper open, I can see it as well."
+    : "Ask a question about the problem. I can help explain concepts, hints, or steps. Draw on the canvas and I’ll recognise it. If you have a past paper open, I can see it too.";
 
   return (
     <div className="pointer-events-auto flex h-full flex-col overflow-hidden">

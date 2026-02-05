@@ -12,6 +12,10 @@ export type QuestionSelectorProps = {
     nextQuestion: () => void;
     previousQuestion: () => void;
     setShowSearch: (show: boolean) => void;
+    /** When set (e.g. past paper mode), center shows this title and arrows call these handlers */
+    overrideTitle?: string;
+    overrideOnPrevious?: () => void;
+    overrideOnNext?: () => void;
 };
 
 // Formatting tags for display
@@ -21,65 +25,64 @@ function formatTags(tags: string[] | string | undefined): string {
   return list.filter(Boolean).map((t) => `#${t}`).join(", ");
 }
 
-export default function QuestionSelector({ question, nextQuestion, previousQuestion, setShowSearch }: QuestionSelectorProps) {
-
-  // Title and tags from question document (properties = Firestore doc data)
-  const title = question?.properties?.name ?? '...';
+export default function QuestionSelector({
+  question,
+  nextQuestion,
+  previousQuestion,
+  setShowSearch,
+  overrideTitle,
+  overrideOnPrevious,
+  overrideOnNext,
+}: QuestionSelectorProps) {
+  const title = question?.properties?.name ?? "...";
   const tagsDisplay = formatTags(question?.properties?.tags);
+
+  const onPrev = overrideOnPrevious ?? previousQuestion;
+  const onNext = overrideOnNext ?? nextQuestion;
+  const centerLabel = overrideTitle ?? title;
+  const showTags = overrideTitle == null && tagsDisplay;
 
   return (
     <div className="flex flex-col gap-2">
-
-
-      <div className="flex w-full items-center  justify-between">
-
-        {/* ========================================== TOP SECTION ========================================== */}
-
-        {/* Left: previous question (circular) - pointer-events-auto so button works when column has pointer-events-none (canvas draw-through) */}
+      <div className="flex w-full items-center justify-between">
         <button
           type="button"
-          aria-label="Previous question"
+          aria-label={overrideOnPrevious ? "Previous paper" : "Previous question"}
           className="questions-advance pointer-events-auto"
-          onClick={previousQuestion}
+          onClick={onPrev}
         >
           <LuChevronLeft size={16} strokeWidth={2.5} />
         </button>
 
-        {/* Centre: title and tags with transition */}
         <div className="flex min-w-0 flex-col self-center overflow-hidden p-2">
           <div className="w-full text-left">
-
             <AnimatePresence mode="wait">
               <motion.div
-                key={question?.id ?? 'empty'}
+                key={overrideTitle ?? question?.id ?? "empty"}
                 initial={{ opacity: 0, x: 8 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -8 }}
                 transition={{ duration: 0.15, ease: [0.25, 0.4, 0.25, 1] }}
                 className="flex min-w-0 flex-col"
               >
-
                 <h2 className="question-selector-truncate color-txt-accent text-md font-bold leading-tight">
-                  {title}
+                  {centerLabel}
                 </h2>
-                {tagsDisplay ? (
+                {showTags ? (
                   <p className="question-selector-truncate color-txt-sub mt-0.5 text-xs font-normal">
                     {tagsDisplay}
                   </p>
                 ) : null}
-
               </motion.div>
             </AnimatePresence>
-
           </div>
         </div>
 
-        {/* Right: next question (circular) */}
         <button
           type="button"
-          aria-label="Next question"
+          aria-label={overrideOnNext ? "Next paper" : "Next question"}
           className="questions-advance pointer-events-auto"
-          onClick={nextQuestion}
+          onClick={onNext}
         >
           <LuChevronRight size={16} strokeWidth={2.5} />
         </button>

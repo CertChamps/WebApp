@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Pencil, Eraser, Grid3X3, Trash2, X } from "lucide-react";
+import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot } from "lucide-react";
 
 type Point = { x: number; y: number; pressure: number };
 type Stroke = { points: Point[]; tool: "pen" | "eraser" };
 
+/** Grid display: off, square (lines), or dots at intersections. */
+type GridMode = "off" | "lines" | "dots";
+
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 10;
 const GRID_STEP = 40;
+const GRID_DOT_RADIUS = 1.5;
 const ERASER_WIDTH = 24;
 const BASE_PEN_WIDTH = 2;
 
@@ -30,7 +34,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: Draw
 	const [pan, setPan] = useState({ x: 0, y: 0 });
 	const [scale, setScale] = useState(1);
 	const [tool, setTool] = useState<"pen" | "eraser">("pen");
-	const [showGrid, setShowGrid] = useState(true);
+	const [gridMode, setGridMode] = useState<GridMode>("lines");
 	const [strokeColor, setStrokeColor] = useState("");
 	const [gridColor, setGridColor] = useState("");
 
@@ -108,52 +112,79 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: Draw
 		ctx.translate(pan.x, pan.y);
 		ctx.scale(scale, scale);
 
-		// Grid (in world space, visible area only) - uses color-bg-grey-5 from theme
-		if (showGrid && gridColor) {
-			const left = -pan.x / scale;
-			const top = -pan.y / scale;
-			const right = left + w / scale;
-			const bottom = top + h / scale;
-			ctx.strokeStyle = gridColor;
-			ctx.lineWidth = 1 / scale;
-			ctx.beginPath();
-			const startX = Math.floor(left / GRID_STEP) * GRID_STEP;
-			const endX = Math.ceil(right / GRID_STEP) * GRID_STEP;
-			const startY = Math.floor(top / GRID_STEP) * GRID_STEP;
-			const endY = Math.ceil(bottom / GRID_STEP) * GRID_STEP;
-			for (let x = startX; x <= endX; x += GRID_STEP) {
-				ctx.moveTo(x, top);
-				ctx.lineTo(x, bottom);
-			}
-			for (let y = startY; y <= endY; y += GRID_STEP) {
-				ctx.moveTo(left, y);
-				ctx.lineTo(right, y);
-			}
-			ctx.stroke();
-		}
-
-		// All strokes
+		// Draw strokes first (eraser only affects these; grid is drawn on top so it cannot be erased)
 		for (const stroke of strokes) {
 			drawStroke(ctx, stroke);
 		}
 		if (currentStroke) {
 			drawStroke(ctx, currentStroke);
 		}
+
+		// Grid on top (not erasable) - lines or dots
+		if (gridMode !== "off" && gridColor) {
+			const left = -pan.x / scale;
+			const top = -pan.y / scale;
+			const right = left + w / scale;
+			const bottom = top + h / scale;
+			const startX = Math.floor(left / GRID_STEP) * GRID_STEP;
+			const endX = Math.ceil(right / GRID_STEP) * GRID_STEP;
+			const startY = Math.floor(top / GRID_STEP) * GRID_STEP;
+			const endY = Math.ceil(bottom / GRID_STEP) * GRID_STEP;
+			if (gridMode === "lines") {
+				ctx.strokeStyle = gridColor;
+				ctx.lineWidth = 1 / scale;
+				ctx.beginPath();
+				for (let x = startX; x <= endX; x += GRID_STEP) {
+					ctx.moveTo(x, top);
+					ctx.lineTo(x, bottom);
+				}
+				for (let y = startY; y <= endY; y += GRID_STEP) {
+					ctx.moveTo(left, y);
+					ctx.lineTo(right, y);
+				}
+				ctx.stroke();
+			} else {
+				ctx.fillStyle = gridColor;
+				for (let x = startX; x <= endX; x += GRID_STEP) {
+					for (let y = startY; y <= endY; y += GRID_STEP) {
+						ctx.beginPath();
+						ctx.arc(x, y, GRID_DOT_RADIUS / scale, 0, Math.PI * 2);
+						ctx.fill();
+					}
+				}
+			}
+		}
 		ctx.restore();
-	}, [pan, scale, showGrid, strokes, currentStroke, strokeColor, gridColor]);
+	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor]);
 
 	useEffect(() => {
 		draw();
 	}, [draw]);
 
-	// Expose current canvas as PNG for AI/vision; draw once so snapshot is up to date
+	// Expose current drawing as PNG for AI/vision (strokes only, no grid)
 	const getSnapshot = useCallback(() => {
 		if (strokes.length === 0 && !currentStroke) return null;
-		draw();
 		const canvas = canvasRef.current;
 		if (!canvas || canvas.width === 0 || canvas.height === 0) return null;
-		return canvas.toDataURL("image/png");
-	}, [draw, strokes.length, currentStroke]);
+		const dpr = window.devicePixelRatio || 1;
+		const rect = canvas.getBoundingClientRect();
+		const w = rect.width;
+		const h = rect.height;
+		const off = document.createElement("canvas");
+		off.width = w * dpr;
+		off.height = h * dpr;
+		const ctx = off.getContext("2d");
+		if (!ctx) return null;
+		ctx.scale(dpr, dpr);
+		ctx.clearRect(0, 0, w, h);
+		ctx.save();
+		ctx.translate(pan.x, pan.y);
+		ctx.scale(scale, scale);
+		for (const stroke of strokes) drawStroke(ctx, stroke);
+		if (currentStroke) drawStroke(ctx, currentStroke);
+		ctx.restore();
+		return off.toDataURL("image/png");
+	}, [pan, scale, strokes, currentStroke]);
 	useEffect(() => {
 		if (!registerDrawingSnapshot) return;
 		registerDrawingSnapshot(getSnapshot);
@@ -407,11 +438,11 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: Draw
 				</button>
 				<button
 					type="button"
-					onClick={() => setShowGrid((g) => !g)}
-					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${showGrid ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
-					title="Toggle grid"
+					onClick={() => setGridMode((m) => (m === "off" ? "lines" : m === "lines" ? "dots" : "off"))}
+					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${gridMode !== "off" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
+					title={gridMode === "off" ? "Grid (off)" : gridMode === "lines" ? "Grid: square" : "Grid: dots"}
 				>
-					<Grid3X3 size={18} strokeWidth={2} />
+					{gridMode === "dots" ? <CircleDot size={18} strokeWidth={2} /> : <Grid3X3 size={18} strokeWidth={2} />}
 				</button>
 				<button
 					type="button"
