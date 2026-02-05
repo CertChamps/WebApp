@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import useQuestions from "../hooks/useQuestions";
 import { useExamPapers, type ExamPaper } from "../hooks/useExamPapers";
+import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
 
 // Components
 import QuestionSelector from "../components/questions/questionSelector";
@@ -60,6 +61,9 @@ export default function Questions() {
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
     const [paperBlob, setPaperBlob] = useState<Blob | null>(null);
     const [paperLoadError, setPaperLoadError] = useState<string | null>(null);
+    const [currentPaperPage, setCurrentPaperPage] = useState(1);
+    const paperSnapshot = usePaperSnapshot(paperBlob, currentPaperPage);
+    const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
 
     const currentQuestion = questions[position - 1];
     const msCode = currentQuestion?.properties?.markingScheme
@@ -121,6 +125,11 @@ export default function Questions() {
             cancelled = true;
         };
     }, [selectedPaper, getPaperBlob]);
+
+    // Reset "current page" when user selects a different paper
+    useEffect(() => {
+        setCurrentPaperPage(1);
+    }, [selectedPaper]);
 
     // Preselect paper matching current question year when papers load (e.g. "25" -> 2025-p1 or first 2025)
     useEffect(() => {
@@ -210,7 +219,11 @@ export default function Questions() {
                                 </div>
                             )}
                             {paperBlob ? (
-                                <PaperPdfPlaceholder file={paperBlob} pageWidth={480} />
+                                <PaperPdfPlaceholder
+                                    file={paperBlob}
+                                    pageWidth={480}
+                                    onCurrentPageChange={setCurrentPaperPage}
+                                />
                             ) : selectedPaper && !paperBlob && !paperLoadError ? (
                                 <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
                                     <p className="color-txt-sub text-sm">Loading paper…</p>
@@ -227,7 +240,7 @@ export default function Questions() {
 
             {/* Collapsible sidebar: collapse button + swipe right to close */}
             <div className="absolute right-0 top-0 bottom-0 z-20 h-full pointer-events-auto">
-                <CollapsibleSidebar question={currentQuestion} getDrawingSnapshot={getDrawingSnapshot} />
+                <CollapsibleSidebar question={currentQuestion} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />
             </div>
 
             {showSearch ? (
