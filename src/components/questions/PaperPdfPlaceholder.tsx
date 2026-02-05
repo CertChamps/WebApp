@@ -1,18 +1,23 @@
 import { useState } from "react";
 import { Document, Page } from "react-pdf";
 
-/** Loads the marking scheme PDF the same way as LogTables: react-pdf only, no iframe, no browser PDF chrome. */
+/** Loads a PDF: react-pdf only. Accepts a Blob (e.g. from Firebase), a URL string, or legacy year for static path. */
 type PaperPdfPlaceholderProps = {
-  /** Two-digit year, e.g. "25" for 2025. PDF path: /assets/marking_schemes/{year}.pdf */
-  year: string;
+  /** PDF as Blob (e.g. from getBlob) or URL string. Preferred when loading from Storage. */
+  file?: string | Blob | null;
+  /** Legacy: two-digit year for static path /assets/marking_schemes/{year}.pdf. Ignored if file is set. */
+  year?: string;
   /** Width of each rendered page. */
   pageWidth?: number;
 };
 
-export default function PaperPdfPlaceholder({ year, pageWidth = 480 }: PaperPdfPlaceholderProps) {
+export default function PaperPdfPlaceholder({ file: fileProp, year, pageWidth = 480 }: PaperPdfPlaceholderProps) {
   const [numPages, setNumPages] = useState<number>(0);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  if (!year) {
+  const file = fileProp ?? (year ? `/assets/marking_schemes/${year}.pdf` : null);
+
+  if (!file) {
     return (
       <div className="flex min-h-[300px] items-center justify-center color-txt-sub text-sm">
         No paper loaded.
@@ -21,11 +26,25 @@ export default function PaperPdfPlaceholder({ year, pageWidth = 480 }: PaperPdfP
   }
 
   return (
-    <div className="h-full w-full min-h-[400px] overflow-y-auto overflow-x-hidden scrollbar-minimal">
+    <div
+      className="h-full w-full min-h-0 overflow-y-auto overflow-x-hidden scrollbar-minimal"
+      style={{ touchAction: "pan-y" }}
+    >
+      {loadError && (
+        <div className="py-2 text-sm color-txt-sub">
+          PDF failed to load: {loadError}
+        </div>
+      )}
       <Document
-        file={`/assets/marking_schemes/${year}.pdf`}
-        onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-        onLoadError={(err) => console.error("PDF load error:", err)}
+        file={file}
+        onLoadSuccess={({ numPages: n }) => {
+          setNumPages(n);
+          setLoadError(null);
+        }}
+        onLoadError={(err) => {
+          console.error("PDF load error:", err);
+          setLoadError(err?.message ?? "Unknown error");
+        }}
       >
         {Array.from({ length: numPages }, (_, i) => (
           <div key={`page_${i + 1}`} className="flex justify-center my-2">

@@ -1,6 +1,7 @@
 // Hooks
 import { useCallback, useEffect, useRef, useState } from "react";
 import useQuestions from "../hooks/useQuestions";
+import { useExamPapers, type ExamPaper } from "../hooks/useExamPapers";
 
 // Components
 import QuestionSelector from "../components/questions/questionSelector";
@@ -51,12 +52,20 @@ export default function Questions() {
     //===============================================================================================//
 
     //==============================================> Hooks <========================================//
-    const { loadQuestions } = useQuestions({ 
-        setQuestions, 
-        collectionPaths, // Use the state variable here
+    const { loadQuestions } = useQuestions({
+        setQuestions,
+        collectionPaths,
     });
+    const { papers, loading: papersLoading, error: papersError, getPaperBlob } = useExamPapers();
+    const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
+    const [paperBlob, setPaperBlob] = useState<Blob | null>(null);
+    const [paperLoadError, setPaperLoadError] = useState<string | null>(null);
 
-    //const { id } = useParams() -- will be used to load questions from a specific deck later on!
+    const currentQuestion = questions[position - 1];
+    const msCode = currentQuestion?.properties?.markingScheme
+        ? String(currentQuestion.properties.markingScheme)
+        : "";
+    const msYear = msCode.length >= 2 ? msCode.substring(0, 2) : (mode === "pastpaper" ? "25" : "");
 
     //==============================================================================================//
 
@@ -87,6 +96,41 @@ export default function Questions() {
         setPosition(1);
     }, [collectionPaths]);
 
+    // Load paper as Blob when selected (avoids CORS; react-pdf accepts Blob)
+    useEffect(() => {
+        if (!selectedPaper) {
+            setPaperBlob(null);
+            setPaperLoadError(null);
+            return;
+        }
+        let cancelled = false;
+        setPaperBlob(null);
+        setPaperLoadError(null);
+        getPaperBlob(selectedPaper)
+            .then((blob) => {
+                if (!cancelled) setPaperBlob(blob);
+            })
+            .catch((err) => {
+                if (!cancelled) {
+                    console.error("Failed to load paper:", err);
+                    setPaperLoadError(err?.message ?? "Failed to load paper");
+                    setPaperBlob(null);
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedPaper, getPaperBlob]);
+
+    // Preselect paper matching current question year when papers load (e.g. "25" -> 2025-p1 or first 2025)
+    useEffect(() => {
+        if (papers.length === 0 || selectedPaper !== null) return;
+        const match = msYear
+            ? papers.find((p) => p.label.toLowerCase().startsWith("20" + msYear)) ?? papers[0]
+            : papers[0];
+        setSelectedPaper(match);
+    }, [papers, msYear, selectedPaper]);
+
     //===============================================================================================//
 
     //===========================================> Next Question <===================================//
@@ -103,13 +147,6 @@ export default function Questions() {
         setPosition((p) => Math.max(0, p - 1));
     };
     //===============================================================================================//
-
-
-    const currentQuestion = questions[position - 1];
-    const msCode = currentQuestion?.properties?.markingScheme
-        ? String(currentQuestion.properties.markingScheme)
-        : "";
-    const msYear = msCode.length >= 2 ? msCode.substring(0, 2) : (mode === "pastpaper" ? "25" : "");
 
     return (
         <div className="relative flex w-full h-full flex-col gap-0">
@@ -141,18 +178,46 @@ export default function Questions() {
                     <RenderMath text={currentQuestion?.content?.[0]?.question ?? "ughhhh no question"} className="font-bold text-sm txt" />
                 </div>
 
-                {/* PDF panel: directly underneath the top-left block when past paper mode */}
+                {/* PDF panel: paper dropdown + viewer when past paper mode */}
                 {mode === "pastpaper" && (
-                    <div className="flex min-h-[420px] w-full max-w-[380px] shrink-0 flex-col overflow-hidden color-bg-grey-5 pl-4 pointer-events-auto">
-                        <div className="flex shrink-0 items-center border-b border-grey/20 px-3 py-2">
-                            <span className="color-txt-sub text-sm font-medium">Paper / marking scheme</span>
+                    <div className="flex h-[740px] max-h-[75vh] w-full max-w-[520px] shrink-0 flex-col overflow-hidden pl-4 pointer-events-auto">
+                        <div className="shrink-0 flex flex-col gap-2 py-2">
+                            <label htmlFor="exam-paper-select" className="color-txt-sub text-sm font-medium">
+                                Paper
+                            </label>
+                            <select
+                                id="exam-paper-select"
+                                value={selectedPaper?.id ?? ""}
+                                onChange={(e) => {
+                                    const paper = papers.find((p) => p.id === e.target.value) ?? null;
+                                    setSelectedPaper(paper);
+                                }}
+                                className="w-full max-w-xs rounded-lg border border-grey/25 color-bg color-txt-main px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-grey/30"
+                                disabled={papersLoading}
+                            >
+                                <option value="">{papersLoading ? "Loading…" : papersError ? "Failed to load" : "Select a paper"}</option>
+                                {papers.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.label}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
-                        <div className="flex min-h-[420px] min-w-0 flex-1 flex-col overflow-hidden p-2">
-                            {msYear ? (
-                                <PaperPdfPlaceholder year={msYear} />
+                        <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden p-2">
+                            {paperLoadError && (
+                                <div className="shrink-0 py-2 text-sm color-txt-sub">
+                                    {paperLoadError}
+                                </div>
+                            )}
+                            {paperBlob ? (
+                                <PaperPdfPlaceholder file={paperBlob} pageWidth={480} />
+                            ) : selectedPaper && !paperBlob && !paperLoadError ? (
+                                <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
+                                    <p className="color-txt-sub text-sm">Loading paper…</p>
+                                </div>
                             ) : (
                                 <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
-                                    <p className="color-txt-sub text-sm">Select a question to view the paper.</p>
+                                    <p className="color-txt-sub text-sm">Select a paper to view.</p>
                                 </div>
                             )}
                         </div>
