@@ -1,10 +1,12 @@
 // Hooks
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import useQuestions from "../hooks/useQuestions";
+import { OptionsContext } from "../context/OptionsContext";
 import { useExamPapers, type ExamPaper } from "../hooks/useExamPapers";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
 
 // Components
+import { LuMonitor, LuTablet } from "react-icons/lu";
 import QuestionSelector from "../components/questions/questionSelector";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas, { type RegisterDrawingSnapshot } from "../components/questions/DrawingCanvas";
@@ -35,6 +37,8 @@ function getStoredMode(): QuestionsMode {
 }
 
 export default function Questions() {
+  const { options, setOptions } = useContext(OptionsContext);
+
   //==============================================> State <========================================//
   const [filters, setFilters] = useState<Record<string, string[]>>({});
   const [position, setPosition] = useState(0);
@@ -176,18 +180,34 @@ export default function Questions() {
             >
             {/* Foreground: top-left block on top, then PDF underneath. */}
             <div className="relative flex min-h-0 flex-1 flex-col gap-4 items-start w-full">
-                {/* Top left: dropdown, question selector (title + arrows + buttons), question text - no background or border */}
+                {/* Top left: tablet/laptop toggle, dropdown, question selector, question text */}
                 <div className="shrink-0 flex flex-col gap-2 pt-4 pl-4 max-w-md pointer-events-auto">
-                    <label htmlFor="questions-mode" className="sr-only">Question source</label>
-                    <select
-                        id="questions-mode"
-                        value={mode}
-                        onChange={(e) => setMode(e.target.value as QuestionsMode)}
-                        className="w-fit rounded border-0 bg-transparent color-txt-main py-1 pr-6 text-sm focus:outline-none focus:ring-0"
-                    >
-                        <option value="certchamps">CertChamps questions</option>
-                        <option value="pastpaper">Past paper questions</option>
-                    </select>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={() => setOptions((opts: any) => ({ ...opts, laptopMode: !opts.laptopMode }))}
+                            className="practice-device-toggle"
+                            title={options.laptopMode ? "Tablet layout" : "Laptop layout"}
+                            aria-label={options.laptopMode ? "Switch to tablet layout" : "Switch to laptop layout"}
+                        >
+                            {options.laptopMode ? (
+                                <LuMonitor className="practice-device-icon" strokeWidth={2} size={22} />
+                            ) : (
+                                <LuTablet className="practice-device-icon" strokeWidth={2} size={22} />
+                            )}
+                            <span className="practice-device-label">{options.laptopMode ? "Laptop" : "Tablet"}</span>
+                        </button>
+                        <label htmlFor="questions-mode" className="sr-only">Question source</label>
+                        <select
+                            id="questions-mode"
+                            value={mode}
+                            onChange={(e) => setMode(e.target.value as QuestionsMode)}
+                            className="practice-mode-dropdown"
+                        >
+                            <option value="certchamps">CertChamps questions</option>
+                            <option value="pastpaper">Past paper questions</option>
+                        </select>
+                    </div>
                     <QuestionSelector
                         question={currentQuestion}
                         nextQuestion={nextQuestion}

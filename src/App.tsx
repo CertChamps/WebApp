@@ -15,7 +15,8 @@ export default function App() {
 
   const [options, setOptions] = useState<any>(() => {
     const storedOptions = localStorage.getItem("OPTIONS");
-    return storedOptions ? JSON.parse(storedOptions) : { theme: "light", drawingEnabled: true };
+    const parsed = storedOptions ? JSON.parse(storedOptions) : {};
+    return { theme: "light", drawingEnabled: true, laptopMode: false, ...parsed };
   });
 
   // ===================== PERSISTENCE ====================== //

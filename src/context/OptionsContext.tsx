@@ -5,6 +5,7 @@ export type OptionsType = {
     options: {
         theme: string
         drawingEnabled: boolean
+        laptopMode: boolean
         // future options and preference will be saved here
     },
     setOptions: React.Dispatch<React.SetStateAction<any>>
@@ -15,7 +16,8 @@ export type OptionsType = {
 export const OptionsContext = createContext<OptionsType>({
     options: {
         theme: 'light',
-        drawingEnabled: true
+        drawingEnabled: true,
+        laptopMode: false
     }, 
     setOptions: () => {}
 })
