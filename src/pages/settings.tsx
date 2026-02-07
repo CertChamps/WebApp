@@ -1,9 +1,9 @@
 // Hooks 
-import { useContext, useState } from "react"
+import { useContext } from "react"
 import { useNavigate } from "react-router-dom";
 
 // Firebase Auth
-import { auth, db } from "../../firebase";
+import { auth } from "../../firebase";
 
 // Contexts
 import { OptionsContext } from "../context/OptionsContext"
@@ -14,12 +14,8 @@ import { useTutorialContext } from "../context/TutorialContext";
 import { TutorialTriggerButton } from "../components/tutorial/Tutorial";
 
 // Styles & Icons
-import { LuLogOut, LuRotateCcw, LuPencil } from "react-icons/lu";
+import { LuLogOut, LuRotateCcw, LuPencil, LuUserCog } from "react-icons/lu";
 import '../styles/settings.css'
-import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
-import { doc, setDoc, updateDoc } from "firebase/firestore";
-import Cropper from "react-easy-crop";
-//import { set } from "nerdamer";
 
 export default function Settings() {
 
@@ -29,20 +25,6 @@ export default function Settings() {
     
     // Tutorial context
     const { triggerTutorial, resetTutorial, hasCompletedTutorial } = useTutorialContext();
-
-    // These are all just for cropping
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    console.log(selectedFile) //unused
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [crop, setCrop] = useState({ x: 0, y: 0 });
-    const [zoom, setZoom] = useState(1);
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
-    const [showCropper, setShowCropper] = useState(false);
-
-    const [ userNameError, setUserNameError ] = useState<string>("");
-
-    // Username
-    const [newUsername, setNewUsername] = useState<string>("");
 
     const setTheme = (theme: string) => {
         setOptions(( opts : any ) => ({
@@ -61,111 +43,6 @@ export default function Settings() {
     // =============================================================================================== //
 
 
-    //===================== Takes care of file selection ======================
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setSelectedFile(file);
-            setPreviewUrl(URL.createObjectURL(file));
-            setShowCropper(true);
-        }
-    };
-    //=========================================================================
-
-
-    //==================== Handle cropped image ======================
-    const getCroppedImg = async (imageSrc: string, crop: any) => {
-        const image = new Image();
-        image.src = imageSrc;
-        await new Promise((resolve) => (image.onload = resolve));
-      
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-      
-        if (!ctx) return null;
-      
-        canvas.width = crop.width;
-        canvas.height = crop.height;
-      
-        ctx.drawImage(
-          image,
-          crop.x,
-          crop.y,
-          crop.width,
-          crop.height,
-          0,
-          0,
-          crop.width,
-          crop.height
-        );
-      
-        return new Promise<Blob | null>((resolve) => {
-          canvas.toBlob((blob) => {
-            resolve(blob);
-          }, "image/jpeg");
-        });
-    };
-    //================================================================
-
-
-    //====================== Upload the image ========================
-    const uploadCroppedImage = async () => {
-        if (!previewUrl || !croppedAreaPixels) return;
-      
-        const croppedBlob = await getCroppedImg(previewUrl, croppedAreaPixels);
-        if (!croppedBlob) return;
-      
-        const storage = getStorage();
-        const path = `profile-photos/${user.uid}.jpg`;
-        const storageRef = ref(storage, path);
-      
-        await uploadBytes(storageRef, croppedBlob);
-        const downloadURL = await getDownloadURL(storageRef);
-      
-        // Update Firestore
-        const userRef = doc(db, "user-data", user.uid);
-        await updateDoc(userRef, { picture: path });
-      
-        // Update context
-        user.picture = downloadURL;
-      
-        setShowCropper(false);
-        setPreviewUrl(null);
-    };
-    //================================================================
-
-
-    //========================== Change Username ============================
-    const changeUsername = async (newUsername: string) => {
-        const username = newUsername.trim();
-
-        if( username.length < 1 ) {
-            setUserNameError("username cannot be empty");
-            return;
-        }
-        else if ( username.length > 20 ) {
-            setUserNameError("username must be less than 20 characters");
-            return;
-        }
-        else {
-            try {     
-                setUser({...user, username: username})
-                await setDoc(doc(db, 'user-data', user.uid), {username: username}, {merge: true})
-                setNewUsername("");
-                setUserNameError("");
-                return;
-            }
-            catch (error) {
-                console.error("Error updating username: ", error);
-                setUserNameError("failed to update username, please try again");
-                return;
-            }
-        }
-
-    }
-    //=======================================================================
-
-
     return (
         <div className="p-4 w-full h-full overflow-y-scroll scrollbar-minimal">        
 
@@ -181,93 +58,36 @@ export default function Settings() {
         </div>
 
         <div className="user-info-container">
-
-        <div className="avatar">
-            <img 
+            <img
                 src={user?.picture}
                 alt="User Avatar"
                 className="avatar-img"
             />
-            <h1 className="avatar-edit" onClick={() => document.getElementById("fileInput")?.click()}>
-                Edit Avatar
-            </h1>
-            <input
-                id="fileInput"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-            />
-        </div>
-
-
-
-        {/* --------------------------This is all just for the image cropper---------------------- */}
-        {showCropper && (
-            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-                <div className="bg-white p-4 rounded-lg">
-                <div className="relative w-[300px] h-[300px]">
-                    <Cropper
-                    image={previewUrl!}
-                    crop={crop}
-                    zoom={zoom}
-                    aspect={1}
-                    onCropChange={setCrop}
-                    onZoomChange={setZoom}
-                    onCropComplete={(_, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels)}
-                    />
-                </div>
-                <div className="flex justify-between mt-4">
-                    <button onClick={() => setShowCropper(false)}>Cancel</button>
-                    <button onClick={uploadCroppedImage}>Save</button>
-                </div>
-                </div>
-            </div>
-        )}
-        {/* -------------------------------------------------------------------------------------- */}
-
-
-
-        <div className="flex-1">
-            <p className="input-header">Username</p>
-            <div className="flex items-center mb-4">
-                <input type="text" className="txtbox max-w-md" value={newUsername} onChange={(e) => {setNewUsername(e.target.value)}}/>
-                <span className="update-btn" onClick={() => changeUsername(newUsername)}>Update</span>
-                <span className="text-red-500 ml-4">{userNameError}</span>
-            </div>
-
-            <p className="input-header">School</p>
-
-            <div className="flex items-center">
-                <input type="text" className="txtbox max-w-md " />
-                <span
-                    className="update-btn"
-                    onMouseDown={e => e.currentTarget.classList.add('translate-x-20')}
-                    onMouseUp={e => e.currentTarget.classList.remove('translate-x-20')}
-                    onMouseLeave={e => e.currentTarget.classList.remove('translate-x-0')}
-                >
-                    Update
-                </span>
-            </div>
-        </div>
-
+            <h1 className="avatar-username">{user?.username}</h1>
         </div>
 
         <span className="cursor-target color-bg-accent txt-heading-colour px-4 py-2 rounded-out mb-2 hover:scale-95 duration-200
             mx-6 cursor-pointer transition-all" 
+                onClick={() => navigate('/user/manage-account')}>
+                <span className="font-bold">Manage Account</span>
+                <LuUserCog className="txt-heading-colour inline mx-1.5" strokeWidth={3}/>
+        </span>
+
+        <span className="cursor-target color-bg-accent txt-heading-colour px-4 py-2 rounded-out mb-2 hover:scale-95 duration-200
+            mx-6 cursor-pointer transition-all" 
                 onClick={() => {logOut()}}>
-                <span className="">Log Out</span>
+                <span className="font-bold">Log Out</span>
                 <LuLogOut className="txt-heading-colour inline mx-1" strokeWidth={3}/>
         </span> 
 
         {/* ====================================== QUESTION SETTINGS ========================================= */}
-        <div className="flex w-full items-center mt-6">
+        {/* <div className="flex w-full items-center mt-6">
             <h1 className="profile-heading">Question Settings</h1>
             <div className="line-break"></div>
-        </div>
+        </div> */}
 
-        <div className="mx-6 my-4 max-w-md">
-            {/* Drawing Feature Toggle */}
+        {/* <div className="mx-6 my-4 max-w-md">
+            
             <div className="flex items-center justify-between py-3">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full color-bg-grey-5 flex items-center justify-center">
@@ -296,7 +116,7 @@ export default function Settings() {
                     />
                 </button>
             </div>
-        </div>
+        </div> */}
         {/* ======================================================================================== */}
 
         {/* ====================================== HELP & TUTORIAL ========================================= */}

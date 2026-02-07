@@ -12,20 +12,28 @@
 }
 
 .user-info-container {
-    @apply w-full flex p-4
+    @apply w-full flex flex-row items-center gap-4 p-4
+}
+
+.user-info {
+    @apply flex flex-col items-center justify-center gap-2
 }
 
 .avatar {
-    @apply w-auto mr-8 
+    @apply flex flex-col items-center w-auto shrink-0
 }
 
 .avatar-img {
-    @apply w-32 h-32 rounded-full object-cover mx-auto
+    @apply w-32 h-32 rounded-full object-cover shrink-0
+}
+
+.avatar-username {
+    @apply font-bold text-4xl color-txt-main tracking-tight
 }
 
 .avatar-edit {
-    @apply mx-auto text-center font-bold my-2 cursor-pointer
-           color-txt-accent 
+    @apply text-center font-bold my-2 cursor-pointer color-txt-accent
+           hover:opacity-80 transition-opacity bg-transparent border-none p-0 
 }
 
 .input-header {
@@ -34,6 +42,10 @@
 
 .update-btn {
     @apply  color-txt-accent font-bold cursor-pointer mx-2
+}
+
+.manage-account-username .input-header {
+    @apply font-medium color-txt-main
 }
 
 /* ======================================================================= */
@@ -65,4 +77,33 @@
 
 .theme-button {
     @apply w-20 py-2 text-center m-2 shadow-xl rounded-in block
+}
+
+/* ================================= MANAGE ACCOUNT LAYOUT ================================ */
+.manage-account-layout {
+    @apply flex flex-1 min-w-0 min-h-0 overflow-auto
+}
+
+.manage-account-main {
+    @apply flex-1 min-w-0 overflow-y-auto p-6
+}
+
+.manage-account-sidebar {
+    @apply w-64 shrink-0 flex flex-col gap-4 p-6 border-l border-grey/25 color-bg-grey-5
+}
+
+.manage-account-sidebar-section {
+    @apply rounded-xl p-4 color-bg border border-grey/20
+}
+
+.manage-account-sidebar-title {
+    @apply text-xs font-semibold uppercase tracking-wider color-txt-sub mb-3
+}
+
+.manage-account-sidebar-link {
+    @apply block py-2 text-sm color-txt-main hover:color-txt-accent transition-colors cursor-pointer
+}
+
+.manage-account-sidebar-link.active {
+    @apply color-txt-accent font-medium
 }

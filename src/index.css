@@ -444,6 +444,34 @@ math-field::part(virtual-keyboard-toggle) {
     pastelPink:bg-pastelPinkBG
 }
 
+@utility border-color-bg {
+  @apply
+    border-white
+    dark:border-black
+    markoblank:border-markoteal
+    tangerine:border-tangerineBG
+    icebergLight:border-icebergLightBG
+    icebergDark:border-icebergDarkBG
+    husqy:border-husqyBG
+    shadow:border-shadowBG
+    modernInk:border-modernInkBG
+    gruvbox:border-gruvboxBG
+    magicGirl:border-magicGirlBG
+    menthol:border-mentholBG
+    lavendar:border-lavendarBG
+    airplane:border-airplaneBG
+    nordLight:border-nordLightBG
+    nordDark:border-nordDarkBG
+    sewingTinLight:border-sewingTinLightBG
+    camping:border-campingBG
+    paper:border-paperBG
+    aurora:border-auroraBG
+    blueberryLight:border-blueberryLightBG
+    blueberryDark:border-blueberryDarkBG
+    darkFuchsia:border-darkFuchsiaBG
+    pastelPink:border-pastelPinkBG
+}
+
 @utility color-txt-invert {
   @apply 
     text-white

@@ -9,6 +9,7 @@ import Games from "./pages/games";
 import Navbar from "./components/navbar";
 import Replies from "./pages/social/replies";
 import Settings from "./pages/settings";
+import ManageAccount from "./pages/manageAccount";
 import DeckViewer from "./pages/deckViewer";
 import Decks from "./pages/decks";
 import MyDecks from "./pages/myDecks";
@@ -154,6 +155,17 @@ const router = createHashRouter([
         <>
           <Navbar />
           <Settings />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/user/manage-account",
+    element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <ManageAccount />
         </>
       </ProtectedRoute>
     ),

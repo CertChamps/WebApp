@@ -21,6 +21,7 @@ export type UserContextType = {
     hasCompletedTutorial: boolean,
     isAdmin?: boolean,
     emailVerified: boolean,
+    isPro?: boolean,
     },
     setUser: React.Dispatch<React.SetStateAction<any>>
 }
@@ -45,6 +46,7 @@ export const UserContext = createContext<UserContextType>({
     hasCompletedTutorial: false,
     isAdmin: false,
     emailVerified: false,
+    isPro: false,
     },
     setUser: () => {}
 })

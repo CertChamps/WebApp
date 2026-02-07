@@ -51,10 +51,11 @@ export default function useAuthentication(props?: authprops) {
       highestStreak: 0,
       savedQuestions: [],
       emailVerified,
+      isPro: false,
     };
 
     // 1. Set Context
-    setUser({ ...userData, picture: imageUrl, decks: [] });
+    setUser({ ...userData, picture: imageUrl, decks: [], isPro: false });
 
     // 2. Write to DB
     await setDoc(doc(db, "user-data", uid), userData);
@@ -109,6 +110,7 @@ const userSetup = async (uid: string, username: string, email: string) => {
         savedQuestions: userData.savedQuestions || [],
         //decks,
         emailVerified: isEmailVerified,
+        isPro: userData.isPro === true,
       });
 
       console.log("2. Context Set. Verified:", isEmailVerified);
