@@ -128,6 +128,125 @@ export const chat = functions.https.onRequest({
     }
 });
 
+// ======================== EXTRACT QUESTIONS ======================== //
+
+/** One page region: bounding box on a single PDF page. */
+type PageRegion = { page: number; x: number; y: number; width: number; height: number };
+
+/** One extracted region = one question part, can span multiple pages. */
+type ExtractedRegion = {
+    id: string;
+    name: string;
+    pageRegions: PageRegion[];
+};
+
+const EXTRACT_SYSTEM = `You are an expert at locating question regions on exam paper PDF page images.
+
+Your job: identify bounding boxes for each question PART so we can crop the PDF to images. Do NOT extract any text, answers, or content. Only return region coordinates. Questions can span multiple pages.
+
+OUTPUT FORMAT - Return ONLY valid JSON, no markdown or extra text:
+{
+  "regions": [
+    { "id": "Q1a", "name": "Question 1 (a)", "pageRegions": [{ "page": 1, "x": 0, "y": 120, "width": 595, "height": 180 }] },
+    { "id": "Q7a", "name": "Question 7 (a)", "pageRegions": [
+      { "page": 2, "x": 0, "y": 80, "width": 595, "height": 700 },
+      { "page": 3, "x": 0, "y": 0, "width": 595, "height": 200 }
+    ]}
+  ]
+}
+
+CRITICAL RULES:
+1. EXTRACT ALL QUESTIONS — Do not skip any. A typical Leaving Cert maths paper has Q1 through Q10 (or more). Include every question and every part (a), (b), (c)... on every page.
+2. SPLIT by (a), (b), (c) — each letter part gets its OWN region.
+3. KEEP (i), (ii), (iii) TOGETHER — within part (a), sub-parts (i) and (ii) stay in ONE region. Do not split by (i)/(ii).
+4. MULTI-PAGE: If a question part spans pages 2 and 3, use pageRegions: [ {page:2, y, height: to bottom}, {page:3, y:0, height: to end} ]. Order matters — list pages in reading order.
+5. WIDTH = full page width — always x: 0 and width: 595 (A4 in PDF points). Never crop horizontally.
+6. HEIGHT = varies — set y (top of region) and height so the region includes the full content for that page segment.
+7. Coordinates in PDF points: origin (0,0) at top-left of page. y increases downward. A4 height ≈ 842.
+8. Page numbers are 1-based (first image = page 1).
+9. id: short slug like "Q1a", "Q7a". name: display label like "Question 1 (a)".
+10. Return ONLY the JSON object, no markdown code fence.`;
+
+export const extractQuestions = functions.https.onRequest({
+    cors: true,
+    secrets: ["OPENROUTER_API_KEY"],
+}, async (req, res) => {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+        res.status(500).json({ error: "Server configuration error" });
+        return;
+    }
+    if (req.method !== "POST") {
+        res.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    const { pageImages } = req.body || {};
+    if (!Array.isArray(pageImages) || pageImages.length === 0) {
+        res.status(400).json({ error: "pageImages array (base64 data URLs) is required" });
+        return;
+    }
+    const images = pageImages.slice(0, 20).map((url: string) => {
+        if (typeof url !== "string" || !url.startsWith("data:")) return null;
+        return { type: "image_url" as const, image_url: { url } };
+    }).filter(Boolean);
+
+    if (images.length === 0) {
+        res.status(400).json({ error: "Valid base64 image URLs required" });
+        return;
+    }
+
+    try {
+        const response = await fetch(OPENROUTER_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`,
+                "HTTP-Referer": "https://certchamps.com",
+            },
+            body: JSON.stringify({
+                model: OPENROUTER_MODEL,
+                messages: [
+                    { role: "system", content: EXTRACT_SYSTEM },
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: "Extract ALL question regions — do not skip any. Q1 through Q10 (or more). Each part (a), (b), (c) gets its own region. Keep (i), (ii) together. Questions can span multiple pages. Width=full page (595). Return the regions JSON only." },
+                            ...images,
+                        ],
+                    },
+                ],
+                max_tokens: 12000,
+                stream: false,
+            }),
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.error("OpenRouter extract error:", response.status, errText);
+            res.status(502).json({ error: "AI extraction failed", details: errText });
+            return;
+        }
+
+        const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+        const content = data.choices?.[0]?.message?.content;
+        if (!content || typeof content !== "string") {
+            res.status(502).json({ error: "No content in AI response" });
+            return;
+        }
+
+        // Parse JSON - strip markdown code fence if present
+        let jsonStr = content.trim();
+        const fence = jsonStr.match(/^```(?:json)?\s*([\s\S]*?)```$/);
+        if (fence) jsonStr = fence[1].trim();
+        const parsed = JSON.parse(jsonStr) as { regions?: ExtractedRegion[] };
+        const regions = Array.isArray(parsed.regions) ? parsed.regions : [];
+        res.status(200).json({ regions });
+    } catch (err) {
+        console.error("extractQuestions error:", err);
+        res.status(500).json({ error: "Failed to extract questions" });
+    }
+});
+
 // ======================== STRIPE PRO CHECKOUT ======================== //
 
 const PRO_PRICE_EUR_CENTS = 2000; // €20.00

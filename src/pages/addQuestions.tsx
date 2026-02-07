@@ -19,8 +19,12 @@ import {
   LuUpload,
   LuLoader,
   LuFileText,
+  LuSparkles,
 } from "react-icons/lu";
+import ExtractQuestionsFlow from "../components/addQuestions/ExtractQuestionsFlow";
 import "../styles/settings.css";
+
+type AddQuestionsTab = "upload" | "extract";
 
 const ADMIN_UIDS = [
   "NkN9UBqoPEYpE21MC89fipLn0SP2",
@@ -156,6 +160,7 @@ export default function AddQuestions() {
   );
 
   const isAdmin = user?.uid && ADMIN_UIDS.includes(user.uid);
+  const [tab, setTab] = useState<AddQuestionsTab>("upload");
 
   const addRow = () => {
     const year = new Date().getFullYear();
@@ -334,7 +339,7 @@ export default function AddQuestions() {
   }
 
   return (
-    <div className="settings-page w-full max-w-4xl mx-auto p-6">
+    <div className={`settings-page w-full mx-auto p-6 ${tab === "extract" ? "max-w-none px-4" : "max-w-6xl"}`}>
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
           <button
@@ -344,14 +349,46 @@ export default function AddQuestions() {
             <LuArrowLeft size={22} className="color-txt-accent" />
           </button>
           <div>
-            <h1 className="color-txt-main text-2xl font-bold">Exam Papers</h1>
+            <h1 className="color-txt-main text-2xl font-bold">Add Questions</h1>
             <p className="color-txt-sub text-sm">
-              Add or edit full exam papers (Leaving Cert)
+              Extract questions with AI or upload papers (Leaving Cert)
             </p>
           </div>
         </div>
+        <div className="flex rounded-xl color-bg-grey-5 p-1">
+          <button
+            type="button"
+            onClick={() => setTab("extract")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === "extract"
+                ? "color-bg-accent color-txt-accent"
+                : "color-txt-sub hover:color-bg-grey-10"
+            }`}
+          >
+            <LuSparkles size={18} />
+            Extract with AI
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("upload")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === "upload"
+                ? "color-bg-accent color-txt-accent"
+                : "color-txt-sub hover:color-bg-grey-10"
+            }`}
+          >
+            <LuUpload size={18} />
+            Upload Papers
+          </button>
+        </div>
       </div>
 
+      {tab === "extract" && (
+        <ExtractQuestionsFlow />
+      )}
+
+      {tab === "upload" && (
+        <>
       <div className="flex flex-wrap gap-4 mb-6">
         <div>
           <label className="block color-txt-sub text-sm mb-1">Subject</label>
@@ -516,6 +553,8 @@ export default function AddQuestions() {
           <LuLoader size={16} className="color-txt-accent animate-spin" />
           <span className="color-txt-sub text-sm">{uploadProgress}</span>
         </div>
+      )}
+        </>
       )}
     </div>
   );
