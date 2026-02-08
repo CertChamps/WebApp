@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
 import { db  }from '../../firebase'
 import { collection, doc, getDoc, getDocs, query, where, collectionGroup, orderBy} from 'firebase/firestore';
@@ -125,7 +126,7 @@ export default function useFetch () {
     // ====================================================================================== //
 
     // ============================= FETCH ALL USER DECKS =================================== //
-    const fetchUserDecks = async (userID: any) => {
+    const fetchUserDecks = useCallback(async (userID: any) => {
         try {
             // Initalise empty array
             const userDecks = [];  
@@ -142,7 +143,6 @@ export default function useFetch () {
 
             // Add all decks where a user is Added 
             const decksWithUser = await getDocs( query( collectionGroup(db, "usersAdded"), where("uid", "==", userID) ) )
-            console.log(decksWithUser.size, userID);
             // go through each added user doc to get parent deck info
             for (const addedUserDoc of decksWithUser.docs) {
                 const parentDeckRef = addedUserDoc.ref.parent.parent; // Get reference to the parent deck\
@@ -180,7 +180,7 @@ export default function useFetch () {
             console.log(err) 
             return null;
         }
-    }
+    }, [])
 
     // ============================= FETCH ALL USER DECKS =================================== //
     const fetchPublicDecks = async () => {

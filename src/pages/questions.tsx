@@ -1,12 +1,14 @@
 // Hooks
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import useQuestions from "../hooks/useQuestions";
 import { OptionsContext } from "../context/OptionsContext";
 import { useExamPapers, type ExamPaper } from "../hooks/useExamPapers";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
+import useFilters from "../hooks/useFilters";
 
 // Components
-import { LuMonitor, LuTablet } from "react-icons/lu";
+import { LuMonitor, LuTablet, LuArrowLeft } from "react-icons/lu";
 import QuestionSelector from "../components/questions/questionSelector";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas, { type RegisterDrawingSnapshot } from "../components/questions/DrawingCanvas";
@@ -28,6 +30,13 @@ const MODE_TO_PATHS: Record<QuestionsMode, string[]> = {
   pastpaper: ["questions/exam-papers"],
 };
 
+function getPathsForMode(mode: QuestionsMode, subject?: string | null): string[] {
+  if (mode === "certchamps" && subject) {
+    return [`questions/certchamps/${subject}`];
+  }
+  return MODE_TO_PATHS[mode];
+}
+
 function getStoredMode(): QuestionsMode {
   try {
     const s = localStorage.getItem(QUESTIONS_MODE_KEY);
@@ -36,8 +45,22 @@ function getStoredMode(): QuestionsMode {
   return "certchamps";
 }
 
+function formatSectionLabel(id: string): string {
+  return id.replace(/-/g, " ").replace(/\b(\w)/g, (c) => c.toUpperCase());
+}
+
 export default function Questions() {
   const { options, setOptions } = useContext(OptionsContext);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const urlMode = searchParams.get("mode") as QuestionsMode | null;
+  const urlSubject = searchParams.get("subject");
+  const urlPaperId = searchParams.get("paperId");
+
+  const initialMode: QuestionsMode =
+    urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
+  const initialPaths = getPathsForMode(initialMode, urlSubject || null);
 
   //==============================================> State <========================================//
   const [filters, setFilters] = useState<Record<string, string[]>>({});
@@ -45,8 +68,9 @@ export default function Questions() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [showSearch, setShowSearch] = useState(false);
 
-  const [mode, setMode] = useState<QuestionsMode>(getStoredMode);
-  const [collectionPaths, setCollectionPaths] = useState<string[]>(() => MODE_TO_PATHS[getStoredMode()]);
+  const [mode, setMode] = useState<QuestionsMode>(initialMode);
+  const [subjectFilter, setSubjectFilter] = useState<string | null>(urlSubject || null);
+  const [collectionPaths, setCollectionPaths] = useState<string[]>(initialPaths);
 
     const cardContainerRef = useRef<HTMLElement | null>(null);
     const getDrawingSnapshotRef = useRef<(() => string | null) | null>(null);
@@ -62,6 +86,8 @@ export default function Questions() {
         collectionPaths,
     });
     const { papers, loading: papersLoading, error: papersError, getPaperBlob } = useExamPapers();
+    const { availableSets } = useFilters();
+    const certChampsSet = availableSets.find((s) => s.id === "certchamps");
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
     const [paperBlob, setPaperBlob] = useState<Blob | null>(null);
     const [paperLoadError, setPaperLoadError] = useState<string | null>(null);
@@ -85,14 +111,14 @@ export default function Questions() {
         setPosition((prev) => prev + 1);
     }, [filters]);
 
-    // Sync mode -> collectionPaths and reload when mode changes
+    // Sync mode + subjectFilter -> collectionPaths and reload when they change
     useEffect(() => {
-        const paths = MODE_TO_PATHS[mode];
+        const paths = getPathsForMode(mode, subjectFilter);
         setCollectionPaths(paths);
         try {
             localStorage.setItem(QUESTIONS_MODE_KEY, mode);
         } catch (_) {}
-    }, [mode]);
+    }, [mode, subjectFilter]);
 
     const isInitialPathsRef = useRef(true);
     useEffect(() => {
@@ -135,14 +161,19 @@ export default function Questions() {
         setCurrentPaperPage(1);
     }, [selectedPaper]);
 
-    // Preselect paper matching current question year when papers load (e.g. "25" -> 2025-p1 or first 2025)
+    // Preselect paper: URL paperId > current question year > first paper
     useEffect(() => {
         if (papers.length === 0 || selectedPaper !== null) return;
-        const match = msYear
-            ? papers.find((p) => p.label.toLowerCase().startsWith("20" + msYear)) ?? papers[0]
-            : papers[0];
+        let match: ExamPaper | undefined;
+        if (urlPaperId) {
+            match = papers.find((p) => p.id === urlPaperId);
+        }
+        if (!match && msYear) {
+            match = papers.find((p) => p.label.toLowerCase().startsWith("20" + msYear)) ?? papers[0];
+        }
+        if (!match) match = papers[0];
         setSelectedPaper(match);
-    }, [papers, msYear, selectedPaper]);
+    }, [papers, msYear, selectedPaper, urlPaperId]);
 
     //===============================================================================================//
 
@@ -163,10 +194,12 @@ export default function Questions() {
 
     return (
         <div className="relative flex w-full h-full flex-col gap-0">
-            {/* Drawing canvas: render first so it sits behind (z-0) */}
-            <div className="absolute inset-0 z-0">
-                <DrawingCanvas registerDrawingSnapshot={registerDrawingSnapshot} />
-            </div>
+            {/* Drawing canvas: disabled in laptop mode; render first so it sits behind (z-0) */}
+            {!options.laptopMode && (
+                <div className="absolute inset-0 z-0">
+                    <DrawingCanvas registerDrawingSnapshot={registerDrawingSnapshot} />
+                </div>
+            )}
 
             {/* Sidebar: outside scaled area so it sits at viewport right edge */}
             <div className="absolute right-0 top-0 bottom-0 z-20 h-full pointer-events-auto">
@@ -176,12 +209,23 @@ export default function Questions() {
             {/* Full-width scaled layout: question + PDF on the left (no centering) */}
             <div
                 className="absolute inset-0 z-10 flex flex-col items-start pointer-events-none"
-                style={{ transform: "scale(0.82)", transformOrigin: "0 0" }}
+                style={{ transform: "scale(1)", transformOrigin: "0 0" }}
             >
-            {/* Foreground: top-left block on top, then PDF underneath. */}
-            <div className="relative flex min-h-0 flex-1 flex-col gap-4 items-start w-full">
-                {/* Top left: tablet/laptop toggle, dropdown, question selector, question text */}
-                <div className="shrink-0 flex flex-col gap-2 pt-4 pl-4 max-w-md pointer-events-auto">
+            {/* Foreground: top-left block on top, then PDF underneath. In laptop+past paper, paper fills from top and header overlays. */}
+            <div className={`relative flex min-h-0 flex-1 w-full ${options.laptopMode && mode === "pastpaper" ? "flex-col" : "flex-col gap-4 items-start"}`}>
+                {/* Top left: tablet/laptop toggle, dropdown, question selector, question text — in laptop+past paper this overlays the paper */}
+                <div className={`shrink-0 flex flex-col gap-2 max-w-md pointer-events-auto ${options.laptopMode && mode === "pastpaper" ? "absolute top-0 left-0 z-10 pt-4 pl-4" : "pt-4 pl-4"}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                        <button
+                            type="button"
+                            onClick={() => navigate("/practice")}
+                            className="flex items-center gap-1.5 text-sm color-txt-sub hover:color-txt-main transition-colors"
+                            aria-label="Back to Practice Hub"
+                        >
+                            <LuArrowLeft size={18} strokeWidth={2} />
+                            <span>Hub</span>
+                        </button>
+                    </div>
                     <div className="flex items-center gap-3 flex-wrap">
                         <button
                             type="button"
@@ -201,12 +245,34 @@ export default function Questions() {
                         <select
                             id="questions-mode"
                             value={mode}
-                            onChange={(e) => setMode(e.target.value as QuestionsMode)}
+                            onChange={(e) => {
+                                const m = e.target.value as QuestionsMode;
+                                setMode(m);
+                                if (m === "pastpaper") setSubjectFilter(null);
+                            }}
                             className="practice-mode-dropdown"
                         >
                             <option value="certchamps">CertChamps questions</option>
                             <option value="pastpaper">Past paper questions</option>
                         </select>
+                        {mode === "certchamps" && certChampsSet && certChampsSet.sections.length > 0 && (
+                            <>
+                                <label htmlFor="questions-subject" className="sr-only">Subject</label>
+                                <select
+                                    id="questions-subject"
+                                    value={subjectFilter ?? ""}
+                                    onChange={(e) => setSubjectFilter(e.target.value || null)}
+                                    className="practice-mode-dropdown"
+                                >
+                                    <option value="">All topics</option>
+                                    {certChampsSet.sections.map((sec) => (
+                                        <option key={sec} value={sec}>
+                                            {formatSectionLabel(sec)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </>
+                        )}
                     </div>
                     <QuestionSelector
                         question={currentQuestion}
@@ -228,32 +294,61 @@ export default function Questions() {
                     )}
                 </div>
 
-                {/* PDF panel: viewer when past paper mode */}
+                {/* PDF panel: viewer when past paper mode; centered only in laptop mode. In laptop mode paper fills from top (inset-0), header overlays. */}
                 {mode === "pastpaper" && (
-                    <div className="flex h-[740px] max-h-[75vh] w-full max-w-[520px] shrink-0 flex-col overflow-hidden pl-4 pointer-events-auto">
-                        <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden p-2">
-                            {paperLoadError && (
-                                <div className="shrink-0 py-2 text-sm color-txt-sub">
-                                    {paperLoadError}
+                    options.laptopMode ? (
+                        <div className="absolute inset-0 flex w-full min-h-0 justify-center items-start pointer-events-auto">
+                            <div className="practice-paper-fly-in flex h-full min-h-0 w-full max-w-[720px] shrink-0 flex-col overflow-hidden pointer-events-auto">
+                                <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden pt-2 px-2 pb-0">
+                                    {paperLoadError && (
+                                        <div className="shrink-0 py-2 text-sm color-txt-sub">
+                                            {paperLoadError}
+                                        </div>
+                                    )}
+                                    {paperBlob ? (
+                                        <PaperPdfPlaceholder
+                                            file={paperBlob}
+                                            pageWidth={680}
+                                            onCurrentPageChange={setCurrentPaperPage}
+                                        />
+                                    ) : selectedPaper && !paperBlob && !paperLoadError ? (
+                                        <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
+                                            <p className="color-txt-sub text-sm">Loading paper…</p>
+                                        </div>
+                                    ) : (
+                                        <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
+                                            <p className="color-txt-sub text-sm">Select a paper to view.</p>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                            {paperBlob ? (
-                                <PaperPdfPlaceholder
-                                    file={paperBlob}
-                                    pageWidth={480}
-                                    onCurrentPageChange={setCurrentPaperPage}
-                                />
-                            ) : selectedPaper && !paperBlob && !paperLoadError ? (
-                                <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
-                                    <p className="color-txt-sub text-sm">Loading paper…</p>
-                                </div>
-                            ) : (
-                                <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
-                                    <p className="color-txt-sub text-sm">Select a paper to view.</p>
-                                </div>
-                            )}
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="flex h-[740px] max-h-[75vh] w-full max-w-[520px] shrink-0 flex-col overflow-hidden pl-4 pointer-events-auto">
+                            <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden p-2">
+                                {paperLoadError && (
+                                    <div className="shrink-0 py-2 text-sm color-txt-sub">
+                                        {paperLoadError}
+                                    </div>
+                                )}
+                                {paperBlob ? (
+                                    <PaperPdfPlaceholder
+                                        file={paperBlob}
+                                        pageWidth={480}
+                                        onCurrentPageChange={setCurrentPaperPage}
+                                    />
+                                ) : selectedPaper && !paperBlob && !paperLoadError ? (
+                                    <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
+                                        <p className="color-txt-sub text-sm">Loading paper…</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
+                                        <p className="color-txt-sub text-sm">Select a paper to view.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )
                 )}
             </div>
 

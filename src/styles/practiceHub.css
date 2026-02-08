@@ -1,0 +1,100 @@
+@reference '../index.css';
+
+/* Practice Hub styles */
+
+@keyframes practice-hub-bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+.practice-hub__bounce-arrow {
+  animation: practice-hub-bounce 1.5s ease-in-out infinite;
+}
+
+.practice-hub__header {
+  flex-shrink: 0;
+}
+
+.practice-hub__quick {
+  flex-shrink: 0;
+}
+
+.practice-hub__tile {
+  @apply flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer;
+  @apply hover:scale-[1.02] hover:shadow-md active:scale-[0.98];
+}
+
+.practice-hub__tile--primary {
+  @apply border-2 color-shadow color-bg;
+  border-color: var(--color-blue, #27548a);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-blue) 8%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+.practice-hub__tile--primary:hover {
+  @apply color-shadow;
+  border-color: color-mix(in srgb, var(--color-blue) 80%, var(--color-grey));
+}
+
+.practice-hub__tile--secondary {
+  @apply border-2 color-shadow color-bg;
+}
+
+.practice-hub__tile:hover {
+  @apply color-bg-grey-5;
+}
+
+.practice-hub__tile-icon {
+  @apply flex items-center justify-center w-14 h-14 rounded-xl shrink-0;
+}
+
+.practice-hub__tile--primary .practice-hub__tile-icon {
+  @apply color-bg-accent color-txt-accent;
+}
+
+.practice-hub__tile--secondary .practice-hub__tile-icon {
+  @apply color-bg-grey-10 color-txt-sub;
+}
+
+.practice-hub__tile-arrow {
+  @apply color-txt-sub transition-transform;
+}
+
+.practice-hub__tile:hover .practice-hub__tile-arrow {
+  transform: translateX(4px);
+}
+
+.practice-hub__section {
+  flex-shrink: 0;
+}
+
+.practice-hub__deck-grid {
+  @apply flex flex-row gap-4 overflow-x-auto pb-4 scrollbar-minimal flex-nowrap;
+}
+
+.practice-hub__deck-grid .deck {
+  flex-shrink: 0;
+}
+
+.practice-hub__skeleton {
+  min-height: 192px;
+}
+
+.practice-hub__topic-btn {
+  @apply px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200;
+  @apply color-bg-grey-10 color-txt-main border border-grey/20;
+  @apply hover:color-bg-accent hover:color-txt-accent hover:border-grey/40;
+}
+
+.practice-hub__papers-group {
+  @apply color-bg rounded-xl p-4 border-2 color-shadow;
+}
+
+.practice-hub__paper-btn {
+  @apply px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200;
+  @apply color-bg-grey-10 color-txt-main;
+  @apply hover:color-bg-accent hover:color-txt-accent;
+}

@@ -1,9 +1,10 @@
 // src/AppRouter.tsx
-import { createHashRouter, RouterProvider, Outlet } from "react-router-dom";
+import { createHashRouter, RouterProvider, Outlet, Navigate, useParams } from "react-router-dom";
 import Login from "./pages/login";
 import SignUp from "./pages/signup";
 import VerifyEmail from "./pages/verifyEmail";
 import Questions from "./pages/questions";
+import PracticeHub from "./pages/PracticeHub";
 import Social from "./pages/social/social";
 import Games from "./pages/games";
 import Navbar from "./components/navbar";
@@ -21,6 +22,12 @@ import Tutorial from "./components/tutorial/Tutorial";
 import { useTutorialContext } from "./context/TutorialContext";
 import MobileRedirect from "./pages/mobileRedirect";
 import PhoneRedirect from "./components/PhoneRedirect";
+
+/** Redirects /practice/:id (deck links from social) to /decks/:id */
+function PracticeToDeckRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/decks/${id}`} replace />;
+}
 
 // Layout component that includes the Tutorial overlay
 function RootLayout() {
@@ -55,22 +62,30 @@ const router = createHashRouter([
           <ProtectedRoute>
             <div className="flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
               <Navbar />
+              <PracticeHub />
+            </div>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/practice/session",
+        element: (
+          <ProtectedRoute>
+            <div className="flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+              <Navbar />
               <Questions />
             </div>
           </ProtectedRoute>
         ),
       },
-  {
-    path: "/practice/:id",
-    element: (
-      <ProtectedRoute>
-        <div className="flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
-          <Navbar />
-          <Questions />
-        </div>
-      </ProtectedRoute>
-    ),
-  },
+      {
+        path: "/practice/:id",
+        element: (
+          <ProtectedRoute>
+            <PracticeToDeckRedirect />
+          </ProtectedRoute>
+        ),
+      },
   {
     path: "/decks",
     element: (
