@@ -205,6 +205,7 @@ export default function ExtractQuestionsFlow({
 
   const STEP_TIMEOUT_MS = 90_000; // 90s per step
   const MAX_EXAM_PAGES_SENT = 12;
+  const MAX_REGION_CONTINUATIONS = 8; // reprompt until paper_finished or this many extra calls
 
   const handleExtract = useCallback(async () => {
     if (!pdfFile || snapshots.length === 0) {
@@ -242,78 +243,171 @@ export default function ExtractQuestionsFlow({
     };
 
     try {
-      // Step 1: regions only
-      const step1 = await doFetch({ pageImages: examImages, step: "regions" }, "Step 1/3");
-      if (!step1.ok) {
-        setErrorFromResponse(step1.data, step1.res, "Step 1 failed.");
-        return;
+      // Step 1: regions — reprompt until AI marks paper_finished or we get no new regions
+      let regionsList: ExtractedRegion[] = [];
+      let paperFinished = false;
+      let continueFrom: string | null = null;
+      let continuationCount = 0;
+
+      while (true) {
+        const stepLabel =
+          continuationCount === 0
+            ? "Step 1/4: Extract questions…"
+            : `Step 1/4: Getting more questions (${continuationCount + 1})…`;
+        setExtractProgress(stepLabel);
+        const body: Record<string, unknown> = { pageImages: examImages, step: "regions" };
+        if (continueFrom != null) body.continueFrom = continueFrom;
+        const step1 = await doFetch(body, stepLabel);
+        if (!step1.ok) {
+          setErrorFromResponse(step1.data, step1.res, "Step 1 failed.");
+          return;
+        }
+        const raw1 = Array.isArray(step1.data.regions) ? step1.data.regions : [];
+        paperFinished = step1.data.paper_finished === true;
+        if (raw1.length === 0) {
+          if (regionsList.length === 0) {
+            const details = step1.data.details != null ? String(step1.data.details) : "";
+            setExtractError(
+              details
+                ? `No question regions returned.\n\n--- AI / server response ---\n${details}`
+                : "No question regions were returned. Try again."
+            );
+            setExtractStatus("error");
+            setExtractProgress("");
+            return;
+          }
+          break;
+        }
+        const newRegions = raw1.map((r: Record<string, unknown>) => normalizeRawRegion(r));
+        if (regionsList.length === 0) {
+          regionsList = newRegions;
+        } else {
+          const existingIds = new Set(regionsList.map((r) => r.id));
+          const onlyNew = newRegions.filter((r) => !existingIds.has(r.id));
+          if (onlyNew.length === 0) break;
+          regionsList = [...regionsList, ...onlyNew];
+        }
+        if (paperFinished) break;
+        const lastId = (regionsList[regionsList.length - 1] as ExtractedRegion | undefined)?.id ?? null;
+        if (!lastId || continuationCount >= MAX_REGION_CONTINUATIONS) break;
+        continueFrom = lastId;
+        continuationCount += 1;
       }
-      const raw1 = Array.isArray(step1.data.regions) ? step1.data.regions : [];
-      if (raw1.length === 0) {
-        const details = step1.data.details != null ? String(step1.data.details) : "";
-        setExtractError(
-          details
-            ? `No question regions returned.\n\n--- AI / server response ---\n${details}`
-            : "No question regions were returned. Try again."
-        );
-        setExtractStatus("error");
-        setExtractProgress("");
-        return;
-      }
-      let regionsList = raw1.map((r: Record<string, unknown>) => normalizeRawRegion(r));
       const regionIds = regionsList.map((r) => r.id);
 
-      // Step 2: metadata (tags + log_table_page)
-      setExtractProgress("Step 2/3: Getting tags & log table page…");
-      const step2Body: Record<string, unknown> = {
-        pageImages: examImages,
-        step: "metadata",
-        regionIds,
-      };
-      if (includeLogTablesAndMarkingScheme && logTableSnapshots.length > 0) {
-        step2Body.logTablePageImages = logTableSnapshots.slice(0, 12);
-      }
-      const step2 = await doFetch(step2Body, "Step 2/3");
-      if (step2.ok && Array.isArray(step2.data.regions)) {
-        const metaById = new Map<string | number, { tags?: string[]; log_table_page?: number | null }>();
-        for (const r of step2.data.regions as Array<{ id?: string; tags?: string[]; log_table_page?: number | null }>) {
-          const id = r.id ?? "Q1";
-          metaById.set(id, { tags: r.tags, log_table_page: r.log_table_page ?? null });
-        }
-        regionsList = regionsList.map((reg) => {
-          const meta = metaById.get(reg.id);
-          if (!meta) return reg;
-          return {
-            ...reg,
-            tags: Array.isArray(meta.tags) ? meta.tags : reg.tags ?? [],
-            log_table_page: typeof meta.log_table_page === "number" ? meta.log_table_page : meta.log_table_page ?? reg.log_table_page ?? null,
-          };
-        });
-      }
+      const MAX_MARKING_ATTEMPTS = 7;
+      const MAX_LOG_TABLES_ATTEMPTS = 8;
+      const MAX_TAGS_ATTEMPTS = 2;
 
-      // Step 3: marking scheme (optional)
+      // Step 2/4: Marking scheme (essential — retry until all filled or 7 attempts)
       const needMarking = includeLogTablesAndMarkingScheme && markingSchemeSnapshots.length > 0;
       if (needMarking) {
-        setExtractProgress("Step 3/3: Matching marking scheme…");
-        const step3 = await doFetch(
-          {
+        let markingAttempt = 0;
+        let missingMarkingIds: string[] = regionIds;
+        while (missingMarkingIds.length > 0 && markingAttempt < MAX_MARKING_ATTEMPTS) {
+          markingAttempt += 1;
+          setExtractProgress(`Step 2/4: Marking scheme (attempt ${markingAttempt}/${MAX_MARKING_ATTEMPTS})…`);
+          const body: Record<string, unknown> = {
             pageImages: examImages,
             markingSchemeImages: markingSchemeSnapshots.slice(0, 10),
             step: "marking",
             regionIds,
-          },
-          "Step 3/3"
+          };
+          if (missingMarkingIds.length < regionIds.length) body.missingMarkingIds = missingMarkingIds;
+          const step2 = await doFetch(body, "Step 2/4");
+          if (!step2.ok) {
+            setErrorFromResponse(step2.data, step2.res, "Step 2 failed.");
+            return;
+          }
+          if (Array.isArray(step2.data.regions)) {
+            const markById = new Map<string, { start: number; end: number }>();
+            for (const r of step2.data.regions as Array<{ id?: string; marking_scheme_page_range?: { start: number; end: number } | null }>) {
+              const id = r.id ?? "Q1";
+              const range = r.marking_scheme_page_range;
+              if (range && typeof range.start === "number" && typeof range.end === "number") markById.set(id, { start: range.start, end: range.end });
+            }
+            regionsList = regionsList.map((reg) => {
+              const range = markById.get(reg.id);
+              return { ...reg, marking_scheme_page_range: range ?? reg.marking_scheme_page_range ?? null };
+            });
+            missingMarkingIds = regionsList.filter((r) => r.marking_scheme_page_range == null).map((r) => r.id);
+          }
+        }
+        const stillMissing = regionsList.filter((r) => r.marking_scheme_page_range == null);
+        if (stillMissing.length > 0) {
+          setExtractError(
+            `Marking scheme is essential but ${stillMissing.length} question(s) still have no page range after ${MAX_MARKING_ATTEMPTS} attempts: ${stillMissing.map((r) => r.id).join(", ")}.`
+          );
+          setExtractStatus("error");
+          setExtractProgress("");
+          return;
+        }
+      }
+
+      // Step 3/4: Log tables (only add when necessary; 8 attempts max)
+      if (includeLogTablesAndMarkingScheme && logTableSnapshots.length > 0) {
+        let logTablesAttempt = 0;
+        let logTablesOk = false;
+        while (!logTablesOk && logTablesAttempt < MAX_LOG_TABLES_ATTEMPTS) {
+          logTablesAttempt += 1;
+          setExtractProgress(`Step 3/4: Log tables (attempt ${logTablesAttempt}/${MAX_LOG_TABLES_ATTEMPTS})…`);
+          const step3 = await doFetch(
+            {
+              pageImages: examImages,
+              logTablePageImages: logTableSnapshots.slice(0, 12),
+              step: "log_tables",
+              regionIds,
+            },
+            "Step 3/4"
+          );
+          if (step3.ok && Array.isArray(step3.data.regions)) {
+            const logById = new Map<string, number | null>();
+            for (const r of step3.data.regions as Array<{ id?: string; log_table_page?: number | null }>) {
+              const id = r.id ?? "Q1";
+              logById.set(id, typeof r.log_table_page === "number" ? r.log_table_page : null);
+            }
+            regionsList = regionsList.map((reg) => ({
+              ...reg,
+              log_table_page: logById.has(reg.id) ? logById.get(reg.id)! : reg.log_table_page ?? null,
+            }));
+            logTablesOk = true;
+          } else if (!step3.ok && logTablesAttempt >= MAX_LOG_TABLES_ATTEMPTS) {
+            setErrorFromResponse(step3.data, step3.res, "Step 3 failed.");
+            return;
+          }
+        }
+      }
+
+      // Step 4/4: Tags (minimum 1 per question; 2 attempts max)
+      let tagsAttempt = 0;
+      let tagsComplete = false;
+      while (!tagsComplete && tagsAttempt < MAX_TAGS_ATTEMPTS) {
+        tagsAttempt += 1;
+        setExtractProgress(`Step 4/4: Tags (attempt ${tagsAttempt}/${MAX_TAGS_ATTEMPTS})…`);
+        const step4 = await doFetch(
+          { pageImages: examImages, step: "tags", regionIds },
+          "Step 4/4"
         );
-        if (step3.ok && Array.isArray(step3.data.regions)) {
-          const markById = new Map<string | number, { start: number; end: number } | null>();
-          for (const r of step3.data.regions as Array<{ id?: string; marking_scheme_page_range?: { start: number; end: number } | null }>) {
+        if (!step4.ok) {
+          if (tagsAttempt >= MAX_TAGS_ATTEMPTS) {
+            setErrorFromResponse(step4.data, step4.res, "Step 4 failed.");
+            return;
+          }
+          continue;
+        }
+        if (Array.isArray(step4.data.regions)) {
+          const tagsById = new Map<string, string[]>();
+          for (const r of step4.data.regions as Array<{ id?: string; tags?: string[] }>) {
             const id = r.id ?? "Q1";
-            markById.set(id, r.marking_scheme_page_range ?? null);
+            const t = Array.isArray(r.tags) ? r.tags.filter((x): x is string => typeof x === "string") : [];
+            tagsById.set(id, t);
           }
           regionsList = regionsList.map((reg) => {
-            const range = markById.get(reg.id);
-            return { ...reg, marking_scheme_page_range: range ?? reg.marking_scheme_page_range ?? null };
+            const t = tagsById.get(reg.id);
+            return { ...reg, tags: t && t.length > 0 ? t : reg.tags ?? [] };
           });
+          const missingTags = regionsList.filter((r) => !r.tags?.length);
+          tagsComplete = missingTags.length === 0 || tagsAttempt >= MAX_TAGS_ATTEMPTS;
         }
       }
 
@@ -397,7 +491,10 @@ export default function ExtractQuestionsFlow({
   }, [regions.length]);
 
   const [showFullPdf, setShowFullPdf] = useState(true);
+  const [showMarkingSchemePreview, setShowMarkingSchemePreview] = useState(true);
+  const [showLogTablesPreview, setShowLogTablesPreview] = useState(true);
   const selected = regions[selectedIndex];
+  const markingSchemeBlob = markingSchemeSource;
 
   return (
     <div className={`flex flex-col w-full ${regions.length > 0 ? "h-[calc(100vh-12rem)] overflow-hidden" : ""}`}>
@@ -497,17 +594,45 @@ export default function ExtractQuestionsFlow({
               : "Extract regions"}
         </button>
         {pdfFile && regions.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowFullPdf((v) => !v)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              showFullPdf ? "color-bg-accent color-txt-accent" : "color-bg-grey-5 color-txt-sub hover:color-bg-grey-10"
-            }`}
-            title="Toggle full PDF reference"
-          >
-            <LuBookOpen size={18} />
-            Full PDF
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setShowFullPdf((v) => !v)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                showFullPdf ? "color-bg-accent color-txt-accent" : "color-bg-grey-5 color-txt-sub hover:color-bg-grey-10"
+              }`}
+              title="Toggle full PDF reference"
+            >
+              <LuBookOpen size={18} />
+              Full PDF
+            </button>
+            {logTablesBlob && (
+              <button
+                type="button"
+                onClick={() => setShowLogTablesPreview((v) => !v)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  showLogTablesPreview ? "color-bg-accent color-txt-accent" : "color-bg-grey-5 color-txt-sub hover:color-bg-grey-10"
+                }`}
+                title="Toggle Log Tables reference"
+              >
+                <LuBookOpen size={18} />
+                Log Tables
+              </button>
+            )}
+            {markingSchemeBlob && (
+              <button
+                type="button"
+                onClick={() => setShowMarkingSchemePreview((v) => !v)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  showMarkingSchemePreview ? "color-bg-accent color-txt-accent" : "color-bg-grey-5 color-txt-sub hover:color-bg-grey-10"
+                }`}
+                title="Toggle marking scheme preview"
+              >
+                <LuClipboardList size={18} />
+                Marking scheme
+              </button>
+            )}
+          </>
         )}
         {onUploadToFirestore && pdfFile && (
           <button
@@ -779,6 +904,44 @@ export default function ExtractQuestionsFlow({
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto">
                 <PaperPdfPlaceholder file={pdfBlob} pageWidth={280} />
+              </div>
+            </div>
+          )}
+          {/* Log Tables reference */}
+          {showLogTablesPreview && logTablesBlob && (
+            <div className="w-80 shrink-0 flex flex-col min-h-0 color-bg-grey-5 rounded-2xl overflow-hidden">
+              <div className="p-3 color-bg-grey-10 color-txt-sub text-xs font-medium flex items-center justify-between">
+                <span>Log Tables reference</span>
+                <button
+                  type="button"
+                  onClick={() => setShowLogTablesPreview(false)}
+                  className="p-1 rounded hover:color-bg-grey-5 color-txt-sub"
+                  title="Close"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <PaperPdfPlaceholder file={logTablesBlob} pageWidth={280} />
+              </div>
+            </div>
+          )}
+          {/* Marking scheme preview */}
+          {showMarkingSchemePreview && markingSchemeBlob && (
+            <div className="w-80 shrink-0 flex flex-col min-h-0 color-bg-grey-5 rounded-2xl overflow-hidden">
+              <div className="p-3 color-bg-grey-10 color-txt-sub text-xs font-medium flex items-center justify-between">
+                <span>Marking scheme preview</span>
+                <button
+                  type="button"
+                  onClick={() => setShowMarkingSchemePreview(false)}
+                  className="p-1 rounded hover:color-bg-grey-5 color-txt-sub"
+                  title="Close"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <PaperPdfPlaceholder file={markingSchemeBlob} pageWidth={280} />
               </div>
             </div>
           )}
