@@ -138,37 +138,79 @@ type ExtractedRegion = {
     id: string;
     name: string;
     pageRegions: PageRegion[];
+    /** Page number in the Log Tables (Formulae and Tables) booklet required to solve this question, or null if none. */
+    log_table_page: number | null;
+    /** Category tags: use the allowed list; for "X - Y" use [Y, X]. Max 3 categories per question. */
+    tags: string[];
+    /** When marking scheme images are provided: 1-based page range in the marking scheme PDF for this question's marking. */
+    marking_scheme_page_range?: { start: number; end: number } | null;
 };
 
-const EXTRACT_SYSTEM = `You are an expert at locating question regions on exam paper PDF page images.
+const TAGS_ALLOWED = [
+    "Algebra - Cubics", "Algebra - Expressions & Factorising", "Algebra - Inequalities", "Algebra - Quadratics",
+    "Algebra - Simultaneous Equations", "Algebra - Solving Equations", "Algebra - Indices and Logs",
+    "Area & Volume", "Co-Ordinate Geometry - The Circle", "Co-Ordinate Geometry - The Line", "Complex Numbers",
+    "Calculus - Differentiation", "Calculus - Integration", "Calculus - Functions", "Financial Maths",
+    "Geometry", "Geometry - Constructions & Proofs", "Induction", "Probability", "Sequences & Series",
+    "Statistics - Descriptive Statistics", "Statistics - Inferential Statistics", "Statistics - Z Scores",
+    "Trigonometry - Functions & Identities", "Trigonometry - Triangles"
+];
 
-Your job: identify bounding boxes for each FULL QUESTION (Q1, Q2, Q3, ...) so we can crop the PDF to images. One region per question number — include ALL parts (a), (b), (c) of that question in the SAME region. Do NOT extract any text, answers, or content. Only return region coordinates. Questions can span multiple pages.
+const EXTRACT_SYSTEM = `You are an expert at locating question regions on exam paper PDF page images and at classifying maths questions.
+
+IMAGE ORDER IN THE REQUEST:
+- First block: EXAM PAPER page images (pages 1, 2, 3, ...). Use these to draw regions for each full question.
+- If provided, second block: LOG TABLES booklet page images (Formulae and Tables). Use these to choose the correct log_table_page for each question by matching which booklet page contains the formula/table needed.
+- If provided, third block: MARKING SCHEME page images. Use these to match each question (Q1, Q2, ...) to the section that shows its marking and return marking_scheme_page_range (start and end page numbers, 1-based) for that section.
+
+Your jobs:
+1. Identify bounding boxes for each FULL QUESTION (Q1, Q2, Q3, ...) on the EXAM PAPER. One region per question — include ALL parts (a), (b), (c) in the SAME region. Questions can span multiple pages.
+2. For EVERY question return:
+   - log_table_page: The 1-based page number from the Log Tables booklet needed to solve the question. When Log Tables images are provided, LOOK at them to pick the exact page. If no table/formula is needed, use null.
+   - tags: Categorise using ONLY this list (max 3 categories per question): ${TAGS_ALLOWED.join(", ")}
+     TAGGING RULE: For "X - Y" split into [Y, X]. E.g. "Statistics - Z Scores" → ["Z Scores", "Statistics"].
+   - marking_scheme_page_range: ONLY when marking scheme images are provided: the 1-based page range in the marking scheme PDF where this question's marking appears. E.g. { "start": 2, "end": 3 }. If unclear, use your best match.
 
 OUTPUT FORMAT - Return ONLY valid JSON, no markdown or extra text:
 {
   "regions": [
-    { "id": "Q1", "name": "Question 1", "pageRegions": [{ "page": 1, "x": 0, "y": 120, "width": 595, "height": 400 }] },
-    { "id": "Q7", "name": "Question 7", "pageRegions": [
-      { "page": 2, "x": 0, "y": 80, "width": 595, "height": 762 },
-      { "page": 3, "x": 0, "y": 0, "width": 595, "height": 200 }
-    ]}
+    { "id": "Q1", "name": "Question 1", "pageRegions": [{ "page": 1, "x": 0, "y": 120, "width": 595, "height": 400 }], "log_table_page": 22, "tags": ["Quadratics", "Algebra"], "marking_scheme_page_range": { "start": 1, "end": 1 } },
+    { "id": "Q2", "name": "Question 2", "pageRegions": [...], "log_table_page": null, "tags": ["Differentiation", "Calculus"], "marking_scheme_page_range": { "start": 2, "end": 2 } }
   ]
 }
 
 CRITICAL RULES:
-1. EXTRACT ALL QUESTIONS — Do not skip any. A typical Leaving Cert maths paper has Q1 through Q10 (or more). One region per question number.
-2. ONE REGION PER FULL QUESTION — Each question (Q1, Q2, Q3...) gets ONE region. Include every part (a), (b), (c) and all sub-parts (i), (ii) within that single region. Do NOT split by (a)/(b)/(c).
-3. MULTI-PAGE: If a full question spans pages 2 and 3, use pageRegions: [ {page:2, y, height: to bottom}, {page:3, y:0, height: to end} ]. Order matters — list pages in reading order.
-4. WIDTH = full page width — always x: 0 and width: 595 (A4 in PDF points). Never crop horizontally.
-5. HEIGHT = varies — set y (top of region) and height so the region includes the full content for that question on that page (from question start to end of last part).
-6. Coordinates in PDF points: origin (0,0) at top-left of page. y increases downward. A4 height ≈ 842.
-7. Page numbers are 1-based (first image = page 1).
-8. id: short slug like "Q1", "Q7". name: display label like "Question 1", "Question 7".
+1. EXTRACT EVERY QUESTION ON THE PAPER — Do not stop early. Q1 through Q10 or more; one region per question.
+2. ONE REGION PER FULL QUESTION — Include all parts (a), (b), (c) in one region. Do NOT split by part.
+3. MULTI-PAGE: If a question spans pages, use pageRegions with multiple entries in reading order.
+4. WIDTH = full page: x: 0, width: 595. HEIGHT = from question start to end of last part.
+5. Coordinates: PDF points, origin top-left, y down. A4 height ≈ 842. Page numbers 1-based.
+6. id/name: e.g. "Q1", "Question 1".
+7. When Log Tables images are provided, you MUST set log_table_page for every region: look at the booklet images and choose the 1-based page number that contains the formula/table needed for that question. Use null only if the question clearly needs no formula or table. Do not leave log_table_page blank or omit it.
+8. When marking scheme images are provided, you MUST set marking_scheme_page_range for every region: look at the marking scheme images and identify the 1-based page range (start, end) where that question's marking appears. Every region must have marking_scheme_page_range with start and end. Do not leave it blank or omit it.
 9. Return ONLY the JSON object, no markdown code fence.`;
+
+const EXTRACT_SYSTEM_MINIMAL = `You extract question regions from exam paper images. Return ONLY valid JSON, no markdown.
+For each full question (Q1, Q2, ...) output one region: pageRegions (array of {page, x, y, width, height}), x=0 width=595, log_table_page: null, tags: array of up to 3 category strings. Use tags from: ${TAGS_ALLOWED.join(", ")}. For "X - Y" use [Y, X].
+Include EVERY question. One region per question; include all parts (a),(b),(c) in one region. Coordinates: PDF points, origin top-left, A4 height ~842. Return format: {"regions": [{ "id": "Q1", "name": "Question 1", "pageRegions": [...], "log_table_page": null, "tags": [...] }, ...]}.`;
+
+const STEP_REGIONS_SYSTEM = `You find question regions on exam paper images. Return ONLY valid JSON, no markdown.
+For each full question (Q1, Q2, Q3, ... to the last) output ONE region: "id" (e.g. "Q1"), "name" (e.g. "Question 1"), "pageRegions": array of {page, x, y, width, height}. Use x=0, width=595 for full page; set y and height to cover the whole question including all parts (a),(b),(c). Include EVERY question. PDF points, origin top-left, A4 height ~842. Return: {"regions": [{ "id": "Q1", "name": "Question 1", "pageRegions": [...] }, ...]}.`;
+
+const STEP_METADATA_SYSTEM = `You assign tags and log_table_page to each question. Return ONLY valid JSON, no markdown.
+You will be told the question ids (e.g. Q1, Q2, ...). For each, return "id", "tags" (array of up to 3 strings from the allowed list), "log_table_page" (number or null). Tags from: ${TAGS_ALLOWED.join(", ")}. For "X - Y" use [Y, X] in the tags array. Return: {"regions": [{ "id": "Q1", "tags": [...], "log_table_page": null }, ...]}.`;
+
+const STEP_MARKING_SYSTEM = `You match each question to the marking scheme. Return ONLY valid JSON, no markdown.
+You will be told the question ids. For each return "id" and "marking_scheme_page_range": { "start": number, "end": number } (1-based page range in the marking scheme PDF). Return: {"regions": [{ "id": "Q1", "marking_scheme_page_range": { "start": 1, "end": 1 } }, ...]}.`;
+
+const EXTRACT_USER_EXAM_ONLY = "From the exam paper images below, extract EVERY full question (Q1, Q2, Q3, ... through the last). One region per question; include all parts (a), (b), (c) in the same region. For each region return: pageRegions (coordinates: x=0, width=595, y and height to cover the question), log_table_page: null, tags: pick up to 3 from the allowed list (for \"X - Y\" use [Y, X]). Return ONLY valid JSON with a \"regions\" array. No markdown.";
+const EXTRACT_USER_FULL = "Extract EVERY full question on this exam paper (Q1 through the last). One region per question; all parts (a),(b),(c) together. Set log_table_page from the Log Tables images when provided (or null). Set tags (allowed list, hyphen-split, max 3). When marking scheme images are provided set marking_scheme_page_range (start, end) for each region. Width=595. Return ONLY the regions JSON.";
 
 export const extractQuestions = functions.https.onRequest({
     cors: true,
     secrets: ["OPENROUTER_API_KEY"],
+    timeoutSeconds: 180,
+    memory: "1GiB",
 }, async (req, res) => {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
@@ -179,21 +221,82 @@ export const extractQuestions = functions.https.onRequest({
         res.status(405).json({ error: "Method not allowed" });
         return;
     }
-    const { pageImages } = req.body || {};
+    const { pageImages, logTablePageImages, markingSchemeImages, examOnly, step, regionIds } = req.body || {};
     if (!Array.isArray(pageImages) || pageImages.length === 0) {
         res.status(400).json({ error: "pageImages array (base64 data URLs) is required" });
         return;
     }
-    const images = pageImages.slice(0, 20).map((url: string) => {
-        if (typeof url !== "string" || !url.startsWith("data:")) return null;
-        return { type: "image_url" as const, image_url: { url } };
-    }).filter(Boolean);
+    const toImageParts = (urls: string[], max: number) =>
+        (Array.isArray(urls) ? urls.slice(0, max) : [])
+            .filter((url: unknown) => typeof url === "string" && url.startsWith("data:"))
+            .map((url: string) => ({ type: "image_url" as const, image_url: { url } }));
 
-    if (images.length === 0) {
-        res.status(400).json({ error: "Valid base64 image URLs required" });
+    const stepMode = step === "regions" || step === "metadata" || step === "marking";
+    const useExamOnly = !stepMode && examOnly === true;
+    const examMax = stepMode ? 12 : (useExamOnly ? 12 : 15);
+    const examImages = toImageParts(pageImages, examMax);
+    if (examImages.length === 0) {
+        res.status(400).json({ error: "Valid base64 image URLs required in pageImages" });
         return;
     }
 
+    let userContent: Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>;
+    let systemPrompt: string;
+
+    if (step === "regions") {
+        systemPrompt = STEP_REGIONS_SYSTEM;
+        userContent = [
+            { type: "text", text: "From the exam paper images below, list EVERY full question (Q1, Q2, Q3, ... to the last). One region per question; include all parts (a),(b),(c) in the same region. For each return id, name, pageRegions (x=0, width=595; y and height to cover the question). Return ONLY valid JSON with a \"regions\" array. No markdown." },
+            ...examImages,
+        ];
+    } else if (step === "metadata") {
+        const ids = Array.isArray(regionIds) ? regionIds.filter((x: unknown) => typeof x === "string") as string[] : [];
+        const idList = ids.length > 0 ? ids.join(", ") : "Q1, Q2, Q3, ... (infer from the paper)";
+        systemPrompt = STEP_METADATA_SYSTEM;
+        const logTableImages = toImageParts(logTablePageImages ?? [], 12);
+        userContent = [
+            {
+                type: "text",
+                text: `The questions on this exam are: ${idList}. Look at each question in the images and for each return id, tags (up to 3 from the allowed list), and log_table_page (booklet page number or null).${logTableImages.length > 0 ? " The following images are the Log Tables booklet—use them to set log_table_page." : ""} Return ONLY valid JSON with a \"regions\" array. No markdown.`,
+            },
+            ...examImages,
+        ];
+        if (logTableImages.length > 0) userContent.push(...logTableImages);
+    } else if (step === "marking") {
+        const ids = Array.isArray(regionIds) ? regionIds.filter((x: unknown) => typeof x === "string") as string[] : [];
+        const idList = ids.length > 0 ? ids.join(", ") : "Q1, Q2, Q3, ...";
+        const markingSchemeImagesList = toImageParts(markingSchemeImages ?? [], 10);
+        if (markingSchemeImagesList.length === 0) {
+            res.status(400).json({ error: "markingSchemeImages required for step=marking" });
+            return;
+        }
+        systemPrompt = STEP_MARKING_SYSTEM;
+        userContent = [
+            {
+                type: "text",
+                text: `Questions: ${idList}. The first set of images is the exam paper; the second set is the marking scheme. For each question return id and marking_scheme_page_range (start, end) — the 1-based page range in the marking scheme where that question's marking appears. Return ONLY valid JSON with a \"regions\" array. No markdown.`,
+            },
+            ...examImages,
+            { type: "text", text: "Marking scheme (next images):" },
+            ...markingSchemeImagesList,
+        ];
+    } else {
+        const logTableImages = useExamOnly ? [] : toImageParts(logTablePageImages ?? [], 15);
+        const markingSchemeImagesList = useExamOnly ? [] : toImageParts(markingSchemeImages ?? [], 10);
+        const userText = useExamOnly ? EXTRACT_USER_EXAM_ONLY : EXTRACT_USER_FULL;
+        userContent = [{ type: "text", text: userText }, ...examImages];
+        if (logTableImages.length > 0) {
+            userContent.push({ type: "text", text: `Log Tables booklet (${logTableImages.length} pages). Use to set log_table_page for each question.` });
+            userContent.push(...logTableImages);
+        }
+        if (markingSchemeImagesList.length > 0) {
+            userContent.push({ type: "text", text: `Marking scheme (${markingSchemeImagesList.length} pages). Set marking_scheme_page_range (start, end) for each region.` });
+            userContent.push(...markingSchemeImagesList);
+        }
+        systemPrompt = useExamOnly ? EXTRACT_SYSTEM_MINIMAL : EXTRACT_SYSTEM;
+    }
+
+    const markingSchemeImagesListForNorm = step === "marking" ? toImageParts(markingSchemeImages ?? [], 10) : (useExamOnly ? [] : toImageParts(markingSchemeImages ?? [], 10));
     try {
         const response = await fetch(OPENROUTER_URL, {
             method: "POST",
@@ -205,16 +308,10 @@ export const extractQuestions = functions.https.onRequest({
             body: JSON.stringify({
                 model: OPENROUTER_MODEL,
                 messages: [
-                    { role: "system", content: EXTRACT_SYSTEM },
-                    {
-                        role: "user",
-                        content: [
-                            { type: "text", text: "Extract ALL full question regions — do not skip any. Q1 through Q10 (or more). One region per question (Q1, Q2, ...); include all parts (a), (b), (c) in the same region. Questions can span multiple pages. Width=full page (595). Return the regions JSON only." },
-                            ...images,
-                        ],
-                    },
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userContent },
                 ],
-                max_tokens: 12000,
+                max_tokens: 8000,
                 stream: false,
             }),
         });
@@ -226,10 +323,13 @@ export const extractQuestions = functions.https.onRequest({
             return;
         }
 
-        const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+        const data = await response.json() as { choices?: Array<{ message?: { content?: string } }>; error?: unknown };
         const content = data.choices?.[0]?.message?.content;
         if (!content || typeof content !== "string") {
-            res.status(502).json({ error: "No content in AI response" });
+            res.status(502).json({
+                error: "No content in AI response",
+                details: JSON.stringify(data, null, 2),
+            });
             return;
         }
 
@@ -237,12 +337,70 @@ export const extractQuestions = functions.https.onRequest({
         let jsonStr = content.trim();
         const fence = jsonStr.match(/^```(?:json)?\s*([\s\S]*?)```$/);
         if (fence) jsonStr = fence[1].trim();
-        const parsed = JSON.parse(jsonStr) as { regions?: ExtractedRegion[] };
-        const regions = Array.isArray(parsed.regions) ? parsed.regions : [];
+        let parsed: { regions?: ExtractedRegion[] };
+        try {
+            parsed = JSON.parse(jsonStr) as { regions?: ExtractedRegion[] };
+        } catch (parseErr) {
+            console.error("extractQuestions JSON parse error:", parseErr);
+            res.status(502).json({
+                error: "AI returned invalid JSON",
+                details: jsonStr,
+                parseError: String(parseErr),
+            });
+            return;
+        }
+        const rawRegions = Array.isArray(parsed.regions) ? parsed.regions : [];
+        const normRange = (v: unknown): { start: number; end: number } | null => {
+            if (v && typeof v === "object" && "start" in v && "end" in v) {
+                const s = Number((v as { start: unknown }).start);
+                const e = Number((v as { end: unknown }).end);
+                if (Number.isFinite(s) && Number.isFinite(e) && s >= 1 && e >= 1) return { start: s, end: e };
+            }
+            return null;
+        };
+        if (step === "regions") {
+            const regions = rawRegions.map((r) => ({
+                id: r.id ?? "Q1",
+                name: r.name ?? "",
+                pageRegions: Array.isArray(r.pageRegions) ? r.pageRegions : [],
+                log_table_page: null as number | null,
+                tags: [] as string[],
+                marking_scheme_page_range: null as { start: number; end: number } | null,
+            }));
+            res.status(200).json({ regions, step: "regions" });
+            return;
+        }
+        if (step === "metadata") {
+            const regions = rawRegions.map((r) => ({
+                id: r.id ?? "Q1",
+                tags: Array.isArray(r.tags) ? r.tags.filter((t): t is string => typeof t === "string") : [],
+                log_table_page: typeof r.log_table_page === "number" ? r.log_table_page : null,
+            }));
+            res.status(200).json({ regions, step: "metadata" });
+            return;
+        }
+        if (step === "marking") {
+            const regions = rawRegions.map((r) => ({
+                id: r.id ?? "Q1",
+                marking_scheme_page_range: normRange(r.marking_scheme_page_range),
+            }));
+            res.status(200).json({ regions, step: "marking" });
+            return;
+        }
+        const hasMarkingScheme = markingSchemeImagesListForNorm.length > 0;
+        const regions = rawRegions.map((r) => ({
+            id: r.id ?? "Q1",
+            name: r.name ?? "",
+            pageRegions: Array.isArray(r.pageRegions) ? r.pageRegions : [],
+            log_table_page: typeof r.log_table_page === "number" ? r.log_table_page : null,
+            tags: Array.isArray(r.tags) ? r.tags.filter((t): t is string => typeof t === "string") : [],
+            marking_scheme_page_range: hasMarkingScheme ? normRange(r.marking_scheme_page_range) : null,
+        }));
         res.status(200).json({ regions });
     } catch (err) {
         console.error("extractQuestions error:", err);
-        res.status(500).json({ error: "Failed to extract questions" });
+        const details = err instanceof Error ? err.message : String(err);
+        res.status(500).json({ error: "Failed to extract questions", details });
     }
 });
 

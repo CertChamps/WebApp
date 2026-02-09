@@ -3,13 +3,18 @@ import { getDocument } from "pdfjs-dist";
 
 const RENDER_SCALE = 1;
 const MAX_WIDTH = 600; // Smaller for API payload limits
-const MAX_PAGES = 20;  // Send more pages so AI can extract all questions
+const DEFAULT_MAX_PAGES = 20;  // Send more pages so AI can extract all questions
 
 /**
  * Renders all pages of a PDF blob to image data URLs for AI extraction.
  * Returns array of data URLs (index 0 = page 1).
+ * @param blob - PDF blob (or null to clear).
+ * @param maxPages - Max pages to render (default 20). Use e.g. 40 for Log Tables booklet.
  */
-export function useAllPageSnapshots(blob: Blob | null): { snapshots: string[]; loading: boolean; error: string | null } {
+export function useAllPageSnapshots(
+  blob: Blob | null,
+  maxPages: number = DEFAULT_MAX_PAGES
+): { snapshots: string[]; loading: boolean; error: string | null } {
   const [snapshots, setSnapshots] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +40,7 @@ export function useAllPageSnapshots(blob: Blob | null): { snapshots: string[]; l
         const numPages = doc.numPages;
         const urls: string[] = [];
 
-        const pagesToRender = Math.min(numPages, MAX_PAGES);
+        const pagesToRender = Math.min(numPages, maxPages);
         for (let i = 1; i <= pagesToRender; i++) {
           if (cancelled) return;
           const page = await doc.getPage(i);
@@ -67,7 +72,7 @@ export function useAllPageSnapshots(blob: Blob | null): { snapshots: string[]; l
     })();
 
     return () => { cancelled = true; };
-  }, [blob]);
+  }, [blob, maxPages]);
 
   return { snapshots, loading, error };
 }

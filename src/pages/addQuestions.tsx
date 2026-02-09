@@ -481,10 +481,21 @@ export default function AddQuestions() {
             "questions",
             questionDocId
           );
+          const logTablePage = typeof r.log_table_page === "number" ? r.log_table_page : null;
+          const tags = Array.isArray(r.tags) ? r.tags : [];
+          const markingSchemePageRange =
+            r.marking_scheme_page_range &&
+            typeof r.marking_scheme_page_range.start === "number" &&
+            typeof r.marking_scheme_page_range.end === "number"
+              ? { start: r.marking_scheme_page_range.start, end: r.marking_scheme_page_range.end }
+              : null;
           batch.set(questionRef, {
             id: questionDocId,
             questionName: r.name || r.id,
             pageRange,
+            logTablePage,
+            tags,
+            ...(markingSchemePageRange ? { markingSchemePageRange } : {}),
           });
         });
         await batch.commit();
