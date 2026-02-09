@@ -133,7 +133,7 @@ export const chat = functions.https.onRequest({
 /** One page region: bounding box on a single PDF page. */
 type PageRegion = { page: number; x: number; y: number; width: number; height: number };
 
-/** One extracted region = one question part, can span multiple pages. */
+/** One extracted region = one full question (all parts (a), (b), (c) together), can span multiple pages. */
 type ExtractedRegion = {
     id: string;
     name: string;
@@ -142,30 +142,29 @@ type ExtractedRegion = {
 
 const EXTRACT_SYSTEM = `You are an expert at locating question regions on exam paper PDF page images.
 
-Your job: identify bounding boxes for each question PART so we can crop the PDF to images. Do NOT extract any text, answers, or content. Only return region coordinates. Questions can span multiple pages.
+Your job: identify bounding boxes for each FULL QUESTION (Q1, Q2, Q3, ...) so we can crop the PDF to images. One region per question number — include ALL parts (a), (b), (c) of that question in the SAME region. Do NOT extract any text, answers, or content. Only return region coordinates. Questions can span multiple pages.
 
 OUTPUT FORMAT - Return ONLY valid JSON, no markdown or extra text:
 {
   "regions": [
-    { "id": "Q1a", "name": "Question 1 (a)", "pageRegions": [{ "page": 1, "x": 0, "y": 120, "width": 595, "height": 180 }] },
-    { "id": "Q7a", "name": "Question 7 (a)", "pageRegions": [
-      { "page": 2, "x": 0, "y": 80, "width": 595, "height": 700 },
+    { "id": "Q1", "name": "Question 1", "pageRegions": [{ "page": 1, "x": 0, "y": 120, "width": 595, "height": 400 }] },
+    { "id": "Q7", "name": "Question 7", "pageRegions": [
+      { "page": 2, "x": 0, "y": 80, "width": 595, "height": 762 },
       { "page": 3, "x": 0, "y": 0, "width": 595, "height": 200 }
     ]}
   ]
 }
 
 CRITICAL RULES:
-1. EXTRACT ALL QUESTIONS — Do not skip any. A typical Leaving Cert maths paper has Q1 through Q10 (or more). Include every question and every part (a), (b), (c)... on every page.
-2. SPLIT by (a), (b), (c) — each letter part gets its OWN region.
-3. KEEP (i), (ii), (iii) TOGETHER — within part (a), sub-parts (i) and (ii) stay in ONE region. Do not split by (i)/(ii).
-4. MULTI-PAGE: If a question part spans pages 2 and 3, use pageRegions: [ {page:2, y, height: to bottom}, {page:3, y:0, height: to end} ]. Order matters — list pages in reading order.
-5. WIDTH = full page width — always x: 0 and width: 595 (A4 in PDF points). Never crop horizontally.
-6. HEIGHT = varies — set y (top of region) and height so the region includes the full content for that page segment.
-7. Coordinates in PDF points: origin (0,0) at top-left of page. y increases downward. A4 height ≈ 842.
-8. Page numbers are 1-based (first image = page 1).
-9. id: short slug like "Q1a", "Q7a". name: display label like "Question 1 (a)".
-10. Return ONLY the JSON object, no markdown code fence.`;
+1. EXTRACT ALL QUESTIONS — Do not skip any. A typical Leaving Cert maths paper has Q1 through Q10 (or more). One region per question number.
+2. ONE REGION PER FULL QUESTION — Each question (Q1, Q2, Q3...) gets ONE region. Include every part (a), (b), (c) and all sub-parts (i), (ii) within that single region. Do NOT split by (a)/(b)/(c).
+3. MULTI-PAGE: If a full question spans pages 2 and 3, use pageRegions: [ {page:2, y, height: to bottom}, {page:3, y:0, height: to end} ]. Order matters — list pages in reading order.
+4. WIDTH = full page width — always x: 0 and width: 595 (A4 in PDF points). Never crop horizontally.
+5. HEIGHT = varies — set y (top of region) and height so the region includes the full content for that question on that page (from question start to end of last part).
+6. Coordinates in PDF points: origin (0,0) at top-left of page. y increases downward. A4 height ≈ 842.
+7. Page numbers are 1-based (first image = page 1).
+8. id: short slug like "Q1", "Q7". name: display label like "Question 1", "Question 7".
+9. Return ONLY the JSON object, no markdown code fence.`;
 
 export const extractQuestions = functions.https.onRequest({
     cors: true,
@@ -210,7 +209,7 @@ export const extractQuestions = functions.https.onRequest({
                     {
                         role: "user",
                         content: [
-                            { type: "text", text: "Extract ALL question regions — do not skip any. Q1 through Q10 (or more). Each part (a), (b), (c) gets its own region. Keep (i), (ii) together. Questions can span multiple pages. Width=full page (595). Return the regions JSON only." },
+                            { type: "text", text: "Extract ALL full question regions — do not skip any. Q1 through Q10 (or more). One region per question (Q1, Q2, ...); include all parts (a), (b), (c) in the same region. Questions can span multiple pages. Width=full page (595). Return the regions JSON only." },
                             ...images,
                         ],
                     },

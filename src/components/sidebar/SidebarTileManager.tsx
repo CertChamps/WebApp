@@ -1,8 +1,9 @@
 import { useState, useCallback, Component, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { LuSparkles, LuBookOpen, LuMessageSquare, LuTimer, LuPanelRightClose } from "react-icons/lu";
 import { AIChat } from "../ai";
-import LogTables from "../logtables";
+import FloatingLogTables from "../FloatingLogTables";
 import QThread from "../questions/q_thread";
 import Timer from "../timer";
 
@@ -157,7 +158,17 @@ export function SidebarTileManager({
                 transition={TILE_TRANSITION}
               >
                 <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-                  <TileContent panelId={id} question={question} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />
+                  <TileContent
+                    panelId={id}
+                    question={question}
+                    getDrawingSnapshot={getDrawingSnapshot}
+                    getPaperSnapshot={getPaperSnapshot}
+                    onClosePanel={(panelId) => {
+                      const [t, b] = openPanels;
+                      if (t === panelId) setOpenPanels([b ?? null, null]);
+                      else if (b === panelId) setOpenPanels([t ?? null, null]);
+                    }}
+                  />
                 </div>
               </motion.div>
             );
@@ -195,11 +206,13 @@ function TileContent({
   question,
   getDrawingSnapshot,
   getPaperSnapshot,
+  onClosePanel,
 }: {
   panelId: SidebarPanelId;
   question?: any;
   getDrawingSnapshot?: (() => string | null) | null;
   getPaperSnapshot?: (() => string | null) | null;
+  onClosePanel?: (id: SidebarPanelId) => void;
 }) {
   const part = 0;
   const pgNumber = question?.content?.[part]?.logtables != null
@@ -212,17 +225,28 @@ function TileContent({
       return <AIChat question={question} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />;
     case "logtables":
       return (
-        <TileErrorBoundary
-          fallback={
-            <div className="flex h-full items-center justify-center p-4 text-center text-sm color-txt-sub">
-              Log tables failed to load. Try refreshing.
-            </div>
-          }
-        >
-          <div className="h-full overflow-auto flex justify-center color-bg">
-            <LogTables pgNumber={pgNumber} />
+        <>
+          {typeof document !== "undefined" &&
+            createPortal(
+              <TileErrorBoundary
+                fallback={
+                  <div className="flex h-full items-center justify-center p-4 text-center text-sm color-txt-sub">
+                    Log tables failed to load. Try refreshing.
+                  </div>
+                }
+              >
+                <FloatingLogTables
+                  pgNumber={pgNumber}
+                  onClose={() => onClosePanel?.("logtables")}
+                />
+              </TileErrorBoundary>,
+              document.body
+            )}
+          <div className="flex h-full flex-col items-center justify-center p-4 text-center text-sm color-txt-sub">
+            <p className="font-medium color-txt-main">Log tables opened in a floating window.</p>
+            <p className="mt-1">Drag the title bar to move, resize from the corner. Close with × on the window.</p>
           </div>
-        </TileErrorBoundary>
+        </>
       );
     case "threads":
       return (

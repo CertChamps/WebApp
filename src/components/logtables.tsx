@@ -9,9 +9,11 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 type QuestionType = {
   pgNumber: string;
+  /** When true, size to fill container (e.g. inside FloatingLogTables) instead of fixed 70vh/520px. */
+  embedded?: boolean;
 };
 
-const LogTables = ({ pgNumber }: QuestionType) => {
+const LogTables = ({ pgNumber, embedded = false }: QuestionType) => {
   // Check for various "empty" states: null, "null", "NaN" (from bad math), or "0"
   const isNullPage = !pgNumber || pgNumber === "null" || pgNumber === "NaN" || pgNumber === "0";
   // If null, default to page 1 for the PDF viewer, but keep isNullPage true for UI
@@ -51,8 +53,8 @@ const LogTables = ({ pgNumber }: QuestionType) => {
 
   return (
     <div
-      className="flex flex-col items-center shadow-small rounded-lg color-bg relative ml-5 overflow-hidden"
-      style={{ height: "70vh", width: "520px" }}
+      className={`flex flex-col items-center color-bg relative overflow-hidden ${embedded ? "h-full w-full" : "shadow-small rounded-lg ml-5"}`}
+      style={embedded ? { height: "100%", width: "100%" } : { height: "70vh", width: "520px" }}
     >
       {/* ================= 1. TOP BAR ================= */}
       {/* This is now the first element, so it sits at the top naturally. */}

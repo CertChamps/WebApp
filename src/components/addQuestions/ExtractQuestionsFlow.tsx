@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from "react";
-import { LuFileText, LuLoader, LuSparkles, LuPlus, LuTrash2, LuBookOpen } from "react-icons/lu";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { LuFileText, LuLoader, LuSparkles, LuPlus, LuTrash2, LuBookOpen, LuUpload } from "react-icons/lu";
 import { useAllPageSnapshots } from "../../hooks/useAllPageSnapshots";
 import PdfRegionView, { type PdfRegion } from "../questions/PdfRegionView";
 import PaperPdfPlaceholder from "../questions/PaperPdfPlaceholder";
@@ -10,7 +10,7 @@ const EXTRACT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net
 /** One page region: bounding box on a single PDF page. */
 export type PageRegion = { page: number; x: number; y: number; width: number; height: number };
 
-/** One extracted region = one question part, can span multiple pages. */
+/** One extracted region = one full question (all parts together), can span multiple pages. */
 export type ExtractedRegion = {
   id: string;
   name: string;
@@ -22,7 +22,7 @@ function normalizeRawRegion(r: Record<string, unknown>): ExtractedRegion {
   const pr = r.pageRegions;
   if (Array.isArray(pr) && pr.length > 0) {
     return {
-      id: (r.id as string) ?? "Q1a",
+      id: (r.id as string) ?? "Q1",
       name: (r.name as string) ?? "",
       pageRegions: pr.map((p: Record<string, unknown>) => ({
         page: (p.page as number) ?? 1,
@@ -35,7 +35,7 @@ function normalizeRawRegion(r: Record<string, unknown>): ExtractedRegion {
   }
   // Legacy format: single page, x, y, width, height at top level
   return {
-    id: (r.id as string) ?? "Q1a",
+    id: (r.id as string) ?? "Q1",
     name: (r.name as string) ?? "",
     pageRegions: [{
       page: (r.page as number) ?? 1,
@@ -47,13 +47,58 @@ function normalizeRawRegion(r: Record<string, unknown>): ExtractedRegion {
   };
 }
 
-type ExtractQuestionsFlowProps = {
-  onClose?: () => void;
+type PaperMetadata = {
+  paperId: string;
+  year: number;
+  label: string;
 };
 
-export default function ExtractQuestionsFlow({ onClose: _onClose }: ExtractQuestionsFlowProps) {
+type ExtractQuestionsFlowProps = {
+  onClose?: () => void;
+  /** When set, preload this file (e.g. from Upload tab "Save papers") so user can extract/review. */
+  initialFile?: File | null;
+  /** Called after initialFile has been applied so parent can clear it. */
+  onInitialFileConsumed?: () => void;
+  /** From Upload tab when opened via "Save papers" – used for Firestore upload. */
+  paperMetadata?: PaperMetadata | null;
+  firestoreUploadPath?: string;
+  subject?: string;
+  level?: string;
+  /** Called to upload current PDF + regions to Firestore after review. */
+  onUploadToFirestore?: (file: File, regions: ExtractedRegion[]) => Promise<void>;
+  isUploading?: boolean;
+  uploadProgress?: string;
+};
+
+export default function ExtractQuestionsFlow({
+  onClose: _onClose,
+  initialFile = null,
+  onInitialFileConsumed,
+  paperMetadata = null,
+  firestoreUploadPath,
+  subject,
+  level,
+  onUploadToFirestore,
+  isUploading = false,
+  uploadProgress = "",
+}: ExtractQuestionsFlowProps) {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [regions, setRegions] = useState<ExtractedRegion[]>([]);
+  const initialFileConsumedRef = useRef(false);
+
+  useEffect(() => {
+    if (initialFile && !initialFileConsumedRef.current) {
+      setPdfFile(initialFile);
+      setRegions([]);
+      setExtractError(null);
+      setExtractStatus("idle");
+      initialFileConsumedRef.current = true;
+      onInitialFileConsumed?.();
+    }
+    return () => {
+      initialFileConsumedRef.current = false;
+    };
+  }, [initialFile, onInitialFileConsumed]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [extractStatus, setExtractStatus] = useState<"idle" | "loading" | "error">("idle");
   const [extractError, setExtractError] = useState<string | null>(null);
@@ -144,8 +189,8 @@ export default function ExtractQuestionsFlow({ onClose: _onClose }: ExtractQuest
   const addRegion = useCallback(() => {
     const n = regions.length + 1;
     const newRegion: ExtractedRegion = {
-      id: `Q${n}a`,
-      name: `Question ${n} (a)`,
+      id: `Q${n}`,
+      name: `Question ${n}`,
       pageRegions: [{ page: 1, x: 0, y: 0, width: 595, height: 150 }],
     };
     setRegions((prev) => [...prev, newRegion]);
@@ -209,6 +254,21 @@ export default function ExtractQuestionsFlow({ onClose: _onClose }: ExtractQuest
             Full PDF
           </button>
         )}
+        {onUploadToFirestore && pdfFile && (
+          <button
+            type="button"
+            onClick={() => onUploadToFirestore(pdfFile, regions)}
+            disabled={isUploading}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl color-bg-accent color-txt-main font-medium text-sm hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isUploading ? (
+              <LuLoader size={18} className="animate-spin shrink-0" />
+            ) : (
+              <LuUpload size={18} className="shrink-0" />
+            )}
+            {isUploading ? (uploadProgress || "Uploading…") : "Upload to Firestore"}
+          </button>
+        )}
         {extractError && (
           <span className="color-txt-sub text-sm">{extractError}</span>
         )}
@@ -216,7 +276,7 @@ export default function ExtractQuestionsFlow({ onClose: _onClose }: ExtractQuest
 
       {regions.length === 0 && extractStatus !== "loading" && !snapshotsLoading && (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 color-txt-sub text-sm">
-          <p>Upload a PDF and click &quot;Extract regions&quot;. Width = full paper, height varies. (a)/(b)/(c) split; (i)/(ii) together. Questions can span multiple pages.</p>
+          <p>Upload a PDF and click &quot;Extract regions&quot;. One region per full question (Q1, Q2, …); all parts (a), (b), (c) stay together. Width = full paper, height varies. Questions can span multiple pages.</p>
           {pdfFile && (
             <button
               type="button"

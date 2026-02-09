@@ -9,6 +9,7 @@ import {
   setDoc,
   collection,
   arrayUnion,
+  writeBatch,
 } from "firebase/firestore";
 import { storage, db } from "../../firebase";
 import {
@@ -21,7 +22,9 @@ import {
   LuFileText,
   LuSparkles,
 } from "react-icons/lu";
-import ExtractQuestionsFlow from "../components/addQuestions/ExtractQuestionsFlow";
+import ExtractQuestionsFlow, {
+  type ExtractedRegion,
+} from "../components/addQuestions/ExtractQuestionsFlow";
 import "../styles/settings.css";
 
 type AddQuestionsTab = "upload" | "extract";
@@ -136,6 +139,28 @@ function getStoragePath(
   return `${base}/${safe}.pdf`;
 }
 
+/** Extracted question from PDF (mock for now). */
+export type ExtractedQuestion = {
+  name: string;
+  id: string;
+  pageRange: [number, number];
+};
+
+/**
+ * Placeholder: extract question data from a PDF file.
+ * Returns mock data; replace with real AI extraction later.
+ */
+export async function extractQuestionsFromPDF(
+  _file: File
+): Promise<ExtractedQuestion[]> {
+  await new Promise((r) => setTimeout(r, 300));
+  return [
+    { name: "Question 1", id: "q1", pageRange: [1, 1] },
+    { name: "Question 2", id: "q2", pageRange: [2, 2] },
+    { name: "Question 3", id: "q3", pageRange: [3, 4] },
+  ];
+}
+
 export default function AddQuestions() {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
@@ -143,6 +168,17 @@ export default function AddQuestions() {
 
   const [subject, setSubject] = useState<SubjectId>("maths");
   const [level, setLevel] = useState<LevelId>("higher");
+  const [firestoreUploadPath, setFirestoreUploadPath] = useState(
+    "questions/leavingcert/subjects/maths/levels/higher/papers"
+  );
+  const [pendingPdfForExtract, setPendingPdfForExtract] = useState<File | null>(
+    null
+  );
+  const [pendingPaperMetadata, setPendingPaperMetadata] = useState<{
+    paperId: string;
+    year: number;
+    label: string;
+  } | null>(null);
   const [rows, setRows] = useState<PaperRow[]>([
     {
       id: crypto.randomUUID(),
@@ -254,23 +290,53 @@ export default function AddQuestions() {
       return;
     }
 
+    const pathTrimmed = firestoreUploadPath.trim();
+    if (!pathTrimmed) {
+      alert("Firestore Upload Path is required.");
+      return;
+    }
+    const pathSegments = pathTrimmed.split("/").filter(Boolean);
+    if (pathSegments.length % 2 !== 1) {
+      alert(
+        "Firestore path must be a collection path (odd number of segments), e.g. questions/leavingcert/subjects/maths/levels/higher/papers"
+      );
+      return;
+    }
+
     setIsUploading(true);
-    setUploadProgress("Ensuring parent structure...");
+    setUploadProgress("Starting upload...");
 
     try {
-      await ensureParentStructure(subject, level);
-
       for (let i = 0; i < toUpload.length; i++) {
         const row = toUpload[i];
-        setUploadProgress(
-          `Paper ${i + 1}/${toUpload.length}: ${row.paperId}...`
-        );
+        const docId =
+          slugify(row.paperId.replace(/\.pdf$/i, "")) ||
+          row.paperId.replace(/\.pdf$/i, "");
+
+        let questions: ExtractedQuestion[] = [];
+        if (row.file) {
+          setUploadProgress(
+            `Paper ${i + 1}/${toUpload.length}: Extracting questions...`
+          );
+          try {
+            questions = await extractQuestionsFromPDF(row.file);
+          } catch (extractErr) {
+            const msg =
+              extractErr instanceof Error
+                ? extractErr.message
+                : "Extraction failed";
+            throw new Error(`${row.paperId}: ${msg}`);
+          }
+        }
 
         let storagePath = row.existingStoragePath;
-
         if (row.file) {
-          const filename =
-            row.paperId.endsWith(".pdf") ? row.paperId : `${row.paperId}.pdf`;
+          setUploadProgress(
+            `Paper ${i + 1}/${toUpload.length}: Uploading PDF...`
+          );
+          const filename = row.paperId.endsWith(".pdf")
+            ? row.paperId
+            : `${row.paperId}.pdf`;
           storagePath = getStoragePath(subject, level, filename);
           const storageRef = ref(storage, storagePath);
           await uploadBytes(storageRef, row.file);
@@ -280,27 +346,45 @@ export default function AddQuestions() {
           throw new Error(`Row ${row.paperId}: no file and no existing path.`);
         }
 
-        const docId = slugify(row.paperId.replace(/\.pdf$/i, "")) || row.paperId.replace(/\.pdf$/i, "");
-        const paperRef = doc(
-          db,
-          "questions",
-          "leavingcert",
-          "subjects",
-          subject,
-          "levels",
-          level,
-          "papers",
-          docId
+        setUploadProgress(
+          `Paper ${i + 1}/${toUpload.length}: Writing Firestore...`
         );
+        const questionSeparationData = questions.map((q) => ({
+          start: q.pageRange[0],
+          end: q.pageRange[1],
+        }));
+        const parentRef = doc(db, ...pathSegments, docId);
+
         await setDoc(
-          paperRef,
+          parentRef,
           {
             year: row.year,
             storagePath,
+            questionSeparationData,
             ...(row.label.trim() ? { label: row.label.trim() } : {}),
           },
           { merge: true }
         );
+
+        if (questions.length > 0) {
+          const batch = writeBatch(db);
+          questions.forEach((q, idx) => {
+            const questionDocId = `q${idx + 1}`;
+            const questionRef = doc(
+              db,
+              ...pathSegments,
+              docId,
+              "questions",
+              questionDocId
+            );
+            batch.set(questionRef, {
+              id: questionDocId,
+              questionName: q.name,
+              pageRange: q.pageRange,
+            });
+          });
+          await batch.commit();
+        }
       }
 
       setUploadProgress("");
@@ -315,6 +399,101 @@ export default function AddQuestions() {
           existingStoragePath: null,
         },
       ]);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setUploadProgress("");
+      alert(`Upload failed: ${msg}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  /** Convert Extract tab regions to page ranges and upload one paper to Firestore. */
+  const handleUploadFromExtract = async (
+    file: File,
+    regions: ExtractedRegion[]
+  ) => {
+    const pathTrimmed = firestoreUploadPath.trim();
+    if (!pathTrimmed) {
+      alert("Firestore Upload Path is required. Set it in the Upload tab.");
+      return;
+    }
+    const pathSegments = pathTrimmed.split("/").filter(Boolean);
+    if (pathSegments.length % 2 !== 1) {
+      alert(
+        "Firestore path must be a collection path (odd number of segments). Set it in the Upload tab."
+      );
+      return;
+    }
+
+    const meta = pendingPaperMetadata ?? {
+      paperId: slugify(file.name.replace(/\.pdf$/i, "")) || "paper",
+      year: new Date().getFullYear(),
+      label: file.name,
+    };
+    const docId =
+      slugify(meta.paperId.replace(/\.pdf$/i, "")) || meta.paperId.replace(/\.pdf$/i, "");
+
+    setIsUploading(true);
+    setUploadProgress("Uploading PDF...");
+
+    try {
+      const filename = meta.paperId.endsWith(".pdf")
+        ? meta.paperId
+        : `${meta.paperId}.pdf`;
+      const storagePath = getStoragePath(subject, level, filename);
+      const storageRef = ref(storage, storagePath);
+      await uploadBytes(storageRef, file);
+
+      setUploadProgress("Writing Firestore...");
+      const questionSeparationData = regions.map((r) => {
+        const pages = r.pageRegions.map((p) => p.page);
+        const min = Math.min(...pages);
+        const max = Math.max(...pages);
+        return { start: min, end: max };
+      });
+
+      const parentRef = doc(db, ...pathSegments, docId);
+      await setDoc(
+        parentRef,
+        {
+          year: meta.year,
+          storagePath,
+          questionSeparationData,
+          ...(meta.label.trim() ? { label: meta.label.trim() } : {}),
+        },
+        { merge: true }
+      );
+
+      if (regions.length > 0) {
+        const batch = writeBatch(db);
+        regions.forEach((r, idx) => {
+          const questionDocId = `q${idx + 1}`;
+          const pages = r.pageRegions.map((p) => p.page);
+          const pageRange: [number, number] = [
+            Math.min(...pages),
+            Math.max(...pages),
+          ];
+          const questionRef = doc(
+            db,
+            ...pathSegments,
+            docId,
+            "questions",
+            questionDocId
+          );
+          batch.set(questionRef, {
+            id: questionDocId,
+            questionName: r.name || r.id,
+            pageRange,
+          });
+        });
+        await batch.commit();
+      }
+
+      setUploadProgress("");
+      alert("Paper uploaded to Firestore.");
+      setPendingPaperMetadata(null);
+      setTab("upload");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setUploadProgress("");
@@ -384,12 +563,32 @@ export default function AddQuestions() {
       </div>
 
       {tab === "extract" && (
-        <ExtractQuestionsFlow />
+        <ExtractQuestionsFlow
+          initialFile={pendingPdfForExtract}
+          onInitialFileConsumed={() => setPendingPdfForExtract(null)}
+          paperMetadata={pendingPaperMetadata}
+          firestoreUploadPath={firestoreUploadPath}
+          subject={subject}
+          level={level}
+          onUploadToFirestore={handleUploadFromExtract}
+          isUploading={isUploading}
+          uploadProgress={uploadProgress}
+        />
       )}
 
       {tab === "upload" && (
         <>
       <div className="flex flex-wrap gap-4 mb-6">
+        <div className="min-w-[280px] flex-1">
+          <label className="block color-txt-sub text-sm mb-1">Firestore Upload Path (collection path)</label>
+          <input
+            type="text"
+            value={firestoreUploadPath}
+            onChange={(e) => setFirestoreUploadPath(e.target.value.trim() || e.target.value)}
+            placeholder="e.g. questions/leavingcert/subjects/maths/levels/higher/papers"
+            className="w-full px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 placeholder:color-txt-sub"
+          />
+        </div>
         <div>
           <label className="block color-txt-sub text-sm mb-1">Subject</label>
           <select
@@ -535,7 +734,20 @@ export default function AddQuestions() {
         </button>
         <button
           type="button"
-          onClick={handleSubmit}
+          onClick={() => {
+            const withFile = rows.find((r) => r.file);
+            if (withFile?.file) {
+              setPendingPdfForExtract(withFile.file);
+              setPendingPaperMetadata({
+                paperId: withFile.paperId || defaultPaperId(withFile.year, withFile.label),
+                year: withFile.year,
+                label: withFile.label,
+              });
+              setTab("extract");
+            } else {
+              handleSubmit();
+            }
+          }}
           disabled={isUploading}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl color-bg-accent color-txt-main font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110"
         >

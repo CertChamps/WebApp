@@ -12,6 +12,13 @@ export type ExamPaper = {
   level?: string;
 };
 
+/** One question from a paper's questions subcollection (q1, q2, ...). */
+export type PaperQuestion = {
+  id: string;
+  questionName: string;
+  pageRange: [number, number];
+};
+
 function deriveLabel(docId: string, year?: number): string {
   const part = docId
     .replace(/^\d+-/, "")
@@ -136,5 +143,47 @@ export function useExamPapers() {
     return getBlob(pathRef);
   }, []);
 
-  return { papers, loading, error, getPaperBlob };
+  const getPaperQuestions = useCallback(
+    async (paper: ExamPaper): Promise<PaperQuestion[]> => {
+      const subject = paper.subject ?? "maths";
+      const level = paper.level ?? "higher";
+      const questionsRef = collection(
+        db,
+        "questions",
+        "leavingcert",
+        "subjects",
+        subject,
+        "levels",
+        level,
+        "papers",
+        paper.id,
+        "questions"
+      );
+      const snap = await getDocs(questionsRef);
+      const list: PaperQuestion[] = [];
+      snap.docs
+        .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
+        .forEach((d) => {
+          const data = d.data();
+          const pr = data.pageRange;
+          const pageRange: [number, number] = Array.isArray(pr)
+            ? [Number(pr[0]) || 1, Number(pr[1]) || 1]
+            : typeof pr === "object" && pr !== null && "start" in pr && "end" in pr
+              ? [(pr as { start: number }).start, (pr as { end: number }).end]
+              : [1, 1];
+          list.push({
+            id: d.id,
+            questionName:
+              typeof data.questionName === "string"
+                ? data.questionName
+                : data.id ?? d.id,
+            pageRange,
+          });
+        });
+      return list;
+    },
+    []
+  );
+
+  return { papers, loading, error, getPaperBlob, getPaperQuestions };
 }

@@ -3,7 +3,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import useQuestions from "../hooks/useQuestions";
 import { OptionsContext } from "../context/OptionsContext";
-import { useExamPapers, type ExamPaper } from "../hooks/useExamPapers";
+import { useExamPapers, type ExamPaper, type PaperQuestion } from "../hooks/useExamPapers";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
 import useFilters from "../hooks/useFilters";
 
@@ -85,13 +85,16 @@ export default function Questions() {
         setQuestions,
         collectionPaths,
     });
-    const { papers, loading: papersLoading, error: papersError, getPaperBlob } = useExamPapers();
+    const { papers, loading: papersLoading, error: papersError, getPaperBlob, getPaperQuestions } = useExamPapers();
     const { availableSets } = useFilters();
     const certChampsSet = availableSets.find((s) => s.id === "certchamps");
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
     const [paperBlob, setPaperBlob] = useState<Blob | null>(null);
     const [paperLoadError, setPaperLoadError] = useState<string | null>(null);
     const [currentPaperPage, setCurrentPaperPage] = useState(1);
+    const [paperQuestions, setPaperQuestions] = useState<PaperQuestion[]>([]);
+    const [paperQuestionPosition, setPaperQuestionPosition] = useState(1);
+    const [scrollToPage, setScrollToPage] = useState<number | null>(null);
     const paperSnapshot = usePaperSnapshot(paperBlob, currentPaperPage);
     const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
 
@@ -160,6 +163,42 @@ export default function Questions() {
     useEffect(() => {
         setCurrentPaperPage(1);
     }, [selectedPaper]);
+
+    // Fetch paper's questions subcollection when paper is selected
+    useEffect(() => {
+        if (!selectedPaper || !getPaperQuestions) {
+            setPaperQuestions([]);
+            setPaperQuestionPosition(1);
+            return;
+        }
+        let cancelled = false;
+        getPaperQuestions(selectedPaper)
+            .then((list) => {
+                if (!cancelled) {
+                    setPaperQuestions(list);
+                    setPaperQuestionPosition(1);
+                    setScrollToPage(list[0]?.pageRange?.[0] ?? null);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setPaperQuestions([]);
+                    setPaperQuestionPosition(1);
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedPaper, getPaperQuestions]);
+
+    // When PDF scroll reports a page, sync to question index (which question contains this page)
+    useEffect(() => {
+        if (paperQuestions.length === 0) return;
+        const idx = paperQuestions.findIndex(
+            (q) => currentPaperPage >= q.pageRange[0] && currentPaperPage <= q.pageRange[1]
+        );
+        if (idx >= 0) setPaperQuestionPosition(idx + 1);
+    }, [currentPaperPage, paperQuestions]);
 
     // Preselect paper: URL paperId > current question year > first paper
     useEffect(() => {
@@ -279,15 +318,43 @@ export default function Questions() {
                         nextQuestion={nextQuestion}
                         previousQuestion={previousQuestion}
                         setShowSearch={setShowSearch}
-                        overrideTitle={mode === "pastpaper" ? (papersLoading ? "Loading…" : papersError ? "Failed to load" : selectedPaper?.label ?? "Select a paper") : undefined}
-                        overrideOnPrevious={mode === "pastpaper" ? () => {
-                            const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
-                            if (idx > 0) setSelectedPaper(papers[idx - 1]);
-                        } : undefined}
-                        overrideOnNext={mode === "pastpaper" ? () => {
-                            const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
-                            if (idx >= 0 && idx < papers.length - 1) setSelectedPaper(papers[idx + 1]);
-                        } : undefined}
+                        overrideTitle={
+                            mode === "pastpaper"
+                                ? papersLoading
+                                    ? "Loading…"
+                                    : papersError
+                                        ? "Failed to load"
+                                        : paperQuestions.length > 0
+                                            ? `${selectedPaper?.label ?? "Paper"} ${paperQuestions[paperQuestionPosition - 1]?.questionName ?? ""}`.trim()
+                                            : selectedPaper?.label ?? "Select a paper"
+                                : undefined
+                        }
+                        overrideOnPrevious={
+                            mode === "pastpaper"
+                                ? () => {
+                                        if (paperQuestions.length > 0 && paperQuestionPosition > 1) {
+                                            setPaperQuestionPosition((p) => p - 1);
+                                            setScrollToPage(paperQuestions[paperQuestionPosition - 2]?.pageRange[0] ?? null);
+                                        } else {
+                                            const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
+                                            if (idx > 0) setSelectedPaper(papers[idx - 1]);
+                                        }
+                                    }
+                                : undefined
+                        }
+                        overrideOnNext={
+                            mode === "pastpaper"
+                                ? () => {
+                                        if (paperQuestions.length > 0 && paperQuestionPosition < paperQuestions.length) {
+                                            setPaperQuestionPosition((p) => p + 1);
+                                            setScrollToPage(paperQuestions[paperQuestionPosition]?.pageRange[0] ?? null);
+                                        } else {
+                                            const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
+                                            if (idx >= 0 && idx < papers.length - 1) setSelectedPaper(papers[idx + 1]);
+                                        }
+                                    }
+                                : undefined
+                        }
                     />
                     {mode !== "pastpaper" && (
                         <RenderMath text={currentQuestion?.content?.[0]?.question ?? "ughhhh no question"} className="font-bold text-sm txt" />
@@ -310,6 +377,8 @@ export default function Questions() {
                                             file={paperBlob}
                                             pageWidth={680}
                                             onCurrentPageChange={setCurrentPaperPage}
+                                            scrollToPage={scrollToPage ?? undefined}
+                                            onScrolledToPage={() => setScrollToPage(null)}
                                         />
                                     ) : selectedPaper && !paperBlob && !paperLoadError ? (
                                         <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
@@ -336,6 +405,8 @@ export default function Questions() {
                                         file={paperBlob}
                                         pageWidth={480}
                                         onCurrentPageChange={setCurrentPaperPage}
+                                        scrollToPage={scrollToPage ?? undefined}
+                                        onScrolledToPage={() => setScrollToPage(null)}
                                     />
                                 ) : selectedPaper && !paperBlob && !paperLoadError ? (
                                     <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">

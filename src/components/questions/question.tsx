@@ -16,7 +16,7 @@ import MathInput from "./../math/mathinput";
 import QThread from "../../components/questions/q_thread"
 import ViewDecks from "./../viewDecks";
 import SharePanel from "../social/sharePanel";
-import LogTables from "../../components/logtables"
+import FloatingLogTables from "../../components/FloatingLogTables"
 import MarkingScheme from "../../components/marking_scheme"
 import Timer from "../../components/timer"
 import QSearch from "./qSearch";
@@ -789,9 +789,10 @@ export default function Question(props: questionsProps) {
         ) : null}
 
         {sideView === 'logtables' ? (
-          <div className="h-full w-5/12 flex items-center justify-center">
-            <LogTables pgNumber={content?.[part]?.logtables ? String(content[part].logtables) : "null"}/>
-          </div>
+          <FloatingLogTables
+            pgNumber={content?.[part]?.logtables ? String(content[part].logtables) : "null"}
+            onClose={() => setSideView('')}
+          />
         ) : null}
 
         {sideView === 'timer' ? (

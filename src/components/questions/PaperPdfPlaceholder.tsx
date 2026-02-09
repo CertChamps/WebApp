@@ -11,9 +11,20 @@ type PaperPdfPlaceholderProps = {
   pageWidth?: number;
   /** Called when the user scrolls to a different page (1-based page number). */
   onCurrentPageChange?: (page: number) => void;
+  /** When set, scroll the PDF so this page (1-based) is in view. Cleared after scroll. */
+  scrollToPage?: number;
+  /** Called after scrolling to scrollToPage (so parent can clear scrollToPage). */
+  onScrolledToPage?: () => void;
 };
 
-export default function PaperPdfPlaceholder({ file: fileProp, year, pageWidth = 480, onCurrentPageChange }: PaperPdfPlaceholderProps) {
+export default function PaperPdfPlaceholder({
+  file: fileProp,
+  year,
+  pageWidth = 480,
+  onCurrentPageChange,
+  scrollToPage,
+  onScrolledToPage,
+}: PaperPdfPlaceholderProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -46,6 +57,18 @@ export default function PaperPdfPlaceholder({ file: fileProp, year, pageWidth = 
     pageRefsRef.current.slice(0, numPages).forEach((el) => el && observer.observe(el));
     return () => observer.disconnect();
   }, [numPages, onCurrentPageChange]);
+
+  useEffect(() => {
+    if (scrollToPage == null || scrollToPage < 1 || numPages === 0) return;
+    const pageIndex = Math.min(scrollToPage, numPages) - 1;
+    const el = pageRefsRef.current[pageIndex];
+    if (el?.scrollIntoView) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      lastReportedPageRef.current = scrollToPage;
+      onCurrentPageChange?.(scrollToPage);
+      onScrolledToPage?.();
+    }
+  }, [scrollToPage, numPages, onCurrentPageChange, onScrolledToPage]);
 
   if (!file) {
     return (
