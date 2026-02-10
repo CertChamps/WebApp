@@ -9,6 +9,7 @@ import { UserContext } from "../context/UserContext";
 import "../styles/settings.css";
 
 const CREATE_PRO_CHECKOUT_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/createProCheckout";
+const CREATE_BILLING_PORTAL_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/createBillingPortalSession";
 
 type TabId = "home" | "payments";
 
@@ -26,6 +27,8 @@ const ManageAccount = () => {
     const [showCropper, setShowCropper] = useState(false);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [checkoutError, setCheckoutError] = useState<string | null>(null);
+    const [portalLoading, setPortalLoading] = useState(false);
+    const [portalError, setPortalError] = useState<string | null>(null);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [paymentCancel, setPaymentCancel] = useState(false);
 
@@ -112,13 +115,17 @@ const ManageAccount = () => {
         if (success === "pro") {
             setPaymentSuccess(true);
             setSearchParams({}, { replace: true });
-            // Refetch user so isPro is up to date (webhook may have run)
+            // Refetch user so isPro and subscriptionPeriodEnd are up to date (webhook may have run)
             const refetch = async () => {
                 if (!user?.uid) return;
                 const userDoc = await getDoc(doc(db, "user-data", user.uid));
                 if (userDoc.exists()) {
                     const d = userDoc.data();
-                    setUser((prev: typeof user) => ({ ...prev, isPro: d.isPro === true }));
+                    setUser((prev: typeof user) => ({
+                        ...prev,
+                        isPro: d.isPro === true,
+                        subscriptionPeriodEnd: typeof d.subscriptionPeriodEnd === "number" ? d.subscriptionPeriodEnd : undefined,
+                    }));
                 }
             };
             refetch();
@@ -156,6 +163,35 @@ const ManageAccount = () => {
             setCheckoutError("Something went wrong. Please try again.");
         }
         setCheckoutLoading(false);
+    };
+
+    const handleManageSubscription = async () => {
+        if (!auth.currentUser) return;
+        setPortalError(null);
+        setPortalLoading(true);
+        try {
+            const idToken = await auth.currentUser.getIdToken();
+            const res = await fetch(CREATE_BILLING_PORTAL_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ idToken }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setPortalError(data.error || "Failed to open billing portal");
+                setPortalLoading(false);
+                return;
+            }
+            if (data.url) {
+                window.location.href = data.url;
+                return;
+            }
+            setPortalError("Invalid response from server");
+        } catch (e) {
+            console.error("Billing portal error:", e);
+            setPortalError("Something went wrong. Please try again.");
+        }
+        setPortalLoading(false);
     };
 
     return (
@@ -244,7 +280,7 @@ const ManageAccount = () => {
                         <div className="max-w-xl space-y-6">
                             {paymentSuccess && (
                                 <div className="rounded-xl p-4 bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400">
-                                    Thank you! Your account is now Pro.
+                                    Thank you! Your account is now CertChamps ACE.
                                 </div>
                             )}
                             {paymentCancel && (
@@ -255,14 +291,34 @@ const ManageAccount = () => {
                             <div className="rounded-xl p-6 color-bg shadow-small border border-color-border">
                                 <div className="flex items-center gap-3 mb-2">
                                     <LuCrown className="w-8 h-8 color-txt-accent" />
-                                    <h2 className="text-xl font-bold color-txt-main">CertChamps Pro</h2>
+                                    <h2 className="text-xl font-bold color-txt-main">CertChamps ACE</h2>
                                 </div>
                                 <p className="color-txt-sub text-base mb-4">
-                                    One-time upgrade. Unlock all Pro features with a single payment of €20.
+                                    €30 per year. Have everything CertChamps has to offer.
                                 </p>
                                 {user?.isPro ? (
-                                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/15 text-green-600 dark:text-green-400 font-medium">
-                                        <LuCrown size={20} /> You have Pro
+                                    <div className="flex flex-col gap-3">
+                                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/15 text-green-600 dark:text-green-400 font-medium">
+                                            <LuCrown size={20} /> You have ACE
+                                        </div>
+                                        {user?.subscriptionPeriodEnd && (
+                                            <p className="color-txt-sub text-sm">
+                                                Your subscription {new Date(user.subscriptionPeriodEnd * 1000) > new Date() ? "renews" : "renewed"} on{" "}
+                                                {new Date(user.subscriptionPeriodEnd * 1000).toLocaleDateString(undefined, { dateStyle: "long" })}
+                                            </p>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={handleManageSubscription}
+                                            
+                                            disabled={portalLoading}
+                                            className="w-fit px-4 py-2 rounded-xl border border-color-border color-txt-main hover:color-bg-grey-10 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                                        >
+                                            {portalLoading ? "Opening…" : "Manage subscription"}
+                                        </button>
+                                        {portalError && (
+                                            <p className="text-red-500 text-sm">{portalError}</p>
+                                        )}
                                     </div>
                                 ) : (
                                     <>
@@ -272,7 +328,7 @@ const ManageAccount = () => {
                                             disabled={checkoutLoading}
                                             className="px-5 py-2.5 rounded-xl font-semibold color-bg-accent color-txt-main hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                                         >
-                                            {checkoutLoading ? "Redirecting to checkout…" : "Upgrade to Pro — €20"}
+                                            {checkoutLoading ? "Redirecting to checkout…" : "Upgrade to ACE — €30/year"}
                                         </button>
                                         {checkoutError && (
                                             <p className="mt-3 text-red-500 text-sm">{checkoutError}</p>
