@@ -406,9 +406,10 @@ export const extractQuestions = functions.https.onRequest({
 
 // ======================== STRIPE PRO CHECKOUT ======================== //
 
-const PRO_PRICE_EUR_CENTS = 2000; // €20.00
+/** Pro subscription: €30/year. First year €20 when customer enters a promotion code at checkout (create a coupon in Stripe Dashboard, e.g. €10 off first invoice, and a promotion code like FIRSTYEAR20). */
+const PRO_YEARLY_PRICE_EUR_CENTS = 3000; // €30.00 per year
 
-/** Create a Stripe Checkout Session for one-time Pro upgrade (€20). Expects POST with JSON body: { idToken, successUrl?, cancelUrl? } */
+/** Create a Stripe Checkout Session for yearly Pro subscription (€30/year; first year €20 with promo code). Expects POST with JSON body: { idToken, successUrl?, cancelUrl? } */
 export const createProCheckout = functions.https.onRequest(
     {
         cors: true,
@@ -448,24 +449,26 @@ export const createProCheckout = functions.https.onRequest(
 
                 const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
                 const session = await stripe.checkout.sessions.create({
-                    mode: "payment",
+                    mode: "subscription",
                     payment_method_types: ["card"],
                     line_items: [
                         {
                             quantity: 1,
                             price_data: {
                                 currency: "eur",
-                                unit_amount: PRO_PRICE_EUR_CENTS,
+                                unit_amount: PRO_YEARLY_PRICE_EUR_CENTS,
                                 product_data: {
-                                    name: "CertChamps Pro",
-                                    description: "One-time upgrade to Pro account",
+                                    name: "CertChamps ACE",
+                                    description: "Yearly subscription — full access to ACE features",
                                 },
+                                recurring: { interval: "year" },
                             },
                         },
                     ],
                     client_reference_id: uid,
                     success_url: success,
                     cancel_url: cancel,
+                    allow_promotion_codes: true,
                 });
 
                 res.status(200).json({ url: session.url });
@@ -477,7 +480,67 @@ export const createProCheckout = functions.https.onRequest(
     }
 );
 
-/** Stripe webhook: on checkout.session.completed, set user isPro in Firestore. Requires rawBody for signature verification (Cloud Functions may expose it as req.rawBody). */
+/** Create a Stripe Billing Portal session so the customer can manage or cancel their subscription. Expects POST with JSON body: { idToken, returnUrl? }. User must have stripeCustomerId in user-data (set when they subscribed). */
+export const createBillingPortalSession = functions.https.onRequest(
+    {
+        cors: true,
+        secrets: ["STRIPE_SECRET_KEY"],
+    },
+    (req, res) => {
+        corsMiddleware(req, res, async () => {
+            if (req.method !== "POST") {
+                res.status(405).json({ error: "Method not allowed" });
+                return;
+            }
+            try {
+                const stripeKey = process.env.STRIPE_SECRET_KEY;
+                if (!stripeKey) {
+                    console.error("Missing STRIPE_SECRET_KEY");
+                    res.status(500).json({ error: "Server configuration error" });
+                    return;
+                }
+                const { idToken, returnUrl } = req.body || {};
+                if (!idToken) {
+                    res.status(400).json({ error: "idToken is required" });
+                    return;
+                }
+                let uid: string;
+                try {
+                    const decoded = await admin.auth().verifyIdToken(idToken);
+                    uid = decoded.uid;
+                } catch (e) {
+                    console.error("Invalid idToken:", e);
+                    res.status(401).json({ error: "Invalid or expired token" });
+                    return;
+                }
+                const userDoc = await admin.firestore().doc(`user-data/${uid}`).get();
+                const stripeCustomerId = userDoc.exists ? (userDoc.data()?.stripeCustomerId as string | undefined) : undefined;
+                if (!stripeCustomerId) {
+                    res.status(400).json({ error: "No subscription to manage. Cancel is only available for Pro subscriptions started from this account." });
+                    return;
+                }
+                const origin = req.headers.origin || "https://certchamps-a7527.web.app";
+                const base = origin.replace(/\/$/, "");
+                const returnUrlFinal = returnUrl || `${base}/#/user/manage-account`;
+
+                const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
+                const portalSession = await stripe.billingPortal.sessions.create({
+                    customer: stripeCustomerId,
+                    return_url: returnUrlFinal,
+                });
+
+                res.status(200).json({ url: portalSession.url });
+            } catch (err) {
+                console.error("createBillingPortalSession error:", err);
+                res.status(500).json({ error: "Failed to open billing portal" });
+            }
+        });
+    }
+);
+
+const SUBSCRIPTION_MAP_COLLECTION = "stripe_subscriptions";
+
+/** Stripe webhook: checkout.session.completed sets isPro and stores subscription id; customer.subscription.deleted clears isPro. Requires rawBody for signature verification. */
 export const stripeWebhook = functions.https.onRequest(
     {
         cors: false,
@@ -505,24 +568,77 @@ export const stripeWebhook = functions.https.onRequest(
             res.status(400).send("Invalid signature");
             return;
         }
-        if (event.type !== "checkout.session.completed") {
+
+        const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
+
+        if (event.type === "checkout.session.completed") {
+            const session = event.data.object as Stripe.Checkout.Session;
+            const uid = session.client_reference_id;
+            const subscriptionId = session.subscription as string | null;
+            const customerId = typeof session.customer === "string" ? session.customer : null;
+            if (!uid) {
+                console.error("checkout.session.completed missing client_reference_id");
+                res.status(200).send("OK");
+                return;
+            }
+            try {
+                const userUpdate: { isPro: boolean; stripeCustomerId?: string; subscriptionPeriodEnd?: number } = { isPro: true };
+                if (customerId) userUpdate.stripeCustomerId = customerId;
+                if (subscriptionId) {
+                    const sub = await stripe.subscriptions.retrieve(subscriptionId);
+                    if (sub.current_period_end) userUpdate.subscriptionPeriodEnd = sub.current_period_end;
+                    await admin.firestore().doc(`${SUBSCRIPTION_MAP_COLLECTION}/${subscriptionId}`).set({ uid });
+                }
+                await admin.firestore().doc(`user-data/${uid}`).set(userUpdate, { merge: true });
+            } catch (e) {
+                console.error("Failed to update user isPro / subscription map:", e);
+                res.status(500).end();
+                return;
+            }
             res.status(200).send("OK");
             return;
         }
-        const session = event.data.object as Stripe.Checkout.Session;
-        const uid = session.client_reference_id;
-        if (!uid) {
-            console.error("checkout.session.completed missing client_reference_id");
+
+        if (event.type === "customer.subscription.updated") {
+            const subscription = event.data.object as Stripe.Subscription;
+            const subId = subscription.id;
+            const periodEnd = subscription.current_period_end;
+            try {
+                const mapDoc = await admin.firestore().doc(`${SUBSCRIPTION_MAP_COLLECTION}/${subId}`).get();
+                if (mapDoc.exists && periodEnd) {
+                    const uid = mapDoc.data()?.uid;
+                    if (uid) {
+                        await admin.firestore().doc(`user-data/${uid}`).set({ subscriptionPeriodEnd: periodEnd }, { merge: true });
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to update subscription period end:", e);
+            }
             res.status(200).send("OK");
             return;
         }
-        try {
-            await admin.firestore().doc(`user-data/${uid}`).set({ isPro: true }, { merge: true });
-        } catch (e) {
-            console.error("Failed to update user isPro:", e);
-            res.status(500).end();
+
+        if (event.type === "customer.subscription.deleted") {
+            const subscription = event.data.object as Stripe.Subscription;
+            const subId = subscription.id;
+            try {
+                const mapDoc = await admin.firestore().doc(`${SUBSCRIPTION_MAP_COLLECTION}/${subId}`).get();
+                if (mapDoc.exists) {
+                    const uid = mapDoc.data()?.uid;
+                    if (uid) {
+                        await admin.firestore().doc(`user-data/${uid}`).set({ isPro: false, subscriptionPeriodEnd: null }, { merge: true });
+                    }
+                    await admin.firestore().doc(`${SUBSCRIPTION_MAP_COLLECTION}/${subId}`).delete();
+                }
+            } catch (e) {
+                console.error("Failed to clear isPro on subscription deleted:", e);
+                res.status(500).end();
+                return;
+            }
+            res.status(200).send("OK");
             return;
         }
+
         res.status(200).send("OK");
     }
 );

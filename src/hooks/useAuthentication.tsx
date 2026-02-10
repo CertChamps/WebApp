@@ -111,6 +111,7 @@ const userSetup = async (uid: string, username: string, email: string) => {
         //decks,
         emailVerified: isEmailVerified,
         isPro: userData.isPro === true,
+        subscriptionPeriodEnd: typeof userData.subscriptionPeriodEnd === "number" ? userData.subscriptionPeriodEnd : undefined,
       });
 
       console.log("2. Context Set. Verified:", isEmailVerified);

@@ -22,6 +22,7 @@ export type UserContextType = {
     isAdmin?: boolean,
     emailVerified: boolean,
     isPro?: boolean,
+    subscriptionPeriodEnd?: number,
     },
     setUser: React.Dispatch<React.SetStateAction<any>>
 }
@@ -47,6 +48,7 @@ export const UserContext = createContext<UserContextType>({
     isAdmin: false,
     emailVerified: false,
     isPro: false,
+    subscriptionPeriodEnd: undefined,
     },
     setUser: () => {}
 })
