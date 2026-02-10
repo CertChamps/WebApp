@@ -992,11 +992,11 @@ export default function ExtractQuestionsFlow({
                     {selected.pageRegions.map((pr, prIndex) => (
                       <div
                         key={prIndex}
-                        className="p-3 rounded-lg color-bg-grey-10 flex flex-col gap-2"
+                        className="p-3 rounded-lg color-bg-grey-10 flex flex-col gap-3"
                       >
                         <div className="flex items-center justify-between">
                           <span className="color-txt-sub text-xs font-medium">
-                            Page {pr.page} segment
+                            Page {pr.page}
                           </span>
                           {selected.pageRegions.length > 1 && (
                             <button
@@ -1009,27 +1009,52 @@ export default function ExtractQuestionsFlow({
                             </button>
                           )}
                         </div>
-                        <div className="flex gap-2 flex-wrap">
-                          {(["page", "x", "y", "width", "height"] as const).map((key) => (
+                        <div className="grid gap-3">
+                          <div className="flex flex-col gap-1">
+                            <label className="color-txt-sub text-xs flex justify-between">
+                              <span>Top (y)</span>
+                              <span className="font-mono color-txt-main">{pr.y} pt</span>
+                            </label>
                             <input
-                              key={key}
-                              type="number"
-                              value={pr[key]}
+                              type="range"
+                              min={0}
+                              max={842}
+                              step={5}
+                              value={pr.y}
                               onChange={(e) => {
-                                const v = parseFloat(e.target.value);
+                                const v = parseInt(e.target.value, 10);
                                 if (Number.isFinite(v)) {
-                                  updatePageRegion(selectedIndex, prIndex, { [key]: v });
+                                  updatePageRegion(selectedIndex, prIndex, { y: v });
                                 }
                               }}
-                              placeholder={key}
-                              className="w-16 px-2 py-1.5 rounded color-bg-grey-5 color-txt-main text-sm font-mono"
+                              className="w-full h-2 rounded-full color-bg-grey-5 accent-[var(--accent)] cursor-pointer"
                             />
-                          ))}
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="color-txt-sub text-xs flex justify-between">
+                              <span>Height</span>
+                              <span className="font-mono color-txt-main">{pr.height} pt</span>
+                            </label>
+                            <input
+                              type="range"
+                              min={20}
+                              max={842}
+                              step={5}
+                              value={pr.height}
+                              onChange={(e) => {
+                                const v = parseInt(e.target.value, 10);
+                                if (Number.isFinite(v)) {
+                                  updatePageRegion(selectedIndex, prIndex, { height: v });
+                                }
+                              }}
+                              className="w-full h-2 rounded-full color-bg-grey-5 accent-[var(--accent)] cursor-pointer"
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}
                     <p className="color-txt-sub text-xs">
-                      x=0, width=595 for full paper width. Add page for questions spanning multiple pages.
+                      Adjust where the question starts (y) and how tall the region is. Full page width is used. Add page for questions spanning multiple pages.
                     </p>
                   </div>
                 </div>

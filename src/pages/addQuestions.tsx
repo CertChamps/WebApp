@@ -489,10 +489,16 @@ export default function AddQuestions() {
             typeof r.marking_scheme_page_range.end === "number"
               ? { start: r.marking_scheme_page_range.start, end: r.marking_scheme_page_range.end }
               : null;
+          const pageRegions = (r.pageRegions ?? []).map((p) => ({
+            page: p.page,
+            y: p.y,
+            height: p.height,
+          }));
           batch.set(questionRef, {
             id: questionDocId,
             questionName: r.name || r.id,
             pageRange,
+            pageRegions,
             logTablePage,
             tags,
             ...(markingSchemePageRange ? { markingSchemePageRange } : {}),

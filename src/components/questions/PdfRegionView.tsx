@@ -133,7 +133,7 @@ export default function PdfRegionView({
       <canvas
         ref={canvasRef}
         className={`max-w-full rounded-xl color-shadow ${error ? "hidden" : ""}`}
-        style={{ maxHeight: "400px", objectFit: "contain" }}
+        style={{ objectFit: "contain" }}
       />
     </div>
   );
