@@ -1,12 +1,12 @@
 //import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { pdfjs } from 'react-pdf'
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import './index.css'
 import App from './App.tsx'
 
-// Set PDF.js worker once so LogTables/MarkingScheme work (avoids Vite bundling issues)
-const pdfVersion = typeof pdfjs.version === 'string' ? pdfjs.version : '5.3.93'
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfVersion}/build/pdf.worker.min.mjs`
+// Set PDF.js worker once so all PDF viewers share it (bundled worker avoids CDN/CORS and messageHandler null)
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker
 
 createRoot(document.getElementById('root')!).render(
   //<StrictMode>

@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState, createRef } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
-import pdfWorker from "pdfjs-dist/build/pdf.worker?url";
+import { Document, Page } from "react-pdf";
 import { LuMoon, LuSun } from "react-icons/lu";
 import Lottie from "lottie-react";
 import loadingAnim from "../assets/animations/loading.json";
 
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
+// Worker is set in main.tsx
 
 type QuestionType = {
   pgNumber: string;

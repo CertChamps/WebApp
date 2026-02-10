@@ -193,6 +193,10 @@ export default function ExtractQuestionsFlow({
   const [extractProgress, setExtractProgress] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const markingSchemeInputRef = useRef<HTMLInputElement>(null);
+  const jsonInputRef = useRef<HTMLInputElement>(null);
+  const [jsonLoadError, setJsonLoadError] = useState<string | null>(null);
+  const [jsonFileName, setJsonFileName] = useState<string | null>(null);
+  const [pastedJson, setPastedJson] = useState("");
 
   const { snapshots, loading: snapshotsLoading } = useAllPageSnapshots(pdfFile);
   const { snapshots: logTableSnapshots, loading: logTableSnapshotsLoading } = useAllPageSnapshots(logTablesBlob, 45);
@@ -203,7 +207,7 @@ export default function ExtractQuestionsFlow({
   );
   const pdfBlob = pdfFile ? new Blob([pdfFile], { type: "application/pdf" }) : null;
 
-  const STEP_TIMEOUT_MS = 90_000; // 90s per step
+  const STEP_TIMEOUT_MS = 300_000; // 5 min per step
   const MAX_EXAM_PAGES_SENT = 12;
   const MAX_REGION_CONTINUATIONS = 8; // reprompt until paper_finished or this many extra calls
 
@@ -250,10 +254,11 @@ export default function ExtractQuestionsFlow({
       let continuationCount = 0;
 
       while (true) {
+        const attemptNum = continuationCount + 1;
         const stepLabel =
           continuationCount === 0
-            ? "Step 1/4: Extract questions…"
-            : `Step 1/4: Getting more questions (${continuationCount + 1})…`;
+            ? `Step 1/4: Extract questions (attempt ${attemptNum})…`
+            : `Step 1/4: Getting more questions (attempt ${attemptNum})…`;
         setExtractProgress(stepLabel);
         const body: Record<string, unknown> = { pageImages: examImages, step: "regions" };
         if (continueFrom != null) body.continueFrom = continueFrom;
@@ -284,10 +289,10 @@ export default function ExtractQuestionsFlow({
         } else {
           const existingIds = new Set(regionsList.map((r) => r.id));
           const onlyNew = newRegions.filter((r) => !existingIds.has(r.id));
-          if (onlyNew.length === 0) break;
           regionsList = [...regionsList, ...onlyNew];
+          // Only stop when we explicitly get no new regions (don't trust paper_finished alone)
+          if (onlyNew.length === 0) break;
         }
-        if (paperFinished) break;
         const lastId = (regionsList[regionsList.length - 1] as ExtractedRegion | undefined)?.id ?? null;
         if (!lastId || continuationCount >= MAX_REGION_CONTINUATIONS) break;
         continueFrom = lastId;
@@ -307,12 +312,18 @@ export default function ExtractQuestionsFlow({
         while (missingMarkingIds.length > 0 && markingAttempt < MAX_MARKING_ATTEMPTS) {
           markingAttempt += 1;
           setExtractProgress(`Step 2/4: Marking scheme (attempt ${markingAttempt}/${MAX_MARKING_ATTEMPTS})…`);
+          const label = (paperMetadata?.label ?? "").toLowerCase();
+          const markingSchemePaper =
+            /\bpaper\s*2|p2\b|paper\s*ii\b/.test(label) ? 2
+              : /\bpaper\s*1|p1\b|paper\s*i\b/.test(label) ? 1
+              : undefined;
           const body: Record<string, unknown> = {
             pageImages: examImages,
             markingSchemeImages: markingSchemeSnapshots.slice(0, 10),
             step: "marking",
             regionIds,
           };
+          if (markingSchemePaper !== undefined) body.markingSchemePaper = markingSchemePaper;
           if (missingMarkingIds.length < regionIds.length) body.missingMarkingIds = missingMarkingIds;
           const step2 = await doFetch(body, "Step 2/4");
           if (!step2.ok) {
@@ -321,13 +332,28 @@ export default function ExtractQuestionsFlow({
           }
           if (Array.isArray(step2.data.regions)) {
             const markById = new Map<string, { start: number; end: number }>();
-            for (const r of step2.data.regions as Array<{ id?: string; marking_scheme_page_range?: { start: number; end: number } | null }>) {
+            for (const r of step2.data.regions as Array<{ id?: string; marking_scheme_page_range?: { start?: unknown; end?: unknown } | null }>) {
               const id = r.id ?? "Q1";
-              const range = r.marking_scheme_page_range;
-              if (range && typeof range.start === "number" && typeof range.end === "number") markById.set(id, { start: range.start, end: range.end });
+              const raw = r.marking_scheme_page_range;
+              if (raw && raw.start != null && raw.end != null) {
+                const start = Number(raw.start);
+                const end = Number(raw.end);
+                if (Number.isFinite(start) && Number.isFinite(end) && start >= 1 && end >= 1) {
+                  const range = { start, end: Math.max(start, end) };
+                  markById.set(id, range);
+                  const baseMatch = id.match(/^([Qq]\d+)/i);
+                  if (baseMatch) markById.set(baseMatch[1], range);
+                }
+              }
             }
+            const rangeForRegion = (regId: string): { start: number; end: number } | null => {
+              const direct = markById.get(regId);
+              if (direct) return direct;
+              const baseId = regId.match(/^([Qq]\d+)/i)?.[1];
+              return (baseId && markById.get(baseId)) ?? null;
+            };
             regionsList = regionsList.map((reg) => {
-              const range = markById.get(reg.id);
+              const range = rangeForRegion(reg.id);
               return { ...reg, marking_scheme_page_range: range ?? reg.marking_scheme_page_range ?? null };
             });
             missingMarkingIds = regionsList.filter((r) => r.marking_scheme_page_range == null).map((r) => r.id);
@@ -418,7 +444,7 @@ export default function ExtractQuestionsFlow({
     } catch (err) {
       const isAbort = err instanceof Error && err.name === "AbortError";
       const msg = isAbort
-        ? "Request timed out (90s per step). Try again or use fewer options."
+        ? "Request timed out (5 min per step). Try again or use fewer options."
         : err instanceof Error
           ? err.message
           : "Extraction failed";
@@ -431,7 +457,7 @@ export default function ExtractQuestionsFlow({
       setExtractStatus("error");
       setExtractProgress("");
     }
-  }, [pdfFile, snapshots, logTableSnapshots, markingSchemeSnapshots, includeLogTablesAndMarkingScheme]);
+  }, [pdfFile, snapshots, logTableSnapshots, markingSchemeSnapshots, includeLogTablesAndMarkingScheme, paperMetadata]);
 
   const updateRegion = useCallback((index: number, updates: Partial<ExtractedRegion>) => {
     setRegions((prev) =>
@@ -490,9 +516,86 @@ export default function ExtractQuestionsFlow({
     setSelectedIndex(regions.length);
   }, [regions.length]);
 
+  const handleLoadJson = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      setJsonLoadError(null);
+      setJsonFileName(null);
+      if (!file) return;
+      if (!pdfFile) {
+        setJsonLoadError("Upload a PDF paper first, then load the JSON.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const text = reader.result;
+          if (typeof text !== "string") {
+            setJsonLoadError("Could not read file as text.");
+            return;
+          }
+          const data = JSON.parse(text) as unknown;
+          const rawList = Array.isArray(data) ? data : (data && typeof data === "object" && "regions" in data && Array.isArray((data as { regions: unknown }).regions) ? (data as { regions: unknown[] }).regions : null);
+          if (!rawList || rawList.length === 0) {
+            setJsonLoadError("JSON must be an array of regions or an object with a \"regions\" array.");
+            return;
+          }
+          const normalized = rawList.map((r) => normalizeRawRegion(typeof r === "object" && r != null ? (r as Record<string, unknown>) : {}));
+          setRegions(normalized);
+          setSelectedIndex(0);
+          setExtractError(null);
+          setExtractStatus("idle");
+          setJsonFileName(file.name);
+        } catch (err) {
+          setJsonLoadError(err instanceof Error ? err.message : "Invalid JSON");
+        }
+      };
+      reader.onerror = () => setJsonLoadError("Failed to read file.");
+      reader.readAsText(file, "utf-8");
+    },
+    [pdfFile]
+  );
+
+  const applyPastedJson = useCallback(() => {
+    setJsonLoadError(null);
+    if (!pdfFile) {
+      setJsonLoadError("Upload a PDF paper first, then paste JSON.");
+      return;
+    }
+    const trimmed = pastedJson.trim();
+    if (!trimmed) {
+      setJsonLoadError("Paste JSON first.");
+      return;
+    }
+    try {
+      const data = JSON.parse(trimmed) as unknown;
+      const rawList = Array.isArray(data) ? data : (data && typeof data === "object" && "regions" in data && Array.isArray((data as { regions: unknown }).regions) ? (data as { regions: unknown[] }).regions : null);
+      if (!rawList || rawList.length === 0) {
+        setJsonLoadError("JSON must be an array of regions or an object with a \"regions\" array.");
+        return;
+      }
+      const normalized = rawList.map((r) => normalizeRawRegion(typeof r === "object" && r != null ? (r as Record<string, unknown>) : {}));
+      setRegions(normalized);
+      setSelectedIndex(0);
+      setExtractError(null);
+      setExtractStatus("idle");
+    } catch (err) {
+      setJsonLoadError(err instanceof Error ? err.message : "Invalid JSON");
+    }
+  }, [pdfFile, pastedJson]);
+
   const [showFullPdf, setShowFullPdf] = useState(true);
   const [showMarkingSchemePreview, setShowMarkingSchemePreview] = useState(true);
   const [showLogTablesPreview, setShowLogTablesPreview] = useState(true);
+  const [logTablesCurrentPage, setLogTablesCurrentPage] = useState(1);
+  const [logTablesNumPages, setLogTablesNumPages] = useState(0);
+  const [logTablesScrollToPage, setLogTablesScrollToPage] = useState<number | null>(null);
+  const [logTablesGoToInput, setLogTablesGoToInput] = useState("");
+  const [markingSchemeCurrentPage, setMarkingSchemeCurrentPage] = useState(1);
+  const [markingSchemeNumPages, setMarkingSchemeNumPages] = useState(0);
+  const [markingSchemeScrollToPage, setMarkingSchemeScrollToPage] = useState<number | null>(null);
+  const [markingSchemeGoToInput, setMarkingSchemeGoToInput] = useState("");
   const selected = regions[selectedIndex];
   const markingSchemeBlob = markingSchemeSource;
 
@@ -576,6 +679,52 @@ export default function ExtractQuestionsFlow({
           />
           Include Log Tables &amp; Marking Scheme (slower)
         </label>
+        <div className="flex flex-col gap-1.5">
+          <label className="block color-txt-sub text-sm mb-0.5">Extract with JSON</label>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={jsonInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleLoadJson}
+            />
+            <button
+              type="button"
+              onClick={() => jsonInputRef.current?.click()}
+              disabled={!pdfFile}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm hover:color-bg-grey-10 transition-all min-w-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!pdfFile ? "Upload a PDF first" : "Load pre-made regions from a JSON file"}
+            >
+              <LuFileText size={18} className="color-txt-accent shrink-0" />
+              {jsonFileName ?? "Choose file"}
+            </button>
+            <span className="color-txt-sub text-xs">or paste:</span>
+            <textarea
+              placeholder='{"regions": [...]} or [...]'
+              value={pastedJson}
+              onChange={(e) => {
+                setPastedJson(e.target.value);
+                if (jsonLoadError) setJsonLoadError(null);
+              }}
+              className="min-w-[180px] max-w-[280px] min-h-[36px] px-3 py-1.5 rounded-lg color-bg-grey-10 color-txt-main text-xs font-mono resize-y"
+              rows={1}
+            />
+            <button
+              type="button"
+              onClick={applyPastedJson}
+              disabled={!pdfFile || !pastedJson.trim()}
+              className="flex items-center gap-1 px-3 py-2 rounded-xl color-bg-accent color-txt-main text-sm font-medium hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Load
+            </button>
+          </div>
+          {jsonLoadError && (
+            <span className="text-xs color-txt-sub" role="alert">
+              {jsonLoadError}
+            </span>
+          )}
+        </div>
         <button
           type="button"
           onClick={handleExtract}
@@ -661,7 +810,7 @@ export default function ExtractQuestionsFlow({
 
       {regions.length === 0 && extractStatus !== "loading" && !snapshotsLoading && (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 color-txt-sub text-sm">
-          <p>Upload a PDF and click &quot;Extract regions&quot;. One region per full question (Q1, Q2, …); all parts (a), (b), (c) stay together. Width = full paper, height varies. Questions can span multiple pages.</p>
+          <p>Upload a PDF, then either click &quot;Extract regions&quot; (AI) or use &quot;Extract with JSON&quot; to load a pre-made regions file. One region per question part (Q1a, Q1b, …); width = full paper (595), height varies.</p>
           {pdfFile && (
             <button
               type="button"
@@ -921,8 +1070,51 @@ export default function ExtractQuestionsFlow({
                   ✕
                 </button>
               </div>
+              <div className="px-3 pb-2 flex flex-wrap items-center gap-2 color-txt-sub text-xs border-b border-[var(--grey-10)]">
+                <span>Page {logTablesCurrentPage} of {logTablesNumPages || "—"}</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={logTablesNumPages || undefined}
+                    placeholder="Go to"
+                    value={logTablesGoToInput}
+                    onChange={(e) => setLogTablesGoToInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const n = parseInt(logTablesGoToInput, 10);
+                        if (Number.isFinite(n) && n >= 1) {
+                          setLogTablesScrollToPage(Math.min(n, logTablesNumPages || n));
+                          setLogTablesGoToInput("");
+                        }
+                      }
+                    }}
+                    className="w-14 px-2 py-1 rounded color-bg-grey-10 color-txt-main text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const n = parseInt(logTablesGoToInput, 10);
+                      if (Number.isFinite(n) && n >= 1) {
+                        setLogTablesScrollToPage(Math.min(n, logTablesNumPages || n));
+                        setLogTablesGoToInput("");
+                      }
+                    }}
+                    className="px-2 py-1 rounded color-bg-accent color-txt-accent text-xs font-medium hover:brightness-110"
+                  >
+                    Check page
+                  </button>
+                </div>
+              </div>
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <PaperPdfPlaceholder file={logTablesBlob} pageWidth={280} />
+                <PaperPdfPlaceholder
+                  file={logTablesBlob}
+                  pageWidth={280}
+                  onCurrentPageChange={setLogTablesCurrentPage}
+                  onNumPages={setLogTablesNumPages}
+                  scrollToPage={logTablesScrollToPage ?? undefined}
+                  onScrolledToPage={() => setLogTablesScrollToPage(null)}
+                />
               </div>
             </div>
           )}
@@ -940,8 +1132,51 @@ export default function ExtractQuestionsFlow({
                   ✕
                 </button>
               </div>
+              <div className="px-3 pb-2 flex flex-wrap items-center gap-2 color-txt-sub text-xs border-b border-[var(--grey-10)]">
+                <span>Page {markingSchemeCurrentPage} of {markingSchemeNumPages || "—"}</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={markingSchemeNumPages || undefined}
+                    placeholder="Go to"
+                    value={markingSchemeGoToInput}
+                    onChange={(e) => setMarkingSchemeGoToInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const n = parseInt(markingSchemeGoToInput, 10);
+                        if (Number.isFinite(n) && n >= 1) {
+                          setMarkingSchemeScrollToPage(Math.min(n, markingSchemeNumPages || n));
+                          setMarkingSchemeGoToInput("");
+                        }
+                      }
+                    }}
+                    className="w-14 px-2 py-1 rounded color-bg-grey-10 color-txt-main text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const n = parseInt(markingSchemeGoToInput, 10);
+                      if (Number.isFinite(n) && n >= 1) {
+                        setMarkingSchemeScrollToPage(Math.min(n, markingSchemeNumPages || n));
+                        setMarkingSchemeGoToInput("");
+                      }
+                    }}
+                    className="px-2 py-1 rounded color-bg-accent color-txt-accent text-xs font-medium hover:brightness-110"
+                  >
+                    Check page
+                  </button>
+                </div>
+              </div>
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <PaperPdfPlaceholder file={markingSchemeBlob} pageWidth={280} />
+                <PaperPdfPlaceholder
+                  file={markingSchemeBlob}
+                  pageWidth={280}
+                  onCurrentPageChange={setMarkingSchemeCurrentPage}
+                  onNumPages={setMarkingSchemeNumPages}
+                  scrollToPage={markingSchemeScrollToPage ?? undefined}
+                  onScrolledToPage={() => setMarkingSchemeScrollToPage(null)}
+                />
               </div>
             </div>
           )}

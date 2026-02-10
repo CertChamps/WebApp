@@ -1,5 +1,17 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Component, type ReactNode } from "react";
 import { Document, Page } from "react-pdf";
+
+/** Catches PDF.js worker errors (e.g. messageHandler is null) so the app doesn't crash. */
+class PdfErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) return this.props.fallback;
+    return this.props.children;
+  }
+}
 
 /** Loads a PDF: react-pdf only. Accepts a Blob (e.g. from Firebase), a URL string, or legacy year for static path. */
 type PaperPdfPlaceholderProps = {
@@ -15,6 +27,8 @@ type PaperPdfPlaceholderProps = {
   scrollToPage?: number;
   /** Called after scrolling to scrollToPage (so parent can clear scrollToPage). */
   onScrolledToPage?: () => void;
+  /** Called when the PDF loads with total page count (for page indicator / go-to). */
+  onNumPages?: (n: number) => void;
 };
 
 export default function PaperPdfPlaceholder({
@@ -24,6 +38,7 @@ export default function PaperPdfPlaceholder({
   onCurrentPageChange,
   scrollToPage,
   onScrolledToPage,
+  onNumPages,
 }: PaperPdfPlaceholderProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -78,6 +93,12 @@ export default function PaperPdfPlaceholder({
     );
   }
 
+  const pdfFallback = (
+    <div className="flex min-h-[200px] items-center justify-center color-txt-sub text-sm p-4 text-center">
+      PDF could not be displayed. If this persists, refresh the page.
+    </div>
+  );
+
   return (
     <div
       ref={scrollContainerRef}
@@ -89,35 +110,38 @@ export default function PaperPdfPlaceholder({
           PDF failed to load: {loadError}
         </div>
       )}
-      <Document
-        file={file}
-        onLoadSuccess={({ numPages: n }) => {
-          setNumPages(n);
-          setLoadError(null);
-        }}
-        onLoadError={(err) => {
-          console.error("PDF load error:", err);
-          setLoadError(err?.message ?? "Unknown error");
-        }}
-      >
-        {Array.from({ length: numPages }, (_, i) => (
-          <div
-            key={`page_${i + 1}`}
-            ref={(el) => {
-              pageRefsRef.current[i] = el;
-            }}
-            data-page={i + 1}
-            className="flex justify-center my-2"
-          >
-            <Page
-              pageNumber={i + 1}
-              width={pageWidth}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-            />
-          </div>
-        ))}
-      </Document>
+      <PdfErrorBoundary fallback={pdfFallback}>
+        <Document
+          file={file}
+          onLoadSuccess={({ numPages: n }) => {
+            setNumPages(n);
+            setLoadError(null);
+            onNumPages?.(n);
+          }}
+          onLoadError={(err) => {
+            console.error("PDF load error:", err);
+            setLoadError(err?.message ?? "Unknown error");
+          }}
+        >
+          {Array.from({ length: numPages }, (_, i) => (
+            <div
+              key={`page_${i + 1}`}
+              ref={(el) => {
+                pageRefsRef.current[i] = el;
+              }}
+              data-page={i + 1}
+              className="flex justify-center my-2"
+            >
+              <Page
+                pageNumber={i + 1}
+                width={pageWidth}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            </div>
+          ))}
+        </Document>
+      </PdfErrorBoundary>
     </div>
   );
 }

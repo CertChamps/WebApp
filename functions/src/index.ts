@@ -9,7 +9,7 @@ admin.initializeApp();
 const corsMiddleware = cors({ origin: true });
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_MODEL = "google/gemini-2.5-flash";
+const OPENROUTER_MODEL = "google/gemini-3-flash-preview";
 
 export const verifyCaptcha = functions.https.onRequest(
     {
@@ -159,65 +159,68 @@ const TAGS_ALLOWED = [
 const EXTRACT_SYSTEM = `You are an expert at locating question regions on exam paper PDF page images and at classifying maths questions.
 
 IMAGE ORDER IN THE REQUEST:
-- First block: EXAM PAPER page images (pages 1, 2, 3, ...). Use these to draw regions for each full question.
-- If provided, second block: LOG TABLES booklet page images (Formulae and Tables). Use these to choose the correct log_table_page for each question by matching which booklet page contains the formula/table needed.
-- If provided, third block: MARKING SCHEME page images. Use these to match each question (Q1, Q2, ...) to the section that shows its marking and return marking_scheme_page_range (start and end page numbers, 1-based) for that section.
+- First block: EXAM PAPER page images (pages 1, 2, 3, ...). Use these to draw regions for each question PART.
+- If provided, second block: LOG TABLES booklet page images (Formulae and Tables). Use these to choose the correct log_table_page for each part by matching which booklet page contains the formula/table needed.
+- If provided, third block: MARKING SCHEME page images. The marking scheme PDF often contains Paper 1 then Paper 2 (earlier pages = Paper 1, later pages = Paper 2). You will be told which paper the exam is; use ONLY that paper's section for marking_scheme_page_range. Match each question to the correct section and return 1-based start and end page numbers.
 
 Your jobs:
-1. Identify bounding boxes for each FULL QUESTION (Q1, Q2, Q3, ...) on the EXAM PAPER. One region per question — include ALL parts (a), (b), (c) in the SAME region. Questions can span multiple pages.
-2. For EVERY question return:
-   - log_table_page: The 1-based page number from the Log Tables booklet needed to solve the question. When Log Tables images are provided, LOOK at them to pick the exact page. If no table/formula is needed, use null.
-   - tags: Categorise using ONLY this list (max 3 categories per question): ${TAGS_ALLOWED.join(", ")}
+1. Identify bounding boxes for each QUESTION PART on the EXAM PAPER. Split every question into its parts (a), (b), (c), etc. One region per PART — e.g. Q1a, Q1b, Q1c, Q2a, Q2b, ... Questions can span multiple pages; each part gets its own region with its own pageRegions.
+2. For EVERY part return:
+   - log_table_page: The 1-based page number from the Log Tables booklet needed for that part. When Log Tables images are provided, LOOK at them to pick the exact page. If no table/formula is needed, use null.
+   - tags: Categorise using ONLY this list (max 3 categories per part): ${TAGS_ALLOWED.join(", ")}
      TAGGING RULE: For "X - Y" split into [Y, X]. Do not duplicate tags; each tag once only (e.g. ["Functions", "Differentiation", "Calculus"] not ["Functions", "Calculus", "Differentiation", "Calculus"]).
-   - marking_scheme_page_range: ONLY when marking scheme images are provided: the 1-based page range in the marking scheme PDF where this question's marking appears. E.g. { "start": 2, "end": 3 }. If unclear, use your best match.
+   - marking_scheme_page_range: ONLY when marking scheme images are provided: the 1-based page range in the marking scheme PDF where that question's marking appears (same question number can share the same range for all its parts, or per-part if the scheme splits them). E.g. { "start": 2, "end": 3 }. If unclear, use your best match.
 
 OUTPUT FORMAT - Return ONLY valid JSON, no markdown or extra text:
 {
   "regions": [
-    { "id": "Q1", "name": "Question 1", "pageRegions": [{ "page": 1, "x": 0, "y": 120, "width": 595, "height": 400 }], "log_table_page": 22, "tags": ["Quadratics", "Algebra"], "marking_scheme_page_range": { "start": 1, "end": 1 } },
-    { "id": "Q2", "name": "Question 2", "pageRegions": [...], "log_table_page": null, "tags": ["Differentiation", "Calculus"], "marking_scheme_page_range": { "start": 2, "end": 2 } }
+    { "id": "Q1a", "name": "Question 1 (a)", "pageRegions": [{ "page": 1, "x": 0, "y": 120, "width": 595, "height": 80 }], "log_table_page": 22, "tags": ["Quadratics", "Algebra"], "marking_scheme_page_range": { "start": 1, "end": 1 } },
+    { "id": "Q1b", "name": "Question 1 (b)", "pageRegions": [{ "page": 1, "x": 0, "y": 200, "width": 595, "height": 100 }], "log_table_page": null, "tags": ["Quadratics", "Algebra"], "marking_scheme_page_range": { "start": 1, "end": 1 } },
+    { "id": "Q2a", "name": "Question 2 (a)", "pageRegions": [...], "log_table_page": null, "tags": ["Differentiation", "Calculus"], "marking_scheme_page_range": { "start": 2, "end": 2 } }
   ]
 }
 
 CRITICAL RULES:
-1. EXTRACT EVERY QUESTION ON THE PAPER — Do not stop early. Q1 through Q10 or more; one region per question.
-2. ONE REGION PER FULL QUESTION — Include all parts (a), (b), (c) in one region. Do NOT split by part.
-3. MULTI-PAGE: If a question spans pages, use pageRegions with multiple entries in reading order.
-4. WIDTH = full page: x: 0, width: 595. HEIGHT = from question start to end of last part.
-5. Coordinates: PDF points, origin top-left, y down. A4 height ≈ 842. Page numbers 1-based.
-6. id/name: e.g. "Q1", "Question 1".
-7. When Log Tables images are provided, you MUST set log_table_page for every region: look at the booklet images and choose the 1-based page number that contains the formula/table needed for that question. Use null only if the question clearly needs no formula or table. Do not leave log_table_page blank or omit it.
-8. When marking scheme images are provided, you MUST set marking_scheme_page_range for every region: look at the marking scheme images and identify the 1-based page range (start, end) where that question's marking appears. Every region must have marking_scheme_page_range with start and end. Do not leave it blank or omit it.
-9. Return ONLY the JSON object, no markdown code fence.`;
+1. EXTRACT EVERY QUESTION PART ON THE PAPER — Do not stop early. Q1a, Q1b, Q1c, Q2a, Q2b, ... one region per part.
+2. ONE REGION PER PART — Split each question into separate regions for (a), (b), (c), etc. Do NOT merge parts into one region.
+3. id/name: Use part suffix, e.g. "Q1a", "Q1b", "Q1c", "Question 1 (a)", "Question 1 (b)".
+4. MULTI-PAGE: If a part spans pages, use pageRegions with multiple entries in reading order for that part only.
+5. WIDTH = full page: x: 0, width: 595. HEIGHT = from that part's start to end of that part only.
+6. VERTICAL PADDING: Add a small vertical padding (about 8–12 points) above and below each region so the box does not sit flush on the text and does not cut into adjacent questions. Slightly increase the top padding above the first line and the bottom padding below the last line of each part.
+7. Coordinates: PDF points, origin top-left, y down. A4 height ≈ 842. Page numbers 1-based.
+8. When Log Tables images are provided, you MUST set log_table_page for every region: look at the booklet images and choose the 1-based page number that contains the formula/table needed for that part. Use null only if the part clearly needs no formula or table. Do not leave log_table_page blank or omit it.
+9. When marking scheme images are provided, you MUST set marking_scheme_page_range for every region. The scheme may contain Paper 1 then Paper 2; use only the section that matches the exam paper (Paper 1 = earlier pages, Paper 2 = later pages). Identify the 1-based page range (start, end) where that question's marking appears. Every region must have marking_scheme_page_range with start and end. Do not leave it blank or omit it.
+10. Return ONLY the JSON object, no markdown code fence.`;
 
 const EXTRACT_SYSTEM_MINIMAL = `You extract question regions from exam paper images. Return ONLY valid JSON, no markdown.
-For each full question (Q1, Q2, ...) output one region: pageRegions (array of {page, x, y, width, height}), x=0 width=595, log_table_page: null, tags: array of up to 3 category strings (no duplicates). Use tags from: ${TAGS_ALLOWED.join(", ")}. For "X - Y" use [Y, X].
-Include EVERY question. One region per question; include all parts (a),(b),(c) in one region. Coordinates: PDF points, origin top-left, A4 height ~842. Return format: {"regions": [{ "id": "Q1", "name": "Question 1", "pageRegions": [...], "log_table_page": null, "tags": [...] }, ...]}.`;
+Split each question into PARTS (a), (b), (c), etc. One region per PART: id e.g. "Q1a", "Q1b", "Q1c", name e.g. "Question 1 (a)". pageRegions (array of {page, x, y, width, height}), x=0 width=595, log_table_page: null, tags: array of up to 3 category strings (no duplicates). Use tags from: ${TAGS_ALLOWED.join(", ")}. For "X - Y" use [Y, X].
+Include EVERY part of EVERY question. One region per part. Add ~8–12pt vertical padding above and below each part so regions do not cut into adjacent questions. Coordinates: PDF points, origin top-left, A4 height ~842. Return format: {"regions": [{ "id": "Q1a", "name": "Question 1 (a)", "pageRegions": [...], "log_table_page": null, "tags": [...] }, ...]}.`;
 
 const STEP_REGIONS_SYSTEM = `You find question regions on exam paper images. Return ONLY valid JSON, no markdown.
-For each full question output ONE region: "id" (e.g. "Q1"), "name", "pageRegions": array of {page, x, y, width, height}. Use x=0, width=595; set y and height to cover the whole question including all parts (a),(b),(c). PDF points, origin top-left, A4 height ~842.
-You MUST also set "paper_finished": true when you have included the LAST question on the paper (no more questions after). Set "paper_finished": false if there are more questions on later pages that you did not include.
+Split each question into PARTS (a), (b), (c), etc. One region per PART: "id" (e.g. "Q1a", "Q1b", "Q1c"), "name" (e.g. "Question 1 (a)"), "pageRegions": array of {page, x, y, width, height} for that part only. Use x=0, width=595; set y and height to cover that part only. Add about 8–12 points vertical padding above and below each part so the region does not cut into the question above or below. PDF points, origin top-left, A4 height ~842.
+You MUST also set "paper_finished": true when you have included the LAST part of the last question on the paper. Set "paper_finished": false if there are more parts or questions on later pages that you did not include.
 Return format: {"regions": [...], "paper_finished": true or false}.`;
 
-const STEP_METADATA_SYSTEM = `You assign tags and log_table_page to each question. Return ONLY valid JSON, no markdown.
-You will be told the question ids (e.g. Q1, Q2, ...). For each, return "id", "tags" (array of up to 3 strings from the allowed list), "log_table_page" (number or null). Tags from: ${TAGS_ALLOWED.join(", ")}. For "X - Y" use [Y, X] in the tags array. Do NOT duplicate tags: each tag must appear at most once (e.g. ["Functions", "Differentiation", "Calculus"] not ["Functions", "Calculus", "Differentiation", "Calculus"]). Return: {"regions": [{ "id": "Q1", "tags": [...], "log_table_page": null }, ...]}.`;
+const STEP_METADATA_SYSTEM = `You assign tags and log_table_page to each question part. Return ONLY valid JSON, no markdown.
+You will be told the region ids (e.g. Q1a, Q1b, Q2a, ...). For each, return "id", "tags" (array of up to 3 strings from the allowed list), "log_table_page" (number or null). Tags from: ${TAGS_ALLOWED.join(", ")}. For "X - Y" use [Y, X] in the tags array. Do NOT duplicate tags: each tag must appear at most once (e.g. ["Functions", "Differentiation", "Calculus"] not ["Functions", "Calculus", "Differentiation", "Calculus"]). Return: {"regions": [{ "id": "Q1a", "tags": [...], "log_table_page": null }, ...]}.`;
 
-const STEP_MARKING_SYSTEM = `You match each question to the marking scheme. Return ONLY valid JSON, no markdown.
-CRITICAL: Every question MUST have a marking_scheme_page_range. Do not leave any question empty or null. For each question id return "id" and "marking_scheme_page_range": { "start": number, "end": number } (1-based page range in the marking scheme PDF where that question's marking appears). Return: {"regions": [{ "id": "Q1", "marking_scheme_page_range": { "start": 1, "end": 1 } }, ...]}.`;
+const STEP_MARKING_SYSTEM = `You match each question part to the marking scheme. Return ONLY valid JSON, no markdown.
+The marking scheme PDF often contains BOTH Paper 1 and Paper 2 in one document: Paper 1 answers are in the EARLIER pages, Paper 2 answers in the LATER pages. You will be told which paper the exam is (1 or 2); use ONLY the page range that falls in that paper's section. Do not use Paper 1 pages when the exam is Paper 2, or vice versa.
+CRITICAL: Every region MUST have a marking_scheme_page_range. Do not leave any empty or null. For each region id (e.g. Q1a, Q1b, Q2a) return "id" and "marking_scheme_page_range": { "start": number, "end": number } (1-based page range in the marking scheme PDF where that question's marking appears; parts of the same question can share the same range). Return: {"regions": [{ "id": "Q1a", "marking_scheme_page_range": { "start": 1, "end": 1 } }, ...]}.`;
 
-const STEP_LOG_TABLES_SYSTEM = `You assign log_table_page to each question. Return ONLY valid JSON, no markdown.
-You will be told the question ids. Look at each question and at the Log Tables booklet images. Set "log_table_page" to the 1-based booklet page number ONLY if the question requires a formula or table from the booklet to solve. Otherwise set "log_table_page": null. Do not guess; only add when necessary. Return: {"regions": [{ "id": "Q1", "log_table_page": 22 or null }, ...]}.`;
+const STEP_LOG_TABLES_SYSTEM = `You assign log_table_page to each question part. Return ONLY valid JSON, no markdown.
+You will be told the region ids (e.g. Q1a, Q1b, Q2a). Look at each part and at the Log Tables booklet images. Set "log_table_page" to the 1-based booklet page number ONLY if that part requires a formula or table from the booklet to solve. Otherwise set "log_table_page": null. Do not guess; only add when necessary. Return: {"regions": [{ "id": "Q1a", "log_table_page": 22 or null }, ...]}.`;
 
-const STEP_TAGS_SYSTEM = `You assign tags to each question. Return ONLY valid JSON, no markdown.
-You will be told the question ids. For each return "id" and "tags": array of 1 to 3 strings from the allowed list. Minimum ONE tag per question. Tags from: ${TAGS_ALLOWED.join(", ")}. For "X - Y" use [Y, X]. No duplicate tags. Return: {"regions": [{ "id": "Q1", "tags": ["Quadratics", "Algebra"] }, ...]}.`;
+const STEP_TAGS_SYSTEM = `You assign tags to each question part. Return ONLY valid JSON, no markdown.
+You will be told the region ids (e.g. Q1a, Q1b, Q2a). For each return "id" and "tags": array of 1 to 3 strings from the allowed list. Minimum ONE tag per region. Tags from: ${TAGS_ALLOWED.join(", ")}. For "X - Y" use [Y, X]. No duplicate tags. Return: {"regions": [{ "id": "Q1a", "tags": ["Quadratics", "Algebra"] }, ...]}.`;
 
-const EXTRACT_USER_EXAM_ONLY = "From the exam paper images below, extract EVERY full question (Q1, Q2, Q3, ... through the last). One region per question; include all parts (a), (b), (c) in the same region. For each region return: pageRegions (coordinates: x=0, width=595, y and height to cover the question), log_table_page: null, tags: pick up to 3 from the allowed list, no duplicate tags (for \"X - Y\" use [Y, X]). Return ONLY valid JSON with a \"regions\" array. No markdown.";
-const EXTRACT_USER_FULL = "Extract EVERY full question on this exam paper (Q1 through the last). One region per question; all parts (a),(b),(c) together. Set log_table_page from the Log Tables images when provided (or null). Set tags (allowed list, hyphen-split, max 3). When marking scheme images are provided set marking_scheme_page_range (start, end) for each region. Width=595. Return ONLY the regions JSON.";
+const EXTRACT_USER_EXAM_ONLY = "From the exam paper images below, extract EVERY question PART (Q1a, Q1b, Q1c, Q2a, Q2b, ... through the last). One region per PART; split each question into separate regions for (a), (b), (c), etc. For each region return: id (e.g. Q1a), name (e.g. Question 1 (a)), pageRegions (x=0, width=595, y and height to cover that part only, with ~8–12pt vertical padding above and below so regions do not cut into adjacent questions), log_table_page: null, tags: pick up to 3 from the allowed list, no duplicate tags (for \"X - Y\" use [Y, X]). Return ONLY valid JSON with a \"regions\" array. No markdown.";
+const EXTRACT_USER_FULL = "Extract EVERY question PART on this exam paper (Q1a, Q1b, Q1c, Q2a, Q2b, ... to the last part). One region per PART; split each question into separate regions for (a), (b), (c), etc. Add ~8–12pt vertical padding above and below each part so regions do not cut into adjacent questions. Set log_table_page from the Log Tables images when provided (or null). Set tags (allowed list, hyphen-split, max 3). When marking scheme images are provided set marking_scheme_page_range (start, end) for each region. Width=595. Return ONLY the regions JSON.";
 
 export const extractQuestions = functions.https.onRequest({
     cors: true,
     secrets: ["OPENROUTER_API_KEY"],
-    timeoutSeconds: 180,
+    timeoutSeconds: 300,
     memory: "1GiB",
 }, async (req, res) => {
     const apiKey = process.env.OPENROUTER_API_KEY;
@@ -229,7 +232,8 @@ export const extractQuestions = functions.https.onRequest({
         res.status(405).json({ error: "Method not allowed" });
         return;
     }
-    const { pageImages, logTablePageImages, markingSchemeImages, examOnly, step, regionIds, continueFrom, missingMarkingIds } = req.body || {};
+    const { pageImages, logTablePageImages, markingSchemeImages, examOnly, step, regionIds, continueFrom, missingMarkingIds, markingSchemePaper } = req.body || {};
+    const paperNumber = markingSchemePaper === 2 || markingSchemePaper === 1 ? markingSchemePaper : null;
     if (!Array.isArray(pageImages) || pageImages.length === 0) {
         res.status(400).json({ error: "pageImages array (base64 data URLs) is required" });
         return;
@@ -255,8 +259,8 @@ export const extractQuestions = functions.https.onRequest({
         systemPrompt = STEP_REGIONS_SYSTEM;
         const continueId = typeof continueFrom === "string" && continueFrom.trim() ? continueFrom.trim() : null;
         const userText = continueId
-            ? `You already have regions for questions up to and including ${continueId}. The exam paper continues on the same images. Extract ONLY the REMAINING questions (the next one after ${continueId} through to the last question on the paper). Return regions for those remaining questions only. Set paper_finished: true when you include the last question; otherwise paper_finished: false. Return ONLY valid JSON: {"regions": [...], "paper_finished": true or false}. No markdown.`
-            : "From the exam paper images below, list EVERY full question (Q1, Q2, Q3, ... to the last). One region per question; include all parts (a),(b),(c) in the same region. For each return id, name, pageRegions (x=0, width=595; y and height to cover the question). Set paper_finished: true when you have included the LAST question on the paper; set paper_finished: false if there are more questions on later pages. Return ONLY valid JSON: {\"regions\": [...], \"paper_finished\": true or false}. No markdown.";
+            ? `You already have regions for parts up to and including ${continueId}. The exam paper continues on the same images. Extract ONLY the REMAINING parts (the next part after ${continueId} through to the last part on the paper). Return regions for those remaining parts only; one region per part (e.g. Q1a, Q1b, Q1c). Set paper_finished: true when you include the last part; otherwise paper_finished: false. Return ONLY valid JSON: {"regions": [...], "paper_finished": true or false}. No markdown.`
+            : "From the exam paper images below, list EVERY question PART (Q1a, Q1b, Q1c, Q2a, Q2b, ... to the last part). One region per PART; split each question into separate regions for (a), (b), (c), etc. For each return id (e.g. Q1a), name (e.g. Question 1 (a)), pageRegions (x=0, width=595; y and height to cover that part only, with about 8–12pt vertical padding above and below so the box does not cut into adjacent questions). Set paper_finished: true when you have included the LAST part on the paper; set paper_finished: false if there are more parts on later pages. Return ONLY valid JSON: {\"regions\": [...], \"paper_finished\": true or false}. No markdown.";
         userContent = [
             { type: "text", text: userText },
             ...examImages,
@@ -336,7 +340,12 @@ export const extractQuestions = functions.https.onRequest({
             userContent.push(...logTableImages);
         }
         if (markingSchemeImagesList.length > 0) {
-            userContent.push({ type: "text", text: `Marking scheme (${markingSchemeImagesList.length} pages). Set marking_scheme_page_range (start, end) for each region.` });
+            const schemeNote = paperNumber === 2
+                ? ` Marking scheme (${markingSchemeImagesList.length} pages). The PDF has Paper 1 first then Paper 2. This exam is Paper 2 — use ONLY the LATER pages (Paper 2 section) for marking_scheme_page_range.`
+                : paperNumber === 1
+                    ? ` Marking scheme (${markingSchemeImagesList.length} pages). The PDF has Paper 1 first then Paper 2. This exam is Paper 1 — use ONLY the EARLIER pages (Paper 1 section) for marking_scheme_page_range.`
+                    : ` Marking scheme (${markingSchemeImagesList.length} pages). Match each region to the section that corresponds to the same paper (earlier = Paper 1, later = Paper 2). Set marking_scheme_page_range (start, end) for each region.`;
+            userContent.push({ type: "text", text: schemeNote });
             userContent.push(...markingSchemeImagesList);
         }
         systemPrompt = useExamOnly ? EXTRACT_SYSTEM_MINIMAL : EXTRACT_SYSTEM;
@@ -357,7 +366,7 @@ export const extractQuestions = functions.https.onRequest({
                     { role: "system", content: systemPrompt },
                     { role: "user", content: userContent },
                 ],
-                max_tokens: 8000,
+                max_tokens: 10000,
                 stream: false,
             }),
         });
@@ -396,6 +405,31 @@ export const extractQuestions = functions.https.onRequest({
             return;
         }
         const rawRegions = Array.isArray(parsed.regions) ? parsed.regions : [];
+        const VERTICAL_PADDING_PT = 10;
+        const A4_HEIGHT_PT = 842;
+        const applyVerticalPadding = (arr: unknown[]): PageRegion[] => {
+            return (Array.isArray(arr) ? arr : []).map((p) => {
+                const o = p && typeof p === "object" ? p as Record<string, unknown> : {};
+                const page = Number(o.page ?? 1);
+                const x = Number(o.x ?? 0);
+                const y = Number(o.y ?? 0);
+                const width = Number(o.width ?? 595);
+                const height = Number(o.height ?? 150);
+                if (!Number.isFinite(page) || !Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) {
+                    return { page: 1, x: 0, y: 0, width: 595, height: 150 };
+                }
+                const y2 = Math.max(0, y - VERTICAL_PADDING_PT);
+                const bottom = Math.min(A4_HEIGHT_PT, y + height + VERTICAL_PADDING_PT);
+                const height2 = Math.max(1, bottom - y2);
+                return {
+                    page: Math.max(1, Math.round(page)),
+                    x: Math.max(0, Math.round(x)),
+                    y: Math.round(y2),
+                    width: Math.max(1, Math.round(width)),
+                    height: Math.round(height2),
+                };
+            });
+        };
         const dedupeTags = (tags: string[]): string[] => {
             const seen = new Set<string>();
             return tags.filter((t) => {
@@ -405,10 +439,32 @@ export const extractQuestions = functions.https.onRequest({
             });
         };
         const normRange = (v: unknown): { start: number; end: number } | null => {
-            if (v && typeof v === "object" && "start" in v && "end" in v) {
-                const s = Number((v as { start: unknown }).start);
-                const e = Number((v as { end: unknown }).end);
-                if (Number.isFinite(s) && Number.isFinite(e) && s >= 1 && e >= 1) return { start: s, end: e };
+            if (!v || typeof v !== "object") return null;
+            const o = v as Record<string, unknown>;
+            // Accept { start, end } (strings or numbers)
+            const startVal = o.start ?? o.startPage;
+            const endVal = o.end ?? o.endPage;
+            const pageVal = o.page;
+            let s: number | null = null;
+            let e: number | null = null;
+            if (startVal != null && endVal != null) {
+                s = Number(startVal);
+                e = Number(endVal);
+            } else if (pageVal != null) {
+                const p = Number(pageVal);
+                if (Number.isFinite(p) && p >= 1) {
+                    s = p;
+                    e = p;
+                }
+            } else if (startVal != null) {
+                s = Number(startVal);
+                e = Number.isFinite(s) && s >= 1 ? s : null;
+            } else if (endVal != null) {
+                e = Number(endVal);
+                s = Number.isFinite(e) && e >= 1 ? e : null;
+            }
+            if (s != null && e != null && Number.isFinite(s) && Number.isFinite(e) && s >= 1 && e >= 1) {
+                return { start: Math.min(s, e), end: Math.max(s, e) };
             }
             return null;
         };
@@ -416,7 +472,7 @@ export const extractQuestions = functions.https.onRequest({
             const regions = rawRegions.map((r) => ({
                 id: r.id ?? "Q1",
                 name: r.name ?? "",
-                pageRegions: Array.isArray(r.pageRegions) ? r.pageRegions : [],
+                pageRegions: applyVerticalPadding(Array.isArray(r.pageRegions) ? r.pageRegions : []),
                 log_table_page: null as number | null,
                 tags: [] as string[],
                 marking_scheme_page_range: null as { start: number; end: number } | null,
@@ -462,7 +518,7 @@ export const extractQuestions = functions.https.onRequest({
         const regions = rawRegions.map((r) => ({
             id: r.id ?? "Q1",
             name: r.name ?? "",
-            pageRegions: Array.isArray(r.pageRegions) ? r.pageRegions : [],
+            pageRegions: applyVerticalPadding(Array.isArray(r.pageRegions) ? r.pageRegions : []),
             log_table_page: typeof r.log_table_page === "number" ? r.log_table_page : null,
             tags: dedupeTags(Array.isArray(r.tags) ? r.tags.filter((t): t is string => typeof t === "string") : []),
             marking_scheme_page_range: hasMarkingScheme ? normRange(r.marking_scheme_page_range) : null,
