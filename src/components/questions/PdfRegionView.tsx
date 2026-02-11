@@ -10,6 +10,8 @@ export type PdfRegion = {
   height: number;
 };
 
+const LOAD_TIMEOUT_MS = 12_000;
+
 type PdfRegionViewProps = {
   /** PDF as Blob or URL string */
   file: string | Blob | null;
@@ -33,15 +35,33 @@ export default function PdfRegionView({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+
+  // Use primitive deps so effect only re-runs when region values actually change
+  const hasRegion = !!region;
+  const page = region?.page ?? 1;
+  const x = region?.x ?? 0;
+  const y = region?.y ?? 0;
+  const rWidth = region?.width ?? 595;
+  const rHeight = region?.height ?? 150;
 
   useEffect(() => {
     if (!file || !canvasRef.current) {
       setError(null);
+      setLoading(false);
+      setTimedOut(false);
       return;
     }
     setError(null);
+    setTimedOut(false);
     setLoading(true);
     let cancelled = false;
+    const timeoutId = setTimeout(() => {
+      if (!cancelled) {
+        setTimedOut(true);
+      }
+    }, LOAD_TIMEOUT_MS);
 
     (async () => {
       try {
@@ -49,12 +69,12 @@ export default function PdfRegionView({
         const doc = await getDocument(data).promise;
         if (cancelled) return;
 
-        const pageNum = region?.page ?? 1;
-        const page = await doc.getPage(Math.max(1, Math.min(pageNum, doc.numPages)));
+        const pageNum = hasRegion ? page : 1;
+        const pdfPage = await doc.getPage(Math.max(1, Math.min(pageNum, doc.numPages)));
         if (cancelled) return;
 
         const scale = 1.5;
-        const viewport = page.getViewport({ scale });
+        const viewport = pdfPage.getViewport({ scale });
 
         // Render full page to offscreen canvas
         const offscreen = document.createElement("canvas");
@@ -62,19 +82,19 @@ export default function PdfRegionView({
         offscreen.height = viewport.height;
         const ctx = offscreen.getContext("2d");
         if (!ctx) throw new Error("Could not get canvas context");
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        await pdfPage.render({ canvasContext: ctx, viewport }).promise;
         if (cancelled) return;
 
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        if (region) {
+        if (hasRegion) {
           // Crop: region is in PDF points. Viewport at scale 1 has 1:1 with PDF points.
-          const s = viewport.width / page.getViewport({ scale: 1 }).width;
-          const sx = region.x * s;
-          const sy = region.y * s;
-          const sw = region.width * s;
-          const sh = region.height * s;
+          const s = viewport.width / pdfPage.getViewport({ scale: 1 }).width;
+          const sx = x * s;
+          const sy = y * s;
+          const sw = rWidth * s;
+          const sh = rHeight * s;
 
           if (sw <= 0 || sh <= 0) {
             setError("Invalid region dimensions");
@@ -103,12 +123,19 @@ export default function PdfRegionView({
           setError(e instanceof Error ? e.message : "Failed to render PDF region");
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        clearTimeout(timeoutId);
+        if (!cancelled) {
+          setLoading(false);
+          setTimedOut(false);
+        }
       }
     })();
 
-    return () => { cancelled = true; };
-  }, [file, region, width]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [file, hasRegion, page, x, y, rWidth, rHeight, width, retryKey]);
 
   if (!file) {
     return (
@@ -118,16 +145,38 @@ export default function PdfRegionView({
     );
   }
 
+  const handleRetry = () => {
+    setError(null);
+    setTimedOut(false);
+    setRetryKey((k) => k + 1);
+  };
+
   return (
     <div className={`relative ${className}`}>
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center color-bg-grey-5/80 rounded-xl">
-          <span className="color-txt-sub text-sm">Loading...</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 color-bg-grey-5/80 rounded-xl z-10">
+          <span className="color-txt-sub text-sm">{timedOut ? "Taking longer than expected…" : "Loading..."}</span>
+          {timedOut && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium color-bg-accent color-txt-main hover:brightness-110"
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
       {error && (
-        <div className="flex min-h-[120px] items-center justify-center color-txt-sub text-sm rounded-xl color-bg-grey-5">
-          {error}
+        <div className="flex min-h-[120px] flex-col items-center justify-center gap-2 color-txt-sub text-sm rounded-xl color-bg-grey-5">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium color-bg-accent color-txt-main hover:brightness-110"
+          >
+            Retry
+          </button>
         </div>
       )}
       <canvas

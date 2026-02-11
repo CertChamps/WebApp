@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { LuFileText, LuLoader, LuSparkles, LuPlus, LuTrash2, LuBookOpen, LuUpload, LuClipboardList } from "react-icons/lu";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { LuFileText, LuLoader, LuSparkles, LuPlus, LuTrash2, LuBookOpen, LuUpload, LuClipboardList, LuDownload, LuSlidersHorizontal } from "react-icons/lu";
 import { useAllPageSnapshots } from "../../hooks/useAllPageSnapshots";
 import PdfRegionView, { type PdfRegion } from "../questions/PdfRegionView";
 import PaperPdfPlaceholder from "../questions/PaperPdfPlaceholder";
@@ -205,7 +205,10 @@ export default function ExtractQuestionsFlow({
     markingSchemeSource,
     30
   );
-  const pdfBlob = pdfFile ? new Blob([pdfFile], { type: "application/pdf" }) : null;
+  const pdfBlob = useMemo(
+    () => (pdfFile ? new Blob([pdfFile], { type: "application/pdf" }) : null),
+    [pdfFile]
+  );
 
   const STEP_TIMEOUT_MS = 300_000; // 5 min per step
   const MAX_EXAM_PAGES_SENT = 12;
@@ -516,6 +519,27 @@ export default function ExtractQuestionsFlow({
     setSelectedIndex(regions.length);
   }, [regions.length]);
 
+  const removeRegion = useCallback((index: number) => {
+    setRegions((prev) => prev.filter((_, i) => i !== index));
+    setSelectedIndex((prev) => {
+      if (prev === index) return Math.max(0, index - 1);
+      if (prev > index) return prev - 1;
+      return prev;
+    });
+  }, []);
+
+  const handleDownloadJson = useCallback(() => {
+    const payload = { regions };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `regions-${pdfFile?.name?.replace(/\.pdf$/i, "") ?? "export"}-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [regions, pdfFile?.name]);
+
   const handleLoadJson = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -585,6 +609,11 @@ export default function ExtractQuestionsFlow({
     }
   }, [pdfFile, pastedJson]);
 
+  const [fixerMode, setFixerMode] = useState(false);
+  const [fixerRegionIdx, setFixerRegionIdx] = useState(0);
+  const [fixerPageRegionIdx, setFixerPageRegionIdx] = useState(0);
+  const [fixerEditing, setFixerEditing] = useState<"y" | "height">("y");
+  const FIXER_STEP = 5;
   const [showFullPdf, setShowFullPdf] = useState(true);
   const [showMarkingSchemePreview, setShowMarkingSchemePreview] = useState(true);
   const [showLogTablesPreview, setShowLogTablesPreview] = useState(true);
@@ -598,6 +627,130 @@ export default function ExtractQuestionsFlow({
   const [markingSchemeGoToInput, setMarkingSchemeGoToInput] = useState("");
   const selected = regions[selectedIndex];
   const markingSchemeBlob = markingSchemeSource;
+
+  const fixerRegion = regions[fixerRegionIdx];
+  const fixerPageRegion = fixerRegion?.pageRegions?.[fixerPageRegionIdx];
+
+  useEffect(() => {
+    if (!fixerMode || regions.length === 0) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      const region = regions[fixerRegionIdx];
+      const pr = region?.pageRegions?.[fixerPageRegionIdx];
+      if (!pr) return;
+      if (e.key === "Escape") {
+        setFixerMode(false);
+        return;
+      }
+      if (e.key === "k" || e.key === "K") {
+        setFixerEditing((v) => (v === "y" ? "height" : "y"));
+        return;
+      }
+      if (e.key === "f" || e.key === "F") {
+        const delta = -FIXER_STEP;
+        if (fixerEditing === "y") {
+          const newY = Math.max(0, Math.min(842 - pr.height, pr.y + delta));
+          updatePageRegion(fixerRegionIdx, fixerPageRegionIdx, { y: newY });
+        } else {
+          const newH = Math.max(20, Math.min(842 - pr.y, pr.height + delta));
+          updatePageRegion(fixerRegionIdx, fixerPageRegionIdx, { height: newH });
+        }
+        return;
+      }
+      if (e.key === "j" || e.key === "J") {
+        const delta = FIXER_STEP;
+        if (fixerEditing === "y") {
+          const newY = Math.max(0, Math.min(842 - pr.height, pr.y + delta));
+          updatePageRegion(fixerRegionIdx, fixerPageRegionIdx, { y: newY });
+        } else {
+          const newH = Math.max(20, Math.min(842 - pr.y, pr.height + delta));
+          updatePageRegion(fixerRegionIdx, fixerPageRegionIdx, { height: newH });
+        }
+        return;
+      }
+      if (e.key === "Enter") {
+        const nextPrIdx = fixerPageRegionIdx + 1;
+        if (nextPrIdx < (region?.pageRegions?.length ?? 0)) {
+          setFixerPageRegionIdx(nextPrIdx);
+        } else {
+          const nextRegionIdx = fixerRegionIdx + 1;
+          if (nextRegionIdx < regions.length) {
+            setFixerRegionIdx(nextRegionIdx);
+            setFixerPageRegionIdx(0);
+            setSelectedIndex(nextRegionIdx);
+          } else {
+            setFixerMode(false);
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [fixerMode, fixerRegionIdx, fixerPageRegionIdx, fixerEditing, regions, updatePageRegion]);
+
+  useEffect(() => {
+    if (fixerMode && regions.length > 0) {
+      setFixerRegionIdx((i) => Math.min(i, regions.length - 1));
+      const r = regions[Math.min(fixerRegionIdx, regions.length - 1)];
+      setFixerPageRegionIdx((p) => Math.min(p, Math.max(0, (r?.pageRegions?.length ?? 1) - 1)));
+    }
+    if (fixerMode && regions.length === 0) setFixerMode(false);
+  }, [fixerMode, regions.length, fixerRegionIdx]);
+
+  if (fixerMode && pdfBlob && fixerPageRegion && fixerRegion) {
+    const totalSegments = regions.reduce((sum, r) => sum + (r.pageRegions?.length ?? 0), 0);
+    let currentSegment = 0;
+    for (let i = 0; i < fixerRegionIdx; i++) currentSegment += regions[i]?.pageRegions?.length ?? 0;
+    currentSegment += fixerPageRegionIdx + 1;
+    return (
+      <div className="flex flex-col w-full h-[calc(100vh-8rem)]">
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <h2 className="color-txt-main font-semibold">Y & Height Fixer</h2>
+          <div className="flex items-center gap-2">
+            <span className="color-txt-sub text-sm">
+              {fixerRegion.name} — Page {fixerPageRegion.page} ({currentSegment}/{totalSegments})
+            </span>
+            <button
+              type="button"
+              onClick={() => setFixerMode(false)}
+              className="px-3 py-1.5 rounded-lg text-sm color-bg-grey-10 color-txt-main hover:color-bg-grey-5"
+            >
+              Exit (Esc)
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 flex gap-4">
+          <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+            <div className="w-full max-w-2xl">
+              <PdfRegionView file={pdfBlob} region={fixerPageRegion as PdfRegion} width={600} />
+            </div>
+          </div>
+          <div className="w-56 shrink-0 flex flex-col gap-4 color-bg-grey-5 rounded-xl p-4">
+            <div className="color-txt-sub text-xs font-medium">Editing: {fixerEditing === "y" ? "Top (y)" : "Height"}</div>
+            <div className="flex flex-col gap-2">
+              <div
+                className={`px-3 py-2 rounded-lg font-mono text-lg ${fixerEditing === "y" ? "color-bg-accent color-txt-main" : "color-bg-grey-10 color-txt-sub"}`}
+              >
+                y: {fixerPageRegion.y} pt
+              </div>
+              <div
+                className={`px-3 py-2 rounded-lg font-mono text-lg ${fixerEditing === "height" ? "color-bg-accent color-txt-main" : "color-bg-grey-10 color-txt-sub"}`}
+              >
+                height: {fixerPageRegion.height} pt
+              </div>
+            </div>
+            <div className="color-txt-sub text-xs mt-auto space-y-1">
+              <div><strong>F</strong> decrease</div>
+              <div><strong>J</strong> increase</div>
+              <div><strong>K</strong> switch y/height</div>
+              <div><strong>Enter</strong> next</div>
+              <div><strong>Esc</strong> exit</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex flex-col w-full ${regions.length > 0 ? "h-[calc(100vh-12rem)] overflow-hidden" : ""}`}>
@@ -746,6 +899,29 @@ export default function ExtractQuestionsFlow({
           <>
             <button
               type="button"
+              onClick={() => {
+                setFixerMode(true);
+                setFixerRegionIdx(0);
+                setFixerPageRegionIdx(0);
+                setFixerEditing("y");
+              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium color-bg-grey-5 color-txt-sub hover:color-bg-grey-10 transition-all"
+              title="Adjust y and height for each region with keyboard shortcuts"
+            >
+              <LuSlidersHorizontal size={18} />
+              Y & Height Fixer
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadJson}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium color-bg-grey-5 color-txt-sub hover:color-bg-grey-10 transition-all"
+              title="Download regions as JSON with all your edits. Use this to save your work or reload later."
+            >
+              <LuDownload size={18} />
+              Download JSON
+            </button>
+            <button
+              type="button"
               onClick={() => setShowFullPdf((v) => !v)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                 showFullPdf ? "color-bg-accent color-txt-accent" : "color-bg-grey-5 color-txt-sub hover:color-bg-grey-10"
@@ -842,21 +1018,38 @@ export default function ExtractQuestionsFlow({
             </div>
             <div className="flex-1 overflow-y-auto scrollbar-minimal">
               {regions.map((r, i) => (
-                <button
+                <div
                   key={r.id}
-                  type="button"
-                  onClick={() => setSelectedIndex(i)}
-                  className={`w-full text-left px-3 py-2.5 border-b border-[var(--grey-10)] hover:color-bg-grey-10 transition-colors ${
-                    selectedIndex === i ? "color-bg-grey-10 color-txt-accent font-medium" : "color-txt-main"
+                  className={`flex items-center gap-1 border-b border-[var(--grey-10)] ${
+                    selectedIndex === i ? "color-bg-grey-10" : ""
                   }`}
                 >
-                  <span className="block truncate">{r.name || r.id}</span>
-                  {r.pageRegions.length > 1 && (
-                    <span className="block truncate text-xs color-txt-sub">
-                      {r.pageRegions.length} pages
-                    </span>
-                  )}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIndex(i)}
+                    className={`flex-1 min-w-0 text-left px-3 py-2.5 hover:color-bg-grey-10 transition-colors ${
+                      selectedIndex === i ? "color-txt-accent font-medium" : "color-txt-main"
+                    }`}
+                  >
+                    <span className="block truncate">{r.name || r.id}</span>
+                    {r.pageRegions.length > 1 && (
+                      <span className="block truncate text-xs color-txt-sub">
+                        {r.pageRegions.length} pages
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeRegion(i);
+                    }}
+                    className="p-2 shrink-0 rounded hover:bg-red-500/20 text-red-400"
+                    title="Delete question"
+                  >
+                    <LuTrash2 size={16} />
+                  </button>
+                </div>
               ))}
             </div>
           </div>
