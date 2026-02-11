@@ -33,12 +33,12 @@ export default function PdfRegionView({
   className = "",
 }: PdfRegionViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const offscreenRef = useRef<{ canvas: HTMLCanvasElement; scale: number; vw: number; vh: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
-  // Use primitive deps so effect only re-runs when region values actually change
   const hasRegion = !!region;
   const page = region?.page ?? 1;
   const x = region?.x ?? 0;
@@ -46,21 +46,22 @@ export default function PdfRegionView({
   const rWidth = region?.width ?? 595;
   const rHeight = region?.height ?? 150;
 
+  // Effect 1: Load document + page (expensive, runs when file/page changes)
   useEffect(() => {
     if (!file || !canvasRef.current) {
       setError(null);
       setLoading(false);
       setTimedOut(false);
+      offscreenRef.current = null;
       return;
     }
     setError(null);
     setTimedOut(false);
     setLoading(true);
+    offscreenRef.current = null;
     let cancelled = false;
     const timeoutId = setTimeout(() => {
-      if (!cancelled) {
-        setTimedOut(true);
-      }
+      if (!cancelled) setTimedOut(true);
     }, LOAD_TIMEOUT_MS);
 
     (async () => {
@@ -75,8 +76,8 @@ export default function PdfRegionView({
 
         const scale = 1.5;
         const viewport = pdfPage.getViewport({ scale });
+        const scale1 = viewport.width / pdfPage.getViewport({ scale: 1 }).width;
 
-        // Render full page to offscreen canvas
         const offscreen = document.createElement("canvas");
         offscreen.width = viewport.width;
         offscreen.height = viewport.height;
@@ -85,49 +86,13 @@ export default function PdfRegionView({
         await pdfPage.render({ canvasContext: ctx, viewport }).promise;
         if (cancelled) return;
 
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        if (hasRegion) {
-          // Crop: region is in PDF points. Viewport at scale 1 has 1:1 with PDF points.
-          const s = viewport.width / pdfPage.getViewport({ scale: 1 }).width;
-          const sx = x * s;
-          const sy = y * s;
-          const sw = rWidth * s;
-          const sh = rHeight * s;
-
-          if (sw <= 0 || sh <= 0) {
-            setError("Invalid region dimensions");
-            return;
-          }
-
-          const aspect = sw / sh;
-          const displayHeight = width / aspect;
-          canvas.width = width;
-          canvas.height = displayHeight;
-          const outCtx = canvas.getContext("2d");
-          if (!outCtx) return;
-          outCtx.drawImage(offscreen, sx, sy, sw, sh, 0, 0, width, displayHeight);
-        } else {
-          // Full page
-          const aspect = viewport.height / viewport.width;
-          const displayHeight = width * aspect;
-          canvas.width = width;
-          canvas.height = displayHeight;
-          const outCtx = canvas.getContext("2d");
-          if (!outCtx) return;
-          outCtx.drawImage(offscreen, 0, 0, viewport.width, viewport.height, 0, 0, width, displayHeight);
-        }
+        offscreenRef.current = { canvas: offscreen, scale: scale1, vw: viewport.width, vh: viewport.height };
       } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to render PDF region");
-        }
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to render PDF region");
       } finally {
         clearTimeout(timeoutId);
-        if (!cancelled) {
-          setLoading(false);
-          setTimedOut(false);
-        }
+        if (!cancelled) setLoading(false);
+        if (!cancelled) setTimedOut(false);
       }
     })();
 
@@ -135,7 +100,39 @@ export default function PdfRegionView({
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [file, hasRegion, page, x, y, rWidth, rHeight, width, retryKey]);
+  }, [file, hasRegion, page, retryKey]);
+
+  // Effect 2: Crop from cached offscreen (cheap, runs when region coords change)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const cached = offscreenRef.current;
+    if (!canvas || !cached) return;
+    const { canvas: offscreen, scale: s } = cached;
+
+    if (hasRegion) {
+      const sx = x * s;
+      const sy = y * s;
+      const sw = rWidth * s;
+      const sh = rHeight * s;
+      if (sw <= 0 || sh <= 0) return;
+
+      const aspect = sw / sh;
+      const displayHeight = width / aspect;
+      canvas.width = width;
+      canvas.height = displayHeight;
+      const outCtx = canvas.getContext("2d");
+      if (!outCtx) return;
+      outCtx.drawImage(offscreen, sx, sy, sw, sh, 0, 0, width, displayHeight);
+    } else {
+      const aspect = cached.vh / cached.vw;
+      const displayHeight = width * aspect;
+      canvas.width = width;
+      canvas.height = displayHeight;
+      const outCtx = canvas.getContext("2d");
+      if (!outCtx) return;
+      outCtx.drawImage(offscreen, 0, 0, cached.vw, cached.vh, 0, 0, width, displayHeight);
+    }
+  }, [hasRegion, x, y, rWidth, rHeight, width, loading]);
 
   if (!file) {
     return (

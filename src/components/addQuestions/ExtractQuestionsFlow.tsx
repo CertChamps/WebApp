@@ -613,7 +613,14 @@ export default function ExtractQuestionsFlow({
   const [fixerRegionIdx, setFixerRegionIdx] = useState(0);
   const [fixerPageRegionIdx, setFixerPageRegionIdx] = useState(0);
   const [fixerEditing, setFixerEditing] = useState<"y" | "height">("y");
+  const [fixerDraftY, setFixerDraftY] = useState(0);
+  const [fixerDraftHeight, setFixerDraftHeight] = useState(150);
+  const [fixerDisplayY, setFixerDisplayY] = useState(0);
+  const [fixerDisplayHeight, setFixerDisplayHeight] = useState(150);
+  const fixerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [fixerReloadKey, setFixerReloadKey] = useState(0);
   const FIXER_STEP = 5;
+  const FIXER_DEBOUNCE_MS = 400;
   const [showFullPdf, setShowFullPdf] = useState(true);
   const [showMarkingSchemePreview, setShowMarkingSchemePreview] = useState(true);
   const [showLogTablesPreview, setShowLogTablesPreview] = useState(true);
@@ -631,6 +638,31 @@ export default function ExtractQuestionsFlow({
   const fixerRegion = regions[fixerRegionIdx];
   const fixerPageRegion = fixerRegion?.pageRegions?.[fixerPageRegionIdx];
 
+  const prY = fixerPageRegion?.y ?? 0;
+  const prHeight = fixerPageRegion?.height ?? 150;
+  useEffect(() => {
+    if (fixerMode && fixerPageRegion) {
+      setFixerDraftY(prY);
+      setFixerDraftHeight(prHeight);
+      setFixerDisplayY(prY);
+      setFixerDisplayHeight(prHeight);
+    }
+  }, [fixerMode, fixerRegionIdx, fixerPageRegionIdx, prY, prHeight]); // sync when navigating or region values change
+
+  const fixerFlush = useCallback(() => {
+    if (fixerDebounceRef.current) {
+      clearTimeout(fixerDebounceRef.current);
+      fixerDebounceRef.current = null;
+    }
+    const region = regions[fixerRegionIdx];
+    const pr = region?.pageRegions?.[fixerPageRegionIdx];
+    if (pr) {
+      setFixerDisplayY(fixerDraftY);
+      setFixerDisplayHeight(fixerDraftHeight);
+      updatePageRegion(fixerRegionIdx, fixerPageRegionIdx, { y: fixerDraftY, height: fixerDraftHeight });
+    }
+  }, [fixerRegionIdx, fixerPageRegionIdx, fixerDraftY, fixerDraftHeight, regions, updatePageRegion]);
+
   useEffect(() => {
     if (!fixerMode || regions.length === 0) return;
     const handler = (e: KeyboardEvent) => {
@@ -639,6 +671,7 @@ export default function ExtractQuestionsFlow({
       const pr = region?.pageRegions?.[fixerPageRegionIdx];
       if (!pr) return;
       if (e.key === "Escape") {
+        fixerFlush();
         setFixerMode(false);
         return;
       }
@@ -646,29 +679,45 @@ export default function ExtractQuestionsFlow({
         setFixerEditing((v) => (v === "y" ? "height" : "y"));
         return;
       }
-      if (e.key === "f" || e.key === "F") {
-        const delta = -FIXER_STEP;
+      if (e.key === "d" || e.key === "D") {
+        setFixerReloadKey((k) => k + 1);
+        return;
+      }
+      const doAdjust = (delta: number) => {
         if (fixerEditing === "y") {
-          const newY = Math.max(0, Math.min(842 - pr.height, pr.y + delta));
-          updatePageRegion(fixerRegionIdx, fixerPageRegionIdx, { y: newY });
+          setFixerDraftY((prev) => {
+            const newY = Math.max(0, Math.min(842 - fixerDraftHeight, prev + delta));
+            if (fixerDebounceRef.current) clearTimeout(fixerDebounceRef.current);
+            fixerDebounceRef.current = setTimeout(() => {
+              setFixerDisplayY(newY);
+              updatePageRegion(fixerRegionIdx, fixerPageRegionIdx, { y: newY });
+              fixerDebounceRef.current = null;
+            }, FIXER_DEBOUNCE_MS);
+            return newY;
+          });
         } else {
-          const newH = Math.max(20, Math.min(842 - pr.y, pr.height + delta));
-          updatePageRegion(fixerRegionIdx, fixerPageRegionIdx, { height: newH });
+          setFixerDraftHeight((prev) => {
+            const newH = Math.max(20, Math.min(842 - fixerDraftY, prev + delta));
+            if (fixerDebounceRef.current) clearTimeout(fixerDebounceRef.current);
+            fixerDebounceRef.current = setTimeout(() => {
+              setFixerDisplayHeight(newH);
+              updatePageRegion(fixerRegionIdx, fixerPageRegionIdx, { height: newH });
+              fixerDebounceRef.current = null;
+            }, FIXER_DEBOUNCE_MS);
+            return newH;
+          });
         }
+      };
+      if (e.key === "f" || e.key === "F") {
+        doAdjust(-FIXER_STEP);
         return;
       }
       if (e.key === "j" || e.key === "J") {
-        const delta = FIXER_STEP;
-        if (fixerEditing === "y") {
-          const newY = Math.max(0, Math.min(842 - pr.height, pr.y + delta));
-          updatePageRegion(fixerRegionIdx, fixerPageRegionIdx, { y: newY });
-        } else {
-          const newH = Math.max(20, Math.min(842 - pr.y, pr.height + delta));
-          updatePageRegion(fixerRegionIdx, fixerPageRegionIdx, { height: newH });
-        }
+        doAdjust(FIXER_STEP);
         return;
       }
       if (e.key === "Enter") {
+        fixerFlush();
         const nextPrIdx = fixerPageRegionIdx + 1;
         if (nextPrIdx < (region?.pageRegions?.length ?? 0)) {
           setFixerPageRegionIdx(nextPrIdx);
@@ -685,8 +734,21 @@ export default function ExtractQuestionsFlow({
       }
     };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [fixerMode, fixerRegionIdx, fixerPageRegionIdx, fixerEditing, regions, updatePageRegion]);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      if (fixerDebounceRef.current) clearTimeout(fixerDebounceRef.current);
+    };
+  }, [
+    fixerMode,
+    fixerRegionIdx,
+    fixerPageRegionIdx,
+    fixerEditing,
+    fixerDraftY,
+    fixerDraftHeight,
+    regions,
+    updatePageRegion,
+    fixerFlush,
+  ]);
 
   useEffect(() => {
     if (fixerMode && regions.length > 0) {
@@ -702,6 +764,11 @@ export default function ExtractQuestionsFlow({
     let currentSegment = 0;
     for (let i = 0; i < fixerRegionIdx; i++) currentSegment += regions[i]?.pageRegions?.length ?? 0;
     currentSegment += fixerPageRegionIdx + 1;
+    const displayRegion: PdfRegion = {
+      ...fixerPageRegion,
+      y: fixerDraftY,
+      height: fixerDraftHeight,
+    };
     return (
       <div className="flex flex-col w-full h-[calc(100vh-8rem)]">
         <div className="flex items-center justify-between gap-4 mb-3">
@@ -712,7 +779,10 @@ export default function ExtractQuestionsFlow({
             </span>
             <button
               type="button"
-              onClick={() => setFixerMode(false)}
+              onClick={() => {
+                fixerFlush();
+                setFixerMode(false);
+              }}
               className="px-3 py-1.5 rounded-lg text-sm color-bg-grey-10 color-txt-main hover:color-bg-grey-5"
             >
               Exit (Esc)
@@ -721,8 +791,16 @@ export default function ExtractQuestionsFlow({
         </div>
         <div className="flex-1 min-h-0 flex gap-4">
           <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-            <div className="w-full max-w-2xl">
-              <PdfRegionView file={pdfBlob} region={fixerPageRegion as PdfRegion} width={600} />
+            <div className="w-full max-w-2xl relative">
+              <PdfRegionView key={fixerReloadKey} file={pdfBlob} region={displayRegion} width={600} />
+              <button
+                type="button"
+                onClick={() => setFixerReloadKey((k) => k + 1)}
+                className="absolute top-2 right-2 px-2 py-1 rounded text-xs color-bg-grey-10 color-txt-sub hover:color-bg-grey-5"
+                title="Reload PDF preview"
+              >
+                Reload
+              </button>
             </div>
           </div>
           <div className="w-56 shrink-0 flex flex-col gap-4 color-bg-grey-5 rounded-xl p-4">
@@ -731,18 +809,19 @@ export default function ExtractQuestionsFlow({
               <div
                 className={`px-3 py-2 rounded-lg font-mono text-lg ${fixerEditing === "y" ? "color-bg-accent color-txt-main" : "color-bg-grey-10 color-txt-sub"}`}
               >
-                y: {fixerPageRegion.y} pt
+                y: {fixerDraftY} pt
               </div>
               <div
                 className={`px-3 py-2 rounded-lg font-mono text-lg ${fixerEditing === "height" ? "color-bg-accent color-txt-main" : "color-bg-grey-10 color-txt-sub"}`}
               >
-                height: {fixerPageRegion.height} pt
+                height: {fixerDraftHeight} pt
               </div>
             </div>
             <div className="color-txt-sub text-xs mt-auto space-y-1">
               <div><strong>F</strong> decrease</div>
               <div><strong>J</strong> increase</div>
               <div><strong>K</strong> switch y/height</div>
+              <div><strong>D</strong> reload PDF</div>
               <div><strong>Enter</strong> next</div>
               <div><strong>Esc</strong> exit</div>
             </div>
