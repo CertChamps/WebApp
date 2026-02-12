@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, Component, type ReactNode } from "react";
+import { useState, useRef, useEffect, Component, type ReactNode, type MutableRefObject } from "react";
 import { Document, Page } from "react-pdf";
 
 /** Catches PDF.js worker errors (e.g. messageHandler is null) so the app doesn't crash. */
@@ -11,6 +11,25 @@ class PdfErrorBoundary extends Component<{ fallback: ReactNode; children: ReactN
     if (this.state.hasError) return this.props.fallback;
     return this.props.children;
   }
+}
+
+const PAGE_GAP_PX = 8;
+const PDF_ASPECT = 842 / 595;
+
+/** Compute pixel offset of a region's top edge in the scroll content (matches PaperPdfPlaceholder layout). */
+export function getRegionScrollOffset(
+  pageWidth: number,
+  region: { page: number; y?: number }
+): number {
+  const pageHeightPx = pageWidth * PDF_ASPECT;
+  const pageIndex = Math.max(0, (region.page ?? 1) - 1);
+  const yPx = ((region.y ?? 0) / 595) * pageWidth;
+  return pageIndex * (pageHeightPx + PAGE_GAP_PX) + yPx;
+}
+
+/** Compute pixel height of a region. */
+export function getRegionHeightPx(pageWidth: number, region: { height?: number }): number {
+  return ((region.height ?? 150) / 595) * pageWidth;
 }
 
 /** Loads a PDF: react-pdf only. Accepts a Blob (e.g. from Firebase), a URL string, or legacy year for static path. */
@@ -29,6 +48,8 @@ type PaperPdfPlaceholderProps = {
   onScrolledToPage?: () => void;
   /** Called when the PDF loads with total page count (for page indicator / go-to). */
   onNumPages?: (n: number) => void;
+  /** Optional ref to the scroll container for programmatic scroll control. */
+  scrollContainerRef?: MutableRefObject<HTMLDivElement | null>;
 };
 
 export default function PaperPdfPlaceholder({
@@ -39,10 +60,12 @@ export default function PaperPdfPlaceholder({
   scrollToPage,
   onScrolledToPage,
   onNumPages,
+  scrollContainerRef: externalScrollRef,
 }: PaperPdfPlaceholderProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const internalScrollRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = externalScrollRef ?? internalScrollRef;
   const pageRefsRef = useRef<(HTMLDivElement | null)[]>([]);
   const ratiosRef = useRef<Record<number, number>>({});
   const lastReportedPageRef = useRef<number>(1);

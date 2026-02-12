@@ -33,7 +33,7 @@ export function CollapsibleSidebar({
   );
 
   return (
-    <div className={`collapsible-sidebar relative h-full ${className}`.trim()}>
+    <div className={`collapsible-sidebar relative h-full w-full  ${className}`.trim()}>
       <motion.button
         type="button"
         aria-label="Open sidebar"
@@ -51,7 +51,7 @@ export function CollapsibleSidebar({
       </motion.button>
 
       <motion.div
-        className="collapsible-sidebar__panel absolute right-0 top-1/2 z-20 flex -translate-y-1/2 h-[82vh] max-h-full min-w-[28rem] max-w-[min(40rem,55%)] w-[55%]"
+        className="collapsible-sidebar__panel absolute right-0 top-0 bottom-0 z-20 flex h-full w-full"
         initial={false}
         animate={{ x: isOpen ? 0 : "100%" }}
         transition={SIDEBAR_TRANSITION}
