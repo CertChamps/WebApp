@@ -369,7 +369,9 @@ export default function AddQuestions() {
         if (questions.length > 0) {
           const batch = writeBatch(db);
           questions.forEach((q, idx) => {
-            const questionDocId = `q${idx + 1}`;
+            const questionDocId = (q.id && String(q.id).trim() && !String(q.id).includes("/"))
+              ? String(q.id).trim().replace(/\//g, "-")
+              : `q${idx + 1}`;
             const questionRef = doc(
               db,
               ...pathSegments,
@@ -468,7 +470,9 @@ export default function AddQuestions() {
       if (regions.length > 0) {
         const batch = writeBatch(db);
         regions.forEach((r, idx) => {
-          const questionDocId = `q${idx + 1}`;
+          const questionDocId = (r.id && String(r.id).trim() && !String(r.id).includes("/"))
+            ? String(r.id).trim().replace(/\//g, "-")
+            : `q${idx + 1}`;
           const pages = r.pageRegions.map((p) => p.page);
           const pageRange: [number, number] = [
             Math.min(...pages),
@@ -491,8 +495,10 @@ export default function AddQuestions() {
               : null;
           const pageRegions = (r.pageRegions ?? []).map((p) => ({
             page: p.page,
-            y: p.y,
-            height: p.height,
+            x: p.x ?? 0,
+            y: p.y ?? 0,
+            width: p.width ?? 595,
+            height: p.height ?? 150,
           }));
           batch.set(questionRef, {
             id: questionDocId,

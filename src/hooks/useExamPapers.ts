@@ -12,11 +12,25 @@ export type ExamPaper = {
   level?: string;
 };
 
+/** One page region defining a snippet of the question on a PDF page. */
+export type PaperPageRegion = {
+  page: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+};
+
+/** Page range in a marking scheme PDF (1-based, inclusive). */
+export type MarkingSchemePageRange = { start: number; end: number };
+
 /** One question from a paper's questions subcollection (q1, q2, ...). */
 export type PaperQuestion = {
   id: string;
   questionName: string;
   pageRange: [number, number];
+  pageRegions?: PaperPageRegion[];
+  markingSchemePageRange?: MarkingSchemePageRange;
 };
 
 function deriveLabel(docId: string, year?: number): string {
@@ -143,6 +157,26 @@ export function useExamPapers() {
     return getBlob(pathRef);
   }, []);
 
+  /** Storage path for marking scheme: marking-schemes/leaving-cert/{subject}/{level}-level/{year}ms.pdf */
+  const getMarkingSchemeStoragePath = useCallback((paper: ExamPaper): string => {
+    const subject = paper.subject ?? "maths";
+    const level = paper.level ?? "higher";
+    const year = paper.year ?? new Date().getFullYear();
+    return `marking-schemes/leaving-cert/${subject}/${level}-level/${year}ms.pdf`;
+  }, []);
+
+  const getMarkingSchemeBlob = useCallback(
+    async (paper: ExamPaper): Promise<Blob | null> => {
+      try {
+        const pathRef = ref(storage, getMarkingSchemeStoragePath(paper));
+        return await getBlob(pathRef);
+      } catch {
+        return null;
+      }
+    },
+    [getMarkingSchemeStoragePath]
+  );
+
   const getPaperQuestions = useCallback(
     async (paper: ExamPaper): Promise<PaperQuestion[]> => {
       const subject = paper.subject ?? "maths";
@@ -171,6 +205,40 @@ export function useExamPapers() {
             : typeof pr === "object" && pr !== null && "start" in pr && "end" in pr
               ? [(pr as { start: number }).start, (pr as { end: number }).end]
               : [1, 1];
+          const rawRegions = data.pageRegions;
+          const pageRegions: PaperPageRegion[] = Array.isArray(rawRegions)
+            ? rawRegions.map((r: Record<string, unknown>) => ({
+                page: typeof r.page === "number" ? r.page : 1,
+                x: typeof r.x === "number" ? r.x : 0,
+                y: typeof r.y === "number" ? r.y : 0,
+                width: typeof r.width === "number" ? r.width : 595,
+                height: typeof r.height === "number" ? r.height : 150,
+              }))
+            : [];
+          const rawMsRange = data.markingSchemePageRange;
+          let markingSchemePageRange: MarkingSchemePageRange | undefined;
+          if (rawMsRange != null) {
+            if (
+              typeof rawMsRange === "object" &&
+              typeof (rawMsRange as { start?: unknown }).start === "number" &&
+              typeof (rawMsRange as { end?: unknown }).end === "number"
+            ) {
+              markingSchemePageRange = {
+                start: (rawMsRange as { start: number }).start,
+                end: (rawMsRange as { end: number }).end,
+              };
+            } else if (
+              Array.isArray(rawMsRange) &&
+              rawMsRange.length >= 2 &&
+              typeof rawMsRange[0] === "number" &&
+              typeof rawMsRange[1] === "number"
+            ) {
+              markingSchemePageRange = {
+                start: rawMsRange[0],
+                end: rawMsRange[1],
+              };
+            }
+          }
           list.push({
             id: d.id,
             questionName:
@@ -178,6 +246,8 @@ export function useExamPapers() {
                 ? data.questionName
                 : data.id ?? d.id,
             pageRange,
+            pageRegions: pageRegions.length > 0 ? pageRegions : undefined,
+            markingSchemePageRange,
           });
         });
       return list;
@@ -185,5 +255,12 @@ export function useExamPapers() {
     []
   );
 
-  return { papers, loading, error, getPaperBlob, getPaperQuestions };
+  return {
+    papers,
+    loading,
+    error,
+    getPaperBlob,
+    getPaperQuestions,
+    getMarkingSchemeBlob,
+  };
 }

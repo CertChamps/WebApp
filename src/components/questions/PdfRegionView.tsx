@@ -1,5 +1,11 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import { getDocument } from "pdfjs-dist";
+import { OptionsContext } from "../../context/OptionsContext";
+import { PDF_THEME_COLORS } from "../../utils/pdfThemeColors";
+import { applyThemeToCanvas } from "../../utils/pdfThemeUtils";
+
+/** Resolution scale for cropped PDF regions (4x for crisp text) */
+const RESOLUTION_SCALE = 4;
 
 /** Region in PDF points (72 per inch). (x,y) = top-left of crop area. */
 export type PdfRegion = {
@@ -32,6 +38,8 @@ export default function PdfRegionView({
   width = 480,
   className = "",
 }: PdfRegionViewProps) {
+  const { options } = useContext(OptionsContext);
+  const theme = PDF_THEME_COLORS[options.theme] ?? PDF_THEME_COLORS.light;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const offscreenRef = useRef<{ canvas: HTMLCanvasElement; scale: number; vw: number; vh: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +82,7 @@ export default function PdfRegionView({
         const pdfPage = await doc.getPage(Math.max(1, Math.min(pageNum, doc.numPages)));
         if (cancelled) return;
 
-        const scale = 1.5;
+        const scale = RESOLUTION_SCALE;
         const viewport = pdfPage.getViewport({ scale });
         const scale1 = viewport.width / pdfPage.getViewport({ scale: 1 }).width;
 
@@ -132,7 +140,10 @@ export default function PdfRegionView({
       if (!outCtx) return;
       outCtx.drawImage(offscreen, 0, 0, cached.vw, cached.vh, 0, 0, width, displayHeight);
     }
-  }, [hasRegion, x, y, rWidth, rHeight, width, loading]);
+    if (options.theme !== "light") {
+      applyThemeToCanvas(canvas, theme);
+    }
+  }, [hasRegion, x, y, rWidth, rHeight, width, loading, options.theme, theme.bg, theme.primary, theme.sub]);
 
   if (!file) {
     return (

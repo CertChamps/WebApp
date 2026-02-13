@@ -8,13 +8,23 @@ import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
 import useFilters from "../hooks/useFilters";
 
 // Components
-import { LuMonitor, LuTablet, LuArrowLeft } from "react-icons/lu";
+import { createPortal } from "react-dom";
+import { LuMonitor, LuTablet, LuArrowLeft, LuMaximize2, LuMinimize2, LuClipboardList, LuX, LuBookOpen } from "react-icons/lu";
 import QuestionSelector from "../components/questions/questionSelector";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas, { type RegisterDrawingSnapshot } from "../components/questions/DrawingCanvas";
 import RenderMath from "../components/math/mathdisplay";
-import PaperPdfPlaceholder from "../components/questions/PaperPdfPlaceholder";
+import { motion, AnimatePresence } from "framer-motion";
+import PaperPdfPlaceholder, {
+  getRegionScrollOffset,
+  getRegionHeightPx,
+} from "../components/questions/PaperPdfPlaceholder";
+import PdfRegionView from "../components/questions/PdfRegionView";
+import PastPaperMarkingScheme from "../components/questions/PastPaperMarkingScheme";
+import FloatingLogTables from "../components/FloatingLogTables";
 import { CollapsibleSidebar } from "../components/sidebar";
+import { TimerProvider } from "../context/TimerContext";
+import { TimerFloatingWidget } from "../components/TimerFloatingWidget";
 
 // Style Imports
 import "../styles/questions.css";
@@ -85,7 +95,14 @@ export default function Questions() {
         setQuestions,
         collectionPaths,
     });
-    const { papers, loading: papersLoading, error: papersError, getPaperBlob, getPaperQuestions } = useExamPapers();
+    const {
+        papers,
+        loading: papersLoading,
+        error: papersError,
+        getPaperBlob,
+        getPaperQuestions,
+        getMarkingSchemeBlob,
+    } = useExamPapers();
     const { availableSets } = useFilters();
     const certChampsSet = availableSets.find((s) => s.id === "certchamps");
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
@@ -95,6 +112,14 @@ export default function Questions() {
     const [paperQuestions, setPaperQuestions] = useState<PaperQuestion[]>([]);
     const [paperQuestionPosition, setPaperQuestionPosition] = useState(1);
     const [scrollToPage, setScrollToPage] = useState<number | null>(null);
+    const [isFullPaperExpanded, setIsFullPaperExpanded] = useState(false);
+    const [markingSchemeBlob, setMarkingSchemeBlob] = useState<Blob | null>(null);
+    const [showMarkingSchemeModal, setShowMarkingSchemeModal] = useState(false);
+    const [showLogTables, setShowLogTables] = useState(false);
+    const [paperDocumentLoaded, setPaperDocumentLoaded] = useState(false);
+    const [logTablesBlob, setLogTablesBlob] = useState<Blob | null>(null);
+    const [logTablesPreloaded, setLogTablesPreloaded] = useState(false);
+    const paperScrollRef = useRef<HTMLDivElement | null>(null);
     const paperSnapshot = usePaperSnapshot(paperBlob, currentPaperPage);
     const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
 
@@ -178,6 +203,7 @@ export default function Questions() {
                     setPaperQuestions(list);
                     setPaperQuestionPosition(1);
                     setScrollToPage(list[0]?.pageRange?.[0] ?? null);
+                    setIsFullPaperExpanded(false);
                 }
             })
             .catch(() => {
@@ -191,14 +217,126 @@ export default function Questions() {
         };
     }, [selectedPaper, getPaperQuestions]);
 
-    // When PDF scroll reports a page, sync to question index (which question contains this page)
+    // When PDF scroll reports a page, sync to question (only when not in full paper mode; otherwise region-based sync handles it)
     useEffect(() => {
-        if (paperQuestions.length === 0) return;
+        if (paperQuestions.length === 0 || isFullPaperExpanded) return;
         const idx = paperQuestions.findIndex(
             (q) => currentPaperPage >= q.pageRange[0] && currentPaperPage <= q.pageRange[1]
         );
         if (idx >= 0) setPaperQuestionPosition(idx + 1);
-    }, [currentPaperPage, paperQuestions]);
+    }, [currentPaperPage, paperQuestions, isFullPaperExpanded]);
+
+    const snippetWidth = options.laptopMode ? 680 : 480;
+
+    // Region-based scroll sync: when full paper expanded, use exact scroll position vs page regions
+    const PAGE_GAP_PX = 8;
+    const PDF_ASPECT = 842 / 595;
+    const pageHeightPx = snippetWidth * PDF_ASPECT;
+
+    useEffect(() => {
+        if (!isFullPaperExpanded) return;
+        const container = paperScrollRef.current;
+        if (!container || paperQuestions.length === 0) return;
+
+        let rafId: number | null = null;
+        const handleScroll = () => {
+            if (rafId != null) return;
+            rafId = requestAnimationFrame(() => {
+                rafId = null;
+                const scrollTop = container.scrollTop;
+                const viewportBottom = scrollTop + container.clientHeight;
+
+                let bestIdx = -1;
+                let bestOverlap = 0;
+
+                for (let i = 0; i < paperQuestions.length; i++) {
+                    const q = paperQuestions[i]!;
+                    let regionTop: number;
+                    let regionHeight: number;
+
+                    if (q.pageRegions && q.pageRegions.length > 0) {
+                        const firstRegion = q.pageRegions[0]!;
+                        regionTop = getRegionScrollOffset(snippetWidth, firstRegion);
+                        regionHeight = getRegionHeightPx(snippetWidth, firstRegion);
+                    } else {
+                        const pageIdx = (q.pageRange[0] ?? 1) - 1;
+                        regionTop = pageIdx * (pageHeightPx + PAGE_GAP_PX);
+                        regionHeight = pageHeightPx + PAGE_GAP_PX;
+                    }
+
+                    const regionBottom = regionTop + regionHeight;
+                    const overlapTop = Math.max(scrollTop, regionTop);
+                    const overlapBottom = Math.min(viewportBottom, regionBottom);
+                    const overlap = Math.max(0, overlapBottom - overlapTop);
+
+                    if (overlap > bestOverlap) {
+                        bestOverlap = overlap;
+                        bestIdx = i;
+                    }
+                }
+
+                if (bestIdx >= 0) {
+                    setPaperQuestionPosition(bestIdx + 1);
+                }
+            });
+        };
+
+        container.addEventListener("scroll", handleScroll, { passive: true });
+        handleScroll();
+        return () => {
+            container.removeEventListener("scroll", handleScroll);
+            if (rafId != null) cancelAnimationFrame(rafId);
+        };
+    }, [paperQuestions, snippetWidth, isFullPaperExpanded, pageHeightPx]);
+
+    // Load marking scheme when paper and current question have markingSchemePageRange
+    const currentPaperQuestion = paperQuestions[paperQuestionPosition - 1];
+    useEffect(() => {
+        if (
+            !selectedPaper ||
+            !getMarkingSchemeBlob ||
+            !currentPaperQuestion?.markingSchemePageRange
+        ) {
+            setMarkingSchemeBlob(null);
+            return;
+        }
+        let cancelled = false;
+        getMarkingSchemeBlob(selectedPaper)
+            .then((blob) => {
+                if (!cancelled) setMarkingSchemeBlob(blob ?? null);
+            })
+            .catch(() => {
+                if (!cancelled) setMarkingSchemeBlob(null);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedPaper, getMarkingSchemeBlob, currentPaperQuestion?.markingSchemePageRange]);
+
+    // Reset PDF document loaded when paper blob changes (new paper)
+    useEffect(() => {
+        setPaperDocumentLoaded(false);
+    }, [paperBlob]);
+
+    // Preload log tables PDF so modal opens instantly
+    useEffect(() => {
+        let cancelled = false;
+        setLogTablesPreloaded(false);
+        fetch("/assets/log_tables.pdf")
+            .then((res) => (res.ok ? res.blob() : null))
+            .then((blob) => {
+                if (!cancelled && blob) {
+                    setLogTablesBlob(blob);
+                }
+            })
+            .catch(() => {})
+            .finally(() => {
+                if (!cancelled) setLogTablesPreloaded(true);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     // Preselect paper: URL paperId > current question year > first paper
     useEffect(() => {
@@ -231,8 +369,43 @@ export default function Questions() {
     };
     //===============================================================================================//
 
+    const isNetworkDev =
+        typeof window !== "undefined" &&
+        import.meta.env.DEV &&
+        !["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const [dismissedCorsHint, setDismissedCorsHint] = useState(() => {
+        try {
+            return localStorage.getItem("questions-dismissed-cors-hint") === "1";
+        } catch {
+            return false;
+        }
+    });
+    const showCorsHint = isNetworkDev && !dismissedCorsHint;
+    const dismissCorsHint = useCallback(() => {
+        setDismissedCorsHint(true);
+        try {
+            localStorage.setItem("questions-dismissed-cors-hint", "1");
+        } catch {}
+    }, []);
+
     return (
-        <div className="relative flex w-full h-full flex-col gap-0">
+        <TimerProvider>
+        <div className="relative flex min-h-0 w-full flex-1 flex-col gap-0 overflow-hidden h-full">
+            {showCorsHint && (
+                <div className="shrink-0 z-30 flex items-center justify-between gap-2 px-3 py-2 text-xs color-bg-grey-10 color-txt-main border-b border-[var(--grey-10)]">
+                    <span>
+                        Testing on another device? Add <strong>{typeof window !== "undefined" ? window.location.origin : ""}</strong> to Firebase Storage CORS so papers load. See <code className="px-1 rounded color-bg-grey-5">CORS_SETUP.md</code>.
+                    </span>
+                    <button
+                        type="button"
+                        onClick={dismissCorsHint}
+                        aria-label="Dismiss"
+                        className="shrink-0 p-1 rounded hover:color-bg-grey-5"
+                    >
+                        <LuX size={16} />
+                    </button>
+                </div>
+            )}
             {/* Drawing canvas: disabled in laptop mode; render first so it sits behind (z-0) */}
             {!options.laptopMode && (
                 <div className="absolute inset-0 z-0">
@@ -241,8 +414,12 @@ export default function Questions() {
             )}
 
             {/* Sidebar: outside scaled area so it sits at viewport right edge */}
-            <div className="absolute right-0 top-0 bottom-0 z-20 h-full pointer-events-auto">
-                <CollapsibleSidebar question={currentQuestion} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />
+            <div className="absolute inset-y-0 right-0 w-[35m%] z-20 overflow-hidden pointer-events-auto">
+                <CollapsibleSidebar
+                    question={mode === "pastpaper" ? undefined : currentQuestion}
+                    getDrawingSnapshot={getDrawingSnapshot}
+                    getPaperSnapshot={getPaperSnapshot}
+                />
             </div>
 
             {/* Full-width scaled layout: question + PDF on the left (no centering) */}
@@ -253,7 +430,7 @@ export default function Questions() {
             {/* Foreground: top-left block on top, then PDF underneath. In laptop+past paper, paper fills from top and header overlays. */}
             <div className={`relative flex min-h-0 flex-1 w-full ${options.laptopMode && mode === "pastpaper" ? "flex-col" : "flex-col gap-4 items-start"}`}>
                 {/* Top left: tablet/laptop toggle, dropdown, question selector, question text — in laptop+past paper this overlays the paper */}
-                <div className={`shrink-0 flex flex-col gap-2 max-w-md pointer-events-auto ${options.laptopMode && mode === "pastpaper" ? "absolute top-0 left-0 z-10 pt-4 pl-4" : "pt-4 pl-4"}`}>
+                <div className={`shrink-0 flex flex-col gap-2 max-w-lg w-[25%]  min-w-sm pointer-events-auto ${options.laptopMode && mode === "pastpaper" ? "absolute top-0 left-0 z-10 pt-4 pl-4" : "pt-4 pl-4"}`}>
                     <div className="flex items-center gap-2 mb-1">
                         <button
                             type="button"
@@ -312,6 +489,18 @@ export default function Questions() {
                                 </select>
                             </>
                         )}
+                        {/* Log tables — header only in CertChamps mode; past paper shows it below Question only/Full paper */}
+                        {mode === "certchamps" && currentQuestion && (
+                            <button
+                                type="button"
+                                onClick={() => setShowLogTables(true)}
+                                className="flex items-center justify-center w-10 h-10 rounded-xl color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all border border-[var(--grey-10)]"
+                                title="Log tables"
+                                aria-label="Log tables"
+                            >
+                                <LuBookOpen size={20} strokeWidth={2} />
+                            </button>
+                        )}
                     </div>
                     <QuestionSelector
                         question={currentQuestion}
@@ -325,7 +514,7 @@ export default function Questions() {
                                     : papersError
                                         ? "Failed to load"
                                         : paperQuestions.length > 0
-                                            ? `${selectedPaper?.label ?? "Paper"} ${paperQuestions[paperQuestionPosition - 1]?.questionName ?? ""}`.trim()
+                                            ? paperQuestions[paperQuestionPosition - 1]?.questionName ?? ""
                                             : selectedPaper?.label ?? "Select a paper"
                                 : undefined
                         }
@@ -361,67 +550,222 @@ export default function Questions() {
                     )}
                 </div>
 
-                {/* PDF panel: viewer when past paper mode; centered only in laptop mode. In laptop mode paper fills from top (inset-0), header overlays. */}
+                {/* PDF panel: viewer when past paper mode; snippet (pageRegions) or full paper with expand/collapse. */}
                 {mode === "pastpaper" && (
-                    options.laptopMode ? (
-                        <div className="absolute inset-0 flex w-full min-h-0 justify-center items-start pointer-events-auto">
-                            <div className="practice-paper-fly-in flex h-full min-h-0 w-full max-w-[720px] shrink-0 flex-col overflow-hidden pointer-events-auto">
-                                <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden pt-2 px-2 pb-0">
-                                    {paperLoadError && (
-                                        <div className="shrink-0 py-2 text-sm color-txt-sub">
-                                            {paperLoadError}
-                                        </div>
-                                    )}
-                                    {paperBlob ? (
-                                        <PaperPdfPlaceholder
-                                            file={paperBlob}
-                                            pageWidth={680}
-                                            onCurrentPageChange={setCurrentPaperPage}
-                                            scrollToPage={scrollToPage ?? undefined}
-                                            onScrolledToPage={() => setScrollToPage(null)}
-                                        />
-                                    ) : selectedPaper && !paperBlob && !paperLoadError ? (
-                                        <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
-                                            <p className="color-txt-sub text-sm">Loading paper…</p>
-                                        </div>
-                                    ) : (
-                                        <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
-                                            <p className="color-txt-sub text-sm">Select a paper to view.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex h-[740px] max-h-[75vh] w-full max-w-[520px] shrink-0 flex-col overflow-hidden pl-4 pointer-events-auto">
-                            <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden p-2">
-                                {paperLoadError && (
+                    (() => {
+                        const currentPaperQuestion = paperQuestions[paperQuestionPosition - 1];
+                        const hasPageRegions = currentPaperQuestion?.pageRegions && currentPaperQuestion.pageRegions.length > 0;
+                        const snippetWidth = options.laptopMode ? 680 : 480;
+                        const showSnippetView = hasPageRegions && !isFullPaperExpanded;
+
+                        const handleExpandToggle = () => {
+                            if (isFullPaperExpanded) {
+                                setIsFullPaperExpanded(false);
+                            } else {
+                                const firstPage = currentPaperQuestion?.pageRegions?.[0]?.page ?? currentPaperQuestion?.pageRange?.[0] ?? 1;
+                                setScrollToPage(firstPage);
+                                setIsFullPaperExpanded(true);
+                            }
+                        };
+
+                        const renderPdfContent = () => {
+                            if (paperLoadError) {
+                                return (
                                     <div className="shrink-0 py-2 text-sm color-txt-sub">
                                         {paperLoadError}
                                     </div>
-                                )}
-                                {paperBlob ? (
-                                    <PaperPdfPlaceholder
-                                        file={paperBlob}
-                                        pageWidth={480}
-                                        onCurrentPageChange={setCurrentPaperPage}
-                                        scrollToPage={scrollToPage ?? undefined}
-                                        onScrolledToPage={() => setScrollToPage(null)}
-                                    />
-                                ) : selectedPaper && !paperBlob && !paperLoadError ? (
-                                    <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
-                                        <p className="color-txt-sub text-sm">Loading paper…</p>
-                                    </div>
-                                ) : (
+                                );
+                            }
+                            if (!paperBlob) {
+                                if (selectedPaper && !paperLoadError) {
+                                    return (
+                                        <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
+                                            <p className="color-txt-sub text-sm">Loading paper…</p>
+                                        </div>
+                                    );
+                                }
+                                return (
                                     <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
                                         <p className="color-txt-sub text-sm">Select a paper to view.</p>
                                     </div>
-                                )}
+                                );
+                            }
+                            // When hasPageRegions we preload full paper off-screen, so view "uses" Document whenever we might show it
+                            const viewUsesDocument = !hasPageRegions || isFullPaperExpanded;
+                            const fullPaperPreloaded = !hasPageRegions || paperDocumentLoaded;
+                            const showPdfLoadingOverlay =
+                                (!viewUsesDocument ? false : !fullPaperPreloaded) || !logTablesPreloaded;
+
+                            return (
+                                <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
+                                    {showPdfLoadingOverlay && (
+                                        <div
+                                            className="absolute inset-0 z-30 flex flex-col items-center justify-center color-bg opacity-95"
+                                            aria-busy="true"
+                                            aria-live="polite"
+                                        >
+                                            <div className="color-txt-sub text-sm font-medium">Loading PDF…</div>
+                                            <div className="mt-2 h-8 w-8 animate-spin rounded-full border-2 border-[var(--grey-10)] border-t-[var(--grey-5)]" />
+                                        </div>
+                                    )}
+                                    {(hasPageRegions || currentPaperQuestion) && (
+                                        <div className="absolute top-0 z-20 flex flex-row gap-2 w-full items-center justify-center color-bg py-3 px-3">
+                                            {hasPageRegions && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleExpandToggle}
+                                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                                    aria-label={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                                    title={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                                >
+                                                    {isFullPaperExpanded ? (
+                                                        <>
+                                                            <LuMinimize2 size={14} strokeWidth={2} />
+                                                            <span>Question only</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <LuMaximize2 size={14} strokeWidth={2} />
+                                                            <span>Full paper</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+                                     
+                                                {currentPaperQuestion && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowLogTables(true)}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                                        title="Log tables"
+                                                        aria-label="Log tables"
+                                                    >
+                                                        <LuBookOpen size={14} strokeWidth={2} />
+                                                        <span>Log tables</span>
+                                                    </button>
+                                                )}
+                                                {markingSchemeBlob && currentPaperQuestion?.markingSchemePageRange && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowMarkingSchemeModal(true)}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                                        title="Marking scheme"
+                                                        aria-label="Marking scheme"
+                                                    >
+                                                        <LuClipboardList size={14} strokeWidth={2} />
+                                                        <span>Marking scheme</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                     
+                                    )}
+                                    <div className="flex-1 min-h-0 relative pt-4 mt-10">
+                                        {hasPageRegions ? (
+                                            <>
+                                                <motion.div
+                                                    className="absolute inset-0 flex flex-col overflow-hidden"
+                                                    initial={false}
+                                                    animate={{
+                                                        opacity: showSnippetView ? 1 : 0,
+                                                        pointerEvents: showSnippetView ? "auto" : "none",
+                                                        visibility: showSnippetView ? "visible" : "hidden",
+                                                    }}
+                                                    transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
+                                                >
+                                                    <div className="flex flex-col gap-3 overflow-y-auto scrollbar-minimal h-full py-2 pr-2">
+                                                        {currentPaperQuestion!.pageRegions!.map((region, i) => (
+                                                            <PdfRegionView
+                                                                key={`${region.page}-${region.y}-${i}`}
+                                                                file={paperBlob}
+                                                                region={{
+                                                                    page: region.page,
+                                                                    x: region.x ?? 0,
+                                                                    y: region.y ?? 0,
+                                                                    width: region.width ?? 595,
+                                                                    height: region.height ?? 150,
+                                                                }}
+                                                                width={snippetWidth}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </motion.div>
+                                                {/* Full paper: always mounted so it loads in background when off-screen; no visibility:hidden so PDF loads */}
+                                                <div
+                                                    className="flex flex-col overflow-hidden"
+                                                    style={{
+                                                        position: "absolute",
+                                                        ...(isFullPaperExpanded
+                                                            ? { inset: 0, zIndex: 1, pointerEvents: "auto" }
+                                                            : {
+                                                                  left: "-9999px",
+                                                                  top: 0,
+                                                                  width: snippetWidth,
+                                                                  height: "100%",
+                                                                  pointerEvents: "none",
+                                                              }),
+                                                    }}
+                                                >
+                                                    <PaperPdfPlaceholder
+                                                        file={paperBlob}
+                                                        pageWidth={snippetWidth}
+                                                        onCurrentPageChange={setCurrentPaperPage}
+                                                        scrollToPage={scrollToPage ?? undefined}
+                                                        onScrolledToPage={() => setScrollToPage(null)}
+                                                        onDocumentLoadSuccess={() => setPaperDocumentLoaded(true)}
+                                                        scrollContainerRef={paperScrollRef}
+                                                    />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <PaperPdfPlaceholder
+                                                file={paperBlob}
+                                                pageWidth={snippetWidth}
+                                                onCurrentPageChange={setCurrentPaperPage}
+                                                scrollToPage={scrollToPage ?? undefined}
+                                                onScrolledToPage={() => setScrollToPage(null)}
+                                                onDocumentLoadSuccess={() => setPaperDocumentLoaded(true)}
+                                                scrollContainerRef={paperScrollRef}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        };
+
+                        return options.laptopMode ? (
+                            <div className="absolute inset-0 flex w-full min-h-0 justify-center items-start pointer-events-auto">
+                                <div className="practice-paper-fly-in flex h-full min-h-0 w-full max-w-[720px] shrink-0 flex-col overflow-hidden pointer-events-auto">
+                                    <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden pt-2 px-2 pb-0">
+                                        {renderPdfContent()}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    )
+                        ) : (
+                            <div className="flex flex-1 min-h-0 w-full max-w-[480px] shrink-0 flex-col overflow-hidden pointer-events-auto">
+                                <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden p-2">
+                                    {renderPdfContent()}
+                                </div>
+                            </div>
+                        );
+                    })()
                 )}
             </div>
+
+            {/* Floating log tables — rendered via portal */}
+            {showLogTables &&
+                typeof document !== "undefined" &&
+                createPortal(
+                    <FloatingLogTables
+                        pgNumber={
+                            mode === "certchamps"
+                                ? String(currentQuestion?.content?.[0]?.logtables ?? "1")
+                                : String(currentPaperQuestion?.log_table_page ?? "1")
+                        }
+                        onClose={() => setShowLogTables(false)}
+                        file={logTablesBlob}
+                    />,
+                    document.body
+                )}
 
             {showSearch ? (
                 <QSearch
@@ -432,9 +776,65 @@ export default function Questions() {
                 />
             ) : null}
 
+            {/* Marking scheme modal — past paper only */}
+            <AnimatePresence>
+                {showMarkingSchemeModal &&
+                    markingSchemeBlob &&
+                    currentPaperQuestion?.markingSchemePageRange && (
+                        <motion.div
+                            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <div
+                                className="absolute inset-0 color-bg-grey-5/90 backdrop-blur-sm"
+                                onClick={() => setShowMarkingSchemeModal(false)}
+                                aria-hidden
+                            />
+                            <motion.div
+                                className="relative flex flex-col w-full max-w-2xl max-h-[90vh] color-bg rounded-2xl color-shadow overflow-hidden border border-[var(--grey-10)]"
+                                initial={{ scale: 0.95, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.95, opacity: 0 }}
+                                transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-[var(--grey-10)]">
+                                    <h2 className="text-lg font-semibold color-txt-main">
+                                        Marking scheme
+                                        <span className="ml-2 color-txt-sub font-normal text-sm">
+                                            — {currentPaperQuestion.questionName}
+                                        </span>
+                                    </h2>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowMarkingSchemeModal(false)}
+                                        className="p-2 rounded-xl color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all"
+                                        aria-label="Close"
+                                    >
+                                        <LuX size={22} strokeWidth={2} />
+                                    </button>
+                                </div>
+                                <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-6">
+                                    <PastPaperMarkingScheme
+                                        file={markingSchemeBlob}
+                                        pageRange={currentPaperQuestion.markingSchemePageRange!}
+                                        pageWidth={580}
+                                        className="flex-1 min-h-0 rounded-xl overflow-hidden"
+                                    />
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+            </AnimatePresence>
+
             </div>
             {/*===============================================================================================*/}
         </div>
+        <TimerFloatingWidget />
+        </TimerProvider>
     )
 }
 

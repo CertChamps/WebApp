@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { LuGripVertical, LuX } from "react-icons/lu";
+import { OptionsContext } from "../context/OptionsContext";
 import LogTables from "./logtables";
 
 const MIN_WIDTH = 320;
@@ -24,9 +25,12 @@ function getDefaultHeight() {
 type FloatingLogTablesProps = {
   pgNumber: string;
   onClose?: () => void;
+  /** Preloaded log tables PDF blob; when provided, modal opens without fetching. */
+  file?: Blob | null;
 };
 
-export default function FloatingLogTables({ pgNumber, onClose }: FloatingLogTablesProps) {
+export default function FloatingLogTables({ pgNumber, onClose, file }: FloatingLogTablesProps) {
+  const { options } = useContext(OptionsContext);
   const [pos, setPos] = useState(getDefaultPosition);
   const [size, setSize] = useState({
     width: DEFAULT_WIDTH,
@@ -106,18 +110,17 @@ export default function FloatingLogTables({ pgNumber, onClose }: FloatingLogTabl
   }, [isResizing]);
 
   const panel = (
-    <div
-      className="fixed flex flex-col rounded-xl overflow-hidden border-2 border-grey/25 color-shadow"
-      style={{
-        left: pos.left,
-        top: pos.top,
-        width: size.width,
-        height: size.height,
-        zIndex: 99999,
-        backgroundColor: "var(--bg, #fff)",
-        boxShadow: "0 20px 40px rgba(0,0,0,0.25)",
-      }}
-    >
+    <div data-theme={options.theme}>
+      <div
+        className="fixed flex flex-col rounded-xl overflow-hidden border-2 color-shadow color-bg"
+        style={{
+          left: pos.left,
+          top: pos.top,
+          width: size.width,
+          height: size.height,
+          zIndex: 99999,
+        }}
+      >
       {/* Title bar: drag handle + close */}
       <div
         role="button"
@@ -126,7 +129,7 @@ export default function FloatingLogTables({ pgNumber, onClose }: FloatingLogTabl
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") e.currentTarget.click();
         }}
-        className="flex shrink-0 items-center justify-between gap-2 px-3 py-2 border-b border-grey/25 color-bg-grey-5 cursor-grab active:cursor-grabbing select-none"
+        className="flex shrink-0 items-center justify-between gap-2 px-3 py-2  color-bg-grey-5 cursor-grab active:cursor-grabbing select-none"
       >
         <div className="flex items-center gap-2 min-w-0">
           <LuGripVertical size={18} className="color-txt-sub shrink-0" aria-hidden />
@@ -149,21 +152,22 @@ export default function FloatingLogTables({ pgNumber, onClose }: FloatingLogTabl
 
       {/* Content: fills remaining height */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <LogTables pgNumber={pgNumber} embedded />
+        <LogTables pgNumber={pgNumber} embedded file={file} />
       </div>
 
       {/* Resize handle */}
       <div
         role="presentation"
         onMouseDown={handleResizeStart}
-        className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-end justify-end p-1"
+        className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-end justify-end p-1 color-txt-sub"
         style={{ margin: "-2px -2px 0 0" }}
         aria-hidden
       >
-        <svg width={14} height={14} viewBox="0 0 16 16" className="color-txt-sub opacity-60">
+        <svg width={14} height={14} viewBox="0 0 16 16" className="opacity-60">
           <path fill="currentColor" d="M14 14H10v-2h2v-2h2v6zM8 14H4v-4h2v2h2v2zM14 8V4h-2v2h-2v2h4z" />
         </svg>
       </div>
+    </div>
     </div>
   );
 

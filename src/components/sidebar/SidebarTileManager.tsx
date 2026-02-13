@@ -1,15 +1,13 @@
 import { useState, useCallback, Component, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { LuSparkles, LuBookOpen, LuMessageSquare, LuTimer, LuPanelRightClose } from "react-icons/lu";
+import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose } from "react-icons/lu";
 import { AIChat } from "../ai";
-import FloatingLogTables from "../FloatingLogTables";
 import QThread from "../questions/q_thread";
 import Timer from "../timer";
 
 const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] };
 
-export type SidebarPanelId = "ai" | "logtables" | "threads" | "timer";
+export type SidebarPanelId = "ai" | "threads" | "timer";
 
 export type SidebarPanelDef = {
   id: SidebarPanelId;
@@ -19,16 +17,15 @@ export type SidebarPanelDef = {
 
 const PANELS: SidebarPanelDef[] = [
   { id: "ai", label: "AI", icon: <LuSparkles size={16} strokeWidth={2} /> },
-  { id: "logtables", label: "Log tables", icon: <LuBookOpen size={16} strokeWidth={2} /> },
   { id: "threads", label: "Threads", icon: <LuMessageSquare size={16} strokeWidth={2} /> },
   { id: "timer", label: "Timer", icon: <LuTimer size={16} strokeWidth={2} /> },
 ];
 
 export type SidebarTileManagerProps = {
   question?: any;
-  /** Optional: controlled open panels [top, bottom]. If not provided, internal state is used. */
-  openPanels?: [SidebarPanelId | null, SidebarPanelId | null];
-  onOpenPanelsChange?: (panels: [SidebarPanelId | null, SidebarPanelId | null]) => void;
+  /** Optional: controlled open panel. If not provided, internal state is used. */
+  openPanel?: SidebarPanelId | null;
+  onOpenPanelChange?: (panel: SidebarPanelId | null) => void;
   /** Called when user requests to collapse the sidebar (e.g. collapse button). */
   onCollapse?: () => void;
   /** Optional: return current drawing as PNG data URL so AI can see handwriting/maths. */
@@ -39,71 +36,46 @@ export type SidebarTileManagerProps = {
 
 export function SidebarTileManager({
   question,
-  openPanels: controlledOpen,
-  onOpenPanelsChange,
+  openPanel: controlledPanel,
+  onOpenPanelChange,
   onCollapse,
   getDrawingSnapshot,
   getPaperSnapshot,
 }: SidebarTileManagerProps) {
-  const [internalOpen, setInternalOpen] = useState<[SidebarPanelId | null, SidebarPanelId | null]>([
-    "ai",
-    null,
-  ]);
-  const isControlled = controlledOpen != null;
-  const openPanels: [SidebarPanelId | null, SidebarPanelId | null] = isControlled
-    ? controlledOpen
-    : internalOpen;
+  const [internalPanel, setInternalPanel] = useState<SidebarPanelId | null>("ai");
+  const isControlled = controlledPanel !== undefined;
+  const openPanelId = isControlled ? controlledPanel : internalPanel;
 
-  const setOpenPanels = useCallback(
-    (next: [SidebarPanelId | null, SidebarPanelId | null]) => {
-      if (!isControlled) setInternalOpen(next);
-      onOpenPanelsChange?.(next);
+  const setOpenPanel = useCallback(
+    (next: SidebarPanelId | null) => {
+      if (!isControlled) setInternalPanel(next);
+      onOpenPanelChange?.(next);
     },
-    [isControlled, onOpenPanelsChange]
+    [isControlled, onOpenPanelChange]
   );
 
-  const openPanel = useCallback(
+  const togglePanel = useCallback(
     (id: SidebarPanelId) => {
-      const [top, bottom] = openPanels;
-      if (top === id || bottom === id) {
-        // Tap open tab = close that panel
-        if (top === id) setOpenPanels([bottom, null]);
-        else setOpenPanels([top, null]);
-        return;
-      }
-      if (top == null) {
-        setOpenPanels([id, null]);
-        return;
-      }
-      if (bottom == null) {
-        setOpenPanels([top, id]);
-        return;
-      }
-      // Two already open: drop top, shift bottom up, add new at bottom
-      setOpenPanels([bottom, id]);
+      setOpenPanel(openPanelId === id ? null : id);
     },
-    [openPanels, setOpenPanels]
-  );
-
-  const [topId, bottomId] = openPanels;
-  const hasTwo = topId != null && bottomId != null;
-  const panelCount = (topId != null ? 1 : 0) + (bottomId != null ? 1 : 0);
+    [openPanelId, setOpenPanel]
+  )
 
   return (
-    <div className="sidebar-tile-manager flex h-full flex-col overflow-hidden rounded-xl border border-grey/25 color-shadow backdrop-blur-xl color-bg">
+    <div className="sidebar-tile-manager flex h-full flex-col overflow-hidden rounded-xl border border-grey/25 backdrop-blur-xl color-bg">
       {/* Tab bar: separated “window” tabs + collapse */}
-      <div className="sidebar-tile-manager__tabs flex shrink-0 items-center gap-2 border-b border-grey/25 px-2 py-2 color-bg-grey-5/90">
+      <div className="sidebar-tile-manager__tabs flex shrink-0 items-center gap-2 px-2 py-2 color-bg-grey-5/90">
         <div className="flex min-w-0 flex-1 gap-2">
           {PANELS.map((p) => {
-            const isOpen = p.id === topId || p.id === bottomId;
+            const isOpen = p.id === openPanelId;
             return (
               <button
                 key={p.id}
                 type="button"
-                onClick={() => openPanel(p.id)}
+                onClick={() => togglePanel(p.id)}
                 className={`sidebar-tile-manager__tab flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-medium transition-all duration-200 ${
                   isOpen
-                    ? "border-grey/30 color-bg-accent color-txt-accent shadow-sm"
+                    ? "border-grey/30 color-bg-accent color-txt-accent"
                     : "border-grey/20 color-txt-sub hover:border-grey/30 hover:color-bg-grey-10 hover:color-txt-main"
                 }`}
                 title={p.label}
@@ -126,64 +98,45 @@ export function SidebarTileManager({
         )}
       </div>
 
-      {/* Stack of 1 or 2 panels — new slides in from right, removed slides out, others slide up */}
+      {/* Single panel — fills full height */}
       <motion.div
         className="sidebar-tile-manager__stack relative flex flex-1 min-h-0 flex-col overflow-hidden"
         layout
         transition={TILE_TRANSITION}
       >
-        <AnimatePresence mode="popLayout" initial={false}>
-          {[topId, bottomId].filter((id): id is SidebarPanelId => id != null).map((id, index) => {
-            const isTop = index === 0;
-            const isBottom = index === 1;
-            return (
-              <motion.div
-                key={id}
-                layout
-                className={`sidebar-tile-manager__tile flex flex-col overflow-hidden rounded-lg border border-grey/25 color-shadow color-bg ${
-                  isTop ? "shrink-0" : "flex-1 min-h-0"
-                }`}
-                style={
-                  isTop
-                    ? { height: hasTwo ? "50%" : "100%", minHeight: 0 }
-                    : { minHeight: 0 }
-                }
-                initial={isBottom ? { x: "100%", opacity: 0.85 } : false}
-                animate={{ x: 0, opacity: 1 }}
-                exit={
-                  isTop
-                    ? { y: "-100%", opacity: 0, transition: TILE_TRANSITION }
-                    : { y: "100%", opacity: 0, transition: TILE_TRANSITION }
-                }
-                transition={TILE_TRANSITION}
-              >
-                <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-                  <TileContent
-                    panelId={id}
-                    question={question}
-                    getDrawingSnapshot={getDrawingSnapshot}
-                    getPaperSnapshot={getPaperSnapshot}
-                    onClosePanel={(panelId) => {
-                      const [t, b] = openPanels;
-                      if (t === panelId) setOpenPanels([b ?? null, null]);
-                      else if (b === panelId) setOpenPanels([t ?? null, null]);
-                    }}
-                  />
-                </div>
-              </motion.div>
-            );
-          })}
+        <AnimatePresence mode="wait" initial={false}>
+          {openPanelId ? (
+            <motion.div
+              key={openPanelId}
+              layout
+              className="sidebar-tile-manager__tile flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg color-bg"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={TILE_TRANSITION}
+            >
+              <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+                <TileContent
+                  panelId={openPanelId}
+                  question={question}
+                  getDrawingSnapshot={getDrawingSnapshot}
+                  getPaperSnapshot={getPaperSnapshot}
+                  onClosePanel={() => setOpenPanel(null)}
+                />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 flex items-center justify-center color-txt-sub text-sm px-4"
+            >
+              Open a panel from the tabs above.
+            </motion.div>
+          )}
         </AnimatePresence>
-        {panelCount === 0 && (
-          <motion.div
-            key="empty"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0 flex items-center justify-center color-txt-sub text-sm px-4"
-          >
-            Open a panel from the tabs above.
-          </motion.div>
-        )}
       </motion.div>
     </div>
   );
@@ -212,42 +165,14 @@ function TileContent({
   question?: any;
   getDrawingSnapshot?: (() => string | null) | null;
   getPaperSnapshot?: (() => string | null) | null;
-  onClosePanel?: (id: SidebarPanelId) => void;
+  onClosePanel?: () => void;
 }) {
   const part = 0;
-  const pgNumber = question?.content?.[part]?.logtables != null
-    ? String(question.content[part].logtables)
-    : "1";
   const questionId = question?.id ?? "";
 
   switch (panelId) {
     case "ai":
       return <AIChat question={question} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />;
-    case "logtables":
-      return (
-        <>
-          {typeof document !== "undefined" &&
-            createPortal(
-              <TileErrorBoundary
-                fallback={
-                  <div className="flex h-full items-center justify-center p-4 text-center text-sm color-txt-sub">
-                    Log tables failed to load. Try refreshing.
-                  </div>
-                }
-              >
-                <FloatingLogTables
-                  pgNumber={pgNumber}
-                  onClose={() => onClosePanel?.("logtables")}
-                />
-              </TileErrorBoundary>,
-              document.body
-            )}
-          <div className="flex h-full flex-col items-center justify-center p-4 text-center text-sm color-txt-sub">
-            <p className="font-medium color-txt-main">Log tables opened in a floating window.</p>
-            <p className="mt-1">Drag the title bar to move, resize from the corner. Close with × on the window.</p>
-          </div>
-        </>
-      );
     case "threads":
       return (
         <div className="h-full overflow-auto color-bg">
