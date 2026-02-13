@@ -915,22 +915,21 @@ export default function ExtractQuestionsFlow({
           <label className="block color-txt-sub text-sm mb-0.5">Extract with JSON</label>
           <div className="flex flex-wrap items-center gap-2">
             <input
+              id="json-regions-input"
               ref={jsonInputRef}
               type="file"
               accept=".json,application/json"
               className="hidden"
               onChange={handleLoadJson}
             />
-            <button
-              type="button"
-              onClick={() => jsonInputRef.current?.click()}
-              disabled={!pdfFile}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm hover:color-bg-grey-10 transition-all min-w-[120px] disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!pdfFile ? "Upload a PDF first" : "Load pre-made regions from a JSON file"}
+            <label
+              htmlFor="json-regions-input"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm hover:color-bg-grey-10 transition-all min-w-[120px] cursor-pointer"
+              title="Load pre-made regions from a JSON file"
             >
               <LuFileText size={18} className="color-txt-accent shrink-0" />
               {jsonFileName ?? "Choose file"}
-            </button>
+            </label>
             <span className="color-txt-sub text-xs">or paste:</span>
             <textarea
               placeholder='{"regions": [...]} or [...]'
@@ -1266,10 +1265,20 @@ export default function ExtractQuestionsFlow({
                         key={prIndex}
                         className="p-3 rounded-lg color-bg-grey-10 flex flex-col gap-3"
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="color-txt-sub text-xs font-medium">
-                            Page {pr.page}
-                          </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="color-txt-sub text-xs font-medium shrink-0">Page</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={pr.page}
+                            onChange={(e) => {
+                              const v = parseInt(e.target.value, 10);
+                              if (Number.isFinite(v) && v >= 1) {
+                                updatePageRegion(selectedIndex, prIndex, { page: v });
+                              }
+                            }}
+                            className="w-20 px-2 py-1.5 rounded color-bg-grey-5 color-txt-main text-sm font-mono"
+                          />
                           {selected.pageRegions.length > 1 && (
                             <button
                               type="button"
