@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, Component, type ReactNode, type MutableRefObject } from "react";
-import { Document, Page } from "react-pdf";
+import { Document } from "react-pdf";
+import PdfThemeWrapper from "../PdfThemeWrapper";
 
 /** Catches PDF.js worker errors (e.g. messageHandler is null) so the app doesn't crash. */
 class PdfErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }> {
@@ -48,6 +49,8 @@ type PaperPdfPlaceholderProps = {
   onScrolledToPage?: () => void;
   /** Called when the PDF loads with total page count (for page indicator / go-to). */
   onNumPages?: (n: number) => void;
+  /** Called when the PDF document has finished loading (for loading state). */
+  onDocumentLoadSuccess?: () => void;
   /** Optional ref to the scroll container for programmatic scroll control. */
   scrollContainerRef?: MutableRefObject<HTMLDivElement | null>;
 };
@@ -60,6 +63,7 @@ export default function PaperPdfPlaceholder({
   scrollToPage,
   onScrolledToPage,
   onNumPages,
+  onDocumentLoadSuccess,
   scrollContainerRef: externalScrollRef,
 }: PaperPdfPlaceholderProps) {
   const [numPages, setNumPages] = useState<number>(0);
@@ -140,6 +144,7 @@ export default function PaperPdfPlaceholder({
             setNumPages(n);
             setLoadError(null);
             onNumPages?.(n);
+            onDocumentLoadSuccess?.();
           }}
           onLoadError={(err) => {
             console.error("PDF load error:", err);
@@ -153,13 +158,11 @@ export default function PaperPdfPlaceholder({
                 pageRefsRef.current[i] = el;
               }}
               data-page={i + 1}
-              className="flex justify-center my-2"
+              className="my-2"
             >
-              <Page
+              <PdfThemeWrapper
                 pageNumber={i + 1}
                 width={pageWidth}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
               />
             </div>
           ))}

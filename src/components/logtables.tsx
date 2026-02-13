@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, createRef } from "react";
-import { Document, Page } from "react-pdf";
-import { LuMoon, LuSun } from "react-icons/lu";
+import { Document } from "react-pdf";
+import PdfThemeWrapper from "./PdfThemeWrapper";
 import Lottie from "lottie-react";
 import loadingAnim from "../assets/animations/loading.json";
 
@@ -10,9 +10,22 @@ type QuestionType = {
   pgNumber: string;
   /** When true, size to fill container (e.g. inside FloatingLogTables) instead of fixed 70vh/520px. */
   embedded?: boolean;
+  /** Preloaded PDF blob or URL; when set, used instead of default /assets/log_tables.pdf. */
+  file?: Blob | string | null;
 };
 
-const LogTables = ({ pgNumber, embedded = false }: QuestionType) => {
+const LOG_TABLES_DEFAULT_FILE = "/assets/log_tables.pdf";
+const FIXED_PAGE_WIDTH = 480;
+/** Fixed width we use to render the PDF when embedded; resize is done via CSS scale so the PDF never reloads. */
+const EMBEDDED_BASE_WIDTH = 480;
+const PAGE_GAP_PX = 0;
+/** Log tables booklet pages are short (~300px), not A4; use this so we don't get huge gaps between pages. */
+const LOG_TABLES_PAGE_HEIGHT = 330;
+
+const LogTables = ({ pgNumber, embedded = false, file: fileProp }: QuestionType) => {
+  const file = fileProp ?? LOG_TABLES_DEFAULT_FILE;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(EMBEDDED_BASE_WIDTH);
   // Check for various "empty" states: null, "null", "NaN" (from bad math), or "0"
   const isNullPage = !pgNumber || pgNumber === "null" || pgNumber === "NaN" || pgNumber === "0";
   // If null, default to page 1 for the PDF viewer, but keep isNullPage true for UI
@@ -20,8 +33,21 @@ const LogTables = ({ pgNumber, embedded = false }: QuestionType) => {
   const [numPages, setNumPages] = useState<number>(0);
   const [pagesRendered, setPagesRendered] = useState(0); 
   const [scrollingDone, setScrollingDone] = useState(false); // ✅ Controls visibility
-  const [darkMode, setDarkMode] = useState(false);
   const pageRefs = useRef<React.RefObject<HTMLDivElement>[]>([]);
+
+  // When embedded, track container width for CSS scale (PDF is always rendered at EMBEDDED_BASE_WIDTH)
+  useEffect(() => {
+    if (!embedded || !containerRef.current) return;
+    const el = containerRef.current;
+    const updateWidth = () => {
+      const w = el.clientWidth;
+      if (w > 0) setContainerWidth(w);
+    };
+    updateWidth();
+    const ro = new ResizeObserver(updateWidth);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [embedded]);
 
   useEffect(() => {
     pageRefs.current = Array(numPages)
@@ -57,7 +83,7 @@ const LogTables = ({ pgNumber, embedded = false }: QuestionType) => {
     >
       {/* ================= 1. TOP BAR ================= */}
       {/* This is now the first element, so it sits at the top naturally. */}
-        <div className="w-full flex items-center justify-between px-4 py-2 bg-opacity-80 relative border-b-2 color-shadow mb-1" style={{ minHeight: '52px' }}>
+        <div className="w-full flex items-center justify-between px-4 py-2 relative color-bg color-txt-main mb-1" style={{ minHeight: "52px" }}>
         <div className="flex-1 flex items-center">
           {isNullPage && (
             <span className="text-sm font-bold color-txt-sub">
@@ -74,26 +100,20 @@ const LogTables = ({ pgNumber, embedded = false }: QuestionType) => {
                   pageRefs.current[pageIndex].current.scrollIntoView({ behavior: "smooth", block: "start" });
                 }
               }}
-              className="px-3 py-1 text-sm rounded-lg color-bg hover:opacity-80 transition-all cursor-pointer shadow-small"
+              className="px-3 py-1 text-sm rounded-lg color-bg-grey-10 color-txt-main hover:opacity-80 transition-all cursor-pointer"
             >
               Jump to Pg {effectivePage}
             </button>
           )}
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2 rounded-lg color-bg hover:opacity-80 transition-all cursor-pointer shadow-small color-txt-accent"
-          >
-            {darkMode ? <LuSun size={18} /> : <LuMoon size={18} />}
-          </button>
         </div>
       </div>
 
       {/* ================= 2. CONTENT AREA ================= */}
       {/* We wrap the PDF and the Loading Screen in this relative container */}
-      <div className="relative w-full flex-1 overflow-hidden">
+      <div ref={containerRef} className="relative w-full flex-1 overflow-hidden min-w-0">
         {/* LOADING OVERLAY - Now lives inside this container, so it won't cover the Top Bar */}
         {!scrollingDone && (
-          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center color-bg h-full w-full">
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center color-bg color-txt-main h-full w-full">
             <Lottie
               animationData={loadingAnim}
               loop={true}
@@ -106,44 +126,100 @@ const LogTables = ({ pgNumber, embedded = false }: QuestionType) => {
           </div>
         )}
 
-        {/* PDF DOCUMENT */}
-        <div
-          className={`w-full h-full flex flex-col items-center transition-opacity duration-200 ${
-            scrollingDone ? "opacity-100 overflow-y-auto scrollbar-minimal" : "opacity-0 overflow-hidden"
-          }`}
-        >
-          <Document
-            file={`/assets/log_tables.pdf`}
-            onLoadSuccess={({ numPages }) => {
-              setNumPages(numPages);
-              setPagesRendered(0);
-              setScrollingDone(false); 
-            }}
-            onLoadError={(err) => console.error("PDF load error:", err)}
-          >
-            {Array.from({ length: numPages }, (_, index) => (
+        {/* PDF DOCUMENT: when embedded we render at fixed width and scale with CSS so resize doesn't reload the PDF */}
+        {embedded ? (
+          (() => {
+            const scale = containerWidth / EMBEDDED_BASE_WIDTH;
+            const totalHeightPx =
+              numPages > 0 ? numPages * LOG_TABLES_PAGE_HEIGHT + (numPages - 1) * PAGE_GAP_PX : 0;
+            const scaledHeightPx = totalHeightPx * scale;
+
+            return (
               <div
-                key={`page_${index + 1}`}
-                ref={pageRefs.current[index]}
-                className="flex justify-center my-2"
-                style={{
-                  filter: darkMode ? "invert(0.9) hue-rotate(180deg) brightness(0.8) contrast(0.9)" : "none",
-                  transition: "filter 0.3s ease",
-                }}
+                className={`w-full h-full transition-opacity duration-200 ${
+                  scrollingDone ? "opacity-100 overflow-y-auto scrollbar-minimal" : "opacity-0 overflow-hidden"
+                }`}
               >
-                <Page
-                  pageNumber={index + 1}
-                  width={480}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  onRenderSuccess={() =>
-                    setPagesRendered((count) => count + 1)
-                  }
-                />
+                <div
+                  style={{
+                    width: containerWidth,
+                    height: scaledHeightPx,
+                    minHeight: "100%",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: EMBEDDED_BASE_WIDTH,
+                      height: totalHeightPx,
+                      transform: `scale(${scale})`,
+                      transformOrigin: "top left",
+                    }}
+                  >
+                    <Document
+                      file={file}
+                      onLoadSuccess={({ numPages: n }) => {
+                        setNumPages(n);
+                        setPagesRendered(0);
+                        setScrollingDone(false);
+                      }}
+                      onLoadError={(err) => console.error("PDF load error:", err)}
+                    >
+                      {Array.from({ length: numPages }, (_, index) => (
+                        <div
+                          key={`page_${index + 1}`}
+                          ref={pageRefs.current[index]}
+                          style={{ marginBottom: index < numPages - 1 ? PAGE_GAP_PX : 0 }}
+                        >
+                          <PdfThemeWrapper
+                            pageNumber={index + 1}
+                            width={EMBEDDED_BASE_WIDTH}
+                            height={LOG_TABLES_PAGE_HEIGHT}
+                            onRenderSuccess={() =>
+                              setPagesRendered((count) => count + 1)
+                            }
+                          />
+                        </div>
+                      ))}
+                    </Document>
+                  </div>
+                </div>
               </div>
-            ))}
-          </Document>
-        </div>
+            );
+          })()
+        ) : (
+          <div
+            className={`w-full h-full flex flex-col items-center transition-opacity duration-200 ${
+              scrollingDone ? "opacity-100 overflow-y-auto scrollbar-minimal" : "opacity-0 overflow-hidden"
+            }`}
+          >
+            <Document
+              file={file}
+              onLoadSuccess={({ numPages }) => {
+                setNumPages(numPages);
+                setPagesRendered(0);
+                setScrollingDone(false); 
+              }}
+              onLoadError={(err) => console.error("PDF load error:", err)}
+            >
+              {Array.from({ length: numPages }, (_, index) => (
+                <div
+                  key={`page_${index + 1}`}
+                  ref={pageRefs.current[index]}
+                  className="mb-0"
+                >
+                  <PdfThemeWrapper
+                    pageNumber={index + 1}
+                    width={FIXED_PAGE_WIDTH}
+                    height={LOG_TABLES_PAGE_HEIGHT}
+                    onRenderSuccess={() =>
+                      setPagesRendered((count) => count + 1)
+                    }
+                  />
+                </div>
+              ))}
+            </Document>
+          </div>
+        )}
       </div>
     </div>
   );

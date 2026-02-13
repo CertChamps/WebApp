@@ -62,7 +62,7 @@ export function SidebarTileManager({
   )
 
   return (
-    <div className="sidebar-tile-manager flex h-full flex-col overflow-hidden rounded-xl border border-grey/25 color-shadow backdrop-blur-xl color-bg">
+    <div className="sidebar-tile-manager flex h-full flex-col overflow-hidden rounded-xl border border-grey/25 backdrop-blur-xl color-bg">
       {/* Tab bar: separated “window” tabs + collapse */}
       <div className="sidebar-tile-manager__tabs flex shrink-0 items-center gap-2 px-2 py-2 color-bg-grey-5/90">
         <div className="flex min-w-0 flex-1 gap-2">
@@ -75,7 +75,7 @@ export function SidebarTileManager({
                 onClick={() => togglePanel(p.id)}
                 className={`sidebar-tile-manager__tab flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-medium transition-all duration-200 ${
                   isOpen
-                    ? "border-grey/30 color-bg-accent color-txt-accent shadow-sm"
+                    ? "border-grey/30 color-bg-accent color-txt-accent"
                     : "border-grey/20 color-txt-sub hover:border-grey/30 hover:color-bg-grey-10 hover:color-txt-main"
                 }`}
                 title={p.label}
@@ -109,7 +109,7 @@ export function SidebarTileManager({
             <motion.div
               key={openPanelId}
               layout
-              className="sidebar-tile-manager__tile flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg color-shadow color-bg"
+              className="sidebar-tile-manager__tile flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg color-bg"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}

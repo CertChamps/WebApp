@@ -80,7 +80,7 @@ export default function PracticeHub() {
   };
 
   return (
-    <div className="practice-hub w-full h-full overflow-y-auto overflow-x-hidden scrollbar-minimal">
+    <div className="practice-hub w-full h-full overflow-y-auto overflow-x-hidden scrollbar-minimal pt-[env(safe-area-inset-top,0px)]">
       {/* Hero: full-height intro with centered text + bouncing arrow */}
       <section className="practice-hub__hero min-h-[100dvh] flex flex-col items-center justify-center relative shrink-0">
         <div className="flex flex-col items-center justify-center text-center px-6">

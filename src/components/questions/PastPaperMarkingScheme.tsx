@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Document, Page } from "react-pdf";
+import { Document } from "react-pdf";
+import PdfThemeWrapper from "../PdfThemeWrapper";
 import Lottie from "lottie-react";
 import loadingAnim from "../../assets/animations/loading.json";
 
@@ -94,11 +95,9 @@ export default function PastPaperMarkingScheme({
                   className="flex flex-col items-center my-4"
                 >
                   <div className="color-shadow rounded-lg overflow-hidden color-bg-grey-5/50">
-                    <Page
+                    <PdfThemeWrapper
                       pageNumber={pageNum}
                       width={pageWidth}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
                     />
                   </div>
                   {pageCount > 1 && (

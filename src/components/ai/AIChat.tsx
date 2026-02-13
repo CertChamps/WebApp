@@ -1,4 +1,7 @@
+import { useContext } from "react";
 import { AnimatePresence } from "framer-motion";
+import { LuSendHorizontal } from "react-icons/lu";
+import { UserContext } from "../../context/UserContext";
 import { useAI } from "./useAI";
 import { ChatMessage, ChatMessageLoading } from "./ChatMessage";
 
@@ -11,6 +14,7 @@ type AIChatProps = {
 };
 
 export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AIChatProps) {
+  const { user } = useContext(UserContext);
   const {
     messages,
     streamingContent,
@@ -25,15 +29,19 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AICha
     hasQuestion,
   } = useAI(question, getDrawingSnapshot, getPaperSnapshot);
 
+  const displayName = user?.username?.trim() || "there";
   const emptyMessage = hasQuestion
     ? "Ask about this question—I can explain concepts, give hints, or walk through steps. If you draw maths or handwriting on the canvas, I can see it too. If you have a past paper open, I can see it as well."
-    : "Ask a question about the problem. I can help explain concepts, hints, or steps. Draw on the canvas and I’ll recognise it. If you have a past paper open, I can see it too.";
+    : "How can I can help? I can explain concepts, hints, or steps. Draw on the canvas and I’ll recognise it. If you have a past paper open, I can see it too.";
 
   return (
     <div className="pointer-events-auto flex h-full flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-3 space-y-4 min-h-0">
         {messages.length === 0 && !loading && (
-          <p className="text-sm color-txt-sub text-center py-12">{emptyMessage}</p>
+          <div className="text-center h-[90%] flex flex-col justify-center items-center">
+            <h3 className="font-bold color-txt-main mb-2 text-2xl">Hey, {displayName}</h3>
+            <p className="text-sm color-txt-sub w-3/4 mx-auto">{emptyMessage}</p>
+          </div>
         )}
         <AnimatePresence initial={false}>
           {messages.map((msg, i) => (
@@ -46,7 +54,7 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AICha
       </div>
 
       <div className="p-3 pt-0">
-        <div className="flex gap-2 items-end">
+        <div className="flex items-start rounded-out border border-grey/25 color-bg overflow-hidden focus-within:ring-2 focus-within:ring-inset focus-within:ring-grey/20">
           <textarea
             ref={inputRef}
             value={input}
@@ -55,17 +63,15 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AICha
             placeholder="Could input your answers here too?"
             rows={2}
             disabled={loading}
-            className="flex-1 resize-none min-h-[2.75rem] max-h-24 rounded-out color-bg border border-grey/25 color-txt-main px-4 py-2.5 text-sm placeholder:color-txt-sub/70 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-grey/20 disabled:opacity-50"
+            className="flex-1 resize-none min-h-[2.75rem] max-h-24 border-0 bg-transparent color-txt-main pl-4 pr-2 py-2.5 text-sm placeholder:color-txt-sub/70 focus:outline-none focus:ring-0 disabled:opacity-50"
           />
           <button
             onClick={sendMessage}
             disabled={loading || !input.trim()}
             aria-label="Send"
-            className="color-bg-grey-10 color-txt-main h-[2.75rem] w-[2.75rem] shrink-0 rounded-full flex items-center justify-center hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+            className="shrink-0 p-2.5 color-txt-main hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-            </svg>
+            <LuSendHorizontal size={20} strokeWidth={2} />
           </button>
         </div>
       </div>

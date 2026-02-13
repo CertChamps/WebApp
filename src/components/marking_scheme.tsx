@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, createRef } from "react";
-import { Document, Page } from "react-pdf";
+import { Document } from "react-pdf";
+import PdfThemeWrapper from "./PdfThemeWrapper";
 import React from "react";
 import Lottie from "lottie-react";
 import loadingAnim from "../assets/animations/loading.json";
@@ -98,13 +99,11 @@ const MarkingScheme = ({ year, pgNumber }: QuestionType) => {
             <div
               key={`page_${index + 1}`}
               ref={pageRefs.current[index]}
-              className="flex justify-center my-2"
+              className="my-2"
             >
-              <Page
+              <PdfThemeWrapper
                 pageNumber={index + 1}
                 width={600}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
                 onRenderSuccess={() =>
                   setPagesRendered((count) => count + 1)
                 }

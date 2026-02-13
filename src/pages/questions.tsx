@@ -23,6 +23,8 @@ import PdfRegionView from "../components/questions/PdfRegionView";
 import PastPaperMarkingScheme from "../components/questions/PastPaperMarkingScheme";
 import FloatingLogTables from "../components/FloatingLogTables";
 import { CollapsibleSidebar } from "../components/sidebar";
+import { TimerProvider } from "../context/TimerContext";
+import { TimerFloatingWidget } from "../components/TimerFloatingWidget";
 
 // Style Imports
 import "../styles/questions.css";
@@ -114,6 +116,9 @@ export default function Questions() {
     const [markingSchemeBlob, setMarkingSchemeBlob] = useState<Blob | null>(null);
     const [showMarkingSchemeModal, setShowMarkingSchemeModal] = useState(false);
     const [showLogTables, setShowLogTables] = useState(false);
+    const [paperDocumentLoaded, setPaperDocumentLoaded] = useState(false);
+    const [logTablesBlob, setLogTablesBlob] = useState<Blob | null>(null);
+    const [logTablesPreloaded, setLogTablesPreloaded] = useState(false);
     const paperScrollRef = useRef<HTMLDivElement | null>(null);
     const paperSnapshot = usePaperSnapshot(paperBlob, currentPaperPage);
     const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
@@ -308,6 +313,31 @@ export default function Questions() {
         };
     }, [selectedPaper, getMarkingSchemeBlob, currentPaperQuestion?.markingSchemePageRange]);
 
+    // Reset PDF document loaded when paper blob changes (new paper)
+    useEffect(() => {
+        setPaperDocumentLoaded(false);
+    }, [paperBlob]);
+
+    // Preload log tables PDF so modal opens instantly
+    useEffect(() => {
+        let cancelled = false;
+        setLogTablesPreloaded(false);
+        fetch("/assets/log_tables.pdf")
+            .then((res) => (res.ok ? res.blob() : null))
+            .then((blob) => {
+                if (!cancelled && blob) {
+                    setLogTablesBlob(blob);
+                }
+            })
+            .catch(() => {})
+            .finally(() => {
+                if (!cancelled) setLogTablesPreloaded(true);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     // Preselect paper: URL paperId > current question year > first paper
     useEffect(() => {
         if (papers.length === 0 || selectedPaper !== null) return;
@@ -339,8 +369,43 @@ export default function Questions() {
     };
     //===============================================================================================//
 
+    const isNetworkDev =
+        typeof window !== "undefined" &&
+        import.meta.env.DEV &&
+        !["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const [dismissedCorsHint, setDismissedCorsHint] = useState(() => {
+        try {
+            return localStorage.getItem("questions-dismissed-cors-hint") === "1";
+        } catch {
+            return false;
+        }
+    });
+    const showCorsHint = isNetworkDev && !dismissedCorsHint;
+    const dismissCorsHint = useCallback(() => {
+        setDismissedCorsHint(true);
+        try {
+            localStorage.setItem("questions-dismissed-cors-hint", "1");
+        } catch {}
+    }, []);
+
     return (
-        <div className="relative flex w-full h-full flex-col gap-0">
+        <TimerProvider>
+        <div className="relative flex min-h-0 w-full flex-1 flex-col gap-0 overflow-hidden h-full">
+            {showCorsHint && (
+                <div className="shrink-0 z-30 flex items-center justify-between gap-2 px-3 py-2 text-xs color-bg-grey-10 color-txt-main border-b border-[var(--grey-10)]">
+                    <span>
+                        Testing on another device? Add <strong>{typeof window !== "undefined" ? window.location.origin : ""}</strong> to Firebase Storage CORS so papers load. See <code className="px-1 rounded color-bg-grey-5">CORS_SETUP.md</code>.
+                    </span>
+                    <button
+                        type="button"
+                        onClick={dismissCorsHint}
+                        aria-label="Dismiss"
+                        className="shrink-0 p-1 rounded hover:color-bg-grey-5"
+                    >
+                        <LuX size={16} />
+                    </button>
+                </div>
+            )}
             {/* Drawing canvas: disabled in laptop mode; render first so it sits behind (z-0) */}
             {!options.laptopMode && (
                 <div className="absolute inset-0 z-0">
@@ -349,7 +414,7 @@ export default function Questions() {
             )}
 
             {/* Sidebar: outside scaled area so it sits at viewport right edge */}
-            <div className="absolute right-0 top-0 bottom-0 w-[30%] z-20 h-full pointer-events-auto">
+            <div className="absolute inset-y-0 right-0 w-[35m%] z-20 overflow-hidden pointer-events-auto">
                 <CollapsibleSidebar
                     question={mode === "pastpaper" ? undefined : currentQuestion}
                     getDrawingSnapshot={getDrawingSnapshot}
@@ -365,7 +430,7 @@ export default function Questions() {
             {/* Foreground: top-left block on top, then PDF underneath. In laptop+past paper, paper fills from top and header overlays. */}
             <div className={`relative flex min-h-0 flex-1 w-full ${options.laptopMode && mode === "pastpaper" ? "flex-col" : "flex-col gap-4 items-start"}`}>
                 {/* Top left: tablet/laptop toggle, dropdown, question selector, question text — in laptop+past paper this overlays the paper */}
-                <div className={`shrink-0 flex flex-col gap-2 max-w-md pointer-events-auto ${options.laptopMode && mode === "pastpaper" ? "absolute top-0 left-0 z-10 pt-4 pl-4" : "pt-4 pl-4"}`}>
+                <div className={`shrink-0 flex flex-col gap-2 max-w-lg w-[25%]  min-w-sm pointer-events-auto ${options.laptopMode && mode === "pastpaper" ? "absolute top-0 left-0 z-10 pt-4 pl-4" : "pt-4 pl-4"}`}>
                     <div className="flex items-center gap-2 mb-1">
                         <button
                             type="button"
@@ -424,8 +489,8 @@ export default function Questions() {
                                 </select>
                             </>
                         )}
-                        {/* Log tables — both modes when we have a question */}
-                        {(mode === "certchamps" ? currentQuestion : currentPaperQuestion) && (
+                        {/* Log tables — header only in CertChamps mode; past paper shows it below Question only/Full paper */}
+                        {mode === "certchamps" && currentQuestion && (
                             <button
                                 type="button"
                                 onClick={() => setShowLogTables(true)}
@@ -436,19 +501,6 @@ export default function Questions() {
                                 <LuBookOpen size={20} strokeWidth={2} />
                             </button>
                         )}
-                        {mode === "pastpaper" &&
-                            markingSchemeBlob &&
-                            currentPaperQuestion?.markingSchemePageRange && (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowMarkingSchemeModal(true)}
-                                    className="flex items-center justify-center w-10 h-10 rounded-xl color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all border border-[var(--grey-10)]"
-                                    title="Marking scheme"
-                                    aria-label="Marking scheme"
-                                >
-                                    <LuClipboardList size={20} strokeWidth={2} />
-                                </button>
-                            )}
                     </div>
                     <QuestionSelector
                         question={currentQuestion}
@@ -538,30 +590,76 @@ export default function Questions() {
                                     </div>
                                 );
                             }
+                            // When hasPageRegions we preload full paper off-screen, so view "uses" Document whenever we might show it
+                            const viewUsesDocument = !hasPageRegions || isFullPaperExpanded;
+                            const fullPaperPreloaded = !hasPageRegions || paperDocumentLoaded;
+                            const showPdfLoadingOverlay =
+                                (!viewUsesDocument ? false : !fullPaperPreloaded) || !logTablesPreloaded;
+
                             return (
                                 <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
-                                    {hasPageRegions && (
-                                        <button
-                                            type="button"
-                                            onClick={handleExpandToggle}
-                                            className="absolute top-0 right-2 z-20 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-10 color-txt-sub hover:color-txt-main hover:color-bg-grey-5 transition-all shadow-sm"
-                                            aria-label={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
-                                            title={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                    {showPdfLoadingOverlay && (
+                                        <div
+                                            className="absolute inset-0 z-30 flex flex-col items-center justify-center color-bg opacity-95"
+                                            aria-busy="true"
+                                            aria-live="polite"
                                         >
-                                            {isFullPaperExpanded ? (
-                                                <>
-                                                    <LuMinimize2 size={14} strokeWidth={2} />
-                                                    <span>Question only</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <LuMaximize2 size={14} strokeWidth={2} />
-                                                    <span>Full paper</span>
-                                                </>
-                                            )}
-                                        </button>
+                                            <div className="color-txt-sub text-sm font-medium">Loading PDF…</div>
+                                            <div className="mt-2 h-8 w-8 animate-spin rounded-full border-2 border-[var(--grey-10)] border-t-[var(--grey-5)]" />
+                                        </div>
                                     )}
-                                    <div className="flex-1 min-h-0 relative pt-2">
+                                    {(hasPageRegions || currentPaperQuestion) && (
+                                        <div className="absolute top-0 z-20 flex flex-row gap-2 w-full items-center justify-center color-bg py-3 px-3">
+                                            {hasPageRegions && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleExpandToggle}
+                                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                                    aria-label={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                                    title={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                                >
+                                                    {isFullPaperExpanded ? (
+                                                        <>
+                                                            <LuMinimize2 size={14} strokeWidth={2} />
+                                                            <span>Question only</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <LuMaximize2 size={14} strokeWidth={2} />
+                                                            <span>Full paper</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+                                     
+                                                {currentPaperQuestion && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowLogTables(true)}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                                        title="Log tables"
+                                                        aria-label="Log tables"
+                                                    >
+                                                        <LuBookOpen size={14} strokeWidth={2} />
+                                                        <span>Log tables</span>
+                                                    </button>
+                                                )}
+                                                {markingSchemeBlob && currentPaperQuestion?.markingSchemePageRange && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowMarkingSchemeModal(true)}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                                        title="Marking scheme"
+                                                        aria-label="Marking scheme"
+                                                    >
+                                                        <LuClipboardList size={14} strokeWidth={2} />
+                                                        <span>Marking scheme</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                     
+                                    )}
+                                    <div className="flex-1 min-h-0 relative pt-4 mt-10">
                                         {hasPageRegions ? (
                                             <>
                                                 <motion.div
@@ -591,15 +689,21 @@ export default function Questions() {
                                                         ))}
                                                     </div>
                                                 </motion.div>
-                                                <motion.div
-                                                    className="absolute inset-0 flex flex-col overflow-hidden"
-                                                    initial={false}
-                                                    animate={{
-                                                        opacity: isFullPaperExpanded ? 1 : 0,
-                                                        pointerEvents: isFullPaperExpanded ? "auto" : "none",
-                                                        visibility: isFullPaperExpanded ? "visible" : "hidden",
+                                                {/* Full paper: always mounted so it loads in background when off-screen; no visibility:hidden so PDF loads */}
+                                                <div
+                                                    className="flex flex-col overflow-hidden"
+                                                    style={{
+                                                        position: "absolute",
+                                                        ...(isFullPaperExpanded
+                                                            ? { inset: 0, zIndex: 1, pointerEvents: "auto" }
+                                                            : {
+                                                                  left: "-9999px",
+                                                                  top: 0,
+                                                                  width: snippetWidth,
+                                                                  height: "100%",
+                                                                  pointerEvents: "none",
+                                                              }),
                                                     }}
-                                                    transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
                                                 >
                                                     <PaperPdfPlaceholder
                                                         file={paperBlob}
@@ -607,9 +711,10 @@ export default function Questions() {
                                                         onCurrentPageChange={setCurrentPaperPage}
                                                         scrollToPage={scrollToPage ?? undefined}
                                                         onScrolledToPage={() => setScrollToPage(null)}
+                                                        onDocumentLoadSuccess={() => setPaperDocumentLoaded(true)}
                                                         scrollContainerRef={paperScrollRef}
                                                     />
-                                                </motion.div>
+                                                </div>
                                             </>
                                         ) : (
                                             <PaperPdfPlaceholder
@@ -618,6 +723,7 @@ export default function Questions() {
                                                 onCurrentPageChange={setCurrentPaperPage}
                                                 scrollToPage={scrollToPage ?? undefined}
                                                 onScrolledToPage={() => setScrollToPage(null)}
+                                                onDocumentLoadSuccess={() => setPaperDocumentLoaded(true)}
                                                 scrollContainerRef={paperScrollRef}
                                             />
                                         )}
@@ -635,7 +741,7 @@ export default function Questions() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex h-[740px] max-h-[75vh] w-full max-w-[520px] shrink-0 flex-col overflow-hidden pl-4 pointer-events-auto">
+                            <div className="flex flex-1 min-h-0 w-full max-w-[480px] shrink-0 flex-col overflow-hidden pointer-events-auto">
                                 <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden p-2">
                                     {renderPdfContent()}
                                 </div>
@@ -656,6 +762,7 @@ export default function Questions() {
                                 : String(currentPaperQuestion?.log_table_page ?? "1")
                         }
                         onClose={() => setShowLogTables(false)}
+                        file={logTablesBlob}
                     />,
                     document.body
                 )}
@@ -726,6 +833,8 @@ export default function Questions() {
             </div>
             {/*===============================================================================================*/}
         </div>
+        <TimerFloatingWidget />
+        </TimerProvider>
     )
 }
 

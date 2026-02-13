@@ -71,7 +71,7 @@ When you open the app on your iPad using the **Network** URL from `npm run dev` 
 
 **Fix:** Add the exact URL you use on the iPad to CORS, then re-apply.
 
-1. In the terminal where you run `npm run dev`, note the **Network** URL (e.g. `http://192.168.1.100:5173`). Use the IP of your *dev machine*, not the iPad.
+1. Open the app on the device where PDFs don’t load (e.g. iPad). A **dev banner** at the top shows the exact origin to add (e.g. `http://192.168.1.100:5173`). You can copy that, or use the **Network** URL from the terminal where you run `npm run dev` on your PC.
 2. In Cloud Shell, create a new `cors.json` that includes that origin (see **step 2** above — use the second block and replace `192.168.1.100` with your machine’s IP if different).
 3. Run **step 4** again to apply CORS:  
    `gcloud storage buckets update gs://certchamps-a7527.firebasestorage.app --cors-file=cors.json`  
