@@ -1,21 +1,21 @@
-import { LuTimer } from "react-icons/lu";
+import { LuTimer, LuClock, LuCoffee } from "react-icons/lu";
 import { useTimer } from "../context/TimerContext";
 
 export function TimerFloatingWidget() {
-  const { state, formatTime, progress } = useTimer();
+  const { state, formatTime } = useTimer();
 
   if (!state.running) return null;
 
   const modeLabel =
     state.mode === "stopwatch"
-      ? "Stopwatch"
+      ? "stopwatch"
       : state.mode === "timer"
-        ? "Timer"
+        ? "timer"
         : state.pomodoroPhase === "work"
-          ? `Pomodoro · Round ${state.pomodoroRound}`
+          ? `pomodoro . round ${state.pomodoroRound}`
           : state.pomodoroPhase === "shortBreak"
-            ? "Short break"
-            : "Long break";
+            ? "short break"
+            : "long break";
 
   const showProgress = state.mode === "timer" || state.mode === "pomodoro";
   const progressPercent =
@@ -23,23 +23,34 @@ export function TimerFloatingWidget() {
       ? Math.max(0, (1 - state.time / state.totalTime) * 100)
       : 0;
 
+  const Icon =
+    state.mode === "stopwatch"
+      ? LuClock
+      : state.mode === "pomodoro"
+        ? LuCoffee
+        : LuTimer;
+
   return (
     <div
-      className="fixed bottom-4 right-4 z-40 flex flex-col gap-2 w-44 rounded-xl border border-grey/25 color-bg color-shadow p-3"
+      className="fixed bottom-3 right-3 z-10 flex flex-col gap-0.5 w-[220px] rounded-xl  color-bg p-2 "
       aria-live="polite"
       aria-label={`Timer: ${modeLabel}, ${formatTime(state.time)}`}
     >
-      <div className="flex items-center gap-2">
-        <LuTimer size={16} strokeWidth={2} className="color-txt-accent shrink-0" />
-        <span className="text-xs font-medium color-txt-main truncate">{modeLabel}</span>
-      </div>
-      <div className="text-xl font-bold color-txt-main text-center tabular-nums">
-        {formatTime(state.time)}
+      <div className="flex items-center  justify-center gap-2 min-w-0">
+        <div className="flex h-7 px-0.5 shrink-0 items-center justify-center rounded-md color-txt-main">
+          <Icon size={12} strokeWidth={2} />
+        </div>
+        <span className="text-xs font-medium color-txt-main truncate lowercase">
+          {modeLabel}
+        </span>
+        <span className="ml-auto text-lg font-bold tabular-nums color-txt-main shrink-0">
+          {formatTime(state.time)}
+        </span>
       </div>
       {showProgress && state.totalTime > 0 && (
-        <div className="h-1.5 rounded-full color-bg-grey-10 overflow-hidden">
+        <div className="h-1 color-bg-grey-10 overflow-hidden rounded-sm">
           <div
-            className="h-full rounded-full color-bg-accent transition-all duration-300 ease-out"
+            className="h-full color-bg-accent transition-[width] duration-100 ease-linear"
             style={{ width: `${progressPercent}%` }}
           />
         </div>

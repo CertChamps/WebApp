@@ -16,10 +16,13 @@ function isTouchDevice(): boolean {
 export type CollapsibleSidebarProps = SidebarTileManagerProps & {
   /** Class name for the wrapper. */
   className?: string;
+  /** Called when the sidebar open state changes (e.g. so parent can shrink overlay and allow drawing when closed). */
+  onOpenChange?: (open: boolean) => void;
 };
 
 export function CollapsibleSidebar({
   className = "",
+  onOpenChange,
   ...tileManagerProps
 }: CollapsibleSidebarProps) {
   const [isOpen, setIsOpen] = useState(true);
@@ -28,6 +31,10 @@ export function CollapsibleSidebar({
   useEffect(() => {
     setTouchEnabled(isTouchDevice());
   }, []);
+
+  useEffect(() => {
+    onOpenChange?.(isOpen);
+  }, [isOpen, onOpenChange]);
 
   const open = useCallback(() => setIsOpen(true), []);
   const close = useCallback(() => setIsOpen(false), []);

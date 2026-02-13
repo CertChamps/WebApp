@@ -171,19 +171,21 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const TICK_MS = 50; // Smooth countdown: update every 50ms so the circle animates continuously
+
   useEffect(() => {
     if (!state.running) return;
     const interval = setInterval(() => {
       setState((prev) => {
         if (prev.mode === "stopwatch") {
-          return { ...prev, time: prev.time + 1000 };
+          return { ...prev, time: prev.time + TICK_MS };
         }
         if (prev.mode === "timer") {
-          if (prev.time <= 1000) return { ...prev, time: 0, running: false };
-          return { ...prev, time: prev.time - 1000 };
+          if (prev.time <= TICK_MS) return { ...prev, time: 0, running: false };
+          return { ...prev, time: prev.time - TICK_MS };
         }
         if (prev.mode === "pomodoro") {
-          if (prev.time <= 1000) {
+          if (prev.time <= TICK_MS) {
             const phase = prev.pomodoroPhase;
             if (phase === "work") {
               const round = prev.pomodoroRound;
@@ -205,11 +207,11 @@ export function TimerProvider({ children }: { children: ReactNode }) {
               totalTime: POMODORO_WORK_MS,
             };
           }
-          return { ...prev, time: prev.time - 1000 };
+          return { ...prev, time: prev.time - TICK_MS };
         }
         return prev;
       });
-    }, 1000);
+    }, TICK_MS);
     return () => clearInterval(interval);
   }, [state.running, state.mode, state.pomodoroPhase, state.pomodoroRound]);
 

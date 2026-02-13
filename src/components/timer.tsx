@@ -9,12 +9,11 @@ const MODES: { id: TimerMode; label: string; icon: React.ReactNode }[] = [
   { id: "pomodoro", label: "Pomodoro", icon: <LuCoffee size={14} strokeWidth={2} /> },
 ];
 
+/** Shift display: new digit goes on the right, previous right shifts left. e.g. "00" + "1" -> "01", "01" + "2" -> "12". */
 function applyDigitLeftToRight(current: string, digit: string): string {
   const c = current.replace(/\D/g, "").padStart(2, "0");
-  const first = c[0] ?? "0";
-  const second = c[1] ?? "0";
-  if (first === "0" && second === "0") return (digit + "0").padStart(2, "0");
-  return (first + digit).padStart(2, "0");
+  const right = c[1] ?? "0";
+  return (right + digit).slice(-2);
 }
 
 function applySecondsDigit(current: string, digit: string): string {
@@ -23,15 +22,51 @@ function applySecondsDigit(current: string, digit: string): string {
   return String(val).padStart(2, "0");
 }
 
+/** Play a silly "time's up" sound: two-tone ding then a descending wah-wah slide */
+function playTimesUpSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const play = (frequency: number, startTime: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(frequency, startTime);
+      gain.gain.setValueAtTime(0.2, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    play(523.25, 0, 0.12);     // C5
+    play(659.25, 0.12, 0.12);  // E5
+    const slide = ctx.createOscillator();
+    const g = ctx.createGain();
+    slide.connect(g);
+    g.connect(ctx.destination);
+    slide.type = "sawtooth";
+    slide.frequency.setValueAtTime(392, 0.3);
+    slide.frequency.exponentialRampToValueAtTime(98, 0.85);
+    g.gain.setValueAtTime(0.1, 0.3);
+    g.gain.exponentialRampToValueAtTime(0.01, 0.85);
+    slide.start(0.3);
+    slide.stop(0.85);
+  } catch {
+    // Ignore if AudioContext not supported or blocked
+  }
+}
+
 export default function Timer() {
   const { state, formatTime, setMode, setTimeFromMMSS, start, pause, reset } = useTimer();
   const [editing, setEditing] = useState(false);
   const [editMins, setEditMins] = useState("00");
   const [editSecs, setEditSecs] = useState("00");
   const [activeField, setActiveField] = useState<"mins" | "secs">("mins");
+  const [showTimesUpModal, setShowTimesUpModal] = useState(false);
   const minsRef = useRef<HTMLInputElement | null>(null);
   const secsRef = useRef<HTMLInputElement | null>(null);
   const switchingFocusRef = useRef(false);
+  const prevRunningRef = useRef(state.running);
 
   const canEdit = state.mode === "timer" && !state.running;
   const showProgress = state.mode === "timer" || state.mode === "pomodoro";
@@ -44,6 +79,21 @@ export default function Timer() {
     if (!editing) return;
     (activeField === "mins" ? minsRef.current : secsRef.current)?.focus();
   }, [editing, activeField]);
+
+  // When countdown hits zero (timer or pomodoro), show popup and play sound
+  useEffect(() => {
+    const wasRunning = prevRunningRef.current;
+    prevRunningRef.current = state.running;
+    if (
+      wasRunning &&
+      !state.running &&
+      state.time === 0 &&
+      (state.mode === "timer" || state.mode === "pomodoro")
+    ) {
+      playTimesUpSound();
+      setShowTimesUpModal(true);
+    }
+  }, [state.running, state.time, state.mode]);
 
   const handleDisplayClick = () => {
     if (!canEdit) return;
@@ -85,8 +135,8 @@ export default function Timer() {
       e.preventDefault();
       const next = applyDigitLeftToRight(editMins, e.key);
       setEditMins(next);
-      const digits = next.replace(/\D/g, "").padStart(2, "0");
-      if (digits.length >= 2) {
+      // Only move to seconds after user has typed 2 digits (minutes value is 10–99, i.e. first char not "0")
+      if (next[0] !== "0") {
         switchingFocusRef.current = true;
         setActiveField("secs");
         setTimeout(() => {
@@ -99,7 +149,7 @@ export default function Timer() {
     if (e.key === "Backspace") {
       e.preventDefault();
       const c = editMins.replace(/\D/g, "").padStart(2, "0");
-      const next = (c[0] ?? "0") + "0";
+      const next = ("0" + (c[0] ?? "0")).slice(-2); // shift right: 12 -> 01, 01 -> 00
       setEditMins(next);
     }
   };
@@ -117,16 +167,12 @@ export default function Timer() {
       e.preventDefault();
       const next = applySecondsDigit(editSecs, e.key);
       setEditSecs(next);
-      const digits = next.replace(/\D/g, "");
-      if (digits.length >= 2 && digits !== "00") {
-        handleEditSubmit();
-      }
       return;
     }
     if (e.key === "Backspace") {
       e.preventDefault();
       const c = editSecs.replace(/\D/g, "").padStart(2, "0");
-      const next = (c[0] ?? "0") + "0";
+      const next = ("0" + (c[0] ?? "0")).slice(-2); // shift right: 12 -> 01, 01 -> 00
       setEditSecs(next);
       if (next === "00") {
         switchingFocusRef.current = true;
@@ -149,6 +195,7 @@ export default function Timer() {
       : null;
 
   return (
+    <>
     <div className="flex flex-col items-center justify-center h-full py-6 px-4">
       {/* Mode Dropdown */}
       <div className="relative mb-6">
@@ -202,7 +249,8 @@ export default function Timer() {
               stroke="currentColor"
               strokeWidth="6"
               strokeLinecap="round"
-              className="color-txt-accent transition-all duration-300"
+              className="color-txt-accent"
+              style={{ transition: "stroke-dashoffset 0.05s linear" }}
               strokeDasharray={`${2 * Math.PI * 44}`}
               strokeDashoffset={`${2 * Math.PI * 44 * (progressPercent / 100)}`}
             />
@@ -335,6 +383,36 @@ export default function Timer() {
           </button>
         </div>
       )}
+
+      {/* Time's up popup */}
+      {showTimesUpModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="times-up-title"
+          onClick={() => setShowTimesUpModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", damping: 20, stiffness: 300 }}
+            className="rounded-2xl shadow-xl p-8 max-w-sm w-full color-bg color-txt-main border border-[var(--grey-10)] text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p id="times-up-title" className="text-2xl font-bold mb-2">Time's up!</p>
+            <p className="text-sm color-txt-sub mb-6">Hope you got through it. 🎉</p>
+            <button
+              type="button"
+              onClick={() => setShowTimesUpModal(false)}
+              className="px-6 py-2.5 rounded-xl font-medium color-bg-accent color-txt-accent hover:opacity-90 transition-opacity"
+            >
+              Dismiss
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
+    </>
   );
 }

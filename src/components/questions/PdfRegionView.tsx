@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useContext } from "react";
 import { getDocument } from "pdfjs-dist";
 import { OptionsContext } from "../../context/OptionsContext";
-import { PDF_THEME_COLORS } from "../../utils/pdfThemeColors";
+import { PDF_THEME_COLORS, PDF_THEMING_ENABLED } from "../../utils/pdfThemeColors";
 import { applyThemeToCanvas } from "../../utils/pdfThemeUtils";
 
 /** Resolution scale for cropped PDF regions (4x for crisp text) */
@@ -140,7 +140,7 @@ export default function PdfRegionView({
       if (!outCtx) return;
       outCtx.drawImage(offscreen, 0, 0, cached.vw, cached.vh, 0, 0, width, displayHeight);
     }
-    if (options.theme !== "light") {
+    if (PDF_THEMING_ENABLED && options.theme !== "light") {
       applyThemeToCanvas(canvas, theme);
     }
   }, [hasRegion, x, y, rWidth, rHeight, width, loading, options.theme, theme.bg, theme.primary, theme.sub]);

@@ -2,7 +2,11 @@
  * Theme-to-PDF color mapping. PDFs are typically black text on white with grey accents.
  * We map: white → theme BG, black → theme Primary, grey → theme Sub.
  * These hex values match the @theme block in index.css.
+ *
+ * Set to true to re-enable PDF theming (canvas color remapping).
  */
+export const PDF_THEMING_ENABLED = false;
+
 export type PdfThemeColors = {
   bg: string;      // PDF white becomes this
   primary: string; // PDF black becomes this

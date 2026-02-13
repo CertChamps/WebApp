@@ -81,6 +81,7 @@ export default function Questions() {
   const [mode, setMode] = useState<QuestionsMode>(initialMode);
   const [subjectFilter, setSubjectFilter] = useState<string | null>(urlSubject || null);
   const [collectionPaths, setCollectionPaths] = useState<string[]>(initialPaths);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
     const cardContainerRef = useRef<HTMLElement | null>(null);
     const getDrawingSnapshotRef = useRef<(() => string | null) | null>(null);
@@ -413,12 +414,15 @@ export default function Questions() {
                 </div>
             )}
 
-            {/* Sidebar: outside scaled area so it sits at viewport right edge */}
-            <div className="absolute inset-y-0 right-0 w-[35m%] z-20 overflow-hidden pointer-events-auto">
+            {/* Sidebar: when closed, only tab width so drawing canvas can receive events in the rest of the right area */}
+            <div
+                className={`absolute inset-y-0 right-0 z-20 overflow-hidden pointer-events-auto transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${sidebarOpen ? "w-[35%]" : "w-12"}`}
+            >
                 <CollapsibleSidebar
                     question={mode === "pastpaper" ? undefined : currentQuestion}
                     getDrawingSnapshot={getDrawingSnapshot}
                     getPaperSnapshot={getPaperSnapshot}
+                    onOpenChange={setSidebarOpen}
                 />
             </div>
 
@@ -430,12 +434,12 @@ export default function Questions() {
             {/* Foreground: top-left block on top, then PDF underneath. In laptop+past paper, paper fills from top and header overlays. */}
             <div className={`relative flex min-h-0 flex-1 w-full ${options.laptopMode && mode === "pastpaper" ? "flex-col" : "flex-col gap-4 items-start"}`}>
                 {/* Top left: tablet/laptop toggle, dropdown, question selector, question text — in laptop+past paper this overlays the paper */}
-                <div className={`shrink-0 flex flex-col gap-2 max-w-lg w-[25%]  min-w-sm pointer-events-auto ${options.laptopMode && mode === "pastpaper" ? "absolute top-0 left-0 z-10 pt-4 pl-4" : "pt-4 pl-4"}`}>
+                <div className={`questions-top-left shrink-0 flex flex-col gap-2 max-w-xs w-[20%]  min-w-xs pointer-events-auto ${options.laptopMode && mode === "pastpaper" ? "absolute top-0 left-0 z-10 pt-4 pl-4" : "pt-4 pl-4"}`}>
                     <div className="flex items-center gap-2 mb-1">
                         <button
                             type="button"
                             onClick={() => navigate("/practice")}
-                            className="flex items-center gap-1.5 text-sm color-txt-sub hover:color-txt-main transition-colors"
+                            className="questions-hub-btn flex items-center gap-1.5 text-sm color-txt-sub hover:color-txt-main transition-colors"
                             aria-label="Back to Practice Hub"
                         >
                             <LuArrowLeft size={18} strokeWidth={2} />
@@ -494,7 +498,7 @@ export default function Questions() {
                             <button
                                 type="button"
                                 onClick={() => setShowLogTables(true)}
-                                className="flex items-center justify-center w-10 h-10 rounded-xl color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all border border-[var(--grey-10)]"
+                                className="practice-log-tables-btn flex items-center justify-center w-10 h-10 rounded-xl color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all border border-[var(--grey-10)]"
                                 title="Log tables"
                                 aria-label="Log tables"
                             >
@@ -546,7 +550,7 @@ export default function Questions() {
                         }
                     />
                     {mode !== "pastpaper" && (
-                        <RenderMath text={currentQuestion?.content?.[0]?.question ?? "ughhhh no question"} className="font-bold text-sm txt" />
+                        <RenderMath text={currentQuestion?.content?.[0]?.question ?? "ughhhh no question"} className="questions-math-preview font-bold text-sm txt" />
                     )}
                 </div>
 

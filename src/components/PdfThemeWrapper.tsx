@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback, useContext } from "react";
 import { Page } from "react-pdf";
 import { OptionsContext } from "../context/OptionsContext";
-import { PDF_THEME_COLORS } from "../utils/pdfThemeColors";
+import { PDF_THEME_COLORS, PDF_THEMING_ENABLED } from "../utils/pdfThemeColors";
 import { applyThemeToCanvas } from "../utils/pdfThemeUtils";
 
 type PdfThemeWrapperProps = {
@@ -46,7 +46,7 @@ export default function PdfThemeWrapper({
   const processCanvas = useCallback(() => {
     const canvas = wrapperRef.current?.querySelector("canvas");
     if (!canvas) return;
-    if (options.theme === "light") return; // Show original PDF for default theme
+    if (!PDF_THEMING_ENABLED || options.theme === "light") return; // Show original PDF when theming off or default theme
     applyThemeToCanvas(canvas, theme);
   }, [options.theme, theme.bg, theme.primary, theme.sub]);
 

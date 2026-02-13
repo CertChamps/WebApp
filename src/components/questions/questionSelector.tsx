@@ -65,7 +65,7 @@ export default function QuestionSelector({
                 transition={{ duration: 0.15, ease: [0.25, 0.4, 0.25, 1] }}
                 className="flex min-w-0 flex-col"
               >
-                <h2 className="question-selector-truncate color-txt-accent text-md font-bold leading-tight">
+                <h2 className="question-selector-title question-selector-truncate color-txt-accent text-md font-bold leading-tight">
                   {centerLabel}
                 </h2>
                 {showTags ? (
