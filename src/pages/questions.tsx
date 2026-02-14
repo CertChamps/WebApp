@@ -15,10 +15,8 @@ import QSearch from "../components/questions/qSearch";
 import DrawingCanvas, { type RegisterDrawingSnapshot } from "../components/questions/DrawingCanvas";
 import RenderMath from "../components/math/mathdisplay";
 import { motion, AnimatePresence } from "framer-motion";
-import PaperPdfPlaceholder, {
-  getRegionScrollOffset,
-  getRegionHeightPx,
-} from "../components/questions/PaperPdfPlaceholder";
+import PaperPdfPlaceholder, { getQuestionScrollOffset } from "../components/questions/PaperPdfPlaceholder";
+import PaperQuestionRegionPanel from "../components/questions/PaperQuestionRegionPanel";
 import PdfRegionView from "../components/questions/PdfRegionView";
 import PastPaperMarkingScheme from "../components/questions/PastPaperMarkingScheme";
 import FloatingLogTables from "../components/FloatingLogTables";
@@ -118,9 +116,11 @@ export default function Questions() {
     const [showMarkingSchemeModal, setShowMarkingSchemeModal] = useState(false);
     const [showLogTables, setShowLogTables] = useState(false);
     const [paperDocumentLoaded, setPaperDocumentLoaded] = useState(false);
+    const [paperNumPages, setPaperNumPages] = useState(0);
     const [logTablesBlob, setLogTablesBlob] = useState<Blob | null>(null);
     const [logTablesPreloaded, setLogTablesPreloaded] = useState(false);
     const paperScrollRef = useRef<HTMLDivElement | null>(null);
+    const panelsScrollRef = useRef<HTMLDivElement | null>(null);
     const paperSnapshot = usePaperSnapshot(paperBlob, currentPaperPage);
     const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
 
@@ -218,77 +218,47 @@ export default function Questions() {
         };
     }, [selectedPaper, getPaperQuestions]);
 
-    // When PDF scroll reports a page, sync to question (only when not in full paper mode; otherwise region-based sync handles it)
-    useEffect(() => {
-        if (paperQuestions.length === 0 || isFullPaperExpanded) return;
-        const idx = paperQuestions.findIndex(
-            (q) => currentPaperPage >= q.pageRange[0] && currentPaperPage <= q.pageRange[1]
-        );
-        if (idx >= 0) setPaperQuestionPosition(idx + 1);
-    }, [currentPaperPage, paperQuestions, isFullPaperExpanded]);
+    // Do NOT sync PDF page/scroll to question — question only changes via arrows or "Open question".
 
     const snippetWidth = options.laptopMode ? 680 : 480;
-
-    // Region-based scroll sync: when full paper expanded, use exact scroll position vs page regions
     const PAGE_GAP_PX = 8;
     const PDF_ASPECT = 842 / 595;
     const pageHeightPx = snippetWidth * PDF_ASPECT;
 
+    // Full-paper scroll does NOT change the current question; user can scroll freely and click "Question only" to return to the question they were on.
+
+    const paperContentHeightPx =
+      paperNumPages > 0 ? paperNumPages * (pageHeightPx + PAGE_GAP_PX) - PAGE_GAP_PX : 0;
+
+    // Sync PDF scroll with region-aligned panels (panels stay in line with question regions)
     useEffect(() => {
-        if (!isFullPaperExpanded) return;
-        const container = paperScrollRef.current;
-        if (!container || paperQuestions.length === 0) return;
-
-        let rafId: number | null = null;
-        const handleScroll = () => {
-            if (rafId != null) return;
-            rafId = requestAnimationFrame(() => {
-                rafId = null;
-                const scrollTop = container.scrollTop;
-                const viewportBottom = scrollTop + container.clientHeight;
-
-                let bestIdx = -1;
-                let bestOverlap = 0;
-
-                for (let i = 0; i < paperQuestions.length; i++) {
-                    const q = paperQuestions[i]!;
-                    let regionTop: number;
-                    let regionHeight: number;
-
-                    if (q.pageRegions && q.pageRegions.length > 0) {
-                        const firstRegion = q.pageRegions[0]!;
-                        regionTop = getRegionScrollOffset(snippetWidth, firstRegion);
-                        regionHeight = getRegionHeightPx(snippetWidth, firstRegion);
-                    } else {
-                        const pageIdx = (q.pageRange[0] ?? 1) - 1;
-                        regionTop = pageIdx * (pageHeightPx + PAGE_GAP_PX);
-                        regionHeight = pageHeightPx + PAGE_GAP_PX;
-                    }
-
-                    const regionBottom = regionTop + regionHeight;
-                    const overlapTop = Math.max(scrollTop, regionTop);
-                    const overlapBottom = Math.min(viewportBottom, regionBottom);
-                    const overlap = Math.max(0, overlapBottom - overlapTop);
-
-                    if (overlap > bestOverlap) {
-                        bestOverlap = overlap;
-                        bestIdx = i;
-                    }
-                }
-
-                if (bestIdx >= 0) {
-                    setPaperQuestionPosition(bestIdx + 1);
-                }
+        if (!isFullPaperExpanded || !paperScrollRef.current || !panelsScrollRef.current) return;
+        const pdfEl = paperScrollRef.current;
+        const panelsEl = panelsScrollRef.current;
+        let raf: number | null = null;
+        const syncFromPdf = () => {
+            if (raf) return;
+            raf = requestAnimationFrame(() => {
+                raf = null;
+                if (panelsEl.scrollTop !== pdfEl.scrollTop) panelsEl.scrollTop = pdfEl.scrollTop;
             });
         };
-
-        container.addEventListener("scroll", handleScroll, { passive: true });
-        handleScroll();
-        return () => {
-            container.removeEventListener("scroll", handleScroll);
-            if (rafId != null) cancelAnimationFrame(rafId);
+        const syncFromPanels = () => {
+            if (raf) return;
+            raf = requestAnimationFrame(() => {
+                raf = null;
+                if (pdfEl.scrollTop !== panelsEl.scrollTop) pdfEl.scrollTop = panelsEl.scrollTop;
+            });
         };
-    }, [paperQuestions, snippetWidth, isFullPaperExpanded, pageHeightPx]);
+        pdfEl.addEventListener("scroll", syncFromPdf, { passive: true });
+        panelsEl.addEventListener("scroll", syncFromPanels, { passive: true });
+        syncFromPdf();
+        return () => {
+            pdfEl.removeEventListener("scroll", syncFromPdf);
+            panelsEl.removeEventListener("scroll", syncFromPanels);
+            if (raf) cancelAnimationFrame(raf);
+        };
+    }, [isFullPaperExpanded]);
 
     // Load marking scheme when paper and current question have markingSchemePageRange
     const currentPaperQuestion = paperQuestions[paperQuestionPosition - 1];
@@ -314,9 +284,10 @@ export default function Questions() {
         };
     }, [selectedPaper, getMarkingSchemeBlob, currentPaperQuestion?.markingSchemePageRange]);
 
-    // Reset PDF document loaded when paper blob changes (new paper)
+    // Reset PDF document loaded and page count when paper blob changes (new paper)
     useEffect(() => {
         setPaperDocumentLoaded(false);
+        setPaperNumPages(0);
     }, [paperBlob]);
 
     // Preload log tables PDF so modal opens instantly
@@ -693,9 +664,9 @@ export default function Questions() {
                                                         ))}
                                                     </div>
                                                 </motion.div>
-                                                {/* Full paper: always mounted so it loads in background when off-screen; no visibility:hidden so PDF loads */}
+                                                {/* Full paper: PDF viewbox (left) + panels (right, outside PDF div) */}
                                                 <div
-                                                    className="flex flex-col overflow-hidden"
+                                                    className="flex flex-row gap-4 overflow-hidden"
                                                     style={{
                                                         position: "absolute",
                                                         ...(isFullPaperExpanded
@@ -709,15 +680,51 @@ export default function Questions() {
                                                               }),
                                                     }}
                                                 >
-                                                    <PaperPdfPlaceholder
-                                                        file={paperBlob}
-                                                        pageWidth={snippetWidth}
-                                                        onCurrentPageChange={setCurrentPaperPage}
-                                                        scrollToPage={scrollToPage ?? undefined}
-                                                        onScrolledToPage={() => setScrollToPage(null)}
-                                                        onDocumentLoadSuccess={() => setPaperDocumentLoaded(true)}
-                                                        scrollContainerRef={paperScrollRef}
-                                                    />
+                                                    <div
+                                                        className="shrink-0 min-h-0 overflow-hidden flex flex-col"
+                                                        style={{ width: snippetWidth }}
+                                                    >
+                                                        <PaperPdfPlaceholder
+                                                            file={paperBlob}
+                                                            pageWidth={snippetWidth}
+                                                            onCurrentPageChange={setCurrentPaperPage}
+                                                            scrollToPage={scrollToPage ?? undefined}
+                                                            onScrolledToPage={() => setScrollToPage(null)}
+                                                            onDocumentLoadSuccess={() => setPaperDocumentLoaded(true)}
+                                                            onNumPages={setPaperNumPages}
+                                                            scrollContainerRef={paperScrollRef}
+                                                        />
+                                                    </div>
+                                                    {isFullPaperExpanded && paperQuestions.length > 0 && paperContentHeightPx > 0 && (
+                                                        <div
+                                                            ref={panelsScrollRef}
+                                                            className="shrink-0 w-44 min-h-0 overflow-y-auto scrollbar-minimal"
+                                                        >
+                                                            <div
+                                                                className="relative w-full"
+                                                                style={{ minHeight: paperContentHeightPx }}
+                                                            >
+                                                                {paperQuestions.map((q, i) => (
+                                                                    <div
+                                                                        key={q.id}
+                                                                        className="absolute left-0 right-0"
+                                                                        style={{
+                                                                            top: getQuestionScrollOffset(snippetWidth, q) + 4,
+                                                                        }}
+                                                                    >
+                                                                        <PaperQuestionRegionPanel
+                                                                            question={q}
+                                                                            index={i}
+                                                                            onGoToQuestion={() => {
+                                                                                setPaperQuestionPosition(i + 1);
+                                                                                setIsFullPaperExpanded(false);
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </>
                                         ) : (
@@ -738,7 +745,11 @@ export default function Questions() {
 
                         return options.laptopMode ? (
                             <div className="absolute inset-0 flex w-full min-h-0 justify-center items-start pointer-events-auto">
-                                <div className="practice-paper-fly-in flex h-full min-h-0 w-full max-w-[720px] shrink-0 flex-col overflow-hidden pointer-events-auto">
+                                <div
+                                    className={`practice-paper-fly-in flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden pointer-events-auto ${
+                                        mode === "pastpaper" ? "max-w-[920px]" : "max-w-[720px]"
+                                    }`}
+                                >
                                     <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden pt-2 px-2 pb-0">
                                         {renderPdfContent()}
                                     </div>

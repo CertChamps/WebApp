@@ -33,6 +33,19 @@ export function getRegionHeightPx(pageWidth: number, region: { height?: number }
   return ((region.height ?? 150) / 595) * pageWidth;
 }
 
+/** Compute scroll offset for a question (region-based or page-based). */
+export function getQuestionScrollOffset(
+  pageWidth: number,
+  question: { pageRegions?: Array<{ page: number; y?: number }>; pageRange?: [number, number] }
+): number {
+  if (question.pageRegions?.length) {
+    return getRegionScrollOffset(pageWidth, question.pageRegions[0]!);
+  }
+  const pageIndex = Math.max(0, (question.pageRange?.[0] ?? 1) - 1);
+  const pageHeightPx = pageWidth * PDF_ASPECT;
+  return pageIndex * (pageHeightPx + PAGE_GAP_PX);
+}
+
 /** Loads a PDF: react-pdf only. Accepts a Blob (e.g. from Firebase), a URL string, or legacy year for static path. */
 type PaperPdfPlaceholderProps = {
   /** PDF as Blob (e.g. from getBlob) or URL string. Preferred when loading from Storage. */
@@ -53,6 +66,8 @@ type PaperPdfPlaceholderProps = {
   onDocumentLoadSuccess?: () => void;
   /** Optional ref to the scroll container for programmatic scroll control. */
   scrollContainerRef?: MutableRefObject<HTMLDivElement | null>;
+  /** Optional overlay nodes positioned by top (px); used for full-paper question region bars. */
+  overlayNodes?: Array<{ topPx: number; content: ReactNode }>;
 };
 
 export default function PaperPdfPlaceholder({
@@ -65,6 +80,7 @@ export default function PaperPdfPlaceholder({
   onNumPages,
   onDocumentLoadSuccess,
   scrollContainerRef: externalScrollRef,
+  overlayNodes,
 }: PaperPdfPlaceholderProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -138,35 +154,50 @@ export default function PaperPdfPlaceholder({
         </div>
       )}
       <PdfErrorBoundary fallback={pdfFallback}>
-        <Document
-          file={file}
-          onLoadSuccess={({ numPages: n }) => {
-            setNumPages(n);
-            setLoadError(null);
-            onNumPages?.(n);
-            onDocumentLoadSuccess?.();
-          }}
-          onLoadError={(err) => {
-            console.error("PDF load error:", err);
-            setLoadError(err?.message ?? "Unknown error");
-          }}
-        >
-          {Array.from({ length: numPages }, (_, i) => (
-            <div
-              key={`page_${i + 1}`}
-              ref={(el) => {
-                pageRefsRef.current[i] = el;
-              }}
-              data-page={i + 1}
-              className="my-2"
-            >
-              <PdfThemeWrapper
+        <div className="relative">
+          <Document
+            file={file}
+            onLoadSuccess={({ numPages: n }) => {
+              setNumPages(n);
+              setLoadError(null);
+              onNumPages?.(n);
+              onDocumentLoadSuccess?.();
+            }}
+            onLoadError={(err) => {
+              console.error("PDF load error:", err);
+              setLoadError(err?.message ?? "Unknown error");
+            }}
+          >
+            {Array.from({ length: numPages }, (_, i) => (
+              <div
+                key={`page_${i + 1}`}
+                ref={(el) => {
+                  pageRefsRef.current[i] = el;
+                }}
+                data-page={i + 1}
+                className="my-2"
+              >
+                <PdfThemeWrapper
                 pageNumber={i + 1}
                 width={pageWidth}
               />
+              </div>
+            ))}
+          </Document>
+          {overlayNodes && overlayNodes.length > 0 && (
+            <div className="absolute top-0 left-0 right-0 h-full pointer-events-none min-h-full">
+              {overlayNodes.map((node, i) => (
+                <div
+                  key={i}
+                  className="absolute left-0 right-0 pointer-events-auto"
+                  style={{ top: node.topPx }}
+                >
+                  {node.content}
+                </div>
+              ))}
             </div>
-          ))}
-        </Document>
+          )}
+        </div>
       </PdfErrorBoundary>
     </div>
   );

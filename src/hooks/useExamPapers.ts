@@ -31,6 +31,10 @@ export type PaperQuestion = {
   pageRange: [number, number];
   pageRegions?: PaperPageRegion[];
   markingSchemePageRange?: MarkingSchemePageRange;
+  /** Optional tags (e.g. topic tags) when stored with the paper question. */
+  tags?: string[];
+  /** Optional log table page for past papers. */
+  log_table_page?: number | string;
 };
 
 function deriveLabel(docId: string, year?: number): string {
@@ -239,6 +243,9 @@ export function useExamPapers() {
               };
             }
           }
+          const tags = Array.isArray(data.tags)
+            ? (data.tags as unknown[]).filter((t): t is string => typeof t === "string")
+            : undefined;
           list.push({
             id: d.id,
             questionName:
@@ -248,6 +255,7 @@ export function useExamPapers() {
             pageRange,
             pageRegions: pageRegions.length > 0 ? pageRegions : undefined,
             markingSchemePageRange,
+            tags: tags?.length ? tags : undefined,
           });
         });
       return list;

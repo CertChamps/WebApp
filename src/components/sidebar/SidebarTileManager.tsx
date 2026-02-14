@@ -16,9 +16,9 @@ export type SidebarPanelDef = {
 };
 
 const PANELS: SidebarPanelDef[] = [
-  { id: "ai", label: "AI", icon: <LuSparkles size={16} strokeWidth={2} /> },
-  { id: "threads", label: "Threads", icon: <LuMessageSquare size={16} strokeWidth={2} /> },
-  { id: "timer", label: "Timer", icon: <LuTimer size={16} strokeWidth={2} /> },
+  { id: "ai", label: "AI", icon: <LuSparkles size={20} strokeWidth={2} /> },
+  { id: "threads", label: "Threads", icon: <LuMessageSquare size={20} strokeWidth={2} /> },
+  { id: "timer", label: "Timer", icon: <LuTimer size={20} strokeWidth={2} /> },
 ];
 
 export type SidebarTileManagerProps = {
@@ -64,8 +64,8 @@ export function SidebarTileManager({
   return (
     <div className="sidebar-tile-manager flex h-full flex-col overflow-hidden rounded-xl border border-grey/25 backdrop-blur-xl color-bg">
       {/* Tab bar: separated “window” tabs + collapse */}
-      <div className="sidebar-tile-manager__tabs flex shrink-0 items-center gap-2 px-2 py-2 color-bg-grey-5/90">
-        <div className="flex min-w-0 flex-1 gap-2">
+      <div className="sidebar-tile-manager__tabs flex shrink-0 items-center justify-center gap-1 py-2">
+        <div className="flex items-center gap-1">
           {PANELS.map((p) => {
             const isOpen = p.id === openPanelId;
             return (
@@ -73,15 +73,12 @@ export function SidebarTileManager({
                 key={p.id}
                 type="button"
                 onClick={() => togglePanel(p.id)}
-                className={`sidebar-tile-manager__tab flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-medium transition-all duration-200 ${
-                  isOpen
-                    ? "border-grey/30 color-bg-accent color-txt-accent"
-                    : "border-grey/20 color-txt-sub hover:border-grey/30 hover:color-bg-grey-10 hover:color-txt-main"
-                }`}
                 title={p.label}
+                className={`sidebar-tile-manager__tab flex items-center justify-center p-2 transition-all duration-200 ${
+                  isOpen ? "color-txt-accent" : "color-txt-sub hover:color-txt-main"
+                }`}
               >
-                <span className="shrink-0 [&>svg]:size-4">{p.icon}</span>
-                <span className="truncate">{p.label}</span>
+                <span className="shrink-0 [&>svg]:size-5">{p.icon}</span>
               </button>
             );
           })}
@@ -91,9 +88,10 @@ export function SidebarTileManager({
             type="button"
             onClick={onCollapse}
             aria-label="Collapse sidebar"
-            className="sidebar-tile-manager__collapse flex shrink-0 items-center justify-center rounded-lg border border-grey/20 p-2 color-txt-sub transition-colors hover:border-grey/30 hover:color-bg-grey-10 hover:color-txt-main"
+            title="Collapse sidebar"
+            className="sidebar-tile-manager__collapse flex shrink-0 items-center justify-center p-2 color-txt-sub transition-colors hover:color-txt-main"
           >
-            <LuPanelRightClose size={18} strokeWidth={2} />
+            <LuPanelRightClose size={20} strokeWidth={2} />
           </button>
         )}
       </div>

@@ -46,28 +46,28 @@
   transition-all duration-250;
 }
 
+/* ====================================== QUESTION SIDEBAR (icon strip – icons only) ================================= */
 .sidebar {
-  @apply items-center rounded-full  my-1 
-  cursor-pointer 
-  group-hover:px-2  relative
-  transition-all duration-250;
+  @apply flex items-center justify-center p-1.5
+  cursor-pointer relative
+  transition-all duration-200;
 }
 
 .sidebar-selected {
-  @apply items-center rounded-full my-1
-  group-hover:px-2 relative 
-  transition-all duration-250;
+  @apply flex items-center justify-center p-1.5 relative
+  transition-all duration-200;
 }
 
-.tooltip {
-  @apply absolute left-1/2 -translate-x-1/2 -top-6
-  color-bg-grey-5 color-txt-sub border-2 color-shadow
-  txt-sub font-bold text-xs rounded-out px-2 py-1
-  transition-all duration-200 scale-0 group-hover:scale-100 origin-bottom
+.question-sidebar-strip .nav-icon {
+  @apply color-txt-main transition-all duration-200;
+}
+
+.question-sidebar-strip .nav-icon-selected {
+  @apply color-txt-accent transition-all duration-200;
 }
 
 .icon-anim {
-  @apply group-hover:animate-wiggle group-hover:-translate-y-1 group-hover:scale-105
+  @apply group-hover:scale-110 group-hover:-translate-y-0.5;
 }
 
 .nav-icon {
