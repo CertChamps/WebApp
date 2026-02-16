@@ -29,6 +29,7 @@
   @apply color-bg color-txt-main;
 }
 
+
 .questions-advance {
   @apply color-bg-grey-5 color-txt-sub flex h-6 w-6 min-h-[2.5rem] min-w-[2.5rem] 
   shrink-0 items-center justify-center rounded-full border border-transparent transition-all 
@@ -36,8 +37,7 @@
 }
 
 .question-selector-button {
-    @apply color-bg-grey-5 color-txt-sub flex items-center justify-center gap-2 rounded-out 
-    px-3 py-1.5 text-sm font-semibold transition-all hover:opacity-85 cursor-pointer
+    @apply color-bg-grey-5 color-txt-sub flex items-center justify-center gap-2 rounded-out px-3! py-1.5! text-sm font-semibold transition-all hover:opacity-85 cursor-pointer
 }
 
 .question-selector-button-active {
@@ -51,22 +51,147 @@
   white-space: nowrap;
 }
 
-/* AI Chat markdown & math */
-.chat-markdown {
-  line-height: 1.5;
+/* AI Chat markdown – tuned for LLM output (headings, lists, code, blockquotes, tables) */
+.chat-markdown,
+.chat-markdown-prose {
+  line-height: 1.6;
   word-wrap: break-word;
 }
 
-/* KaTeX in chat - ensure visible rendering */
+/* Paragraphs – clear separation without excessive gaps */
+.chat-markdown-p {
+  margin-bottom: 0.625em;
+}
+.chat-markdown-p:last-child {
+  margin-bottom: 0;
+}
+
+/* Headings – clear hierarchy; LLMs often use ### for sections */
+.chat-markdown-h1 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-top: 0.75em;
+  margin-bottom: 0.35em;
+  color: inherit;
+}
+.chat-markdown-h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-top: 0.65em;
+  margin-bottom: 0.3em;
+  color: inherit;
+}
+.chat-markdown-h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-top: 0.5em;
+  margin-bottom: 0.25em;
+  color: inherit;
+}
+.chat-markdown-h1:first-child,
+.chat-markdown-h2:first-child,
+.chat-markdown-h3:first-child {
+  margin-top: 0;
+}
+
+/* Lists – atomic bullets; LLMs favour - and 1. */
+.chat-markdown-ul {
+  list-style-type: disc;
+  list-style-position: inside;
+  margin-bottom: 0.625em;
+  padding-left: 0.25em;
+}
+.chat-markdown-ol {
+  list-style-type: decimal;
+  list-style-position: inside;
+  margin-bottom: 0.625em;
+  padding-left: 0.25em;
+}
+.chat-markdown-li {
+  margin-bottom: 0.2em;
+  padding-left: 0.25em;
+}
+
+/* Code – inline for terms, block for snippets */
+.chat-markdown-code-inline {
+  padding: 0.125em 0.375em;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+  background: rgba(128, 128, 128, 0.2);
+}
+.chat-markdown-pre {
+  margin: 0.5em 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.chat-markdown-code-block {
+  display: block;
+  padding: 0.75em 1em;
+  margin: 0.5em 0;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+  background: rgba(128, 128, 128, 0.15);
+  white-space: pre;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Blockquote – for quoted/emphasised content */
+.chat-markdown-blockquote {
+  margin: 0.5em 0;
+  padding-left: 0.75em;
+  border-left: 3px solid rgba(128, 128, 128, 0.4);
+  opacity: 0.95;
+}
+
+/* Horizontal rule */
+.chat-markdown-hr {
+  margin: 0.75em 0;
+  border: none;
+  border-top: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+/* Tables – for structured data */
+.chat-markdown-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0.5em 0;
+}
+.chat-markdown-table {
+  border-collapse: collapse;
+  font-size: 0.875em;
+}
+.chat-markdown-table th,
+.chat-markdown-table td {
+  padding: 0.35em 0.6em;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+}
+.chat-markdown-table th {
+  font-weight: 600;
+  background: rgba(128, 128, 128, 0.12);
+}
+
+/* KaTeX in chat – remark-math + rehype-katex render inline ($) vs block ($$) */
 .chat-markdown .katex {
   font-size: 1em;
   overflow-x: auto;
   overflow-y: hidden;
 }
-
 .chat-markdown .katex-display {
-  margin: 0.5em 0;
+  margin: 0.6em 0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar (for overlay elements that scroll in sync) */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Past paper fly-in when centered (laptop mode) */

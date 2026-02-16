@@ -2,6 +2,13 @@
   scrollbar-gutter: stable;
 }
 
+/* AI chat messages – prioritise vertical scroll on iPad; allow sidebar drag when horizontal */
+.ai-chat-messages {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior-y: contain;
+}
+
 /* Stack gap between two window tiles */
 .sidebar-tile-manager__stack {
   gap: 0.5rem;

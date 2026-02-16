@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getDocument } from "pdfjs-dist";
+import { getDocumentCached } from "../utils/pdfDocumentCache";
 
 const RENDER_SCALE = 1;
 const MAX_WIDTH = 600; // Smaller for API payload limits
@@ -33,9 +33,8 @@ export function useAllPageSnapshots(
 
     (async () => {
       try {
-        const data = await blob.arrayBuffer();
+        const doc = await getDocumentCached(blob);
         if (cancelled) return;
-        const doc = await getDocument(data).promise;
         if (cancelled) return;
         const numPages = doc.numPages;
         const urls: string[] = [];

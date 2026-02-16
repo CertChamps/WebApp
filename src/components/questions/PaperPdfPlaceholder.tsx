@@ -1,6 +1,12 @@
-import { useState, useRef, useEffect, Component, type ReactNode, type MutableRefObject } from "react";
+import { useState, useRef, useEffect, useCallback, Component, type ReactNode, type MutableRefObject } from "react";
 import { Document } from "react-pdf";
 import PdfThemeWrapper from "../PdfThemeWrapper";
+
+/** Default buffer; mobile uses 1. */
+const VIRTUALIZATION_BUFFER_DESKTOP = 2;
+const VIRTUALIZATION_BUFFER_MOBILE = 1;
+const INITIAL_PAGES_DESKTOP = 5;
+const INITIAL_PAGES_MOBILE = 2;
 
 /** Catches PDF.js worker errors (e.g. messageHandler is null) so the app doesn't crash. */
 class PdfErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }> {
@@ -14,7 +20,7 @@ class PdfErrorBoundary extends Component<{ fallback: ReactNode; children: ReactN
   }
 }
 
-const PAGE_GAP_PX = 8;
+const PAGE_GAP_PX = 0;
 const PDF_ASPECT = 842 / 595;
 
 /** Compute pixel offset of a region's top edge in the scroll content (matches PaperPdfPlaceholder layout). */
@@ -44,6 +50,21 @@ export function getQuestionScrollOffset(
   const pageIndex = Math.max(0, (question.pageRange?.[0] ?? 1) - 1);
   const pageHeightPx = pageWidth * PDF_ASPECT;
   return pageIndex * (pageHeightPx + PAGE_GAP_PX);
+}
+
+/** Compute bottom edge (in scroll px) of a question's region(s). Used to place separators in the gap between questions. */
+export function getQuestionBottomOffset(
+  pageWidth: number,
+  question: { pageRegions?: Array<{ page: number; y?: number; height?: number }>; pageRange?: [number, number] }
+): number {
+  const offset = 0;
+  if (question.pageRegions?.length) {
+    const last = question.pageRegions[question.pageRegions.length - 1]!;
+    return getRegionScrollOffset(pageWidth, last) + getRegionHeightPx(pageWidth, last) + offset; 
+  }
+  const pageIndex = Math.max(0, (question.pageRange?.[1] ?? question.pageRange?.[0] ?? 1) - 1);
+  const pageHeightPx = pageWidth * PDF_ASPECT;
+  return (pageIndex + 1) * (pageHeightPx + PAGE_GAP_PX) - PAGE_GAP_PX + offset;
 }
 
 /** Loads a PDF: react-pdf only. Accepts a Blob (e.g. from Firebase), a URL string, or legacy year for static path. */
@@ -84,13 +105,67 @@ export default function PaperPdfPlaceholder({
 }: PaperPdfPlaceholderProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  /** Only render pages in [min, max] to avoid memory crash on iPad (virtualization). */
+  const [visibleRange, setVisibleRange] = useState<{ min: number; max: number }>({ min: 1, max: 2 });
+  const [isMobile, setIsMobile] = useState(false);
   const internalScrollRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = externalScrollRef ?? internalScrollRef;
   const pageRefsRef = useRef<(HTMLDivElement | null)[]>([]);
   const ratiosRef = useRef<Record<number, number>>({});
   const lastReportedPageRef = useRef<number>(1);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const m =
+      typeof window !== "undefined" &&
+      ("ontouchstart" in window || window.innerWidth <= 768);
+    setIsMobile(m);
+  }, []);
 
   const file = fileProp ?? (year ? `/assets/marking_schemes/${year}.pdf` : null);
+  const pageHeightPx = pageWidth * PDF_ASPECT;
+  const buffer = isMobile ? VIRTUALIZATION_BUFFER_MOBILE : VIRTUALIZATION_BUFFER_DESKTOP;
+  const initialMax = isMobile ? INITIAL_PAGES_MOBILE : INITIAL_PAGES_DESKTOP;
+
+  const updateVisibleRange = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el || numPages === 0) return;
+    const scrollTop = el.scrollTop;
+    const clientHeight = el.clientHeight;
+    const firstVisible = Math.floor(scrollTop / pageHeightPx);
+    const lastVisible = Math.ceil((scrollTop + clientHeight) / pageHeightPx) - 1;
+    const minPage = Math.max(1, firstVisible - buffer + 1);
+    const maxPage = Math.min(numPages, lastVisible + buffer + 1);
+    setVisibleRange((prev) =>
+      prev.min === minPage && prev.max === maxPage ? prev : { min: minPage, max: maxPage }
+    );
+  }, [numPages, pageHeightPx, buffer]);
+
+  useEffect(() => {
+    if (numPages === 0) return;
+    setVisibleRange({ min: 1, max: Math.min(initialMax, numPages) });
+  }, [numPages, initialMax]);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || numPages === 0) return;
+    const onScrollOrResize = () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        updateVisibleRange();
+      });
+    };
+    el.addEventListener("scroll", onScrollOrResize, { passive: true });
+    const resizeObserver = new ResizeObserver(onScrollOrResize);
+    resizeObserver.observe(el);
+    updateVisibleRange();
+    return () => {
+      el.removeEventListener("scroll", onScrollOrResize);
+      resizeObserver.disconnect();
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [numPages, updateVisibleRange]);
 
   useEffect(() => {
     if (!onCurrentPageChange || numPages === 0 || !scrollContainerRef.current) return;
@@ -119,6 +194,10 @@ export default function PaperPdfPlaceholder({
   useEffect(() => {
     if (scrollToPage == null || scrollToPage < 1 || numPages === 0) return;
     const pageIndex = Math.min(scrollToPage, numPages) - 1;
+    setVisibleRange((prev) => ({
+      min: Math.max(1, Math.min(prev.min, scrollToPage - buffer)),
+      max: Math.min(numPages, Math.max(prev.max, scrollToPage + buffer)),
+    }));
     const el = pageRefsRef.current[pageIndex];
     if (el?.scrollIntoView) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -126,7 +205,7 @@ export default function PaperPdfPlaceholder({
       onCurrentPageChange?.(scrollToPage);
       onScrolledToPage?.();
     }
-  }, [scrollToPage, numPages, onCurrentPageChange, onScrolledToPage]);
+  }, [scrollToPage, numPages, buffer, onCurrentPageChange, onScrolledToPage]);
 
   if (!file) {
     return (
@@ -168,21 +247,28 @@ export default function PaperPdfPlaceholder({
               setLoadError(err?.message ?? "Unknown error");
             }}
           >
-            {Array.from({ length: numPages }, (_, i) => (
-              <div
-                key={`page_${i + 1}`}
-                ref={(el) => {
-                  pageRefsRef.current[i] = el;
-                }}
-                data-page={i + 1}
-                className="my-2"
-              >
-                <PdfThemeWrapper
-                pageNumber={i + 1}
-                width={pageWidth}
-              />
-              </div>
-            ))}
+            {Array.from({ length: numPages }, (_, i) => {
+              const pageNum = i + 1;
+              const isVisible =
+                pageNum >= visibleRange.min && pageNum <= visibleRange.max;
+              return (
+                <div
+                  key={`page_${pageNum}`}
+                  ref={(el) => {
+                    pageRefsRef.current[i] = el;
+                  }}
+                  data-page={pageNum}
+                  style={{ height: pageHeightPx, minHeight: pageHeightPx }}
+                >
+                  {isVisible ? (
+                    <PdfThemeWrapper
+                      pageNumber={pageNum}
+                      width={pageWidth}
+                    />
+                  ) : null}
+                </div>
+              );
+            })}
           </Document>
           {overlayNodes && overlayNodes.length > 0 && (
             <div className="absolute top-0 left-0 right-0 h-full pointer-events-none min-h-full">

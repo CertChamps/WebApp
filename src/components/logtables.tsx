@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, createRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, createRef } from "react";
 import { Document } from "react-pdf";
 import PdfThemeWrapper from "./PdfThemeWrapper";
 import Lottie from "lottie-react";
@@ -22,7 +22,9 @@ const PAGE_GAP_PX = 0;
 /** Log tables booklet pages are short (~300px), not A4; use this so we don't get huge gaps between pages. */
 const LOG_TABLES_PAGE_HEIGHT = 330;
 
-const LogTables = ({ pgNumber, embedded = false, file: fileProp }: QuestionType) => {
+export type LogTablesHandle = { scrollToCurrentPage: () => void };
+
+const LogTables = forwardRef<LogTablesHandle, QuestionType>(({ pgNumber, embedded = false, file: fileProp }, ref) => {
   const file = fileProp ?? LOG_TABLES_DEFAULT_FILE;
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(EMBEDDED_BASE_WIDTH);
@@ -34,6 +36,15 @@ const LogTables = ({ pgNumber, embedded = false, file: fileProp }: QuestionType)
   const [pagesRendered, setPagesRendered] = useState(0); 
   const [scrollingDone, setScrollingDone] = useState(false); // ✅ Controls visibility
   const pageRefs = useRef<React.RefObject<HTMLDivElement>[]>([]);
+
+  useImperativeHandle(ref, () => ({
+    scrollToCurrentPage: () => {
+      const pageIndex = parseInt(effectivePage, 10) - 1;
+      if (pageIndex >= 0 && pageRefs.current[pageIndex]?.current) {
+        pageRefs.current[pageIndex].current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    },
+  }), [effectivePage]);
 
   // When embedded, track container width for CSS scale (PDF is always rendered at EMBEDDED_BASE_WIDTH)
   useEffect(() => {
@@ -92,7 +103,7 @@ const LogTables = ({ pgNumber, embedded = false, file: fileProp }: QuestionType)
           )}
         </div>
         <div className="flex items-center gap-2">
-          {!isNullPage && (
+          {!embedded && !isNullPage && (
             <button
               onClick={() => {
                 const pageIndex = parseInt(effectivePage, 10) - 1;
@@ -223,6 +234,8 @@ const LogTables = ({ pgNumber, embedded = false, file: fileProp }: QuestionType)
       </div>
     </div>
   );
-};
+});
+
+LogTables.displayName = "LogTables";
 
 export default LogTables;

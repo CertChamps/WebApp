@@ -1,85 +1,67 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import katex from "katex";
+import remarkMath from "remark-math";
+import remarkBreaks from "remark-breaks";
+import rehypeKatex from "rehype-katex";
 import { motion } from "framer-motion";
 import "katex/dist/katex.min.css";
 import type { Message } from "./useAI";
 
-const MATH_PLACEHOLDER = "\uE000";
-type Segment = { type: "text"; value: string } | { type: "math"; value: string; display: boolean };
-
-function splitMathSegments(text: string): Segment[] {
-  const parts: Segment[] = [];
+/**
+ * Normalise math delimiters and ensure block math is recognised by remark-math.
+ * remark-math treats $$ as block only when it has newlines around it (fenced style).
+ * Single-line $$\frac{1}{2}$$ is parsed as inline; we wrap it in newlines to force block.
+ */
+function normaliseMathDelimiters(text: string): string {
   let s = text
-    .replace(/\\\[([\s\S]*?)\\\]/g, (_, m) => `${MATH_PLACEHOLDER}B${m}${MATH_PLACEHOLDER}b`)
-    .replace(/\\\(([\s\S]*?)\\\)/g, (_, m) => `${MATH_PLACEHOLDER}I${m}${MATH_PLACEHOLDER}i`)
-    .replace(/\$\$([\s\S]*?)\$\$/g, (_, m) => `${MATH_PLACEHOLDER}B${m}${MATH_PLACEHOLDER}b`)
-    .replace(/\$([^$\n]+?)\$/g, (_, m) => `${MATH_PLACEHOLDER}I${m}${MATH_PLACEHOLDER}i`);
-  const re = new RegExp(`${MATH_PLACEHOLDER}([BI])([\\s\\S]*?)${MATH_PLACEHOLDER}([bi])`, "g");
-  let lastIdx = 0;
-  let m;
-  while ((m = re.exec(s)) !== null) {
-    if (m.index > lastIdx) {
-      const textPart = s.slice(lastIdx, m.index);
-      if (textPart) parts.push({ type: "text", value: textPart });
-    }
-    parts.push({ type: "math", value: m[2], display: m[1] === "B" });
-    lastIdx = re.lastIndex;
-  }
-  if (lastIdx < s.length) {
-    const textPart = s.slice(lastIdx);
-    if (textPart) parts.push({ type: "text", value: textPart });
-  }
-  return parts.length ? parts : [{ type: "text", value: text }];
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_, m) => `\n\n$$${m.trim()}$$\n\n`)
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_, m) => `$${m}$`);
+  // Single-line $$...$$ (AI often outputs this) -> add newlines so remark-math parses as block
+  s = s.replace(/(?<!\$)\$\$([^\n]*?)\$\$(?!\$)/g, (_, m) => `\n\n$$${m.trim()}$$\n\n`);
+  return s;
 }
 
 const mdComponents = {
-  p: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 last:mb-0">{children}</p>,
-  ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
-  ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
-  li: ({ children }: { children?: React.ReactNode }) => <li className="ml-1">{children}</li>,
+  p: ({ children }: { children?: React.ReactNode }) => <p className="chat-markdown-p">{children}</p>,
+  ul: ({ children }: { children?: React.ReactNode }) => <ul className="chat-markdown-ul">{children}</ul>,
+  ol: ({ children }: { children?: React.ReactNode }) => <ol className="chat-markdown-ol">{children}</ol>,
+  li: ({ children }: { children?: React.ReactNode }) => <li className="chat-markdown-li">{children}</li>,
   code: ({ className, children, ...props }: { className?: string; children?: React.ReactNode }) => {
     const isInline = !className;
     return isInline ? (
-      <code className="px-1 py-0.5 rounded bg-grey/20 text-sm font-mono" {...props}>{children}</code>
+      <code className="chat-markdown-code-inline" {...props}>{children}</code>
     ) : (
-      <code className="block p-3 rounded my-2 overflow-x-auto bg-grey/20 text-sm font-mono whitespace-pre" {...props}>{children}</code>
+      <code className="chat-markdown-code-block" {...props}>{children}</code>
     );
   },
-  pre: ({ children }: { children?: React.ReactNode }) => <pre className="my-2 overflow-x-auto text-xs">{children}</pre>,
+  pre: ({ children }: { children?: React.ReactNode }) => <pre className="chat-markdown-pre">{children}</pre>,
   strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-bold">{children}</strong>,
-  h1: ({ children }: { children?: React.ReactNode }) => <h3 className="font-bold text-base mt-2 mb-1">{children}</h3>,
-  h2: ({ children }: { children?: React.ReactNode }) => <h3 className="font-bold text-sm mt-2 mb-1">{children}</h3>,
-  h3: ({ children }: { children?: React.ReactNode }) => <h3 className="font-semibold text-sm mt-2 mb-1">{children}</h3>,
+  em: ({ children }: { children?: React.ReactNode }) => <em className="italic">{children}</em>,
+  blockquote: ({ children }: { children?: React.ReactNode }) => <blockquote className="chat-markdown-blockquote">{children}</blockquote>,
+  hr: () => <hr className="chat-markdown-hr" />,
+  h1: ({ children }: { children?: React.ReactNode }) => <h1 className="chat-markdown-h1">{children}</h1>,
+  h2: ({ children }: { children?: React.ReactNode }) => <h2 className="chat-markdown-h2">{children}</h2>,
+  h3: ({ children }: { children?: React.ReactNode }) => <h3 className="chat-markdown-h3">{children}</h3>,
+  table: ({ children }: { children?: React.ReactNode }) => <div className="chat-markdown-table-wrap"><table className="chat-markdown-table">{children}</table></div>,
+  thead: ({ children }: { children?: React.ReactNode }) => <thead>{children}</thead>,
+  tbody: ({ children }: { children?: React.ReactNode }) => <tbody>{children}</tbody>,
+  tr: ({ children }: { children?: React.ReactNode }) => <tr>{children}</tr>,
+  th: ({ children }: { children?: React.ReactNode }) => <th>{children}</th>,
+  td: ({ children }: { children?: React.ReactNode }) => <td>{children}</td>,
 };
 
 function MessageContent({ content }: { content: string }) {
   if (!content.trim()) return null;
-  const segments = splitMathSegments(content);
+  const normalised = normaliseMathDelimiters(content);
   return (
     <div className="chat-markdown">
-      {segments.map((seg, i) => {
-        if (seg.type === "text") {
-          if (!seg.value.trim()) return null;
-          return (
-            <ReactMarkdown key={i} remarkPlugins={[remarkGfm]} components={mdComponents}>
-              {seg.value}
-            </ReactMarkdown>
-          );
-        }
-        try {
-          const html = katex.renderToString(seg.value.trim(), { throwOnError: false, displayMode: seg.display });
-          return (
-            <span
-              key={i}
-              className={seg.display ? "block my-2 overflow-x-auto" : "inline"}
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
-          );
-        } catch {
-          return <code key={i} className="text-sm">${seg.value}$</code>;
-        }
-      })}
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
+        rehypePlugins={[rehypeKatex]}
+        components={mdComponents}
+      >
+        {normalised}
+      </ReactMarkdown>
     </div>
   );
 }

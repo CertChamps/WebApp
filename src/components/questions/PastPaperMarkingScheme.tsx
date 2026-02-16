@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Document } from "react-pdf";
 import PdfThemeWrapper from "../PdfThemeWrapper";
 import Lottie from "lottie-react";
@@ -11,8 +11,10 @@ type PastPaperMarkingSchemeProps = {
   file: Blob | null;
   /** 1-based inclusive page range to show. If null, show nothing. */
   pageRange: MarkingSchemePageRange | null;
-  /** Width of each page in px. */
+  /** Width of each page in px. When fillWidth is true, this is ignored and container width is used. */
   pageWidth?: number;
+  /** When true, page width fills the container (measured via ResizeObserver). */
+  fillWidth?: boolean;
   /** Optional class for the container. */
   className?: string;
 };
@@ -25,10 +27,30 @@ export default function PastPaperMarkingScheme({
   file,
   pageRange,
   pageWidth = 550,
+  fillWidth = false,
   className = "",
 }: PastPaperMarkingSchemeProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [measuredWidth, setMeasuredWidth] = useState<number>(fillWidth ? 0 : pageWidth);
+
+  const effectiveWidth = fillWidth ? Math.max(measuredWidth, 1) : pageWidth;
+
+  useEffect(() => {
+    if (!fillWidth) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const e of entries) {
+        const w = e.contentRect.width;
+        if (w > 0) setMeasuredWidth(w);
+      }
+    });
+    ro.observe(el);
+    setMeasuredWidth(el.clientWidth || 280);
+    return () => ro.disconnect();
+  }, [fillWidth]);
 
   useEffect(() => {
     if (!file) {
@@ -73,7 +95,7 @@ export default function PastPaperMarkingScheme({
           {loadError}
         </div>
       )}
-      <div className="flex-1 min-h-0 overflow-y-auto py-1">
+      <div ref={fillWidth ? scrollRef : undefined} className="flex-1 min-h-0 overflow-y-auto py-1 w-full">
         <Document
           file={file}
           onLoadSuccess={({ numPages: n }) => {
@@ -97,7 +119,7 @@ export default function PastPaperMarkingScheme({
                   <div className="color-shadow rounded-lg overflow-hidden color-bg-grey-5/50">
                     <PdfThemeWrapper
                       pageNumber={pageNum}
-                      width={pageWidth}
+                      width={effectiveWidth}
                     />
                   </div>
                   {pageCount > 1 && (

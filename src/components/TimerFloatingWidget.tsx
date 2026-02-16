@@ -1,7 +1,12 @@
 import { LuTimer, LuClock, LuCoffee } from "react-icons/lu";
 import { useTimer } from "../context/TimerContext";
 
-export function TimerFloatingWidget() {
+type TimerFloatingWidgetProps = {
+  /** When true, position on the left (for left-hand layout). */
+  leftHandMode?: boolean;
+};
+
+export function TimerFloatingWidget({ leftHandMode = false }: TimerFloatingWidgetProps) {
   const { state, formatTime } = useTimer();
 
   if (!state.running) return null;
@@ -32,7 +37,7 @@ export function TimerFloatingWidget() {
 
   return (
     <div
-      className="fixed bottom-3 right-3 z-10 flex flex-col gap-0.5 w-[220px] rounded-xl  color-bg p-2 "
+      className={`fixed bottom-3 z-10 flex flex-col gap-0.5 w-[220px] rounded-xl color-bg p-2 ${leftHandMode ? "left-20" : "right-3"}`}
       aria-live="polite"
       aria-label={`Timer: ${modeLabel}, ${formatTime(state.time)}`}
     >

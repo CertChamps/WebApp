@@ -57,7 +57,6 @@ const MarkingScheme = ({ year, pgNumber }: QuestionType) => {
   return (
     <div
       className="relative flex flex-col items-start color-shadow scrollbar-minimal overflow-hidden"
-      style={{ height: "80vh", width: "650px" }}
     >
       {/* ================= LOADING SCREEN ================= */}
       {/* 

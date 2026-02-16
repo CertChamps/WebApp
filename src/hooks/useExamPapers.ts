@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getBlob, ref } from "firebase/storage";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { storage, db } from "../../firebase";
@@ -156,9 +156,30 @@ export function useExamPapers() {
     };
   }, []);
 
+  // In-memory blob cache (LRU, max 10) so switching papers is instant when revisiting
+  const paperBlobCache = useRef<Map<string, Blob>>(new Map());
+  const paperBlobCacheOrder = useRef<string[]>([]);
+  const MAX_BLOB_CACHE = 10;
+
   const getPaperBlob = useCallback(async (paper: ExamPaper): Promise<Blob> => {
+    const key = paper.id;
+    const cached = paperBlobCache.current.get(key);
+    if (cached) {
+      // Move to end (most recently used)
+      paperBlobCacheOrder.current = paperBlobCacheOrder.current.filter((k) => k !== key);
+      paperBlobCacheOrder.current.push(key);
+      return cached;
+    }
     const pathRef = ref(storage, paper.storagePath);
-    return getBlob(pathRef);
+    const blob = await getBlob(pathRef);
+    paperBlobCache.current.set(key, blob);
+    paperBlobCacheOrder.current = paperBlobCacheOrder.current.filter((k) => k !== key);
+    paperBlobCacheOrder.current.push(key);
+    if (paperBlobCacheOrder.current.length > MAX_BLOB_CACHE) {
+      const oldest = paperBlobCacheOrder.current.shift();
+      if (oldest) paperBlobCache.current.delete(oldest);
+    }
+    return blob;
   }, []);
 
   /** Storage path for marking scheme: marking-schemes/leaving-cert/{subject}/{level}-level/{year}ms.pdf */
@@ -169,12 +190,22 @@ export function useExamPapers() {
     return `marking-schemes/leaving-cert/${subject}/${level}-level/${year}ms.pdf`;
   }, []);
 
+  const msBlobCache = useRef<Map<string, Blob | null>>(new Map());
   const getMarkingSchemeBlob = useCallback(
     async (paper: ExamPaper): Promise<Blob | null> => {
+      const cached = msBlobCache.current.get(paper.id);
+      if (cached !== undefined) return cached;
       try {
         const pathRef = ref(storage, getMarkingSchemeStoragePath(paper));
-        return await getBlob(pathRef);
+        const blob = await getBlob(pathRef);
+        msBlobCache.current.set(paper.id, blob);
+        if (msBlobCache.current.size > 5) {
+          const firstKey = msBlobCache.current.keys().next().value;
+          if (firstKey != null) msBlobCache.current.delete(firstKey);
+        }
+        return blob;
       } catch {
+        msBlobCache.current.set(paper.id, null);
         return null;
       }
     },
@@ -246,6 +277,13 @@ export function useExamPapers() {
           const tags = Array.isArray(data.tags)
             ? (data.tags as unknown[]).filter((t): t is string => typeof t === "string")
             : undefined;
+          const rawLogPage = data.log_table_page ?? data.logTablePage;
+          const log_table_page =
+            rawLogPage != null
+              ? typeof rawLogPage === "number"
+                ? rawLogPage
+                : String(rawLogPage)
+              : undefined;
           list.push({
             id: d.id,
             questionName:
@@ -256,6 +294,7 @@ export function useExamPapers() {
             pageRegions: pageRegions.length > 0 ? pageRegions : undefined,
             markingSchemePageRange,
             tags: tags?.length ? tags : undefined,
+            log_table_page,
           });
         });
       return list;

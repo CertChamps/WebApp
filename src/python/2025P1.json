@@ -2,18 +2,27 @@
   {
     "id": "CCQ00000001",
     "name": "2025 Paper 1 - Q1a",
-    "tags": ["Algebra", "Inequalities"],
+    "tags": [
+      "Algebra",
+      "Inequalities"
+    ],
     "difficulty": 1,
     "questions": [
       "$\\text{Solve the following inequality for } x \\in \\mathbb{R}: |x - 3| \\leq 12$"
     ],
     "answers": [
-      ["-9", "15"]
+      [
+        "-9",
+        "15"
+      ]
     ],
     "prefix": [
-      [null, "\\leq x \\leq"]
+      [
+        null,
+        "\\leq x \\leq"
+      ]
     ],
-    "orderMatters": [ 
+    "orderMatters": [
       true
     ],
     "isExamQ": true,
@@ -23,7 +32,10 @@
   {
     "id": "CCQ00000002",
     "name": "2025 Paper 1 - Q1b",
-    "tags": ["Algebra", "Expressions & Factorising"],
+    "tags": [
+      "Algebra",
+      "Expressions & Factorising"
+    ],
     "difficulty": 2,
     "questions": [
       "$(4x - 10\\sqrt{x})(2x + 5\\sqrt{x} - 7)$"
@@ -33,28 +45,41 @@
     ],
     "prefix": [
       null
-    ], 
+    ],
     "orderMatters": [
       false
-    ], 
+    ],
     "isExamQ": true,
     "markingScheme": 2508
-  }, 
+  },
   {
     "id": "CCQ00000003",
     "name": "2025 Paper 1 - Q1c",
-    "tags": ["Algebra", "Cubics", "Solving Equations", "Po"],
+    "tags": [
+      "Algebra",
+      "Cubics",
+      "Solving Equations",
+      "Po"
+    ],
     "difficulty": 2,
     "questions": [
       "$(2x + 3) \\text{ is a factor of } 4x^3 - 12x^2 - 7x + 30. \\\\ \\text{Use this information to find the three solutions of } 4x^3 - 12x^2 - 7x + 30 = 0$"
     ],
     "answers": [
-      ["-\\tfrac{3}{2}", "\\tfrac{5}{2}", "2"]
+      [
+        "-\\tfrac{3}{2}",
+        "\\tfrac{5}{2}",
+        "2"
+      ]
     ],
     "prefix": [
-      ["x = ", "x = ", "x = "]
+      [
+        "x = ",
+        "x = ",
+        "x = "
+      ]
     ],
-    "orderMatters": [ 
+    "orderMatters": [
       false
     ],
     "isExamQ": true,
@@ -63,74 +88,112 @@
   {
     "id": "CCQ00000004",
     "name": "2025 Paper 1 - Q2a",
-    "tags": ["Calculus", "Differentiation", "Applications of Differentiation"],
+    "tags": [
+      "Calculus",
+      "Differentiation",
+      "Applications of Differentiation"
+    ],
     "difficulty": 2,
     "questions": [
       "A function is defined for $x \\in \\mathbb{R}$ by $f(x) = 6 + x^2 + \\sin 4x$.\nFind $f'(x)$.",
       "Find the equation of the tangent to the curve $y = f(x)$ at the point where $x = 0$.\nGive your answer in the form $ax + by + c = 0$, where $a,b,c \\in \\mathbb{Z}$."
     ],
     "answers": [
-      ["2x + 4cos(4x)"],
-      ["4x - y + 6"]
+      [
+        "2x + 4cos(4x)"
+      ],
+      [
+        "4x - y + 6"
+      ]
     ],
     "prefix": [
-      ["f'(x) = "],
-      ["0 ="]
+      [
+        "f'(x) = "
+      ],
+      [
+        "0 ="
+      ]
     ],
     "orderMatters": [
       false,
       false
-    ], 
+    ],
     "isExamQ": true,
     "markingScheme": "2510",
     "logtables": "25"
-  }, 
-  {
-  "id": "CCQ00000005",
-  "name": "2025 Paper 1 - Q2b",
-  "tags": ["Calculus", "Functions", "Coordinate Geometry", "Line"],
-  "difficulty": 2,
-  "questions": [
-    "The function $g(x)$ is defined for $0 \\leq x \\leq 4$, $x \\in \\mathbb{R}$. Its graph is shown and is made up of two line segments.\nState the range of values of $x$ for which $g'(x) > 2$.",
-    "Find the value of $g(g(3))$. Give your answer in the form $\\frac{a}{b}$ where $a,b \\in \\mathbb{N}$. Show your work on the graph.",
-    "The graph of $y = g(x)$ is shown again. Draw and label the graph of $y = g^{-1}(x)$ on the same diagram, for $0 \\leq x \\leq 4$, $x \\in \\mathbb{R}$, where $g^{-1}$ is the inverse of $g$. (Hint: reflection in $y=x$.)"
-  ],
-  "answers": [
-    ["3", "4"],
-    ["\\frac{1}{3}"],
-    ["y = g^{-1}(x)"]
-  ],
-  "prefix": [
-    [null, "\\le x \\leq"],
-    ["g(g(3)) = "],
-    [null]
-  ],
-  "orderMatters": [
-    true,
-    false,
-    false
-  ],
-  "isExamQ": true,
-  "markingScheme": "2511",
-  "logtables": "18"
   },
-    {
+  {
+    "id": "CCQ00000005",
+    "name": "2025 Paper 1 - Q2b",
+    "tags": [
+      "Calculus",
+      "Functions",
+      "Coordinate Geometry",
+      "Line"
+    ],
+    "difficulty": 2,
+    "questions": [
+      "The function $g(x)$ is defined for $0 \\leq x \\leq 4$, $x \\in \\mathbb{R}$. Its graph is shown and is made up of two line segments.\nState the range of values of $x$ for which $g'(x) > 2$.",
+      "Find the value of $g(g(3))$. Give your answer in the form $\\frac{a}{b}$ where $a,b \\in \\mathbb{N}$. Show your work on the graph.",
+      "The graph of $y = g(x)$ is shown again. Draw and label the graph of $y = g^{-1}(x)$ on the same diagram, for $0 \\leq x \\leq 4$, $x \\in \\mathbb{R}$, where $g^{-1}$ is the inverse of $g$. (Hint: reflection in $y=x$.)"
+    ],
+    "answers": [
+      [
+        "3",
+        "4"
+      ],
+      [
+        "\\frac{1}{3}"
+      ],
+      [
+        "y = g^{-1}(x)"
+      ]
+    ],
+    "prefix": [
+      [
+        null,
+        "\\le x \\leq"
+      ],
+      [
+        "g(g(3)) = "
+      ],
+      [
+        null
+      ]
+    ],
+    "orderMatters": [
+      true,
+      false,
+      false
+    ],
+    "isExamQ": true,
+    "markingScheme": "2511",
+    "logtables": "18"
+  },
+  {
     "id": "CCQ00000006",
     "name": "2025 Paper 1 - Q3a",
-    "tags": ["Calculus", "Differentiation"],
+    "tags": [
+      "Calculus",
+      "Differentiation"
+    ],
     "difficulty": 2,
     "questions": [
       "The function $f(x) = (3x^5 - 4)^{28}$ is defined for $x \\in \\mathbb{R}$.\nFind an expression for $f'(x)$. You do not need to simplify your answer."
     ],
     "answers": [
-      ["28(3x^5 - 4)^{27}(15x^4)"]
+      [
+        "28(3x^5 - 4)^{27}(15x^4)"
+      ]
     ],
     "prefix": [
-      ["f'(x) = "]
+      [
+        "f'(x) = "
+      ]
     ],
-    "orderMatters": [ 
+    "orderMatters": [
       false
-    ], 
+    ],
     "isExamQ": true,
     "markingScheme": "2512",
     "logtables": "25"
@@ -138,19 +201,27 @@
   {
     "id": "CCQ00000007",
     "name": "2025 Paper 1 - Q3b",
-    "tags": ["Calculus", "Differentiation", "Applications of Differentiation"],
+    "tags": [
+      "Calculus",
+      "Differentiation",
+      "Applications of Differentiation"
+    ],
     "difficulty": 2,
     "questions": [
       "The function $g(x) = \\frac{3}{2x - 7}$ is defined for $x \\in \\mathbb{R}, x \\neq \\frac{7}{2}$.\nBy finding $g'(x)$, show that this function has no local maximum or minimum points."
     ],
     "answers": [
-      ["\\frac{-6}{(2x - 7)^2}"]
+      [
+        "\\frac{-6}{(2x - 7)^2}"
+      ]
     ],
     "prefix": [
-      ["g'(x) = "]
+      [
+        "g'(x) = "
+      ]
     ],
-    "orderMatters": [ 
-      false 
+    "orderMatters": [
+      false
     ],
     "isExamQ": true,
     "markingScheme": "2512",
@@ -159,16 +230,25 @@
   {
     "id": "CCQ00000008",
     "name": "2025 Paper 1 - Q3c",
-    "tags": ["Calculus", "Integration"],
+    "tags": [
+      "Calculus",
+      "Integration"
+    ],
     "difficulty": 2,
     "questions": [
       "It is given that $\\int_0^k e^{5x}\\, dx = 9$.\nUse this to find the value of $k$.\nGive your answer in the form $k = \\frac{\\ln a}{b}$, where $a,b \\in \\mathbb{N}$."
     ],
     "answers": [
-      ["\\frac{\\ln(46)}{5}"]
+      [
+        "\\frac{\\ln(46)}{5}"
+      ]
     ],
-    "prefix": [ null ],
-    "orderMatters": [null], 
+    "prefix": [
+      null
+    ],
+    "orderMatters": [
+      null
+    ],
     "isExamQ": true,
     "markingScheme": "2513",
     "logtables": "26"
@@ -176,126 +256,195 @@
   {
     "id": "CCQ00000009",
     "name": "2025 Paper 1 – Q4a",
-    "tags": ["Complex Numbers"],
+    "tags": [
+      "Complex Numbers"
+    ],
     "difficulty": 2,
     "questions": [
-        "Write the complex number $\\frac{2+3i}{4-5i}$ in the form $a + bi$, where $a,b \\in \\mathbb{R}$."
+      "Write the complex number $\\frac{2+3i}{4-5i}$ in the form $a + bi$, where $a,b \\in \\mathbb{R}$."
     ],
     "answers": [
-        ["-\\frac{7}{41} + \\frac{22}{41}i"]
+      [
+        "-\\frac{7}{41} + \\frac{22}{41}i"
+      ]
     ],
     "isExamQ": true,
     "markingScheme": "2514",
     "logtables": "20",
-    "prefix": [ null ],
-    "orderMatters": [ false ]
+    "prefix": [
+      null
+    ],
+    "orderMatters": [
+      false
+    ]
   },
   {
     "id": "CCQ00000010",
     "name": "2025 Paper 1 – Q4b",
-    "tags": ["Complex Numbers", "Trigonometry", "Functions & Identities"],
+    "tags": [
+      "Complex Numbers",
+      "Trigonometry",
+      "Functions & Identities"
+    ],
     "difficulty": 2,
     "questions": [
       "Use de Moivre’s theorem and the expression $(\\cos \\theta + i \\sin \\theta)^2$ to prove that $\\cos 2\\theta = \\cos^2 \\theta - \\sin^2 \\theta$ for any angle $\\theta$."
     ],
     "answers": [
-      [ null ]
+      [
+        null
+      ]
     ],
     "isExamQ": true,
     "markingScheme": "2515",
     "logtables": "20",
-    "prefix": [ null ],
-    "orderMatters": [ false ]
+    "prefix": [
+      null
+    ],
+    "orderMatters": [
+      false
+    ]
   },
   {
     "id": "CCQ00000011",
     "name": "2025 Paper 1 – Q4c",
-    "tags": ["Complex Numbers"],
+    "tags": [
+      "Complex Numbers"
+    ],
     "difficulty": 3,
     "questions": [
       "Use de Moivre’s theorem to find two values of $z$ for which $z^6 = -64i$.\nGive each answer in the form $c + di$, where $c,d \\in \\mathbb{R}$.\nLeave $c$ and $d$ in surd form."
     ],
     "answers": [
-      ["\\sqrt{2} + i\\sqrt{2}", "-\\frac{\\sqrt{6}}{2} + i\\frac{\\sqrt{2}}{2}"]
+      [
+        "\\sqrt{2} + i\\sqrt{2}",
+        "-\\frac{\\sqrt{6}}{2} + i\\frac{\\sqrt{2}}{2}"
+      ]
     ],
     "isExamQ": true,
     "markingScheme": "2515",
     "logtables": "20",
-    "prefix": ["z =", "z ="],
-    "orderMatters": [ false ]
+    "prefix": [
+      "z =",
+      "z ="
+    ],
+    "orderMatters": [
+      false
+    ]
   },
   {
     "id": "CCQ00000012",
     "name": "2025 Paper 1 – Q5a",
-    "tags": ["Algebra", "Quadratics"],
+    "tags": [
+      "Algebra",
+      "Quadratics"
+    ],
     "difficulty": 2,
     "questions": [
       "The function $g(x) = 5x^2 + 20x - 12$.\nWrite $g(x)$ in the form $a(x + h)^2 + k$, where $a,h,k \\in \\mathbb{Z}$."
     ],
     "answers": [
-      ["5(x+2)^2 - 32"]
+      [
+        "5(x+2)^2 - 32"
+      ]
     ],
     "isExamQ": true,
     "markingScheme": "2516",
     "logtables": "20",
-    "prefix": [ "g(x) ="],
-    "orderMatters": [ false ]
+    "prefix": [
+      "g(x) ="
+    ],
+    "orderMatters": [
+      false
+    ]
   },
   {
     "id": "CCQ00000013",
     "name": "2025 Paper 1 – Q5b",
-    "tags": ["Algebra", "Indices & Logs"],
+    "tags": [
+      "Algebra",
+      "Indices & Logs"
+    ],
     "difficulty": 2,
     "questions": [
       "$p$ is a positive constant.\nUse the laws of logs to write the expression $\\ln[(e^3 p)^5]$ in the form $c + d \\ln p$, where $c,d \\in \\mathbb{Z}$."
     ],
     "answers": [
-      ["15 + 5\\ln p"]
+      [
+        "15 + 5\\ln p"
+      ]
     ],
     "isExamQ": true,
     "markingScheme": "2517",
     "logtables": "21",
-    "prefix": [ null ],
-    "orderMatters": [ false ]
+    "prefix": [
+      null
+    ],
+    "orderMatters": [
+      false
+    ]
   },
   {
     "id": "CCQ00000014",
     "name": "2025 Paper 1 – Q5c",
-    "tags": ["Algebra", "Simultaneous Equations"],
+    "tags": [
+      "Algebra",
+      "Simultaneous Equations"
+    ],
     "difficulty": 2,
     "questions": [
       "The simultaneous equations in $x$ and $y$, where $n \\in \\mathbb{R}$, are:\n$2x - y = 7$\n$x^2 + y + 2y^2 = n$\nOne of the solutions is on the $y$-axis. Use this information to find the value of $n$."
     ],
     "answers": [
-      ["91"]
+      [
+        "91"
+      ]
     ],
     "isExamQ": true,
     "markingScheme": "2517",
     "logtables": "20",
-    "prefix": ["n ="],
-    "orderMatters": [ false ]
+    "prefix": [
+      "n ="
+    ],
+    "orderMatters": [
+      false
+    ]
   },
-    {
+  {
     "id": "CCQ00000015",
     "name": "2025 Paper 1 – Q6a",
-    "tags": ["Algebra", "Binomial Theorem"],
+    "tags": [
+      "Algebra",
+      "Binomial Theorem"
+    ],
     "difficulty": 2,
     "questions": [
       "Write down, in descending powers of $p$, the first 3 terms in the binomial expansion of $(2p + 3)^7$.\nGive each term in its simplest form."
     ],
     "answers": [
-      ["128p^7", "1344p^6", "6048p^5"]
+      [
+        "128p^7",
+        "1344p^6",
+        "6048p^5"
+      ]
     ],
     "isExamQ": true,
     "markingScheme": "2518",
     "logtables": "20",
-    "prefix": [ null ],
-    "orderMatters": [ false ]
+    "prefix": [
+      null
+    ],
+    "orderMatters": [
+      false
+    ]
   },
   {
     "id": "CCQ00000016",
     "name": "2025 Paper 1 – Q6b",
-    "tags": ["Algebra", "Quadratics"],
+    "tags": [
+      "Algebra",
+      "Quadratics"
+    ],
     "difficulty": 2,
     "questions": [
       "The function $h(x) = 6mx^2 - 4rx + 54m$, where $m$ and $r$ are positive constants.\nThe equation $h(x) = 0$ has exactly one solution.\nUse this to show that $r = 9m$.",
@@ -303,152 +452,293 @@
     ],
     "answers": [
       [],
-      ["3"]
+      [
+        "3"
+      ]
     ],
     "isExamQ": true,
     "markingScheme": "2519",
     "logtables": "20",
     "prefix": [
-      [ null ],
-      [ "x =" ]
+      [
+        null
+      ],
+      [
+        "x ="
+      ]
     ],
-    "orderMatters": [ false, false ]
+    "orderMatters": [
+      false,
+      false
+    ]
   },
   {
-  "id": "CCQ00000017",
-  "name": "2025 Paper 1 – Q7a",
-  "tags": ["Sequences & Series", "Algebra"],
-  "difficulty": 3,
-  "questions": [
-    "Spiders build webs out of silk. This question involves two different models of how a spider might build its web. The functions in each model give lengths in centimetres.\nIn the first model, the web is made in stages. First, the spider makes Stage 1 of the web. It then adds extra silk to Stage 1 to make Stage 2 of the web, and so on.\nThe table below shows the values of $S(n)$, the total length of silk in each stage, in the first three stages of this model. The table also shows $A(n)$. For $n > 1$, $A(n)$ is the length of extra silk needed to make Stage $n$ from Stage $n-1$. $A(1)$ is set to be $15.8$.\nStage 1: $S(1) = 15.8$\nStage 2: $S(2) = 37.8$\nStage 3: $S(3) = 66$",
-    "Use the values in the table to show that $A(2) = 22$ and find the value of $A(3)$.\nWrite the values of $A(2)$ and $A(3)$ into the table above.",
-    "The numbers $A(1), A(2), A(3), \\dots$ form an arithmetic sequence.\nFind an expression in $n$ for $A(n)$, where $n \\in \\mathbb{N}$.",
-    "Hence, or otherwise, find the value of $A(100)$.",
-    "$S(n)$ is the total length of silk needed to make Stage $n$ of the web, where $n \\in \\mathbb{N}$.\nBy using the formula for the sum of an arithmetic series, or otherwise, show that:\n$S(n) = 3.1n^2 + 12.7n$.",
-    "Stage $k$ is the first stage for which the total length of silk is more than 10 m, in this model.\nUsing the expression for $S(n)$ above, solve an equation to find the value of $k$.\n(Remember that $S(n)$ gives the total length of silk in centimetres.)"
-  ],
-  "answers": [
-    [],
-    ["22", "A(3) = 28.2"],
-    ["6.2n + 9.6"],
-    ["629.6"],
-    ["3.1n^2 + 12.7n"],
-    ["17"]
-  ],
-  "orderMatters": [false, false, false, false, false, false], 
-  "prefix": [
-    [null], ["A(2) = "], ["A(n) = "], ["A(100) = "], ["S(n) = "], ["k = "]
-  ],
-  "isExamQ": true,
-  "markingScheme": "2521",
-  "logtables": "22"
-},
-{
-  "id": "CCQ00000018",
-  "name": "2025 Paper 1 – Q7b",
-  "tags": ["Sequences & Series", "Geometry"],
-  "difficulty": 3,
-  "questions": [
-    "In the second model, the web is made in laps. The diagram on the right shows the first lap of the web. The line segments marked $O_1$, $O_2$, and $O_3$ in the diagram are the first 3 orbitals of the web.\nThe lengths of the orbitals form a geometric sequence. The length of $O_1$ is 0.5 cm and the length of $O_2$ is 0.53 cm.",
-    "Find the length of $O_3$.",
-    "Write an expression in $n$ for the total length of the first $n$ orbitals of the web, where $n \\in \\mathbb{N}$.",
-    "There are exactly 18 orbitals in each lap of the web.\nWrite an expression in $k$ for the total length of the first $k$ laps, where $k \\in \\mathbb{N}$."
-  ],
-  "answers": [
-    [],
-    ["0.5618"],
-    ["0.5\\frac{1.06^n - 1}{0.06}"],
-    ["\\frac{25}{3}(1.06^{18k} - 1)"]
-  ],
-  "prefix": [[null], [null], ["S_n = "], [null]],
-  "orderMatters": [false, false, false, false],
-  "isExamQ": true,
-  "markingScheme": "2523",
-  "logtables": "22"
-},
-{
-  "id": "CCQ00000019",
-  "name": "2025 Paper 1 – Q8a",
-  "tags": ["Financial Maths"],
-  "difficulty": 2,
-  "questions": [
-    "Jacob buys a new kayak in a shop. The kayak is usually priced at €870.\nThis price is reduced by 15% in a sale. Jacob gets a further reduction of 10% on this reduced price, because he is a member of the shop’s loyalty club.\nFind the price that Jacob pays for the kayak."
-  ],
-  "answers": [
-    ["665.55"]
-  ],
-  "orderMatters": [false],
-  "prefix": [["€"]],
-  "isExamQ": true,
-  "markingScheme": "2525",
-  "logtables": "30"
-},
-{
-  "id": "CCQ00000020",
-  "name": "2025 Paper 1 - Q8b",
-  "tags": ["Financial Maths"],
-  "difficulty": 3,
-  "questions": [
-    "Jacob buys a paddle online. The paddle costs $95.\nJacob thinks that the exchange rate being used is €1 = $1.183. The actual exchange rate being used is €1 = $d, where $d \\in \\mathbb{R}$.\nAs a result, the paddle costs €1.02 more than Jacob thought that it would.\nUse this to find the value of $d$, correct to 3 decimal places."
-  ],
-  "answers": [
-    ["1.168"]
-  ],
-  "orderMatters": [false],
-  "prefix": [["$"]],
-  "isExamQ": true,
-  "markingScheme": "2525",
-  "logtables": "30"
-},
-{
-  "id": "CCQ00000021",
-  "name": "2025 Paper 1 – Q8c,8d",
-  "tags": ["Algebra", "Coordinate Geometry", "Trigonometry", "Applications"],
-  "difficulty": 3,
-  "questions": [
-    "Jacob takes part in a race, which involves kayaking and running. He must get from the point $S$ in the sea to the point $F$ on the coastline.\n$A$ is another point on the coastline. $|SA| = 2$ km, $|AF| = 8$ km, and $\\angle SAF$ is a right angle.\nJacob kayaks at an average speed of 6 km/h and runs at an average speed of 12 km/h.\nFind how long it would take Jacob in total to kayak from $S$ to $A$, and then run from $A$ to $F$.",
-    "Find how long it would take Jacob to kayak directly from $S$ to $F$, correct to the nearest minute."
-  ],
-  "answers": [
-    ["1"],
-    ["82"]
-  ],
-  "prefix": [[null], [null]], 
-  "orderMatters": [false, false],
-  "isExamQ": true,
-  "markingScheme": "2526",
-  "logtables": "13,18"
-},
-{
-  "id": "CCQ00000022",
-  "name": "2025 Paper 1 – Q8e",
-  "tags": ["Calculus", "Applications of Differentiation", "Coordinate Geometry"],
-  "difficulty": 4,
-  "questions": [
-    "The point $B$ is on $[AF]$, and $|AB| = x$ km, where $0 \\leq x \\leq 8$, $x \\in \\mathbb{R}$.\nJacob is going to kayak from $S$ to $B$, and then run from $B$ to $F$.",
-    "Find an expression in $x$ for $T$, the total time, in hours, that it will take Jacob to get from $S$ to $B$ to $F$.",
-    "Jacob knows that there is one value of $x$ for which $T(x)$ is a minimum ($0 \\leq x \\leq 8$).\nSolve the following equation to find this value of $x$, correct to 3 decimal places:\n$\\frac{x}{6\\sqrt{x^2+4}} - \\frac{1}{12} = 0$",
-    "There are no other values of $x \\in [0,8]$ for which $T'(x)=0$.\nUse this fact, and your answers from parts (c) and (d), to find which one of the graphs A, B, C, D could represent $T(x)$. Justify your answer fully."
-  ],
-  "answers": [
-    [],
-    ["\\frac{\\sqrt{x^2+4}}{6} + \\frac{8-x}{12}"],
-    ["1.155"],
-    ["Graph D"]
-  ],
-  "prefix": [
-    [null], [null], [null], [null]
-  ],
-  "orderMatters": [false,false,false,false],
-  "isExamQ": true,
-  "markingScheme": "2527",
-  "logtables": "25"
-},
-[
+    "id": "CCQ00000017",
+    "name": "2025 Paper 1 – Q7a",
+    "tags": [
+      "Sequences & Series",
+      "Algebra"
+    ],
+    "difficulty": 3,
+    "questions": [
+      "Spiders build webs out of silk. This question involves two different models of how a spider might build its web. The functions in each model give lengths in centimetres.\nIn the first model, the web is made in stages. First, the spider makes Stage 1 of the web. It then adds extra silk to Stage 1 to make Stage 2 of the web, and so on.\nThe table below shows the values of $S(n)$, the total length of silk in each stage, in the first three stages of this model. The table also shows $A(n)$. For $n > 1$, $A(n)$ is the length of extra silk needed to make Stage $n$ from Stage $n-1$. $A(1)$ is set to be $15.8$.\nStage 1: $S(1) = 15.8$\nStage 2: $S(2) = 37.8$\nStage 3: $S(3) = 66$",
+      "Use the values in the table to show that $A(2) = 22$ and find the value of $A(3)$.\nWrite the values of $A(2)$ and $A(3)$ into the table above.",
+      "The numbers $A(1), A(2), A(3), \\dots$ form an arithmetic sequence.\nFind an expression in $n$ for $A(n)$, where $n \\in \\mathbb{N}$.",
+      "Hence, or otherwise, find the value of $A(100)$.",
+      "$S(n)$ is the total length of silk needed to make Stage $n$ of the web, where $n \\in \\mathbb{N}$.\nBy using the formula for the sum of an arithmetic series, or otherwise, show that:\n$S(n) = 3.1n^2 + 12.7n$.",
+      "Stage $k$ is the first stage for which the total length of silk is more than 10 m, in this model.\nUsing the expression for $S(n)$ above, solve an equation to find the value of $k$.\n(Remember that $S(n)$ gives the total length of silk in centimetres.)"
+    ],
+    "answers": [
+      [],
+      [
+        "22",
+        "A(3) = 28.2"
+      ],
+      [
+        "6.2n + 9.6"
+      ],
+      [
+        "629.6"
+      ],
+      [
+        "3.1n^2 + 12.7n"
+      ],
+      [
+        "17"
+      ]
+    ],
+    "orderMatters": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "prefix": [
+      [
+        null
+      ],
+      [
+        "A(2) = "
+      ],
+      [
+        "A(n) = "
+      ],
+      [
+        "A(100) = "
+      ],
+      [
+        "S(n) = "
+      ],
+      [
+        "k = "
+      ]
+    ],
+    "isExamQ": true,
+    "markingScheme": "2521",
+    "logtables": "22"
+  },
+  {
+    "id": "CCQ00000018",
+    "name": "2025 Paper 1 – Q7b",
+    "tags": [
+      "Sequences & Series",
+      "Geometry"
+    ],
+    "difficulty": 3,
+    "questions": [
+      "In the second model, the web is made in laps. The diagram on the right shows the first lap of the web. The line segments marked $O_1$, $O_2$, and $O_3$ in the diagram are the first 3 orbitals of the web.\nThe lengths of the orbitals form a geometric sequence. The length of $O_1$ is 0.5 cm and the length of $O_2$ is 0.53 cm.",
+      "Find the length of $O_3$.",
+      "Write an expression in $n$ for the total length of the first $n$ orbitals of the web, where $n \\in \\mathbb{N}$.",
+      "There are exactly 18 orbitals in each lap of the web.\nWrite an expression in $k$ for the total length of the first $k$ laps, where $k \\in \\mathbb{N}$."
+    ],
+    "answers": [
+      [],
+      [
+        "0.5618"
+      ],
+      [
+        "0.5\\frac{1.06^n - 1}{0.06}"
+      ],
+      [
+        "\\frac{25}{3}(1.06^{18k} - 1)"
+      ]
+    ],
+    "prefix": [
+      [
+        null
+      ],
+      [
+        null
+      ],
+      [
+        "S_n = "
+      ],
+      [
+        null
+      ]
+    ],
+    "orderMatters": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "isExamQ": true,
+    "markingScheme": "2523",
+    "logtables": "22"
+  },
+  {
+    "id": "CCQ00000019",
+    "name": "2025 Paper 1 – Q8a",
+    "tags": [
+      "Financial Maths"
+    ],
+    "difficulty": 2,
+    "questions": [
+      "Jacob buys a new kayak in a shop. The kayak is usually priced at €870.\nThis price is reduced by 15% in a sale. Jacob gets a further reduction of 10% on this reduced price, because he is a member of the shop’s loyalty club.\nFind the price that Jacob pays for the kayak."
+    ],
+    "answers": [
+      [
+        "665.55"
+      ]
+    ],
+    "orderMatters": [
+      false
+    ],
+    "prefix": [
+      [
+        "€"
+      ]
+    ],
+    "isExamQ": true,
+    "markingScheme": "2525",
+    "logtables": "30"
+  },
+  {
+    "id": "CCQ00000020",
+    "name": "2025 Paper 1 - Q8b",
+    "tags": [
+      "Financial Maths"
+    ],
+    "difficulty": 3,
+    "questions": [
+      "Jacob buys a paddle online. The paddle costs $95.\nJacob thinks that the exchange rate being used is €1 = $1.183. The actual exchange rate being used is €1 = $d, where $d \\in \\mathbb{R}$.\nAs a result, the paddle costs €1.02 more than Jacob thought that it would.\nUse this to find the value of $d$, correct to 3 decimal places."
+    ],
+    "answers": [
+      [
+        "1.168"
+      ]
+    ],
+    "orderMatters": [
+      false
+    ],
+    "prefix": [
+      [
+        "$"
+      ]
+    ],
+    "isExamQ": true,
+    "markingScheme": "2525",
+    "logtables": "30"
+  },
+  {
+    "id": "CCQ00000021",
+    "name": "2025 Paper 1 – Q8c,8d",
+    "tags": [
+      "Algebra",
+      "Coordinate Geometry",
+      "Trigonometry",
+      "Applications"
+    ],
+    "difficulty": 3,
+    "questions": [
+      "Jacob takes part in a race, which involves kayaking and running. He must get from the point $S$ in the sea to the point $F$ on the coastline.\n$A$ is another point on the coastline. $|SA| = 2$ km, $|AF| = 8$ km, and $\\angle SAF$ is a right angle.\nJacob kayaks at an average speed of 6 km/h and runs at an average speed of 12 km/h.\nFind how long it would take Jacob in total to kayak from $S$ to $A$, and then run from $A$ to $F$.",
+      "Find how long it would take Jacob to kayak directly from $S$ to $F$, correct to the nearest minute."
+    ],
+    "answers": [
+      [
+        "1"
+      ],
+      [
+        "82"
+      ]
+    ],
+    "prefix": [
+      [
+        null
+      ],
+      [
+        null
+      ]
+    ],
+    "orderMatters": [
+      false,
+      false
+    ],
+    "isExamQ": true,
+    "markingScheme": "2526",
+    "logtables": "13,18"
+  },
+  {
+    "id": "CCQ00000022",
+    "name": "2025 Paper 1 – Q8e",
+    "tags": [
+      "Calculus",
+      "Applications of Differentiation",
+      "Coordinate Geometry"
+    ],
+    "difficulty": 4,
+    "questions": [
+      "The point $B$ is on $[AF]$, and $|AB| = x$ km, where $0 \\leq x \\leq 8$, $x \\in \\mathbb{R}$.\nJacob is going to kayak from $S$ to $B$, and then run from $B$ to $F$.",
+      "Find an expression in $x$ for $T$, the total time, in hours, that it will take Jacob to get from $S$ to $B$ to $F$.",
+      "Jacob knows that there is one value of $x$ for which $T(x)$ is a minimum ($0 \\leq x \\leq 8$).\nSolve the following equation to find this value of $x$, correct to 3 decimal places:\n$\\frac{x}{6\\sqrt{x^2+4}} - \\frac{1}{12} = 0$",
+      "There are no other values of $x \\in [0,8]$ for which $T'(x)=0$.\nUse this fact, and your answers from parts (c) and (d), to find which one of the graphs A, B, C, D could represent $T(x)$. Justify your answer fully."
+    ],
+    "answers": [
+      [],
+      [
+        "\\frac{\\sqrt{x^2+4}}{6} + \\frac{8-x}{12}"
+      ],
+      [
+        "1.155"
+      ],
+      [
+        "Graph D"
+      ]
+    ],
+    "prefix": [
+      [
+        null
+      ],
+      [
+        null
+      ],
+      [
+        null
+      ],
+      [
+        null
+      ]
+    ],
+    "orderMatters": [
+      false,
+      false,
+      false,
+      false
+    ],
+    "isExamQ": true,
+    "markingScheme": "2527",
+    "logtables": "25"
+  },
   {
     "id": "CCQ00000023",
     "name": "2025 Paper 1 – Q9a",
-    "tags": ["Calculus", "Applications of Differentiation"],
+    "tags": [
+      "Calculus",
+      "Applications of Differentiation"
+    ],
     "logTables": -1,
     "questions": [
       "Show that there is no difference between the fuel consumption (F) when Dani’s car is travelling at 60 km/hour and when it is travelling at 110 km/hour.",
@@ -458,27 +748,58 @@
       "Use your answers to parts (a)(iii) and (a)(iv) to find the rate of change of the car’s fuel consumption, $F$, with respect to time, at the instant when $t = 7$ minutes. Give your answer in (litres per 10 000 km) per minute."
     ],
     "answers": [
-      ["470"],
-      ["0.1c - 8.5"],
-      ["2.8"],
-      ["\\\\frac{18}{t}"],
-      ["7.2", "\\\\frac{36}{5}"]
+      [
+        "470"
+      ],
+      [
+        "0.1c - 8.5"
+      ],
+      [
+        "2.8"
+      ],
+      [
+        "\\\\frac{18}{t}"
+      ],
+      [
+        "7.2",
+        "\\\\frac{36}{5}"
+      ]
     ],
     "prefix": [
-      ["F(60) = F(110) = "],
-      ["\\\\frac{dF}{dc} = "],
-      ["\\\\frac{dF}{dc} = "],
-      ["\\\\frac{dc}{dt} = "],
-      ["\\\\frac{dF}{dt} = ", "\\\\frac{dF}{dt} = "]
+      [
+        "F(60) = F(110) = "
+      ],
+      [
+        "\\\\frac{dF}{dc} = "
+      ],
+      [
+        "\\\\frac{dF}{dc} = "
+      ],
+      [
+        "\\\\frac{dc}{dt} = "
+      ],
+      [
+        "\\\\frac{dF}{dt} = ",
+        "\\\\frac{dF}{dt} = "
+      ]
     ],
-    "orderMatters": [false, false, false, false, false],
+    "orderMatters": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
     "markingScheme": "2529",
     "isExamQ": true
   },
   {
     "id": "CCQ00000024",
     "name": "2025 Paper 1 – Q9b",
-    "tags": ["Calculus", "Integration"],
+    "tags": [
+      "Calculus",
+      "Integration"
+    ],
     "logTables": -1,
     "questions": [
       "Fill in the table below to show the values of $v(t)$ for the given values of $t$, up to $t = 8$. Give each value correct to 1 decimal place, where appropriate.",
@@ -486,69 +807,131 @@
       "Use integration, and $v(t) = -t^2 + 24t - 48.4$, to find the average speed of Dani’s car for $4 < t \\\\leq 8$. Give your answer in km/hour, correct to 1 decimal place."
     ],
     "answers": [
-      ["3.9", "18.6", "46.6", "59.6"],
-      [""],
-      ["58.3"]
+      [
+        "3.9",
+        "18.6",
+        "46.6",
+        "59.6"
+      ],
+      [
+        ""
+      ],
+      [
+        "58.3"
+      ]
     ],
     "prefix": [
-      ["v(1) = ", "v(3) = ", "v(5) = ", "v(6) = "],
-      [""],
-      ["Average speed = "]
+      [
+        "v(1) = ",
+        "v(3) = ",
+        "v(5) = ",
+        "v(6) = "
+      ],
+      [
+        ""
+      ],
+      [
+        "Average speed = "
+      ]
     ],
-    "orderMatters": [true, false, false],
+    "orderMatters": [
+      true,
+      false,
+      false
+    ],
     "markingScheme": "2532",
     "isExamQ": true
   },
   {
     "id": "CCQ00000025",
     "name": "2025 Paper 1 – Q10a",
-    "tags": ["Geometry"],
+    "tags": [
+      "Geometry"
+    ],
     "logTables": -1,
     "questions": [
       "9 of the dots in Pattern 4 are shown on the co-ordinate diagram below. Draw in the missing dots to complete Pattern 4. Do not mark any points that are not in Pattern 4."
     ],
-    "answers": [""],
-    "prefix": [""],
-    "orderMatters": [false],
+    "answers": [
+      ""
+    ],
+    "prefix": [
+      ""
+    ],
+    "orderMatters": [
+      false
+    ],
     "markingScheme": "2534",
     "isExamQ": true
   },
   {
     "id": "CCQ00000026",
     "name": "2025 Paper 1 – Q10b",
-    "tags": ["Geometry"],
+    "tags": [
+      "Geometry"
+    ],
     "logTables": -1,
     "questions": [
       "In Pattern 2000, there are 4 points that are a distance of 2000 units from (0,0). Write down the co-ordinates of these 4 points."
     ],
     "answers": [
-      [["(0,2000)"], ["(2000,0)"], ["(0,-2000)"], ["(-2000,0)"]]
+      [
+        [
+          "(0,2000)"
+        ],
+        [
+          "(2000,0)"
+        ],
+        [
+          "(0,-2000)"
+        ],
+        [
+          "(-2000,0)"
+        ]
+      ]
     ],
     "prefix": [
-      ["", "", "", ""]
+      [
+        "",
+        "",
+        "",
+        ""
+      ]
     ],
-    "orderMatters": [false],
+    "orderMatters": [
+      false
+    ],
     "markingScheme": "2534",
     "isExamQ": true
   },
   {
     "id": "CCQ00000027",
     "name": "2025 Paper 1 – Q10c",
-    "tags": ["Geometry"],
+    "tags": [
+      "Geometry"
+    ],
     "logTables": -1,
     "questions": [
       "What is the smallest value of $n \\\\in \\\\mathbb{N}$ for which the point (4,4) is in Pattern $n$? Do not draw on your diagram from part (a)."
     ],
-    "answers": ["8"],
-    "prefix": ["n = "],
-    "orderMatters": [false],
+    "answers": [
+      "8"
+    ],
+    "prefix": [
+      "n = "
+    ],
+    "orderMatters": [
+      false
+    ],
     "markingScheme": "2534",
     "isExamQ": true
   },
   {
     "id": "CCQ00000028",
     "name": "2025 Paper 1 – Q10d",
-    "tags": ["Sequences & Series"],
+    "tags": [
+      "Sequences & Series"
+    ],
     "logTables": -1,
     "questions": [
       "Rearrange the formula $t = 2n + 1$ to write $n$ in terms of $t$.",
@@ -556,39 +939,67 @@
       "Find the value of $Q_{\\\\infty}$ which is given by: $Q_{\\\\infty} = \\\\lim_{t \\\\to \\\\infty} \\\\frac{t^2 + 2t + 1}{4t^2}$"
     ],
     "answers": [
-      ["\\\\frac{t-1}{2}"],
-      ["\\\\frac{t^2 + 2t + 1}{4t^2}"],
-      ["\\\\frac{1}{4}"]
+      [
+        "\\\\frac{t-1}{2}"
+      ],
+      [
+        "\\\\frac{t^2 + 2t + 1}{4t^2}"
+      ],
+      [
+        "\\\\frac{1}{4}"
+      ]
     ],
     "prefix": [
-      ["n = "],
-      ["Q(n) = "],
-      ["Q_{\\\\infty} = "]
+      [
+        "n = "
+      ],
+      [
+        "Q(n) = "
+      ],
+      [
+        "Q_{\\\\infty} = "
+      ]
     ],
-    "orderMatters": [false, false, false],
+    "orderMatters": [
+      false,
+      false,
+      false
+    ],
     "markingScheme": "2535",
     "isExamQ": true
   },
   {
     "id": "CCQ00000029",
     "name": "2025 Paper 1 – Q10e",
-    "tags": ["Sequences & Series"],
+    "tags": [
+      "Sequences & Series"
+    ],
     "logTables": -1,
     "questions": [
       "Write down the value of $H(1)$.",
       "Using this fact, prove the identity on the grid below. Use proof by induction. Prove that: $H(n) = (n+1)^2$ for all values of $n \\\\in \\\\mathbb{N}$"
     ],
     "answers": [
-      ["4"],
-      [""]
+      [
+        "4"
+      ],
+      [
+        ""
+      ]
     ],
     "prefix": [
-      ["H(1) = "],
-      [""]
+      [
+        "H(1) = "
+      ],
+      [
+        ""
+      ]
     ],
-    "orderMatters": [false, false],
+    "orderMatters": [
+      false,
+      false
+    ],
     "markingScheme": "2537",
     "isExamQ": true
   }
-]
 ]

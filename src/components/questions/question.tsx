@@ -422,10 +422,11 @@ export default function Question(props: questionsProps) {
         
                   {showSearch ? (
         <QSearch
+          mode="certchamps"
           setShowSearch={setShowSearch}
           questions={props.questions}
           position={props.position}
-          setPosition={props.setPosition ?? null}
+          setPosition={props.setPosition ?? (() => {})}
         />
       ) : null}
 

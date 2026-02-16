@@ -1,13 +1,14 @@
 import { useState, useCallback, Component, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose } from "react-icons/lu";
+import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose, LuClipboardList } from "react-icons/lu";
 import { AIChat } from "../ai";
 import QThread from "../questions/q_thread";
 import Timer from "../timer";
+import PastPaperMarkingScheme from "../questions/PastPaperMarkingScheme";
 
 const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] };
 
-export type SidebarPanelId = "ai" | "threads" | "timer";
+export type SidebarPanelId = "ai" | "threads" | "timer" | "markingscheme";
 
 export type SidebarPanelDef = {
   id: SidebarPanelId;
@@ -19,7 +20,10 @@ const PANELS: SidebarPanelDef[] = [
   { id: "ai", label: "AI", icon: <LuSparkles size={20} strokeWidth={2} /> },
   { id: "threads", label: "Threads", icon: <LuMessageSquare size={20} strokeWidth={2} /> },
   { id: "timer", label: "Timer", icon: <LuTimer size={20} strokeWidth={2} /> },
+  { id: "markingscheme", label: "Marking scheme", icon: <LuClipboardList size={20} strokeWidth={2} /> },
 ];
+
+export type MarkingSchemePageRange = { start: number; end: number };
 
 export type SidebarTileManagerProps = {
   question?: any;
@@ -32,6 +36,10 @@ export type SidebarTileManagerProps = {
   getDrawingSnapshot?: (() => string | null) | null;
   /** Optional: return current exam paper (first page) as image data URL so AI can see the paper. */
   getPaperSnapshot?: (() => string | null) | null;
+  /** Optional: past paper marking scheme — when provided, marking scheme tab is shown. */
+  markingSchemeBlob?: Blob | null;
+  markingSchemePageRange?: MarkingSchemePageRange | null;
+  markingSchemeQuestionName?: string;
 };
 
 export function SidebarTileManager({
@@ -41,10 +49,16 @@ export function SidebarTileManager({
   onCollapse,
   getDrawingSnapshot,
   getPaperSnapshot,
+  markingSchemeBlob,
+  markingSchemePageRange,
+  markingSchemeQuestionName,
 }: SidebarTileManagerProps) {
   const [internalPanel, setInternalPanel] = useState<SidebarPanelId | null>("ai");
   const isControlled = controlledPanel !== undefined;
   const openPanelId = isControlled ? controlledPanel : internalPanel;
+
+  const showMarkingScheme = !!(markingSchemeBlob && markingSchemePageRange);
+  const visiblePanels = PANELS.filter((p) => p.id !== "markingscheme" || showMarkingScheme);
 
   const setOpenPanel = useCallback(
     (next: SidebarPanelId | null) => {
@@ -66,7 +80,7 @@ export function SidebarTileManager({
       {/* Tab bar: separated “window” tabs + collapse */}
       <div className="sidebar-tile-manager__tabs flex shrink-0 items-center justify-center gap-1 py-2">
         <div className="flex items-center gap-1">
-          {PANELS.map((p) => {
+          {visiblePanels.map((p) => {
             const isOpen = p.id === openPanelId;
             return (
               <button
@@ -119,6 +133,9 @@ export function SidebarTileManager({
                   question={question}
                   getDrawingSnapshot={getDrawingSnapshot}
                   getPaperSnapshot={getPaperSnapshot}
+                  markingSchemeBlob={markingSchemeBlob}
+                  markingSchemePageRange={markingSchemePageRange}
+                  markingSchemeQuestionName={markingSchemeQuestionName}
                   onClosePanel={() => setOpenPanel(null)}
                 />
               </div>
@@ -157,12 +174,18 @@ function TileContent({
   question,
   getDrawingSnapshot,
   getPaperSnapshot,
+  markingSchemeBlob,
+  markingSchemePageRange,
+  markingSchemeQuestionName,
   onClosePanel,
 }: {
   panelId: SidebarPanelId;
   question?: any;
   getDrawingSnapshot?: (() => string | null) | null;
   getPaperSnapshot?: (() => string | null) | null;
+  markingSchemeBlob?: Blob | null;
+  markingSchemePageRange?: MarkingSchemePageRange | null;
+  markingSchemeQuestionName?: string;
   onClosePanel?: () => void;
 }) {
   const part = 0;
@@ -187,6 +210,28 @@ function TileContent({
       return (
         <div className="h-full overflow-auto flex justify-center items-start color-bg p-2">
           <Timer />
+        </div>
+      );
+    case "markingscheme":
+      return markingSchemeBlob && markingSchemePageRange ? (
+        <div className="h-full overflow-hidden flex flex-col">
+          {markingSchemeQuestionName && (
+            <div className="shrink-0 px-3 py-2 text-center text-sm font-bold color-txt-sub truncate ">
+              {markingSchemeQuestionName}
+            </div>
+          )}
+          <div className="flex-1 min-h-0 overflow-auto p-2 w-full">
+            <PastPaperMarkingScheme
+              file={markingSchemeBlob}
+              pageRange={markingSchemePageRange}
+              fillWidth
+              className="w-full"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex h-full items-center justify-center p-4 text-sm color-txt-sub">
+          No marking scheme available for this question.
         </div>
       );
     default:

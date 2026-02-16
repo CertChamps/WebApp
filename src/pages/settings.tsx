@@ -119,6 +119,41 @@ export default function Settings() {
         </div> */}
         {/* ======================================================================================== */}
 
+        {/* ====================================== PRACTICE LAYOUT ========================================= */}
+        <div className="flex w-full items-center mt-6">
+            <h1 className="profile-heading">Practice</h1>
+            <div className="line-break"></div>
+        </div>
+        <div className="mx-6 my-4 max-w-md">
+            <div className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full color-bg-grey-5 flex items-center justify-center">
+                        <LuRotateCcw size={20} className="color-txt-sub" style={{ transform: "scaleX(-1)" }} />
+                    </div>
+                    <div>
+                        <p className="txt-bold">Left-hand layout</p>
+                        <p className="txt-sub">Flip the practice tab: sidebar and question list on the left</p>
+                    </div>
+                </div>
+                <button
+                    className={`w-14 h-8 rounded-full transition-all duration-200 relative ${
+                        options.leftHandMode ? "color-bg-accent" : "color-bg-grey-5"
+                    }`}
+                    onClick={() => setOptions((opts: any) => ({
+                        ...opts,
+                        leftHandMode: !opts.leftHandMode
+                    }))}
+                >
+                    <div
+                        className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-200 ${
+                            options.leftHandMode ? "right-1" : "left-1"
+                        }`}
+                    />
+                </button>
+            </div>
+        </div>
+        {/* ======================================================================================== */}
+
         {/* ====================================== HELP & TUTORIAL ========================================= */}
         <div className="flex w-full items-center mt-6">
             <h1 className="profile-heading">Help & Tutorial</h1>

@@ -17,8 +17,8 @@ export default function PaperQuestionRegionBar({
   const name = question.questionName || `Question ${index + 1}`;
 
   return (
-    <div className="paper-question-region-bar flex flex-col rounded-b-md overflow-hidden border-b border-dotted border-grey/15">
-      <div className="flex items-center justify-between gap-3 px-2.5 py-1.5 min-h-0">
+    <div className="paper-question-region-bar flex flex-col rounded-b-md overflow-hidden border-b border-dashed bg-red border-[#333]">
+      <div className="flex items-center justify-between gap-3 py-1.5 min-h-0">
         {/* Left: question name · #tags — subtle grey */}
         <div className="flex min-w-0 flex-1 items-center gap-2 text-xs color-txt-sub">
           <span className="truncate font-medium">{name}</span>
@@ -43,7 +43,7 @@ export default function PaperQuestionRegionBar({
       </div>
       {/* Faint dotted line */}
       <div
-        className="h-px w-full flex-shrink-0 border-t border-dotted border-grey/20"
+        className="h-px w-full flex-shrink-0 border-t border-dashed border-[#333]"
         aria-hidden
       />
     </div>

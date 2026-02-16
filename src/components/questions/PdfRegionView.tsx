@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef, useContext } from "react";
 import { getDocument } from "pdfjs-dist";
+import { getDocumentCached } from "../../utils/pdfDocumentCache";
 import { OptionsContext } from "../../context/OptionsContext";
 import { PDF_THEME_COLORS, PDF_THEMING_ENABLED } from "../../utils/pdfThemeColors";
 import { applyThemeToCanvas } from "../../utils/pdfThemeUtils";
 
-/** Resolution scale for cropped PDF regions (4x for crisp text) */
-const RESOLUTION_SCALE = 4;
+/** 2x for crisp question snippets; only a few regions so memory is fine. Full paper stays 1x elsewhere. */
+const RESOLUTION_SCALE = 2;
 
 /** Region in PDF points (72 per inch). (x,y) = top-left of crop area. */
 export type PdfRegion = {
@@ -74,8 +75,10 @@ export default function PdfRegionView({
 
     (async () => {
       try {
-        const data = typeof file === "string" ? file : await (file as Blob).arrayBuffer();
-        const doc = await getDocument(data).promise;
+        const doc =
+          typeof file === "string"
+            ? await getDocument(file).promise
+            : await getDocumentCached(file as Blob);
         if (cancelled) return;
 
         const pageNum = hasRegion ? page : 1;

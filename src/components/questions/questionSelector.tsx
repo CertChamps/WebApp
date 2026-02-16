@@ -12,8 +12,15 @@ export type QuestionSelectorProps = {
     nextQuestion: () => void;
     previousQuestion: () => void;
     setShowSearch: (show: boolean) => void;
+    /** When true, next picks a random question from the full set; when undefined, randomise button is hidden */
+    randomise?: boolean;
+    onRandomiseChange?: (value: boolean) => void;
+    /** When set (e.g. past paper mode), opens the topic/subtopic filter panel */
+    onFilterClick?: () => void;
     /** When set (e.g. past paper mode), center shows this title and arrows call these handlers */
     overrideTitle?: string;
+    /** When set (e.g. past paper mode), tags shown under the title */
+    overrideTags?: string[];
     overrideOnPrevious?: () => void;
     overrideOnNext?: () => void;
 };
@@ -30,17 +37,22 @@ export default function QuestionSelector({
   nextQuestion,
   previousQuestion,
   setShowSearch,
+  randomise = false,
+  onRandomiseChange,
+  onFilterClick,
   overrideTitle,
+  overrideTags,
   overrideOnPrevious,
   overrideOnNext,
 }: QuestionSelectorProps) {
   const title = question?.properties?.name ?? "...";
-  const tagsDisplay = formatTags(question?.properties?.tags);
+  const tagsFromQuestion = formatTags(question?.properties?.tags);
+  const tagsDisplay = overrideTags != null ? formatTags(overrideTags) : tagsFromQuestion;
 
   const onPrev = overrideOnPrevious ?? previousQuestion;
   const onNext = overrideOnNext ?? nextQuestion;
   const centerLabel = overrideTitle ?? title;
-  const showTags = overrideTitle == null && tagsDisplay;
+  const showTags = !!tagsDisplay;
 
   return (
     <div className="flex flex-col gap-2">
@@ -94,25 +106,37 @@ export default function QuestionSelector({
 
       {/* ========================================== BOTTOM SECTION ========================================== */}
       <div className="flex w-full flex-wrap items-center justify-start gap-4">
-        {/* Random / dice: highlighted (active-style) pill */}
         <button
           type="button"
-          aria-label="Random question"
-          className="question-selector-button-active question-selector-button pointer-events-auto"
+          aria-label={randomise ? "Random question (on)" : "Random question (off)"}
+          className={`question-selector-button pointer-events-auto ${randomise ? "question-selector-button-active" : ""}`}
+          onClick={() => onRandomiseChange?.(!randomise)}
         >
           <TbDice5 size={20} strokeWidth={1.8} />
           <span>randomize</span>
         </button>
 
-        {/* Filter: default pill */}
-        <button
-          type="button"
-          aria-label="Filter questions"
-          className="question-selector-button pointer-events-auto"
-        >
-          <LuFilter size={18} strokeWidth={2} />
-          <span>filter</span>
-        </button>
+        {/* Filter: only wired in past paper mode */}
+        {onFilterClick != null ? (
+          <button
+            type="button"
+            aria-label="Filter questions by topic"
+            className="question-selector-button pointer-events-auto"
+            onClick={onFilterClick}
+          >
+            <LuFilter size={18} strokeWidth={2} />
+            <span>filter</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label="Filter questions"
+            className="question-selector-button pointer-events-auto"
+          >
+            <LuFilter size={18} strokeWidth={2} />
+            <span>filter</span>
+          </button>
+        )}
 
         {/* Search: default pill */}
         <button

@@ -44,6 +44,7 @@
     "react-router-dom": "^7.7.1",
     "react-simple-code-editor": "^0.14.1",
     "rehype-katex": "^7.0.1",
+    "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "sass": "^1.91.0",

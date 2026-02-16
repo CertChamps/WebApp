@@ -36,7 +36,7 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AICha
 
   return (
     <div className="pointer-events-auto flex h-full flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-3 space-y-4 min-h-0">
+      <div className="ai-chat-messages flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-3 space-y-4 min-h-0">
         {messages.length === 0 && !loading && (
           <div className="text-center h-[90%] flex flex-col justify-center items-center">
             <h3 className="font-bold color-txt-main mb-2 text-2xl">Hey, {displayName}</h3>
