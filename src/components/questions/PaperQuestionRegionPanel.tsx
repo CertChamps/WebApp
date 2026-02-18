@@ -55,8 +55,8 @@ export default function PaperQuestionRegionPanel({
 
   const textClass = compact ? "text-[7px]" : "text-[10px]";
   const buttonClass = compact
-    ? "color-bg-grey-5 color-txt-sub flex items-center gap-1 text-[6px] justify-center rounded-in px-1.5 py-0.5 ml-auto hover:opacity-80 transition-all duration-200 cursor-pointer"
-    : "color-bg-grey-5 color-txt-sub flex items-center gap-2 text-xs justify-center rounded-in px-2 py-1 my-1 hover:opacity-80 transition-all duration-200 cursor-pointer";
+    ? "color-bg-accent color-txt-accent flex items-center gap-1 text-[6px] justify-center rounded-in px-1.5 py-0.5 ml-auto hover:opacity-80 transition-all duration-200 cursor-pointer"
+    : "color-bg-accent color-txt-accent flex items-center gap-2 text-xs justify-center rounded-in px-2 py-1 my-1 hover:opacity-80 transition-all duration-200 cursor-pointer";
 
   return (
     <div className={`paper-question-region-panel w-full max-w-[11rem] flex flex-col relative ${compact ? "gap-1 max-w-[3rem]" : "gap-2"}`}>
@@ -67,7 +67,7 @@ export default function PaperQuestionRegionPanel({
         <div className={`space-y-0.5 min-w-0 flex-1 ${compact ? "" : "px-4"}`}>
           {/* <p className={`${textClass} color-txt-main font-bold`}>{name}</p> */}
           {tags.length > 0 && (
-            <p className={`${textClass} font-normal color-txt-sub `}>
+            <p className={`${textClass} font-bold color-txt-accent `}>
               {tags.map((t: string) => `#${t}`).join(" ")}
             </p>
           )}
