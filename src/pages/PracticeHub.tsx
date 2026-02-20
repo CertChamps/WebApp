@@ -359,12 +359,12 @@ export default function PracticeHub() {
   return (
     <div className="practice-hub w-full min-h-full h-full flex flex-col overflow-x-hidden p-4 scrollbar-minimal pt-[env(safe-area-inset-top,0px)]">
       <div className="practice-hub__inner flex flex-col flex-1 w-full min-h-0">
-        {/* Top bar: subject (oval) + search – match decks topBar and txtbox */}
-        <section className="topBar flex-shrink-0 mb-2">
+        {/* Top bar: subject (oval) left, search right */}
+        <section className="topBar flex flex-shrink-0 items-center justify-between w-full mb-2">
           <div className="practice-hub__subject-field practice-hub__subject-field--oval shrink-0">
             <SubjectDropdown value={subjectFilter} onChange={setSubjectFilter} id="ph-subject" />
           </div>
-          <div ref={globalSearchContainerRef} className="flex items-center txtbox color-bg w-1/4 max-w-80 rounded-out min-w-0 relative">
+          <div ref={globalSearchContainerRef} className="flex items-center txtbox color-bg w-1/4 max-w-80 rounded-out min-w-0 relative ml-auto">
             <input
               type="text"
               className="w-full p-1 outline-none border-none color-txt-main"
