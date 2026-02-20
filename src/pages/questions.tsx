@@ -9,12 +9,13 @@ import useFilters from "../hooks/useFilters";
 
 // Components
 import { createPortal } from "react-dom";
-import { LuMonitor, LuTablet, LuArrowLeft, LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator } from "react-icons/lu";
-import QuestionSelector from "../components/questions/questionSelector";
+import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuFilter, LuSearch } from "react-icons/lu";
+import { TbDice5 } from "react-icons/tb";
+import QuestionsTopBar from "../components/questions/QuestionsTopBar";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas, { type RegisterDrawingSnapshot } from "../components/questions/DrawingCanvas";
 import RenderMath from "../components/math/mathdisplay";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import PaperPdfPlaceholder, { getQuestionScrollOffset } from "../components/questions/PaperPdfPlaceholder";
 import PaperQuestionRegionPanel from "../components/questions/PaperQuestionRegionPanel";
 import CroppedPdfRegions from "../components/questions/CroppedPdfRegions";
@@ -57,6 +58,12 @@ function formatSectionLabel(id: string): string {
   return id.replace(/-/g, " ").replace(/\b(\w)/g, (c) => c.toUpperCase());
 }
 
+function formatTags(tags: string[] | string | undefined): string {
+  if (tags == null || tags === "") return "";
+  const list = Array.isArray(tags) ? tags : tags.split(",").map((t) => t.trim());
+  return list.filter(Boolean).map((t) => `#${t}`).join(", ");
+}
+
 export default function Questions() {
   const { options, setOptions } = useContext(OptionsContext);
   const navigate = useNavigate();
@@ -81,6 +88,12 @@ export default function Questions() {
   const [selectedSubTopics, setSelectedSubTopics] = useState<string[]>([]);
 
   const [mode, setMode] = useState<QuestionsMode>(initialMode);
+
+  // Sync mode from URL when navigating (e.g. from Practice Hub with ?mode=pastpaper)
+  useEffect(() => {
+    const m = urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
+    setMode(m);
+  }, [urlMode]);
   const [subjectFilter, setSubjectFilter] = useState<string | null>(urlSubject || null);
   const [collectionPaths, setCollectionPaths] = useState<string[]>(initialPaths);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -549,7 +562,7 @@ export default function Questions() {
 
             {/* Sidebar: left or right depending on left-hand mode */}
             <div
-                className={`absolute inset-y-0 z-20 overflow-hidden pointer-events-auto transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${options.leftHandMode ? "left-0" : "right-0"} ${sidebarOpen ? "w-[35%]" : "w-12"}`}
+                className={`absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-auto transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${options.leftHandMode ? "left-0" : "right-0"} ${sidebarOpen ? "w-[35%]" : "w-12"}`}
             >
                 <CollapsibleSidebar
                     side={options.leftHandMode ? "left" : "right"}
@@ -572,162 +585,180 @@ export default function Questions() {
                 />
             </div>
 
-            {/* Full-width scaled layout: question + PDF on the left (no centering) */}
+            {/* Full-width scaled layout: top bar then question + PDF */}
             <div
                 className="absolute inset-0 z-10 flex flex-col items-start pointer-events-none"
                 style={{ transform: "scale(1)", transformOrigin: "0 0" }}
             >
-            {/* Foreground: top-left block on top, then PDF underneath. In laptop+past paper, paper fills from top and header overlays. */}
-            <div className={`relative flex min-h-0 flex-1 w-full ${options.laptopMode && mode === "pastpaper" ? "flex-col" : "flex-col gap-4 items-start"}`}>
-                {/* Top controls: left or right depending on left-hand mode */}
-                <div className={`questions-top-left shrink-0 flex flex-col gap-2 max-w-sm w-[35%] min-w-xs pointer-events-auto ${
-                    options.laptopMode && mode === "pastpaper"
-                        ? `absolute top-0 z-10 ${options.leftHandMode ? "right-0 pt-4 pr-4" : "left-0 pt-4 pl-4"}`
-                        : options.leftHandMode
-                            ? "pt-4 pr-4 self-end"
-                            : "pt-4 pl-4"
-                }`}>
-                    <div className="flex items-center gap-2 mb-1">
-                        <button
-                            type="button"
-                            onClick={() => navigate("/practice")}
-                            className="questions-hub-btn flex items-center gap-1.5 text-sm color-txt-sub hover:color-txt-main transition-colors"
-                            aria-label="Back to Practice Hub"
-                        >
-                            <LuArrowLeft size={18} strokeWidth={2} />
-                            <span>Hub</span>
-                        </button>
-                    </div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <button
-                            type="button"
-                            onClick={() => setOptions((opts: any) => ({ ...opts, laptopMode: !opts.laptopMode }))}
-                            className="practice-device-toggle"
-                            title={options.laptopMode ? "Tablet layout" : "Laptop layout"}
-                            aria-label={options.laptopMode ? "Switch to tablet layout" : "Switch to laptop layout"}
-                        >
-                            {options.laptopMode ? (
-                                <LuMonitor className="practice-device-icon" strokeWidth={2} size={22} />
-                            ) : (
-                                <LuTablet className="practice-device-icon" strokeWidth={2} size={22} />
-                            )}
-                            <span className="practice-device-label">{options.laptopMode ? "Laptop" : "Tablet"}</span>
-                        </button>
-                        <label htmlFor="questions-mode" className="sr-only">Question source</label>
-                        <select
-                            id="questions-mode"
-                            value={mode}
-                            onChange={(e) => {
-                                const m = e.target.value as QuestionsMode;
-                                setMode(m);
-                                if (m === "pastpaper") setSubjectFilter(null);
-                            }}
-                            className="practice-mode-dropdown"
-                        >
-                            <option value="certchamps">CertChamps questions</option>
-                            <option value="pastpaper">Past paper questions</option>
-                        </select>
-                        {mode === "certchamps" && certChampsSet && certChampsSet.sections.length > 0 && (
-                            <>
-                                <label htmlFor="questions-subject" className="sr-only">Subject</label>
-                                <select
-                                    id="questions-subject"
-                                    value={subjectFilter ?? ""}
-                                    onChange={(e) => setSubjectFilter(e.target.value || null)}
-                                    className="practice-mode-dropdown"
+            {/* Full-width top bar with underline – left: Hub/Laptop, center: question title, right: action buttons */}
+            {(() => {
+                const overrideTitle = mode === "pastpaper"
+                    ? papersLoading
+                        ? "Loading…"
+                        : papersError
+                            ? "Failed to load"
+                            : filteredPaperQuestions.length > 0
+                                ? filteredPaperQuestions[paperQuestionPosition - 1]?.questionName ?? ""
+                                : paperQuestions.length > 0
+                                    ? "No questions match filter"
+                                    : selectedPaper?.label ?? "Select a paper"
+                    : undefined;
+                const centerLabel = overrideTitle ?? currentQuestion?.properties?.name ?? "...";
+                const overrideTags = mode === "pastpaper" ? (currentPaperQuestion?.tags ?? []) : undefined;
+                const tagsDisplay = overrideTags != null
+                    ? formatTags(overrideTags)
+                    : formatTags(currentQuestion?.properties?.tags);
+
+                const onPrev = mode === "pastpaper"
+                    ? () => {
+                        if (filteredPaperQuestions.length > 0 && paperQuestionPosition > 1) {
+                            setPaperQuestionPosition((p) => p - 1);
+                            const prevQ = filteredPaperQuestions[paperQuestionPosition - 2];
+                            setScrollToPage(prevQ?.pageRegions?.[0]?.page ?? prevQ?.pageRange?.[0] ?? null);
+                        } else {
+                            const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
+                            if (idx > 0) setSelectedPaper(papers[idx - 1]);
+                        }
+                    }
+                    : previousQuestion;
+
+                const onNext = mode === "pastpaper"
+                    ? async () => {
+                        if (randomise) {
+                            const mathsHigherPapers = papers.filter(
+                                (p: ExamPaper) => (p.subject ?? "maths") === "maths" && (p.level ?? "higher") === "higher"
+                            );
+                            if (mathsHigherPapers.length === 0) return;
+                            const randomPaper = mathsHigherPapers[Math.floor(Math.random() * mathsHigherPapers.length)];
+                            const list = await getPaperQuestions(randomPaper);
+                            if (list.length === 0) return;
+                            const filtered = selectedSubTopics.length === 0
+                                ? list
+                                : list.filter((q) =>
+                                    q.tags?.some((tag) =>
+                                        selectedSubTopics.some((st) => normTag(String(tag)) === normTag(st))
+                                    )
+                                  );
+                            if (filtered.length === 0) return;
+                            const randomPos = 1 + Math.floor(Math.random() * filtered.length);
+                            const q = filtered[randomPos - 1];
+                            if (randomPaper.id === selectedPaper?.id) {
+                                setPaperQuestionPosition(randomPos);
+                                setScrollToPage(q?.pageRegions?.[0]?.page ?? q?.pageRange?.[0] ?? null);
+                            } else {
+                                pendingRandomRef.current = { questionId: q.id };
+                                setSelectedPaper(randomPaper);
+                            }
+                        } else {
+                            if (filteredPaperQuestions.length > 0 && paperQuestionPosition < filteredPaperQuestions.length) {
+                                setPaperQuestionPosition((p) => p + 1);
+                                const nextQ = filteredPaperQuestions[paperQuestionPosition];
+                                setScrollToPage(nextQ?.pageRegions?.[0]?.page ?? nextQ?.pageRange?.[0] ?? null);
+                            } else {
+                                const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
+                                if (idx >= 0 && idx < papers.length - 1) setSelectedPaper(papers[idx + 1]);
+                            }
+                        }
+                    }
+                    : nextQuestion;
+
+                const hideTitleAndArrows = mode === "pastpaper" && isFullPaperExpanded;
+
+                return (
+                    <QuestionsTopBar
+                        onBack={() => navigate("/practice")}
+                        laptopMode={options.laptopMode}
+                        onLaptopModeChange={() => setOptions((opts: any) => ({ ...opts, laptopMode: !opts.laptopMode }))}
+                        mode={mode}
+                        subjectFilter={subjectFilter}
+                        onSubjectFilterChange={setSubjectFilter}
+                        subjectOptions={certChampsSet?.sections?.map((sec) => ({ value: sec, label: formatSectionLabel(sec) })) ?? []}
+                        centerContent={!hideTitleAndArrows ? (
+                            <div className="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    aria-label={mode === "pastpaper" ? "Previous paper" : "Previous question"}
+                                    className="questions-advance pointer-events-auto"
+                                    onClick={onPrev}
                                 >
-                                    <option value="">All topics</option>
-                                    {certChampsSet.sections.map((sec) => (
-                                        <option key={sec} value={sec}>
-                                            {formatSectionLabel(sec)}
-                                        </option>
-                                    ))}
-                                </select>
-                            </>
-                        )}
-                    </div>
-                    <QuestionSelector
-                        question={currentQuestion}
-                        nextQuestion={nextQuestion}
-                        previousQuestion={previousQuestion}
-                        setShowSearch={setShowSearch}
-                        randomise={randomise}
-                        onRandomiseChange={setRandomise}
-                        overrideTitle={
-                            mode === "pastpaper"
-                                ? papersLoading
-                                    ? "Loading…"
-                                    : papersError
-                                        ? "Failed to load"
-                                        : filteredPaperQuestions.length > 0
-                                            ? filteredPaperQuestions[paperQuestionPosition - 1]?.questionName ?? ""
-                                            : paperQuestions.length > 0
-                                                ? "No questions match filter"
-                                                : selectedPaper?.label ?? "Select a paper"
-                                : undefined
-                        }
-                        overrideTags={mode === "pastpaper" ? (currentPaperQuestion?.tags ?? []) : undefined}
-                        onFilterClick={mode === "pastpaper" ? () => setShowPastPaperFilter(true) : undefined}
-                        overrideOnPrevious={
-                            mode === "pastpaper"
-                                ? () => {
-                                        if (filteredPaperQuestions.length > 0 && paperQuestionPosition > 1) {
-                                            setPaperQuestionPosition((p) => p - 1);
-                                            const prevQ = filteredPaperQuestions[paperQuestionPosition - 2];
-                                            setScrollToPage(prevQ?.pageRegions?.[0]?.page ?? prevQ?.pageRange?.[0] ?? null);
-                                        } else {
-                                            const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
-                                            if (idx > 0) setSelectedPaper(papers[idx - 1]);
-                                        }
-                                    }
-                                : undefined
-                        }
-                        overrideOnNext={
-                            mode === "pastpaper"
-                                ? async () => {
-                                        if (randomise) {
-                                            const mathsHigherPapers = papers.filter(
-                                                (p: ExamPaper) => (p.subject ?? "maths") === "maths" && (p.level ?? "higher") === "higher"
-                                            );
-                                            if (mathsHigherPapers.length === 0) return;
-                                            const randomPaper = mathsHigherPapers[Math.floor(Math.random() * mathsHigherPapers.length)];
-                                            const list = await getPaperQuestions(randomPaper);
-                                            if (list.length === 0) return;
-                                            const filtered = selectedSubTopics.length === 0
-                                                ? list
-                                                : list.filter((q) =>
-                                                    q.tags?.some((tag) =>
-                                                        selectedSubTopics.some((st) => normTag(String(tag)) === normTag(st))
-                                                    )
-                                                  );
-                                            if (filtered.length === 0) return;
-                                            const randomPos = 1 + Math.floor(Math.random() * filtered.length);
-                                            const q = filtered[randomPos - 1];
-                                            if (randomPaper.id === selectedPaper?.id) {
-                                                setPaperQuestionPosition(randomPos);
-                                                setScrollToPage(q?.pageRegions?.[0]?.page ?? q?.pageRange?.[0] ?? null);
-                                            } else {
-                                                pendingRandomRef.current = { questionId: q.id };
-                                                setSelectedPaper(randomPaper);
-                                            }
-                                        } else {
-                                            if (filteredPaperQuestions.length > 0 && paperQuestionPosition < filteredPaperQuestions.length) {
-                                                setPaperQuestionPosition((p) => p + 1);
-                                                const nextQ = filteredPaperQuestions[paperQuestionPosition];
-                                                setScrollToPage(nextQ?.pageRegions?.[0]?.page ?? nextQ?.pageRange?.[0] ?? null);
-                                            } else {
-                                                const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
-                                                if (idx >= 0 && idx < papers.length - 1) setSelectedPaper(papers[idx + 1]);
-                                            }
-                                        }
-                                    }
-                                : undefined
+                                    <LuChevronLeft size={16} strokeWidth={2.5} />
+                                </button>
+                                <div className="flex min-w-0 flex-col overflow-hidden px-2">
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key={overrideTitle ?? currentQuestion?.id ?? "empty"}
+                                            initial={{ opacity: 0, x: 8 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -8 }}
+                                            transition={{ duration: 0.15, ease: [0.25, 0.4, 0.25, 1] }}
+                                            className="flex min-w-0 flex-col"
+                                        >
+                                            <h2 className="question-selector-title question-selector-truncate color-txt-accent text-sm font-bold leading-tight">
+                                                {centerLabel}
+                                            </h2>
+                                            {tagsDisplay && (
+                                                <p className="question-selector-truncate color-txt-sub mt-0.5 text-xs font-normal">
+                                                    {tagsDisplay}
+                                                </p>
+                                            )}
+                                        </motion.div>
+                                    </AnimatePresence>
+                                </div>
+                                <button
+                                    type="button"
+                                    aria-label={mode === "pastpaper" ? "Next paper" : "Next question"}
+                                    className="questions-advance pointer-events-auto"
+                                    onClick={onNext}
+                                >
+                                    <LuChevronRight size={16} strokeWidth={2.5} />
+                                </button>
+                            </div>
+                        ) : undefined}
+                        rightContent={
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    aria-label={randomise ? "Random question (on)" : "Random question (off)"}
+                                    className={`question-selector-button pointer-events-auto ${randomise ? "question-selector-button-active" : ""}`}
+                                    onClick={() => setRandomise(!randomise)}
+                                >
+                                    <TbDice5 size={20} strokeWidth={1.8} />
+                                    <span>randomize</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-label="Filter questions by topic"
+                                    className="question-selector-button pointer-events-auto"
+                                    onClick={mode === "pastpaper" ? () => setShowPastPaperFilter(true) : undefined}
+                                >
+                                    <LuFilter size={18} strokeWidth={2} />
+                                    <span>filter</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-label="Search questions"
+                                    className="question-selector-button pointer-events-auto"
+                                    onClick={() => setShowSearch(true)}
+                                >
+                                    <LuSearch size={18} strokeWidth={2} />
+                                    <span>search</span>
+                                </button>
+                            </div>
                         }
                     />
-                    {mode !== "pastpaper" && (
+                );
+            })()}
+
+            {/* Foreground: content block then PDF underneath. In laptop+past paper, paper fills from top. */}
+            <div className={`relative flex min-h-0 flex-1 w-full ${options.laptopMode && mode === "pastpaper" ? "flex-col" : "flex-col gap-4 items-start"}`}>
+                {/* Math preview for certchamps mode */}
+                {mode !== "pastpaper" && (
+                    <div className={`questions-top-left shrink-0 flex flex-col gap-2 max-w-sm w-[35%] min-w-xs pointer-events-auto ${
+                        options.leftHandMode ? "pt-4 pr-4 self-end" : "pt-4 pl-4"
+                    }`}>
                         <RenderMath text={currentQuestion?.content?.[0]?.question ?? "ughhhh no question"} className="questions-math-preview font-bold text-sm txt" />
-                    )}
-                </div>
+                    </div>
+                )}
 
                 {/* PDF panel: viewer when past paper mode; snippet (pageRegions) or full paper with expand/collapse. */}
                 {mode === "pastpaper" && (
@@ -786,59 +817,67 @@ export default function Questions() {
                                             <div className="mt-2 h-8 w-8 animate-spin rounded-full border-2 border-[var(--grey-10)] border-t-[var(--grey-5)]" />
                                         </div>
                                     )}
-                                    {(hasPageRegions || currentPaperQuestion) && (
-                                        <div className="absolute top-0 z-20 flex flex-row gap-2 w-full items-center justify-center color-bg py-3 px-3">
-                                            {hasPageRegions && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleExpandToggle}
-                                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
-                                                    aria-label={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
-                                                    title={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
-                                                >
-                                                    {isFullPaperExpanded ? (
-                                                        <>
-                                                            <LuMinimize2 size={14} strokeWidth={2} />
-                                                            <span>Question only</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <LuMaximize2 size={14} strokeWidth={2} />
-                                                            <span>Full paper</span>
-                                                        </>
-                                                    )}
-                                                </button>
-                                            )}
-                                            {currentPaperQuestion && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setLogTablesQuestionIndex(paperQuestionIndexInFullList >= 0 ? paperQuestionIndexInFullList : 0);
-                                                        setShowLogTables(true);
-                                                    }}
-                                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
-                                                    title="Log tables"
-                                                    aria-label="Log tables"
-                                                >
-                                                    <LuBookOpen size={14} strokeWidth={2} />
-                                                    <span>Log tables</span>
-                                                </button>
-                                            )}
-                                            {currentPaperQuestion && (
-                                                <button
-                                                    type="button"
-                                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub opacity-60 cursor-not-allowed"
-                                                    title="Calculator (coming soon)"
-                                                    aria-label="Calculator"
-                                                >
-                                                    <LuCalculator size={14} strokeWidth={2} />
-                                                    <span>Calculator</span>
-                                                </button>
-                                            )}
-                                            </div>
-                                     
-                                    )}
-                                    <div className="flex-1 min-h-0 relative pt-4 mt-10">
+                                    {(hasPageRegions || currentPaperQuestion) &&
+                                        typeof document !== "undefined" &&
+                                        createPortal(
+                                            <div
+                                                className="fixed z-[25] flex flex-row gap-2 items-center justify-start py-3 pointer-events-auto bg-transparent"
+                                                style={{
+                                                    left: "var(--navbar-width, 5.5rem)",
+                                                    bottom: "env(safe-area-inset-bottom, 0px)",
+                                                }}
+                                            >
+                                                {hasPageRegions && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleExpandToggle}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                                        aria-label={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                                        title={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                                    >
+                                                        {isFullPaperExpanded ? (
+                                                            <>
+                                                                <LuMinimize2 size={14} strokeWidth={2} />
+                                                                <span>Question only</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <LuMaximize2 size={14} strokeWidth={2} />
+                                                                <span>Full paper</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                )}
+                                                {currentPaperQuestion && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setLogTablesQuestionIndex(paperQuestionIndexInFullList >= 0 ? paperQuestionIndexInFullList : 0);
+                                                            setShowLogTables(true);
+                                                        }}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                                        title="Log tables"
+                                                        aria-label="Log tables"
+                                                    >
+                                                        <LuBookOpen size={14} strokeWidth={2} />
+                                                        <span>Log tables</span>
+                                                    </button>
+                                                )}
+                                                {currentPaperQuestion && (
+                                                    <button
+                                                        type="button"
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub opacity-60 cursor-not-allowed"
+                                                        title="Calculator (coming soon)"
+                                                        aria-label="Calculator"
+                                                    >
+                                                        <LuCalculator size={14} strokeWidth={2} />
+                                                        <span>Calculator</span>
+                                                    </button>
+                                                )}
+                                            </div>,
+                                            document.body
+                                        )}
+                                    <div className="flex-1 min-h-0 relative pt-4 pb-14">
                                         {hasPageRegions ? (
                                             <>
                                                 <motion.div

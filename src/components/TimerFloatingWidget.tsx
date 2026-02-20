@@ -48,7 +48,7 @@ export function TimerFloatingWidget({ leftHandMode = false }: TimerFloatingWidge
         <span className="text-xs font-medium color-txt-main truncate lowercase">
           {modeLabel}
         </span>
-        <span className="ml-auto text-lg font-bold tabular-nums color-txt-main shrink-0">
+        <span className="ml-auto text-lg font-bold tabular-nums color-txt-accent shrink-0">
           {formatTime(state.time)}
         </span>
       </div>

@@ -1,6 +1,43 @@
 @reference '../index.css';
 
-/* ========== Practice top bar: device toggle + mode dropdown ========== */
+/* ========== Full-width questions top bar ========== */
+.questions-top-bar {
+  @apply w-full shrink-0;
+}
+.questions-top-bar__inner {
+  @apply flex items-center gap-2 px-4 py-2;
+}
+.questions-top-bar__left {
+  @apply flex items-center gap-2 shrink-0;
+}
+.questions-top-bar__center {
+  @apply flex-1 flex items-center justify-center min-w-0;
+}
+.questions-top-bar__right {
+  @apply flex items-center gap-2 shrink-0 ml-auto;
+}
+.questions-top-bar__btn {
+  @apply inline-flex items-center gap-1.5 rounded-out px-3 py-1.5 text-sm font-medium
+    color-txt-sub border border-transparent
+    hover:color-bg-grey-5 active:scale-[0.98] transition-all duration-200 cursor-pointer;
+}
+.questions-top-bar__btn:focus-visible {
+  @apply outline-none ring-2 ring-offset-2 ring-blue/40;
+}
+.questions-top-bar__dropdown {
+  @apply min-w-[140px] rounded-out pl-3 pr-9 py-1.5 text-sm font-medium
+    color-bg-grey-5 color-txt-main
+    border border-solid color-bg-grey-10
+    cursor-pointer
+    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue/40
+    appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.25rem_1.25rem];
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+}
+.questions-top-bar__dropdown option {
+  @apply color-bg color-txt-main;
+}
+
+/* Legacy classes kept for compat */
 .practice-device-toggle {
   @apply inline-flex items-center gap-2 rounded-out px-3 py-2 text-sm font-medium
     color-bg-grey-5 color-txt-main border border-transparent
@@ -37,7 +74,7 @@
 }
 
 .question-selector-button {
-    @apply color-bg-grey-5 color-txt-sub flex items-center justify-center gap-2 rounded-out px-3! py-1.5! text-sm font-semibold transition-all hover:opacity-85 cursor-pointer
+    @apply color-txt-sub flex items-center justify-center gap-2 rounded-out px-3! py-1.5! text-sm font-semibold transition-all hover:color-bg-grey-5 cursor-pointer
 }
 
 .question-selector-button-active {
@@ -214,30 +251,6 @@
   padding-top: 0.5rem;
   padding-left: 0.5rem;
   gap: 0.375rem;
-}
-.questions-top-left .questions-hub-btn {
-  font-size: 0.8125rem;
-  gap: 0.25rem;
-}
-.questions-top-left .questions-hub-btn svg {
-  width: 1rem;
-  height: 1rem;
-}
-.questions-top-left .practice-device-toggle {
-  padding: 0.375rem 0.5rem;
-  font-size: 0.8125rem;
-  gap: 0.375rem;
-}
-.questions-top-left .practice-device-toggle .practice-device-icon {
-  width: 1.125rem;
-  height: 1.125rem;
-}
-.questions-top-left .practice-mode-dropdown {
-  min-width: 140px;
-  padding: 0.375rem 0.5rem 0.375rem 0.5rem;
-  padding-right: 1.75rem;
-  font-size: 0.8125rem;
-  background-size: 1rem 1rem;
 }
 .questions-top-left .practice-log-tables-btn {
   width: 2rem;
