@@ -4,9 +4,9 @@ import Fuse from "fuse.js";
 import { useExamPapers, type ExamPaper, type PaperQuestion } from "../hooks/useExamPapers";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronDown } from "react-icons/lu";
+import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown } from "react-icons/lu";
 import { subjectMatchesPaper } from "../data/practiceHubSubjects";
-import { SubjectDropdown, YearClockPicker } from "../components/practiceHub";
+import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
 
@@ -44,6 +44,10 @@ const LEVEL_OPTIONS: { value: LevelFilter; code: string; display: string }[] = [
   { value: "all", code: "all", display: "level" },
 ];
 
+const LEVEL_ORDER: LevelFilter[] = ["all", "higher", "ordinary", "foundation"];
+const LEVEL_DRAG_THRESHOLD_PX = 8;
+const LEVEL_DRAG_STEP_PX = 20;
+
 export default function PracticeHub() {
   const navigate = useNavigate();
   const { papers, loading: papersLoading, getPaperBlob, getPaperQuestions } = useExamPapers();
@@ -51,7 +55,7 @@ export default function PracticeHub() {
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
   const [paperFilter, setPaperFilter] = useState<PaperFilter>("all");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
-  const [yearFilter, setYearFilter] = useState<number | "all">("all");
+  const [yearFilter, setYearFilter] = useState<YearFilterValue>("all");
   const [topicFilter, setTopicFilter] = useState<string[]>([]);
   const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
@@ -70,8 +74,18 @@ export default function PracticeHub() {
   const topicsContainerRef = useRef<HTMLDivElement>(null);
 
   const [levelOpen, setLevelOpen] = useState(false);
+  const [levelTriggerDragging, setLevelTriggerDragging] = useState(false);
   const levelContainerRef = useRef<HTMLDivElement>(null);
   const levelTriggerRef = useRef<HTMLButtonElement>(null);
+  const levelFilterRef = useRef(levelFilter);
+  const levelTriggerDragRef = useRef<{
+    startY: number;
+    isDrag: boolean;
+    lastY: number;
+    accum: number;
+  } | null>(null);
+
+  levelFilterRef.current = levelFilter;
 
   const filteredByMeta = useMemo(() => {
     return papers.filter((p) => {
@@ -249,23 +263,98 @@ export default function PracticeHub() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [topicsOpen, levelOpen]);
 
-  /* Wheel on level trigger: scroll up = next level, scroll down = prev (all → higher → ordinary → foundation → all) */
+  /* Wheel on level trigger: scroll up = next level, scroll down = prev */
   useEffect(() => {
     const trigger = levelTriggerRef.current;
     if (!trigger) return;
-    const order: LevelFilter[] = ["all", "higher", "ordinary", "foundation"];
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const i = order.indexOf(levelFilter);
+      const i = LEVEL_ORDER.indexOf(levelFilter);
       if (e.deltaY < 0) {
-        setLevelFilter(order[(i + 1) % order.length]);
+        setLevelFilter(LEVEL_ORDER[(i + 1) % LEVEL_ORDER.length]);
       } else {
-        setLevelFilter(order[(i - 1 + order.length) % order.length]);
+        setLevelFilter(LEVEL_ORDER[(i - 1 + LEVEL_ORDER.length) % LEVEL_ORDER.length]);
       }
     };
     trigger.addEventListener("wheel", handleWheel, { passive: false, capture: true });
     return () => trigger.removeEventListener("wheel", handleWheel, { capture: true });
   }, [levelFilter]);
+
+  const levelTriggerPointerDown = useCallback((clientY: number) => {
+    levelTriggerDragRef.current = {
+      startY: clientY,
+      isDrag: false,
+      lastY: clientY,
+      accum: 0,
+    };
+
+    const applyStep = (delta: number) => {
+      const i = LEVEL_ORDER.indexOf(levelFilterRef.current);
+      const next = (i + delta + LEVEL_ORDER.length) % LEVEL_ORDER.length;
+      setLevelFilter(LEVEL_ORDER[next]);
+    };
+
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      const state = levelTriggerDragRef.current;
+      if (!state) return;
+      const clientY =
+        "touches" in e && e.touches[0]
+          ? e.touches[0].clientY
+          : (e as MouseEvent).clientY;
+      const dy = clientY - state.lastY;
+
+      if (!state.isDrag && Math.abs(clientY - state.startY) >= LEVEL_DRAG_THRESHOLD_PX) {
+        state.isDrag = true;
+        setLevelTriggerDragging(true);
+      }
+      if (state.isDrag) {
+        state.accum += dy;
+        while (state.accum >= LEVEL_DRAG_STEP_PX) {
+          applyStep(-1);
+          state.accum -= LEVEL_DRAG_STEP_PX;
+        }
+        while (state.accum <= -LEVEL_DRAG_STEP_PX) {
+          applyStep(1);
+          state.accum += LEVEL_DRAG_STEP_PX;
+        }
+        state.lastY = clientY;
+      }
+    };
+
+    const onUp = () => {
+      const wasDrag = levelTriggerDragRef.current?.isDrag ?? false;
+      levelTriggerDragRef.current = null;
+      setLevelTriggerDragging(false);
+      document.removeEventListener("mousemove", onMove as (e: MouseEvent) => void);
+      document.removeEventListener("mouseup", onUp);
+      document.removeEventListener("touchmove", onMove as (e: TouchEvent) => void, { capture: true });
+      document.removeEventListener("touchend", onUp);
+      document.removeEventListener("touchcancel", onUp);
+      if (!wasDrag) setLevelOpen((o) => !o);
+    };
+
+    document.addEventListener("mousemove", onMove as (e: MouseEvent) => void);
+    document.addEventListener("mouseup", onUp);
+    document.addEventListener("touchmove", onMove as (e: TouchEvent) => void, { passive: false, capture: true });
+    document.addEventListener("touchend", onUp);
+    document.addEventListener("touchcancel", onUp);
+  }, []);
+
+  const onLevelTriggerMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      levelTriggerPointerDown(e.clientY);
+    },
+    [levelTriggerPointerDown]
+  );
+
+  const onLevelTriggerTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.preventDefault();
+      if (e.touches[0]) levelTriggerPointerDown(e.touches[0].clientY);
+    },
+    [levelTriggerPointerDown]
+  );
 
   return (
     <div className="practice-hub w-full min-h-full h-full flex flex-col overflow-x-hidden p-4 scrollbar-minimal pt-[env(safe-area-inset-top,0px)]">
@@ -337,7 +426,7 @@ export default function PracticeHub() {
         </section>
 
         {/* Filter section – left blank for you to add your own controls */}
-        <section className="flex items-center justify-start practice-hub__filter-section py-2 w-full flex-shrink-0 border-b color-shadow mb-2" aria-label="Filters">
+        <section className="flex items-center justify-start practice-hub__filter-section py-2 w-full flex-shrink-0 border-b mb-2" aria-label="Filters">
             <h2 className="txt-heading-colour text-xl font-bold mr-3">State Exam Papers</h2>
 
             <YearClockPicker
@@ -352,8 +441,9 @@ export default function PracticeHub() {
               <button
                 ref={levelTriggerRef}
                 type="button"
-                className="flex color-txt-sub font-bold py-0.5 px-2 items-center justify-center rounded-out color-bg-grey-5 gap-1 mx-2 cursor-pointer border-0"
-                onClick={() => setLevelOpen((o) => !o)}
+                className={`practice-hub__level-trigger flex color-txt-sub font-bold py-0.5 px-2 items-center justify-center rounded-out color-bg-grey-5 gap-1 mx-2 cursor-pointer border-0 ${levelTriggerDragging ? "practice-hub__level-trigger--dragging" : ""}`}
+                onMouseDown={onLevelTriggerMouseDown}
+                onTouchStart={onLevelTriggerTouchStart}
                 aria-expanded={levelOpen}
                 aria-haspopup="listbox"
                 aria-label="Filter by level"
@@ -361,11 +451,14 @@ export default function PracticeHub() {
                 <span>
                   {LEVEL_OPTIONS.find((o) => o.value === levelFilter)?.display ?? "level"}
                 </span>
-                <LuChevronDown size={16} className="color-txt-sub" aria-hidden />
+                <span className="practice-hub__level-chevrons" aria-hidden>
+                  <LuChevronUp size={14} className="color-txt-sub" />
+                  <LuChevronDown size={14} className="color-txt-sub" />
+                </span>
               </button>
               {levelOpen && (
                 <div
-                  className="practice-hub__level-panel color-bg rounded-out border-2 color-shadow"
+                  className="practice-hub__level-panel color-bg rounded-out border-2"
                   role="listbox"
                   aria-label="Level"
                 >
@@ -536,7 +629,7 @@ export default function PracticeHub() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
               onClick={() => setSelectedPaper(null)}
               aria-hidden
             />
@@ -545,7 +638,11 @@ export default function PracticeHub() {
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "tween", duration: 0.25, ease: "easeOut" }}
+              transition={{
+                type: "tween",
+                duration: 0.35,
+                ease: [0.32, 0.72, 0, 1],
+              }}
               role="dialog"
               aria-modal="true"
               aria-labelledby="ph-panel-title"
@@ -565,11 +662,13 @@ export default function PracticeHub() {
                   </button>
                 </header>
 
-                <div className="practice-hub__panel-meta color-txt-sub text-sm space-y-1">
-                  <p>Year: {selectedPaper.year ?? "—"}</p>
-                  <p>Level: {formatLevel(selectedPaper.level)}</p>
-                  <p>Paper: {getPaperNumber(selectedPaper) ?? "—"}</p>
-                </div>
+                <p className="practice-hub__panel-meta color-txt-sub text-sm">
+                  <span>{selectedPaper.year ?? "—"}</span>
+                  <span className="practice-hub__panel-meta-sep" aria-hidden> · </span>
+                  <span>{formatLevel(selectedPaper.level)}</span>
+                  <span className="practice-hub__panel-meta-sep" aria-hidden> · </span>
+                  <span>Paper {getPaperNumber(selectedPaper) ?? "—"}</span>
+                </p>
 
                 <div className="practice-hub__panel-preview">
                   <p className="practice-hub__panel-preview-label color-txt-sub text-xs font-medium mb-2">

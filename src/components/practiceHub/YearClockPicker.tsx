@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LuChevronDown } from "react-icons/lu";
+import { LuChevronUp, LuChevronDown } from "react-icons/lu";
 import "../../styles/practiceHub.css";
 
 const YEAR_MIN = 2014;
 const YEAR_MAX = 2025; /* 2014–2025 inclusive; 26 not included */
+
+/** Pixels to move before treating trigger press as drag (not click) */
+const TRIGGER_DRAG_THRESHOLD_PX = 8;
+/** Pixels of vertical drag per year step when dragging on trigger */
+const TRIGGER_DRAG_STEP_PX = 20;
 
 /** Years from 25 at top, decreasing clockwise (25, 24, …, 14) */
 const YEARS = Array.from(
@@ -57,18 +62,14 @@ function yearIndexToAngle(index: number): number {
   return (index / n) * 2 * Math.PI - Math.PI / 2;
 }
 
+export type YearFilterValue = number | "all";
+
 type Props = {
-  value: number | "all";
-  onChange: (year: number | "all") => void;
+  value: YearFilterValue;
+  onChange: (year: YearFilterValue) => void;
   id?: string;
   "aria-label"?: string;
 };
-
-function parseYearInput(s: string): number | null {
-  const n = parseInt(s.trim(), 10);
-  if (Number.isNaN(n) || n < YEAR_MIN || n > YEAR_MAX) return null;
-  return n;
-}
 
 export default function YearClockPicker({
   value,
@@ -78,12 +79,20 @@ export default function YearClockPicker({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [inputValue, setInputValue] = useState("");
+  const [triggerDragging, setTriggerDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dialRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const valueRef = useRef(value);
+  const triggerDragRef = useRef<{
+    startY: number;
+    isDrag: boolean;
+    lastY: number;
+    accum: number;
+  } | null>(null);
+
+  valueRef.current = value;
 
   const selectedYear = value === "all" ? null : value;
   const selectedIndex =
@@ -93,29 +102,30 @@ export default function YearClockPicker({
   const handAngleDeg = (handAngleRad * 180) / Math.PI;
 
   const displayLabel =
-    selectedYear != null ? yearToFull(selectedYear) : "year";
+    selectedYear != null ? yearToFull(selectedYear) : "All years";
 
-  /* Sync input from selected year when popover opens or value changes from outside; focus the input when open */
-  useEffect(() => {
-    if (open) {
-      setInputValue(selectedYear != null ? yearToFull(selectedYear) : "");
-      inputRef.current?.focus();
-    }
-  }, [open, selectedYear]);
+  const displayText =
+    selectedYear != null ? yearToFull(selectedYear) : "All years";
 
-  const handleDialPointer = useCallback(
-    (e: React.MouseEvent | React.TouchEvent) => {
+  const updateYearFromCoords = useCallback(
+    (clientX: number, clientY: number) => {
       const dial = dialRef.current;
       if (!dial) return;
       const rect = dial.getBoundingClientRect();
-      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
       const angle = getAngleFromEvent({ clientX, clientY }, rect);
       const index = angleToYearIndex(angle);
-      const y = YEARS[Math.min(index, YEARS.length - 1)];
-      onChange(y);
+      onChange(YEARS[Math.min(index, YEARS.length - 1)]);
     },
     [onChange]
+  );
+
+  const handleDialPointer = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+      updateYearFromCoords(clientX, clientY);
+    },
+    [updateYearFromCoords]
   );
 
   const onDialDown = useCallback(
@@ -127,24 +137,13 @@ export default function YearClockPicker({
     [handleDialPointer]
   );
 
-  const commitInput = useCallback(() => {
-    const y = parseYearInput(inputValue);
-    if (y != null) {
-      onChange(y);
-      setInputValue(yearToFull(y));
-    } else {
-      setInputValue(selectedYear != null ? yearToFull(selectedYear) : "");
-    }
-  }, [inputValue, selectedYear, onChange]);
-
-  const onDisplayKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        commitInput();
-      }
+  const onDialTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.preventDefault();
+      setDragging(true);
+      handleDialPointer(e);
     },
-    [commitInput]
+    [handleDialPointer]
   );
 
   const handleWheelYear = useCallback(
@@ -179,25 +178,125 @@ export default function YearClockPicker({
 
   useEffect(() => {
     if (!dragging) return;
-    const onMove = (e: MouseEvent) => handleDialPointer(e as unknown as React.MouseEvent);
-    const onUp = () => setDragging(false);
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-    return () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
+    const onMouseMove = (e: MouseEvent) =>
+      updateYearFromCoords(e.clientX, e.clientY);
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (e.touches[0])
+        updateYearFromCoords(e.touches[0].clientX, e.touches[0].clientY);
     };
-  }, [dragging, handleDialPointer]);
+    const onUp = () => setDragging(false);
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onUp);
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", onUp);
+    document.addEventListener("touchcancel", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onUp);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onUp);
+      document.removeEventListener("touchcancel", onUp);
+    };
+  }, [dragging, updateYearFromCoords]);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
+      const target = (e as MouseEvent).target ?? (e as TouchEvent).target;
+      if (containerRef.current && !containerRef.current.contains(target as Node)) {
         setOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, []);
+
+  const triggerPointerDown = useCallback(
+    (clientY: number) => {
+      triggerDragRef.current = {
+        startY: clientY,
+        isDrag: false,
+        lastY: clientY,
+        accum: 0,
+      };
+
+      const applyStep = (delta: number) => {
+        const current =
+          valueRef.current === "all" ? YEAR_MAX : (valueRef.current as number);
+        const next = Math.min(
+          YEAR_MAX,
+          Math.max(YEAR_MIN, current + delta)
+        );
+        onChange(next);
+      };
+
+      const onMove = (e: MouseEvent | TouchEvent) => {
+        const state = triggerDragRef.current;
+        if (!state) return;
+        const clientY =
+          "touches" in e && e.touches[0]
+            ? e.touches[0].clientY
+            : (e as MouseEvent).clientY;
+        const dy = clientY - state.lastY;
+
+        if (!state.isDrag && Math.abs(clientY - state.startY) >= TRIGGER_DRAG_THRESHOLD_PX) {
+          state.isDrag = true;
+          setTriggerDragging(true);
+        }
+        if (state.isDrag) {
+          state.accum += dy;
+          while (state.accum >= TRIGGER_DRAG_STEP_PX) {
+            applyStep(-1);
+            state.accum -= TRIGGER_DRAG_STEP_PX;
+          }
+          while (state.accum <= -TRIGGER_DRAG_STEP_PX) {
+            applyStep(1);
+            state.accum += TRIGGER_DRAG_STEP_PX;
+          }
+          state.lastY = clientY;
+        }
+      };
+
+      const onUp = () => {
+        const wasDrag = triggerDragRef.current?.isDrag ?? false;
+        triggerDragRef.current = null;
+        setTriggerDragging(false);
+        document.removeEventListener("mousemove", onMove as (e: MouseEvent) => void);
+        document.removeEventListener("mouseup", onUp);
+        document.removeEventListener("touchmove", onMove as (e: TouchEvent) => void, { capture: true });
+        document.removeEventListener("touchend", onUp);
+        document.removeEventListener("touchcancel", onUp);
+        if (!wasDrag) setOpen((o) => !o);
+      };
+
+      document.addEventListener("mousemove", onMove as (e: MouseEvent) => void);
+      document.addEventListener("mouseup", onUp);
+      document.addEventListener("touchmove", onMove as (e: TouchEvent) => void, { passive: false, capture: true });
+      document.addEventListener("touchend", onUp);
+      document.addEventListener("touchcancel", onUp);
+    },
+    [onChange]
+  );
+
+  const onTriggerMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      triggerPointerDown(e.clientY);
+    },
+    [triggerPointerDown]
+  );
+
+  const onTriggerTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.preventDefault();
+      if (e.touches[0]) triggerPointerDown(e.touches[0].clientY);
+    },
+    [triggerPointerDown]
+  );
 
   return (
     <div ref={containerRef} className="year-clock-picker" data-state={open ? "open" : "closed"}>
@@ -208,37 +307,28 @@ export default function YearClockPicker({
         aria-label={ariaLabel ?? "Select year"}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="flex color-txt-sub font-bold py-0.5 px-2 items-center justify-center rounded-out color-bg-grey-5 gap-1 mx-2 cursor-pointer border-0 "
-        onClick={() => setOpen((o) => !o)}
+        className={`year-clock-picker__trigger flex color-txt-sub font-bold py-0.5 px-2 items-center justify-center rounded-out color-bg-grey-5 gap-1 mx-2 cursor-pointer border-0 ${triggerDragging ? "year-clock-picker__trigger--dragging" : ""}`}
+        onMouseDown={onTriggerMouseDown}
+        onTouchStart={onTriggerTouchStart}
       >
         <p className="m-0">{displayLabel}</p>
-        <span className="year-clock-picker__chevron" aria-hidden>
-          <LuChevronDown size={16} className="color-txt-sub" />
+        <span className="year-clock-picker__chevrons" aria-hidden>
+          <LuChevronUp size={14} className="color-txt-sub" />
+          <LuChevronDown size={14} className="color-txt-sub" />
         </span>
       </button>
 
       {open && (
         <div ref={popoverRef} className="year-clock-picker__popover" role="dialog" aria-modal="true" aria-label="Pick year">
-          <div className="year-clock-picker__display color-bg-grey-10 color-txt-main">
-            <input
-              ref={inputRef}
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              className="year-clock-picker__input"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onBlur={commitInput}
-              onKeyDown={onDisplayKeyDown}
-              placeholder="—"
-              aria-label="Type year (2014–2025)"
-            />
+          <div className="year-clock-picker__display color-bg-grey-10 color-txt-main" aria-live="polite">
+            <span className="year-clock-picker__display-year">{displayText}</span>
           </div>
 
           <div
             ref={dialRef}
             className="year-clock-picker__dial color-bg"
             onMouseDown={onDialDown}
+            onTouchStart={onDialTouchStart}
             role="slider"
             aria-valuemin={YEAR_MIN}
             aria-valuemax={YEAR_MAX}

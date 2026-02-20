@@ -436,7 +436,22 @@
   min-width: 180px;
   padding: 0.375rem;
   z-index: 50;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.practice-hub__level-trigger {
+  transition: transform 0.2s ease-out;
+}
+
+.practice-hub__level-trigger--dragging {
+  animation: trigger-drag-bounce 0.35s ease-out forwards;
+}
+
+.practice-hub__level-chevrons {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 0.5;
 }
 
 .practice-hub__level-option {
@@ -565,16 +580,16 @@
 /* Paper cards in practice hub: override .deck’s h-48 so aspect-ratio works (edit ratio here) */
 .practice-hub .deck.paper-card {
   height: auto;
-  width: 20rem;
-  min-width: 15rem;
-  aspect-ratio: 5 / 8;
+  aspect-ratio: 6 / 7;
+  @apply max-w-2
 }
 
 /* Lower the overlay/gradient: position and height; themed gradient to full transparency */
 .practice-hub .deck.paper-card .bg-overlay {
-  top: 25%;
-  height: 50%;
-  background: linear-gradient(to top, var(--paper-card-fade, var(--color-white, #fff)) 0%, var(--paper-card-fade, var(--color-white, #fff)) 15%, transparent 100%);
+  top: 70%;
+  height: 10%;
+  /* background: linear-gradient(to top, var(--paper-card-fade, var(--color-white, #fff)) 0%,transparent 0%); */
+  @apply color-bg rounded-none
 }
 
 /* Lower the text: push to bottom of card, ensure on top of overlay */
@@ -582,6 +597,7 @@
   margin-top: auto;
   position: relative;
   z-index: 30;
+
 }
 
 /* Paper card – standalone (no deck classes): same look as before */
@@ -704,6 +720,15 @@
 
 .practice-hub__panel-meta {
   margin-bottom: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.practice-hub__panel-meta-sep {
+  user-select: none;
+  opacity: 0.7;
 }
 
 .practice-hub__panel-preview {
@@ -754,70 +779,69 @@
   display: inline-block;
 }
 
-.year-clock-picker__chevron {
-  display: inline-flex;
+.year-clock-picker__trigger {
+  transition: transform 0.2s ease-out;
 }
 
-.year-clock-picker[data-state="open"] .year-clock-picker__chevron {
-  transform: rotate(180deg);
+.year-clock-picker__trigger--dragging {
+  animation: trigger-drag-bounce 0.35s ease-out forwards;
+}
+
+@keyframes trigger-drag-bounce {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.08); }
+  70% { transform: scale(1.02); }
+  100% { transform: scale(1.05); }
+}
+
+.year-clock-picker__chevrons {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 0.5;
 }
 
 .year-clock-picker__popover {
   position: absolute;
   left: 0;
   top: 100%;
-  margin-top: 0.25rem;
-  min-width: 260px;
+  margin-top: 0.5rem;
+  min-width: 280px;
   border-radius: var(--radius-out, 0.5rem);
   z-index: 50;
   overflow: hidden;
-  @apply color-bg color-shadow border-2
+  box-shadow: 0 10px 40px color-mix(in srgb, var(--color-black, #353535) 0.15);
+  @apply color-bg border-2 color-shadow;
 }
 
 .year-clock-picker__display {
-  padding: 1rem 1.25rem;
-  font-size: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
   text-align: center;
   letter-spacing: 0.02em;
+  border-bottom: 1px solid var(--color-bg-grey-10, #f3f4f6);
   @apply color-txt-main color-bg;
 }
 
-.year-clock-picker__input {
-  width: 100%;
-  max-width: 6em;
-  margin: 0 auto;
+.year-clock-picker__display-year {
   display: block;
-  font: inherit;
-  font-size: 1.5rem;
-  font-weight: 700;
-  text-align: center;
-  letter-spacing: 0.02em;
-  padding: 0;
-  border: none;
-  border-radius: 0.25rem;
-  background: transparent;
-  color: inherit;
-}
-
-.year-clock-picker__input::placeholder {
-  opacity: 0.5;
-}
-
-.year-clock-picker__input:focus {
-  outline: none;
-
+  min-height: 1.5em;
+  @apply color-txt-main;
 }
 
 .year-clock-picker__dial {
   position: relative;
   width: 240px;
   height: 240px;
-  margin: 0 auto;
+  margin: 1rem auto;
   border-radius: 50%;
   cursor: grab;
   user-select: none;
-  @apply color-txt-main color-bg
+  touch-action: none;
+  border: 2px solid var(--color-bg-grey-10, #f3f4f6);
+  @apply color-txt-main color-bg;
 }
 
 .year-clock-picker__dial:active {
@@ -881,25 +905,34 @@
 }
 
 .year-clock-picker__footer {
-  padding: 0.5rem 1rem;
-
-  background: var(--color-bg, #fff);
-  @apply color-bg
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--color-bg-grey-10, #f3f4f6);
+  @apply color-bg;
 }
 
 .year-clock-picker__all {
-  color: var(--color-txt-main, #111);
+  width: 100%;
   cursor: pointer;
   text-align: center;
-  @apply color-bg-grey-5 mx-auto w-full rounded-out color-txt-sub py-0.5 px-2 font-bold duration-200 transition-all mb-1
+  border: none;
+  border-radius: var(--radius-out, 0.5rem);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background 0.2s, color 0.2s;
+  @apply color-bg-grey-5 color-txt-sub;
 }
 
 .year-clock-picker__all:hover {
-  @apply color-bg-grey-10;
+  @apply color-bg-grey-10 color-txt-main;
 }
 
 .year-clock-picker__all--selected {
- 
-  @apply color-bg-accent mx-auto w-full rounded-out color-txt-accent py-0.5 px-2 font-bold duration-200 transition-all mb-1
+  @apply color-bg-accent color-txt-accent;
+}
+
+.year-clock-picker__all--selected:hover {
+  @apply color-bg-accent color-txt-accent;
+  opacity: 0.95;
 }
 
