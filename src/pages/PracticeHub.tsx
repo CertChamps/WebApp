@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Fuse from "fuse.js";
 import { useExamPapers, type ExamPaper, type PaperQuestion } from "../hooks/useExamPapers";
@@ -58,6 +58,7 @@ export default function PracticeHub() {
   const [yearFilter, setYearFilter] = useState<YearFilterValue>("all");
   const [topicFilter, setTopicFilter] = useState<string[]>([]);
   const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
+  const [panelAnimationDone, setPanelAnimationDone] = useState(false);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [previewQuestions, setPreviewQuestions] = useState<PaperQuestion[]>([]);
   const [paperTagsMap, setPaperTagsMap] = useState<Record<string, string[]>>({});
@@ -85,7 +86,17 @@ export default function PracticeHub() {
     accum: number;
   } | null>(null);
 
+  const [panelTagsExpanded, setPanelTagsExpanded] = useState(false);
+  const [tagsVisibleWhenCollapsed, setTagsVisibleWhenCollapsed] = useState(1);
+  const panelTagsContainerRef = useRef<HTMLDivElement>(null);
+  const panelTagsMeasureRef = useRef<HTMLDivElement>(null);
+
   levelFilterRef.current = levelFilter;
+
+  useEffect(() => {
+    setPanelTagsExpanded(false);
+    setTagsVisibleWhenCollapsed(1);
+  }, [selectedPaper?.id]);
 
   const filteredByMeta = useMemo(() => {
     return papers.filter((p) => {
@@ -156,12 +167,15 @@ export default function PracticeHub() {
     };
   }, [filteredByMeta, getPaperQuestions]);
 
+  /* Defer PDF/questions load until after panel open animation so slide-in stays smooth */
   useEffect(() => {
     if (!selectedPaper) {
+      setPanelAnimationDone(false);
       setPreviewBlob(null);
       setPreviewQuestions([]);
       return;
     }
+    if (!panelAnimationDone) return;
     let cancelled = false;
     setPreviewBlob(null);
     setPreviewQuestions([]);
@@ -176,13 +190,32 @@ export default function PracticeHub() {
     return () => {
       cancelled = true;
     };
-  }, [selectedPaper, getPaperBlob, getPaperQuestions]);
+  }, [selectedPaper, panelAnimationDone, getPaperBlob, getPaperQuestions]);
 
   const allTagsInPreview = useMemo(() => {
     const set = new Set<string>();
     previewQuestions.forEach((q) => q.tags?.forEach((t) => set.add(String(t))));
     return Array.from(set).sort();
   }, [previewQuestions]);
+
+  useLayoutEffect(() => {
+    if (panelTagsExpanded || allTagsInPreview.length === 0) return;
+    const container = panelTagsContainerRef.current;
+    const measure = panelTagsMeasureRef.current;
+    if (!container || !measure) return;
+    const gap = 8;
+    const maxWidth = container.clientWidth;
+    let sum = 0;
+    let count = 0;
+    for (const child of measure.children) {
+      const w = (child as HTMLElement).offsetWidth;
+      if (count > 0) sum += gap;
+      sum += w;
+      if (sum > maxWidth) break;
+      count += 1;
+    }
+    setTagsVisibleWhenCollapsed(count > 0 ? count : 1);
+  }, [panelTagsExpanded, allTagsInPreview, selectedPaper?.id]);
 
   const goToSession = useCallback(() => {
     if (!selectedPaper) return;
@@ -608,7 +641,10 @@ export default function PracticeHub() {
                     getPaperBlob={getPaperBlob}
                     questionCount={paperQuestionCountMap[paper.id]}
                     tags={paperTagsMap[paper.id] ?? []}
-                    onSelect={() => setSelectedPaper(paper)}
+                    onSelect={() => {
+                      setSelectedPaper(paper);
+                      setPanelAnimationDone(false);
+                    }}
                   />
                 ))}
               </div>
@@ -620,7 +656,7 @@ export default function PracticeHub() {
         </div>
       </div>
 
-      {/* Slide-in preview panel */}
+      {/* Slide-in preview e */}
       <AnimatePresence>
         {selectedPaper && (
           <>
@@ -643,23 +679,35 @@ export default function PracticeHub() {
                 duration: 0.35,
                 ease: [0.32, 0.72, 0, 1],
               }}
+              onAnimationComplete={() => setPanelAnimationDone(true)}
               role="dialog"
               aria-modal="true"
               aria-labelledby="ph-panel-title"
             >
-              <div className="practice-hub__panel-inner">
+                <div className="absolute top-1 right-1">
+                  <button
+                      type="button"
+                      onClick={() => setSelectedPaper(null)}
+                      className="practice-hub__panel-close"
+                      aria-label="Close"
+                    >
+                      <LuX size={24} />
+                  </button>
+
+                </div>
+         
+                <div className="practice-hub__panel-preview">
+                  <div className="practice-hub__preview-wrap">
+                    <FullPaperPreview blob={previewBlob} />
+                  </div>
+                </div>
+
+                <div className="practice-hub__panel-inner">
                 <header className="practice-hub__panel-header">
                   <h2 id="ph-panel-title" className="practice-hub__panel-title txt-heading-colour">
                     {selectedPaper.label}
                   </h2>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPaper(null)}
-                    className="practice-hub__panel-close"
-                    aria-label="Close"
-                  >
-                    <LuX size={24} />
-                  </button>
+       
                 </header>
 
                 <p className="practice-hub__panel-meta color-txt-sub text-sm">
@@ -670,40 +718,61 @@ export default function PracticeHub() {
                   <span>Paper {getPaperNumber(selectedPaper) ?? "—"}</span>
                 </p>
 
-                <div className="practice-hub__panel-preview">
-                  <p className="practice-hub__panel-preview-label color-txt-sub text-xs font-medium mb-2">
-                    Preview (title page)
-                  </p>
-                  <div className="practice-hub__preview-wrap">
-                    <FullPaperPreview blob={previewBlob} />
-                  </div>
-                </div>
-
                 {allTagsInPreview.length > 0 && (
-                  <div className="practice-hub__panel-tags">
-                    <p className="practice-hub__panel-tags-label color-txt-sub text-xs font-medium mb-2">
-                      Tags in this paper
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {allTagsInPreview.map((tag) => (
-                        <span key={tag} className="color-bg-accent color-txt-accent rounded-in px-2 py-1 text-sm">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+                  <div className="practice-hub__panel-tags" ref={panelTagsContainerRef}>
+                    {panelTagsExpanded ? (
+                      <div className="practice-hub__panel-tags-list flex flex-wrap gap-2">
+                        {allTagsInPreview.map((tag) => (
+                          <span key={tag} className="color-bg-accent color-txt-accent rounded-in px-2 py-1 text-sm">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="practice-hub__panel-tags-list flex flex-nowrap gap-2" aria-hidden={tagsVisibleWhenCollapsed < allTagsInPreview.length}>
+                          {allTagsInPreview.slice(0, tagsVisibleWhenCollapsed).map((tag) => (
+                            <span key={tag} className="color-bg-accent color-txt-accent rounded-in px-2 py-1 text-sm shrink-0">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        <div
+                          ref={panelTagsMeasureRef}
+                          className="practice-hub__panel-tags-measure flex flex-nowrap gap-2"
+                          aria-hidden
+                        >
+                          {allTagsInPreview.map((tag) => (
+                            <span key={tag} className="color-bg-accent color-txt-accent rounded-in px-2 py-1 text-sm shrink-0">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {(panelTagsExpanded || allTagsInPreview.length > tagsVisibleWhenCollapsed) && (
+                      <button
+                        type="button"
+                        onClick={() => setPanelTagsExpanded((v) => !v)}
+                        className="practice-hub__panel-tags-toggle mt-2 text-xs font-medium color-txt-sub hover:color-txt focus:outline-none focus:underline"
+                      >
+                        {panelTagsExpanded ? "See less" : "See more"}
+                      </button>
+                    )}
                   </div>
                 )}
 
-                <div className="practice-hub__panel-actions mt-auto pt-4">
-                  <button
-                    type="button"
-                    onClick={goToSession}
-                    className="blue-btn w-full flex items-center justify-center gap-2 py-3"
-                  >
-                    Let&apos;s go
-                    <LuChevronRight size={20} />
-                  </button>
-                </div>
+                <div className="practice-hub__panel-actions-spacer" aria-hidden />
+              </div>
+              <div className="practice-hub__panel-actions color-bg">
+                <button
+                  type="button"
+                  onClick={goToSession}
+                  className="blue-btn w-full flex items-center justify-center gap-2 py-3"
+                >
+                  Let&apos;s go
+                  <LuChevronRight size={20} />
+                </button>
               </div>
             </motion.aside>
           </>
@@ -712,6 +781,9 @@ export default function PracticeHub() {
     </div>
   );
 }
+
+/** Tags on card: one line only; show first N then "see more" */
+const TAGS_VISIBLE_ON_CARD = 3;
 
 /** Paper card – deck styling (shadow-small, color-border, txt-heading-colour, blue-btn tags) */
 function PaperCard({
@@ -748,7 +820,8 @@ function PaperCard({
 
   const snapshot = usePaperSnapshot(blob, 1);
   const levelLabel = formatLevel(paper.level);
-  const displayTags = tags.slice(0, 4);
+  const visibleTags = tags.slice(0, TAGS_VISIBLE_ON_CARD);
+  const hasMoreTags = tags.length > TAGS_VISIBLE_ON_CARD;
 
   return (
     <div
@@ -779,9 +852,9 @@ function PaperCard({
       {/* Same as decks: gradient overlay that goes up into the image */}
       <div className="bg-overlay" />
       <div className="practice-hub__paper-card-body">
-      <div className="flex w-full z-50 mt-21 px-3 items-center pt-1">
-        <LuFileCheck size={24} className="color-txt-accent shrink-0" aria-hidden />
-        <div className="flex flex-col ml-3 min-w-0 flex-1">
+      <div className="flex w-full z-50 mt-21 px-2.5 items-center pt-0.5">
+        <LuFileCheck size={18} className="color-txt-accent shrink-0" aria-hidden />
+        <div className="flex flex-col ml-2 min-w-0 flex-1">
           <span className="txt-heading-colour truncate">{paper.label}</span>
           <span className="txt color-txt-sub">{levelLabel}</span>
         </div>
@@ -791,14 +864,26 @@ function PaperCard({
           </span>
         </div>
       </div>
-      {/* Tags (match deck – blue-btn color-bg-grey-5) */}
-      {displayTags.length > 0 && (
-        <div className="px-4 mt-2 flex flex-wrap gap-1 items-center relative z-50 pb-2">
-          {displayTags.map((tag) => (
-            <span key={tag} className="blue-btn color-bg-grey-5 text-xs font-semibold px-2 py-0.5 w-auto">
+      {/* Tags: one line only; "see more" opens side panel for all tags */}
+      {tags.length > 0 && (
+        <div className="practice-hub__paper-card-tags px-2.5 mt-0.5 relative z-50 pb-1.5">
+          {visibleTags.map((tag) => (
+            <span key={tag} className="practice-hub__paper-card-tag-pill blue-btn color-bg-grey-5 font-semibold">
               {tag}
             </span>
           ))}
+          {hasMoreTags && (
+            <button
+              type="button"
+              className="practice-hub__paper-card-tags-seemore"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect();
+              }}
+            >
+              see more
+            </button>
+          )}
         </div>
       )}
       </div>

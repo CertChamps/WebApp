@@ -27,7 +27,7 @@ EOF
 
 ```bash
 cat > cors.json << 'EOF'
-[{"origin":["http://localhost:5173","http://localhost:3000","http://127.0.0.1:5173","http://192.168.1.100:5173","https://certchamps-a7527.web.app","https://certchamps-a7527.firebaseapp.com"],"method":["GET","HEAD"],"responseHeader":["Content-Type","Content-Length"],"maxAgeSeconds":3600}]
+[{"origin":["http://localhost:5173","http://localhost:3000","http://127.0.0.1:5173","http://192.168.1.100:5173", "http://172.18.253.58:5173", "https://certchamps-a7527.web.app","https://certchamps-a7527.firebaseapp.com"],"method":["GET","HEAD"],"responseHeader":["Content-Type","Content-Length"],"maxAgeSeconds":3600}]
 EOF
 ```
 
