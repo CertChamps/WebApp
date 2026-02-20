@@ -402,11 +402,11 @@
   right: 0;
   top: 100%;
   margin-top: 0.25rem;
-  min-width: 280px;
-  max-width: 360px;
+  min-width: 400px;
+  max-width: 500px;
   padding: 1rem 1.25rem;
   z-index: 50;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+
 }
 
 .practice-hub__topics-heading {

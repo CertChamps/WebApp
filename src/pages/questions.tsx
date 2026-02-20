@@ -9,7 +9,7 @@ import useFilters from "../hooks/useFilters";
 
 // Components
 import { createPortal } from "react-dom";
-import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuFilter, LuSearch } from "react-icons/lu";
+import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch } from "react-icons/lu";
 import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
 import QSearch from "../components/questions/qSearch";
@@ -99,6 +99,7 @@ export default function Questions() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
     const cardContainerRef = useRef<HTMLElement | null>(null);
+    const pastPaperFilterRef = useRef<HTMLDivElement>(null);
     /** When set, next paperQuestions effect will jump here (used for random across papers). */
     const pendingRandomRef = useRef<{ pos: number } | { questionId: string } | null>(null);
     /** When set, next paperQuestions effect will jump to this index (used when selecting from all-papers search). */
@@ -471,6 +472,19 @@ export default function Questions() {
         setSelectedPaper(match);
     }, [papers, msYear, selectedPaper, urlPaperId]);
 
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            const target = e.target as Node;
+            if (pastPaperFilterRef.current && !pastPaperFilterRef.current.contains(target)) {
+                setShowPastPaperFilter(false);
+            }
+        }
+        if (showPastPaperFilter) {
+            document.addEventListener("mousedown", handleClickOutside);
+            return () => document.removeEventListener("mousedown", handleClickOutside);
+        }
+    }, [showPastPaperFilter]);
+
     //===============================================================================================//
 
     //===========================================> Next Question <===================================//
@@ -529,29 +543,6 @@ export default function Questions() {
                         <LuX size={16} />
                     </button>
                 </div>
-            )}
-            {mode === "pastpaper" && (
-                <PastPaperFilterPanel
-                    open={showPastPaperFilter}
-                    onClose={() => setShowPastPaperFilter(false)}
-                    selectedSubTopics={selectedSubTopics}
-                    onApply={(subTopics) => {
-                        setSelectedSubTopics(subTopics);
-                        setShowPastPaperFilter(false);
-                        setPaperQuestionPosition(1);
-                        if (paperQuestions.length > 0 && subTopics.length > 0) {
-                            const set = new Set(subTopics.map((s) => normTag(s)));
-                            const filtered = paperQuestions.filter((q) =>
-                                q.tags?.some((tag) => set.has(normTag(String(tag))))
-                            );
-                            const first = filtered[0];
-                            if (first) setScrollToPage(first?.pageRegions?.[0]?.page ?? first?.pageRange?.[0] ?? null);
-                        } else if (paperQuestions.length > 0) {
-                            const first = paperQuestions[0];
-                            setScrollToPage(first?.pageRegions?.[0]?.page ?? first?.pageRange?.[0] ?? null);
-                        }
-                    }}
-                />
             )}
             {/* Drawing canvas: disabled in laptop mode; render first so it sits behind (z-0) */}
             {!options.laptopMode && (
@@ -725,15 +716,52 @@ export default function Questions() {
                                     <TbDice5 size={20} strokeWidth={1.8} />
                                     <span>randomize</span>
                                 </button>
-                                <button
-                                    type="button"
-                                    aria-label="Filter questions by topic"
-                                    className="question-selector-button pointer-events-auto"
-                                    onClick={mode === "pastpaper" ? () => setShowPastPaperFilter(true) : undefined}
-                                >
-                                    <LuFilter size={18} strokeWidth={2} />
-                                    <span>filter</span>
-                                </button>
+                                {mode === "pastpaper" ? (
+                                    <div ref={pastPaperFilterRef} className="practice-hub__topics-wrap relative">
+                                        <button
+                                            type="button"
+                                            className="flex color-txt-sub font-bold py-0.5 px-2 items-center justify-center rounded-out color-bg-grey-5 gap-1 mx-2 cursor-pointer border-0 pointer-events-auto"
+                                            onClick={() => setShowPastPaperFilter((o) => !o)}
+                                            aria-expanded={showPastPaperFilter}
+                                            aria-haspopup="dialog"
+                                            aria-label="Filter questions by topic"
+                                        >
+                                            <span>Topics</span>
+                                            <LuChevronDown size={16} className="color-txt-sub" aria-hidden />
+                                        </button>
+                                        <PastPaperFilterPanel
+                                            asDropdown
+                                            open={showPastPaperFilter}
+                                            onClose={() => setShowPastPaperFilter(false)}
+                                            selectedSubTopics={selectedSubTopics}
+                                            onApply={(subTopics) => {
+                                                setSelectedSubTopics(subTopics);
+                                                setShowPastPaperFilter(false);
+                                                setPaperQuestionPosition(1);
+                                                if (paperQuestions.length > 0 && subTopics.length > 0) {
+                                                    const set = new Set(subTopics.map((s) => normTag(s)));
+                                                    const filtered = paperQuestions.filter((q) =>
+                                                        q.tags?.some((tag) => set.has(normTag(String(tag))))
+                                                    );
+                                                    const first = filtered[0];
+                                                    if (first) setScrollToPage(first?.pageRegions?.[0]?.page ?? first?.pageRange?.[0] ?? null);
+                                                } else if (paperQuestions.length > 0) {
+                                                    const first = paperQuestions[0];
+                                                    setScrollToPage(first?.pageRegions?.[0]?.page ?? first?.pageRange?.[0] ?? null);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        aria-label="Filter questions by topic"
+                                        className="question-selector-button pointer-events-auto"
+                                    >
+                                        <LuFilter size={18} strokeWidth={2} />
+                                        <span>filter</span>
+                                    </button>
+                                )}
                                 <button
                                     type="button"
                                     aria-label="Search questions"
@@ -821,9 +849,8 @@ export default function Questions() {
                                         typeof document !== "undefined" &&
                                         createPortal(
                                             <div
-                                                className="fixed z-[25] flex flex-row gap-2 items-center justify-start py-3 pointer-events-auto bg-transparent"
+                                                className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-0 pr-4" : "justify-start left-[var(--navbar-width,5.5rem)]"}`}
                                                 style={{
-                                                    left: "var(--navbar-width, 5.5rem)",
                                                     bottom: "env(safe-area-inset-bottom, 0px)",
                                                 }}
                                             >

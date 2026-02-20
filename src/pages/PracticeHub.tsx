@@ -4,8 +4,9 @@ import Fuse from "fuse.js";
 import { useExamPapers, type ExamPaper, type PaperQuestion } from "../hooks/useExamPapers";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown } from "react-icons/lu";
+import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2 } from "react-icons/lu";
 import { subjectMatchesPaper } from "../data/practiceHubSubjects";
+import { MATHS_HIGHER_TOPICS, TOPIC_TO_SUB_TOPICS } from "../data/mathsHigherTopics";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
@@ -72,7 +73,28 @@ export default function PracticeHub() {
 
   const [topicsOpen, setTopicsOpen] = useState(false);
   const [pendingTopicFilter, setPendingTopicFilter] = useState<string[]>([]);
+  const [pendingSubTopicFilter, setPendingSubTopicFilter] = useState<string[]>([]);
   const topicsContainerRef = useRef<HTMLDivElement>(null);
+
+  const topicSet = useMemo(() => new Set<string>(MATHS_HIGHER_TOPICS), []);
+  const resetAllFilters = useCallback(() => {
+    setSubjectFilter(null);
+    setPaperFilter("all");
+    setLevelFilter("all");
+    setYearFilter("all");
+    setTopicFilter([]);
+    setPendingTopicFilter([]);
+    setPendingSubTopicFilter([]);
+    setTopicsOpen(false);
+  }, []);
+  const availableSubTopics = useMemo(() => {
+    if (pendingTopicFilter.length === 0) return [];
+    const set = new Set<string>();
+    pendingTopicFilter.forEach((t) => {
+      TOPIC_TO_SUB_TOPICS[t]?.forEach((st) => set.add(st));
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [pendingTopicFilter]);
 
   const [levelOpen, setLevelOpen] = useState(false);
   const [levelTriggerDragging, setLevelTriggerDragging] = useState(false);
@@ -112,22 +134,15 @@ export default function PracticeHub() {
     });
   }, [papers, subjectFilter, paperFilter, levelFilter, yearFilter]);
 
+  const normTag = useCallback((t: string) => t.trim().toLowerCase().replace(/\s*&\s*/g, " and "), []);
   const filteredPapers = useMemo(() => {
     if (topicFilter.length === 0) return filteredByMeta;
-    const set = new Set(topicFilter.map((t) => t.toLowerCase()));
+    const set = new Set(topicFilter.map(normTag));
     return filteredByMeta.filter((p) => {
       const tags = paperTagsMap[p.id] ?? [];
-      return tags.some((tag) => set.has(String(tag).toLowerCase()));
+      return tags.some((tag) => set.has(normTag(String(tag))));
     });
-  }, [filteredByMeta, topicFilter, paperTagsMap]);
-
-  const availableTopics = useMemo(() => {
-    const set = new Set<string>();
-    filteredByMeta.forEach((p) => {
-      (paperTagsMap[p.id] ?? []).forEach((t) => set.add(String(t)));
-    });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-  }, [filteredByMeta, paperTagsMap]);
+  }, [filteredByMeta, topicFilter, paperTagsMap, normTag]);
 
   useEffect(() => {
     if (filteredByMeta.length === 0) {
@@ -459,7 +474,7 @@ export default function PracticeHub() {
         </section>
 
         {/* Filter section – left blank for you to add your own controls */}
-        <section className="flex items-center justify-start practice-hub__filter-section py-2 w-full flex-shrink-0 border-b mb-2" aria-label="Filters">
+        <section className="flex items-center justify-start practice-hub__filter-section py-2 w-full flex-shrink-0  mb-2" aria-label="Filters">
             <h2 className="txt-heading-colour text-xl font-bold mr-3">State Exam Papers</h2>
 
             <YearClockPicker
@@ -549,7 +564,16 @@ export default function PracticeHub() {
                 type="button"
                 className="flex color-txt-sub font-bold py-0.5 px-2 items-center justify-center rounded-out color-bg-grey-5 gap-1 mx-2 cursor-pointer border-0"
                 onClick={() => {
-                  if (!topicsOpen) setPendingTopicFilter([...topicFilter]);
+                  if (!topicsOpen) {
+                    const topics: string[] = [];
+                    const subtopics: string[] = [];
+                    topicFilter.forEach((t) => {
+                      if (topicSet.has(t)) topics.push(t);
+                      else subtopics.push(t);
+                    });
+                    setPendingTopicFilter(topics);
+                    setPendingSubTopicFilter(subtopics);
+                  }
                   setTopicsOpen((o) => !o);
                 }}
                 aria-expanded={topicsOpen}
@@ -568,7 +592,7 @@ export default function PracticeHub() {
                 >
                   <p className="practice-hub__topics-heading txt-bold color-txt-main mb-2">topic</p>
                   <div className="practice-hub__topics-tags flex flex-wrap gap-2 mb-4">
-                    {availableTopics.map((tag) => {
+                    {MATHS_HIGHER_TOPICS.map((tag) => {
                       const selected = pendingTopicFilter.some(
                         (t) => t.toLowerCase() === tag.toLowerCase()
                       );
@@ -576,7 +600,7 @@ export default function PracticeHub() {
                         <button
                           key={tag}
                           type="button"
-                          className={`practice-hub__topic-tag rounded-in px-2 py-1 text-sm font-medium border-0 cursor-pointer flex items-center gap-1.5 ${
+                          className={`practice-hub__topic-tag rounded-in px-1.5 py-0.5 text-xs font-medium border-0 cursor-pointer flex items-center gap-1 ${
                             selected
                               ? "color-bg-accent color-txt-accent"
                               : "color-bg-grey-5 color-txt-sub"
@@ -586,6 +610,9 @@ export default function PracticeHub() {
                               setPendingTopicFilter((prev) =>
                                 prev.filter((t) => t.toLowerCase() !== tag.toLowerCase())
                               );
+                              setPendingSubTopicFilter((prev) =>
+                                prev.filter((st) => !(TOPIC_TO_SUB_TOPICS[tag] ?? []).includes(st))
+                              );
                             } else {
                               setPendingTopicFilter((prev) => [...prev, tag]);
                             }
@@ -593,17 +620,53 @@ export default function PracticeHub() {
                           aria-pressed={selected}
                         >
                           <span>{tag}</span>
-                          {selected && <LuX size={14} strokeWidth={2.5} aria-hidden />}
+                          {selected && <LuX size={12} strokeWidth={2.5} aria-hidden />}
                         </button>
                       );
                     })}
                   </div>
+                  {availableSubTopics.length > 0 && (
+                    <>
+                      <p className="practice-hub__topics-heading txt-bold color-txt-main mb-2">subtopic</p>
+                      <div className="practice-hub__topics-tags flex flex-wrap gap-2 mb-4">
+                        {availableSubTopics.map((tag) => {
+                          const selected = pendingSubTopicFilter.some(
+                            (t) => t.toLowerCase() === tag.toLowerCase()
+                          );
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              className={`practice-hub__topic-tag rounded-in px-1.5 py-0.5 text-xs font-medium border-0 cursor-pointer flex items-center gap-1 ${
+                                selected
+                                  ? "color-bg-accent color-txt-accent"
+                                  : "color-bg-grey-5 color-txt-sub"
+                              }`}
+                              onClick={() => {
+                                if (selected) {
+                                  setPendingSubTopicFilter((prev) =>
+                                    prev.filter((t) => t.toLowerCase() !== tag.toLowerCase())
+                                  );
+                                } else {
+                                  setPendingSubTopicFilter((prev) => [...prev, tag]);
+                                }
+                              }}
+                              aria-pressed={selected}
+                            >
+                              <span>{tag}</span>
+                              {selected && <LuX size={12} strokeWidth={2.5} aria-hidden />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-end">
                     <button
                       type="button"
                       className="blue-btn color-bg-accent color-txt-accent txt-bold rounded-in px-3 py-1.5"
                       onClick={() => {
-                        setTopicFilter(pendingTopicFilter);
+                        setTopicFilter([...pendingTopicFilter, ...pendingSubTopicFilter]);
                         setTopicsOpen(false);
                       }}
                     >
@@ -613,6 +676,15 @@ export default function PracticeHub() {
                 </div>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={resetAllFilters}
+              className="flex items-center justify-center p-1.5 rounded-out color-txt-sub hover:color-txt-main hover:color-bg-grey-5 border-0 cursor-pointer ml-1"
+              aria-label="Reset all filters"
+            >
+              <LuTrash2 size={18} aria-hidden />
+            </button>
         </section>
 
         {/* Results: deck-grid + paper cards (deck styling) – fills remaining height */}
@@ -723,7 +795,7 @@ export default function PracticeHub() {
                     {panelTagsExpanded ? (
                       <div className="practice-hub__panel-tags-list flex flex-wrap gap-2">
                         {allTagsInPreview.map((tag) => (
-                          <span key={tag} className="color-bg-accent color-txt-accent rounded-in px-2 py-1 text-sm">
+                          <span key={tag} className="color-bg-accent color-txt-accent rounded-in px-1.5 py-0.5 text-xs">
                             {tag}
                           </span>
                         ))}
@@ -732,7 +804,7 @@ export default function PracticeHub() {
                       <>
                         <div className="practice-hub__panel-tags-list flex flex-nowrap gap-2" aria-hidden={tagsVisibleWhenCollapsed < allTagsInPreview.length}>
                           {allTagsInPreview.slice(0, tagsVisibleWhenCollapsed).map((tag) => (
-                            <span key={tag} className="color-bg-accent color-txt-accent rounded-in px-2 py-1 text-sm shrink-0">
+                            <span key={tag} className="color-bg-accent color-txt-accent rounded-in px-1.5 py-0.5 text-xs shrink-0">
                               {tag}
                             </span>
                           ))}
@@ -743,7 +815,7 @@ export default function PracticeHub() {
                           aria-hidden
                         >
                           {allTagsInPreview.map((tag) => (
-                            <span key={tag} className="color-bg-accent color-txt-accent rounded-in px-2 py-1 text-sm shrink-0">
+                            <span key={tag} className="color-bg-accent color-txt-accent rounded-in px-1.5 py-0.5 text-xs shrink-0">
                               {tag}
                             </span>
                           ))}
