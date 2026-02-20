@@ -1,100 +1,905 @@
 @reference '../index.css';
 
-/* Practice Hub styles */
+/* Practice Hub – Papers browser */
 
-@keyframes practice-hub-bounce {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(8px); }
+/* Full length of page: use full width and full height */
+.practice-hub {
+  min-height: 100dvh;
 }
 
-.practice-hub__bounce-arrow {
-  animation: practice-hub-bounce 1.5s ease-in-out infinite;
+.practice-hub__inner {
+  width: 100%;
+  min-height: 0;
 }
 
-.practice-hub__header {
-  flex-shrink: 0;
+/* Practice hub top bar: full width (override decks .topBar) */
+.practice-hub .topBar {
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }
 
-.practice-hub__quick {
-  flex-shrink: 0;
+/* Top bar: subject (oval) + search (icon right) */
+.practice-hub__topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
-.practice-hub__tile {
-  @apply flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer;
-  @apply hover:scale-[1.02] hover:shadow-md active:scale-[0.98];
+.practice-hub__subject-field {
+  min-width: 160px;
 }
 
-.practice-hub__tile--primary {
-  @apply border-2 color-shadow color-bg;
+/* Oval subject pill – grey, matches image */
+.practice-hub__subject-field--oval .practice-hub__subject-trigger {
+  border-radius: 9999px;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  background: var(--color-bg-grey-10);
+  border: 2px solid var(--color-grey);
+}
+
+.practice-hub__search-wrap {
+  flex: 1;
+  min-width: 200px;
+  max-width: 420px;
+  position: relative;
+}
+
+.practice-hub__search-wrap--icon-right .practice-hub__search-input {
+  padding-left: 0.875rem;
+  padding-right: 2.5rem;
+}
+
+.practice-hub__search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-txt-sub, #6b7280);
+  pointer-events: none;
+}
+
+.practice-hub__search-icon--right {
+  left: auto;
+  right: 0.75rem;
+}
+
+.practice-hub__search-input {
+  width: 100%;
+  padding: 0.625rem 0.875rem 0.625rem 2.5rem;
+  font-size: 0.9375rem;
+  border-radius: 0.5rem;
+  border: 2px solid var(--color-grey, #9ca3af);
+  background: var(--color-bg, #fff);
+  color: var(--color-txt-main, #111);
+  transition: border-color 0.15s;
+}
+
+.practice-hub__search-input::placeholder {
+  color: var(--color-txt-sub, #6b7280);
+}
+
+.practice-hub__search-input:hover {
   border-color: var(--color-blue, #27548a);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--color-blue) 8%, transparent) 0%,
-    transparent 100%
-  );
 }
 
-.practice-hub__tile--primary:hover {
-  @apply color-shadow;
-  border-color: color-mix(in srgb, var(--color-blue) 80%, var(--color-grey));
+.practice-hub__search-input:focus {
+  outline: none;
+  border-color: var(--color-blue, #27548a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-blue) 25%, transparent);
 }
 
-.practice-hub__tile--secondary {
-  @apply border-2 color-shadow color-bg;
+.practice-hub__search-results {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 0.25rem;
+  max-height: 320px;
+  overflow-y: auto;
+  border-radius: var(--radius-in, 5px);
+  border: 2px solid;
+  border-color: var(--color-grey, #9ca3af);
+  background: var(--color-bg, #fff);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-black, #353535) 0.12);
+  z-index: 30;
+  scrollbar-gutter: stable;
 }
 
-.practice-hub__tile:hover {
-  @apply color-bg-grey-5;
+.practice-hub__search-loading,
+.practice-hub__search-empty,
+.practice-hub__search-hint {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
 }
 
-.practice-hub__tile-icon {
-  @apply flex items-center justify-center w-14 h-14 rounded-xl shrink-0;
+.practice-hub__search-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid var(--color-bg-grey-10);
 }
 
-.practice-hub__tile--primary .practice-hub__tile-icon {
-  @apply color-bg-accent color-txt-accent;
+.practice-hub__search-result:last-child {
+  border-bottom: none;
 }
 
-.practice-hub__tile--secondary .practice-hub__tile-icon {
-  @apply color-bg-grey-10 color-txt-sub;
+.practice-hub__search-result:hover {
+  background: var(--color-bg-grey-10, #f3f4f6);
 }
 
-.practice-hub__tile-arrow {
-  @apply color-txt-sub transition-transform;
+.practice-hub__search-result-name {
+  display: block;
+  font-size: 0.875rem;
 }
 
-.practice-hub__tile:hover .practice-hub__tile-arrow {
-  transform: translateX(4px);
+.practice-hub__search-result-tags {
+  display: block;
+  margin-top: 0.125rem;
 }
 
-.practice-hub__section {
+.practice-hub__search-result-paper {
+  display: block;
+  margin-top: 0.125rem;
+}
+
+.practice-hub__subject-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 180px;
+}
+
+/* Subject dropdown */
+.practice-hub__subject-wrap {
+  position: relative;
+}
+
+.practice-hub__subject-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.9375rem;
+  border-radius: 0.5rem;
+  border: 2px solid var(--color-grey, #9ca3af);
+  background: var(--color-bg, #fff);
+  color: var(--color-txt-main, #111);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+}
+
+.practice-hub__subject-trigger:hover {
+  border-color: var(--color-blue, #27548a);
+}
+
+.practice-hub__subject-trigger-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.practice-hub__subject-arrow {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-txt-sub);
+  transition: transform 0.2s ease;
+}
+
+.practice-hub__subject-wrap[data-state="open"] .practice-hub__subject-arrow {
+  transform: rotate(180deg);
+}
+
+.practice-hub__subject-chevron {
+  display: block;
+}
+
+.practice-hub__subject-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 0.25rem;
+  max-height: 320px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.5rem;
+  border: 2px solid var(--color-grey, #9ca3af);
+  background: var(--color-bg, #fff);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-black, #353535) 0.12);
+  z-index: 50;
+}
+
+.practice-hub__subject-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-bg-grey-10, #f3f4f6);
   flex-shrink: 0;
 }
 
-.practice-hub__deck-grid {
-  @apply flex flex-row gap-4 overflow-x-auto pb-4 scrollbar-minimal flex-nowrap;
-}
-
-.practice-hub__deck-grid .deck {
+.practice-hub__subject-search-icon {
+  color: var(--color-txt-sub, #6b7280);
   flex-shrink: 0;
 }
 
-.practice-hub__skeleton {
-  min-height: 192px;
+.practice-hub__subject-search {
+  flex: 1;
+  min-width: 0;
+  padding: 0.375rem 0;
+  font-size: 0.875rem;
+  border: none;
+  background: none;
+  color: var(--color-txt-main, #111);
 }
 
-.practice-hub__topic-btn {
-  @apply px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200;
-  @apply color-bg-grey-10 color-txt-main border border-grey/20;
-  @apply hover:color-bg-accent hover:color-txt-accent hover:border-grey/40;
+.practice-hub__subject-search:focus {
+  outline: none;
 }
 
-.practice-hub__papers-group {
-  @apply color-bg rounded-xl p-4 border-2 color-shadow;
+.practice-hub__subject-group {
+  flex-shrink: 0;
+  overflow-y: auto;
 }
 
-.practice-hub__paper-btn {
-  @apply px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200;
-  @apply color-bg-grey-10 color-txt-main;
-  @apply hover:color-bg-accent hover:color-txt-accent;
+.practice-hub__subject-group-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-txt-sub, #6b7280);
+  padding: 0.5rem 0.75rem 0.25rem;
 }
+
+.practice-hub__subject-list {
+  padding-bottom: 0.5rem;
+}
+
+.practice-hub__subject-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border: none;
+  background: none;
+  color: var(--color-txt-main, #111);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.practice-hub__subject-option:hover {
+  background: var(--color-bg-grey-10, #f3f4f6);
+}
+
+.practice-hub__subject-option[aria-selected="true"] {
+  background: color-mix(in srgb, var(--color-blue) 12%, transparent);
+  color: var(--color-blue, #27548a);
+}
+
+.practice-hub__subject-option > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.practice-hub__subject-fav {
+  flex-shrink: 0;
+  padding: 0.25rem;
+  border: none;
+  background: none;
+  color: var(--color-txt-sub, #6b7280);
+  cursor: pointer;
+  border-radius: 0.25rem;
+  transition: color 0.15s, background 0.15s;
+}
+
+.practice-hub__subject-fav:hover {
+  color: var(--color-blue, #27548a);
+  background: var(--color-bg-grey-10, #f3f4f6);
+}
+
+.practice-hub__subject-fav--on {
+  color: var(--color-blue, #27548a);
+}
+
+.practice-hub__subject-empty {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+/* Content filter row: State Exam Papers + Year, Pills, Level, Topics */
+.practice-hub__filter-row {
+  flex-shrink: 0;
+  margin-bottom: 1rem;
+}
+
+.practice-hub__page-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-blue, #27548a);
+  margin: 0 0 0.75rem 0;
+}
+
+.practice-hub__filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+}
+
+.practice-hub__field--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.practice-hub__label--inline {
+  margin-bottom: 0;
+  text-transform: none;
+  font-size: 0.875rem;
+}
+
+.practice-hub__select--compact {
+  min-width: 5rem;
+  padding: 0.5rem 0.625rem;
+}
+
+.practice-hub__paper-pills {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Paper 1 / Paper 2 pills – circular, selected = light grey (match image) */
+.practice-hub__pill {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  border: 2px solid var(--color-grey);
+  background: var(--color-bg);
+  color: var(--color-txt-sub);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.practice-hub__pill:hover {
+  border-color: var(--color-blue);
+  color: var(--color-txt-main);
+}
+
+.practice-hub__pill--active {
+  background: var(--color-bg-grey-10);
+  border-color: var(--color-grey);
+  color: var(--color-txt-main);
+}
+
+/* Topics dropdown – trigger matches other filter pills; panel like reference (topic tags + Apply) */
+.practice-hub__topics-wrap {
+  display: inline-flex;
+}
+
+.practice-hub__topics-panel {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 0.25rem;
+  min-width: 280px;
+  max-width: 360px;
+  padding: 1rem 1.25rem;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.practice-hub__topics-heading {
+  font-size: 0.875rem;
+  text-transform: lowercase;
+}
+
+.practice-hub__topics-tags {
+  min-height: 2rem;
+}
+
+.practice-hub__topic-tag:hover {
+  opacity: 0.9;
+}
+
+/* Level dropdown – trigger matches other pills; panel with HL/OL/FD/all → higher/ordinary/foundation/level */
+.practice-hub__level-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.practice-hub__level-panel {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 0.25rem;
+  min-width: 180px;
+  padding: 0.375rem;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.practice-hub__level-option {
+  transition: background 0.15s, color 0.15s;
+}
+
+.practice-hub__level-option + .practice-hub__level-option {
+  margin-top: 0.125rem;
+}
+
+/* Filters row (legacy / fallback) */
+.practice-hub__filters {
+  flex-shrink: 0;
+}
+
+.practice-hub__filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem 1.5rem;
+  align-items: end;
+}
+
+.practice-hub__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.practice-hub__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-txt-sub, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.practice-hub__select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  border: 2px solid var(--color-grey, #9ca3af);
+  background: var(--color-bg, #fff);
+  color: var(--color-txt-main, #111);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.practice-hub__select:hover {
+  border-color: var(--color-blue, #27548a);
+}
+
+.practice-hub__select:focus {
+  outline: none;
+  border-color: var(--color-blue, #27548a);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-blue) 25%, transparent);
+}
+
+.practice-hub__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.25rem;
+}
+
+.practice-hub__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 9999px;
+  background: var(--color-bg-grey-10, #f3f4f6);
+  color: var(--color-txt-main, #111);
+  border: 1px solid var(--color-grey, #9ca3af);
+}
+
+.practice-hub__chip-remove {
+  display: inline-flex;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+.practice-hub__chip-remove:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 0.15, transparent);
+}
+
+/* Results horizontal scroll */
+.practice-hub__results {
+  flex-shrink: 0;
+}
+
+.practice-hub__results-title {
+  flex-shrink: 0;
+}
+
+.practice-hub__scroll-hint {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0;
+  opacity: 0.7;
+}
+
+.practice-hub__scroll {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.practice-hub__scroll > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* Paper cards in practice hub: override .deck’s h-48 so aspect-ratio works (edit ratio here) */
+.practice-hub .deck.paper-card {
+  height: auto;
+  width: 20rem;
+  min-width: 15rem;
+  aspect-ratio: 5 / 8;
+}
+
+/* Lower the overlay/gradient: position and height; themed gradient to full transparency */
+.practice-hub .deck.paper-card .bg-overlay {
+  top: 25%;
+  height: 50%;
+  background: linear-gradient(to top, var(--paper-card-fade, var(--color-white, #fff)) 0%, var(--paper-card-fade, var(--color-white, #fff)) 15%, transparent 100%);
+}
+
+/* Lower the text: push to bottom of card, ensure on top of overlay */
+.practice-hub .deck.paper-card .practice-hub__paper-card-body {
+  margin-top: auto;
+  position: relative;
+  z-index: 30;
+}
+
+/* Paper card – standalone (no deck classes): same look as before */
+.practice-hub__paper-card {
+  width: 20rem;
+  min-width: 15rem;
+  height: auto;
+  aspect-ratio: 2 / 8;
+  position: relative;
+  padding: 0.25rem;
+  border: 0;
+  border-radius: 1rem;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+}
+.practice-hub__paper-card:hover {
+  transform: scale(0.97);
+}
+
+.practice-hub__paper-card-border {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 1rem;
+  border: 2px solid var(--color-shadow, rgba(0, 0, 0, 0.15));
+  pointer-events: none;
+  z-index: 30;
+}
+
+.practice-hub__paper-card-image {
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: calc(100% - 0.25rem);
+  height: calc(75% - 0.25rem);
+  border-radius: 0.75rem 0.75rem 0 0;
+  z-index: 10;
+}
+
+.practice-hub__paper-card-image img {
+  object-fit: cover;
+}
+
+/* Position/size only; gradient from utility bg-gradient-bg-fade (theme-aware, defined once in index.css) */
+.practice-hub__paper-card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0.125rem;
+  width: calc(100% - 0.25rem);
+  height: 75%;
+  border-radius: 1rem 1rem 0 0;
+  z-index: 25;
+}
+
+/* Slide-in panel */
+.practice-hub__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--color-black, #353535) 0.4);
+  backdrop-filter: blur(0.5px);
+}
+
+.practice-hub__panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 420px;
+  z-index: 50;
+  box-shadow: -4px 0 24px color-mix(in srgb, var(--color-black) 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.practice-hub__panel-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  scrollbar-gutter: stable;
+}
+
+.practice-hub__panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.practice-hub__panel-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.practice-hub__panel-close {
+  flex-shrink: 0;
+  padding: 0.25rem;
+  border: none;
+  background: none;
+  color: var(--color-txt-sub, #6b7280);
+  cursor: pointer;
+  border-radius: 0.5rem;
+  transition: color 0.15s, background 0.15s;
+}
+
+.practice-hub__panel-close:hover {
+  color: var(--color-txt-main, #111);
+  background: var(--color-bg-grey-10, #f3f4f6);
+}
+
+.practice-hub__panel-meta {
+  margin-bottom: 1.25rem;
+}
+
+.practice-hub__panel-preview {
+  margin-bottom: 1.25rem;
+  flex-shrink: 0;
+}
+
+.practice-hub__panel-preview-label,
+.practice-hub__panel-tags-label {
+  margin: 0;
+}
+
+/* Scrollable paper preview area */
+.practice-hub__preview-wrap {
+  overflow-y: auto;
+  max-height: 320px;
+  border-radius: var(--radius-in);
+  border: 1px solid var(--color-grey, rgba(0, 0, 0, 0.12));
+}
+
+/* Full paper: stack of pages inside scrollable wrap */
+.practice-hub__preview-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.practice-hub__preview-box {
+  width: 100%;
+  min-height: 120px;
+}
+
+.practice-hub__preview-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.practice-hub__panel-tags {
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+
+/* Year clock picker – trigger uses filter-pill styling from page; popover + rotatable dial */
+.year-clock-picker {
+  position: relative;
+  display: inline-block;
+}
+
+.year-clock-picker__chevron {
+  display: inline-flex;
+}
+
+.year-clock-picker[data-state="open"] .year-clock-picker__chevron {
+  transform: rotate(180deg);
+}
+
+.year-clock-picker__popover {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 0.25rem;
+  min-width: 260px;
+  border-radius: var(--radius-out, 0.5rem);
+  z-index: 50;
+  overflow: hidden;
+  @apply color-bg color-shadow border-2
+}
+
+.year-clock-picker__display {
+  padding: 1rem 1.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.02em;
+  @apply color-txt-main color-bg;
+}
+
+.year-clock-picker__input {
+  width: 100%;
+  max-width: 6em;
+  margin: 0 auto;
+  display: block;
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.02em;
+  padding: 0;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+}
+
+.year-clock-picker__input::placeholder {
+  opacity: 0.5;
+}
+
+.year-clock-picker__input:focus {
+  outline: none;
+
+}
+
+.year-clock-picker__dial {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  margin: 0 auto;
+  border-radius: 50%;
+  cursor: grab;
+  user-select: none;
+  @apply color-txt-main color-bg
+}
+
+.year-clock-picker__dial:active {
+  cursor: grabbing;
+}
+
+.year-clock-picker__dial-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Use color-txt-main so hand/dot follow theme; SVG needs stroke/fill: currentColor */
+.year-clock-picker__hand-line {
+  @apply color-txt-sub;
+  stroke: currentColor;
+}
+
+.year-clock-picker__center-dot {
+  @apply color-txt-sub;
+  fill: currentColor;
+}
+
+.year-clock-picker__labels {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 240px;
+  height: 240px;
+  margin-left: -120px;
+  pointer-events: none;
+
+}
+
+.year-clock-picker__labels > * {
+  pointer-events: none;
+}
+
+.year-clock-picker__label {
+  position: absolute;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--color-txt-main, #111);
+  @apply color-txt-main color-bg
+}
+
+.year-clock-picker__label--selected {
+  background: var(--color-txt-accent, var(--color-blue, #27548a));
+  color: var(--color-bg, #fff);
+  /* Border uses same color as color-txt-main (black/white for light/dark) */
+  @apply color-bg-grey-10 ;
+}
+
+.year-clock-picker__footer {
+  padding: 0.5rem 1rem;
+
+  background: var(--color-bg, #fff);
+  @apply color-bg
+}
+
+.year-clock-picker__all {
+  color: var(--color-txt-main, #111);
+  cursor: pointer;
+  text-align: center;
+  @apply color-bg-grey-5 mx-auto w-full rounded-out color-txt-sub py-0.5 px-2 font-bold duration-200 transition-all mb-1
+}
+
+.year-clock-picker__all:hover {
+  @apply color-bg-grey-10;
+}
+
+.year-clock-picker__all--selected {
+ 
+  @apply color-bg-accent mx-auto w-full rounded-out color-txt-accent py-0.5 px-2 font-bold duration-200 transition-all mb-1
+}
+

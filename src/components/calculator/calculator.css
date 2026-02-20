@@ -1,0 +1,201 @@
+/* Casio fx-83GT CW / fx-85GT CW – 1:1 style */
+
+.casio-calc {
+  --casio-body: #e8e8e8;
+  --casio-body-dark: #d0d0d0;
+  --casio-display-bg: #c5e9c8;
+  --casio-display-text: #1a3d1a;
+  --casio-key-bg: #f5f5f5;
+  --casio-key-shadow: #bbb;
+  --casio-key-active: #ddd;
+  --casio-key-orange: #ff9f0a;
+  --casio-key-blue: #5ac8fa;
+  --casio-font: "Segoe UI", "Roboto", system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.casio-calc-body {
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto;
+  padding: 10px 12px 14px;
+  background: linear-gradient(180deg, var(--casio-body) 0%, var(--casio-body-dark) 100%);
+  border-radius: 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.8),
+    0 2px 4px rgba(0,0,0,0.15),
+    0 6px 12px rgba(0,0,0,0.1);
+}
+
+.casio-calc-brand {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #333;
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+.casio-calc-model {
+  font-size: 9px;
+  color: #555;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.casio-calc-display {
+  background: var(--casio-display-bg);
+  border: 1px solid #8fbc8f;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin-bottom: 10px;
+  min-height: 52px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.casio-calc-indicators {
+  font-size: 9px;
+  color: var(--casio-display-text);
+  opacity: 0.8;
+  margin-bottom: 2px;
+}
+
+.casio-calc-indicators .on {
+  font-weight: 700;
+  color: #0a5c0a;
+}
+
+.casio-calc-line {
+  font-family: var(--casio-font);
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--casio-display-text);
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 2.7em;
+}
+
+.casio-calc-expr {
+  min-height: 1.35em;
+}
+
+.casio-calc-result {
+  font-size: 16px;
+  font-weight: 600;
+  text-align: right;
+  margin-top: 4px;
+}
+
+.casio-calc-angle-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.casio-calc-angle-btn {
+  font-size: 10px;
+  padding: 2px 8px;
+  border: 1px solid var(--casio-key-shadow);
+  border-radius: 4px;
+  background: var(--casio-key-bg);
+  color: #333;
+  cursor: pointer;
+}
+
+.casio-calc-angle-btn.active {
+  background: var(--casio-key-blue);
+  color: #fff;
+  border-color: #4ab0e0;
+}
+
+.casio-calc-keypad {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.casio-calc-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 5px;
+}
+
+.casio-calc-key {
+  position: relative;
+  aspect-ratio: 1.15;
+  min-height: 36px;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #fff 0%, var(--casio-key-bg) 100%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.9),
+    0 2px 2px var(--casio-key-shadow);
+  font-family: var(--casio-font);
+  font-size: 13px;
+  font-weight: 600;
+  color: #222;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px;
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
+}
+
+.casio-calc-key:hover {
+  background: linear-gradient(180deg, #fff 0%, var(--casio-key-active) 100%);
+}
+
+.casio-calc-key:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 1px var(--casio-key-shadow);
+}
+
+.casio-calc-key.empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.casio-calc-key .key-shift {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 8px;
+  color: var(--casio-key-orange);
+  font-weight: 700;
+}
+
+.casio-calc-key .key-main {
+  font-size: 12px;
+}
+
+.casio-calc-key.shift .key-main {
+  color: var(--casio-key-orange);
+}
+
+.casio-calc-key.eq {
+  background: linear-gradient(180deg, var(--casio-key-blue) 0%, #4ab0e0 100%);
+  color: #fff;
+  font-size: 14px;
+}
+
+.casio-calc-key.eq:hover {
+  filter: brightness(1.05);
+}
+
+.casio-calc-key.ac {
+  background: linear-gradient(180deg, #ff6b6b 0%, #ee5a5a 100%);
+  color: #fff;
+  font-size: 11px;
+}
+
+.casio-calc-key.ac:hover {
+  filter: brightness(1.05);
+}
+
+.casio-calc-key.ac .key-main {
+  font-size: 11px;
+}

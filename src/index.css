@@ -335,6 +335,31 @@ math-field::part(virtual-keyboard-toggle) {
 @custom-variant darkFuchsia (&:where([data-theme="darkFuchsia"] &));
 @custom-variant pastelPink (&:where([data-theme="pastelPink"] &));
 
+/* Paper card overlay gradient: set on themed wrapper (data-theme is on #themed-root, not html) */
+:root { --paper-card-fade: var(--color-white); }
+[data-theme="dark"] { --paper-card-fade: var(--color-black); }
+[data-theme="markoblank"] { --paper-card-fade: var(--color-markoteal); }
+[data-theme="tangerine"] { --paper-card-fade: var(--color-tangerineBG); }
+[data-theme="icebergLight"] { --paper-card-fade: var(--color-icebergLightBG); }
+[data-theme="icebergDark"] { --paper-card-fade: var(--color-icebergDarkBG); }
+[data-theme="husqy"] { --paper-card-fade: var(--color-husqyBG); }
+[data-theme="shadow"] { --paper-card-fade: var(--color-shadowBG); }
+[data-theme="modernInk"] { --paper-card-fade: var(--color-modernInkBG); }
+[data-theme="gruvbox"] { --paper-card-fade: var(--color-gruvboxBG); }
+[data-theme="magicGirl"] { --paper-card-fade: var(--color-magicGirlBG); }
+[data-theme="menthol"] { --paper-card-fade: var(--color-mentholBG); }
+[data-theme="lavendar"] { --paper-card-fade: var(--color-lavendarBG); }
+[data-theme="airplane"] { --paper-card-fade: var(--color-airplaneBG); }
+[data-theme="nordLight"] { --paper-card-fade: var(--color-nordLightBG); }
+[data-theme="sewingTinLight"] { --paper-card-fade: var(--color-sewingTinLightBG); }
+[data-theme="camping"] { --paper-card-fade: var(--color-campingBG); }
+[data-theme="paper"] { --paper-card-fade: var(--color-paperBG); }
+[data-theme="aurora"] { --paper-card-fade: var(--color-auroraBG); }
+[data-theme="nordDark"] { --paper-card-fade: var(--color-nordDarkBG); }
+[data-theme="blueberryLight"] { --paper-card-fade: var(--color-blueberryLightBG); }
+[data-theme="blueberryDark"] { --paper-card-fade: var(--color-blueberryDarkBG); }
+[data-theme="darkFuchsia"] { --paper-card-fade: var(--color-darkFuchsiaBG); }
+[data-theme="pastelPink"] { --paper-card-fade: var(--color-pastelPinkBG); }
 
 @utility color-txt-main {
   @apply 
@@ -811,6 +836,61 @@ math-field::part(virtual-keyboard-toggle) {
     pastelPink:via-pastelPinkBG/100
 
     z-1000;
+}
+
+/* Same as bg-gradient-bg-fade but fades to full transparency (to 100%) – for paper cards etc. */
+@utility bg-gradient-bg-fade-transparent {
+  @apply
+    bg-gradient-to-t
+    from-white from-[0%]
+    via-white via-[15%]
+    to-transparent to-[100%]
+    dark:from-black/100
+    dark:via-black/100
+    markoblank:from-markoteal/100
+    markoblank:via-markoteal/100
+    tangerine:from-tangerineBG/100
+    tangerine:via-tangerineBG/100
+    icebergLight:from-icebergLightBG/100
+    icebergLight:via-icebergLightBG/100
+    icebergDark:from-icebergDarkBG/100
+    icebergDark:via-icebergDarkBG/100
+    husqy:from-husqyBG/100
+    husqy:via-husqyBG/100
+    shadow:from-shadowBG/100
+    shadow:via-shadowBG/100
+    modernInk:from-modernInkBG/100
+    modernInk:via-modernInkBG/100
+    gruvbox:from-gruvboxBG/100
+    gruvbox:via-gruvboxBG/100
+    magicGirl:from-magicGirlBG/100
+    magicGirl:via-magicGirlBG/100
+    menthol:from-mentholBG/100
+    menthol:via-mentholBG/100
+    lavendar:from-lavendarBG/100
+    lavendar:via-lavendarBG/100
+    airplane:from-airplaneBG/100
+    airplane:via-airplaneBG/100
+    nordLight:from-nordLightBG/100
+    nordLight:via-nordLightBG/100
+    sewingTinLight:from-sewingTinLightBG/100
+    sewingTinLight:via-sewingTinLightBG/100
+    camping:from-campingBG/100
+    camping:via-campingBG/100
+    paper:from-paperBG/100
+    paper:via-paperBG/100
+    aurora:from-auroraBG/100
+    aurora:via-auroraBG/100
+    nordDark:from-nordDarkBG/100
+    nordDark:via-nordDarkBG/100
+    blueberryLight:from-blueberryLightBG/100
+    blueberryLight:via-blueberryLightBG/100
+    blueberryDark:from-blueberryDarkBG/100
+    blueberryDark:via-blueberryDarkBG/100
+    darkFuchsia:from-darkFuchsiaBG/100
+    darkFuchsia:via-darkFuchsiaBG/100
+    pastelPink:from-pastelPinkBG/100
+    pastelPink:via-pastelPinkBG/100;
 }
 
 /* ================== SCROLLBAR STYLES ================== */

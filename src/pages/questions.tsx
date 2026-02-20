@@ -65,6 +65,7 @@ export default function Questions() {
   const urlMode = searchParams.get("mode") as QuestionsMode | null;
   const urlSubject = searchParams.get("subject");
   const urlPaperId = searchParams.get("paperId");
+  const urlIndexInPaper = searchParams.get("indexInPaper");
 
   const initialMode: QuestionsMode =
     urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
@@ -432,6 +433,16 @@ export default function Questions() {
             cancelled = true;
         };
     }, []);
+
+    // When landing with paperId + indexInPaper (e.g. from Practice Hub search), set pending search so we jump to that question when paper questions load
+    useEffect(() => {
+        if (urlPaperId && urlIndexInPaper != null) {
+            const idx = parseInt(urlIndexInPaper, 10);
+            if (!isNaN(idx) && idx >= 0) {
+                pendingSearchRef.current = { indexInPaper: idx };
+            }
+        }
+    }, [urlPaperId, urlIndexInPaper]);
 
     // Preselect paper: URL paperId > current question year > first paper
     useEffect(() => {

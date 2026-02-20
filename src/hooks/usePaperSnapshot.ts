@@ -88,3 +88,28 @@ export function usePaperSnapshot(paperBlob: Blob | null, pageNumber: number = 1)
 
   return dataUrl;
 }
+
+/** Returns number of pages in the PDF blob, or null while loading / if blob is null. */
+export function usePaperPageCount(paperBlob: Blob | null): number | null {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!paperBlob) {
+      setCount(null);
+      return;
+    }
+    let cancelled = false;
+    getDocumentCached(paperBlob)
+      .then((doc) => {
+        if (!cancelled) setCount(doc.numPages);
+      })
+      .catch(() => {
+        if (!cancelled) setCount(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [paperBlob]);
+
+  return count;
+}
