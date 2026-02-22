@@ -194,11 +194,26 @@ function TileContent({
   switch (panelId) {
     case "ai":
       return <AIChat question={question} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />;
-    case "threads":
+    case "threads": {
+      const isPaperThread = !!question?._paperThread;
       return (
         <div className="h-full overflow-auto color-bg">
           {questionId ? (
-            <QThread questionId={questionId} part={part} />
+            <QThread
+              questionId={questionId}
+              part={part}
+              paperThread={isPaperThread}
+              paperId={isPaperThread ? question.paperId : undefined}
+              paperQuestionId={isPaperThread ? question.paperQuestionId : undefined}
+              paperLabel={isPaperThread ? question.paperLabel : undefined}
+              questionName={isPaperThread ? question.questionName : undefined}
+              subject={isPaperThread ? question.subject : undefined}
+              level={isPaperThread ? question.level : undefined}
+              indexInPaper={isPaperThread ? question.indexInPaper : undefined}
+              storagePath={isPaperThread ? question.storagePath : undefined}
+              pageRange={isPaperThread ? question.pageRange : undefined}
+              pageRegions={isPaperThread ? question.pageRegions : undefined}
+            />
           ) : (
             <div className="flex h-full items-center justify-center p-4 text-sm color-txt-sub">
               Select a question to view threads.
@@ -206,6 +221,7 @@ function TileContent({
           )}
         </div>
       );
+    }
     case "timer":
       return (
         <div className="h-full overflow-auto flex justify-center items-start color-bg p-2">

@@ -2,13 +2,13 @@ import { useEffect, useState, useContext } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { collection, getDocs, orderBy, query, where } from 'firebase/firestore'
 import useFetch from "../hooks/useFetch"
-import DeckCard from '../components/decks/deckCard'
 import PostCard from '../components/social/PostCard'
 import { db } from '../../firebase'
 import { UserContext } from '../context/UserContext'
 import '../styles/profile.css'
 import '../styles/decks.css'
 import '../styles/social.css'
+import ActivityHeatmap from '../components/profile/ActivityHeatmap'
 
 export default function ProfileViewer() {
 
@@ -20,7 +20,6 @@ export default function ProfileViewer() {
     const [decks, setDecks] = useState<any>()
     const [posts, setPosts] = useState<any[]>([])
     const [showFriendsModal, setShowFriendsModal] = useState(false)
-    const [activeTab, setActiveTab] = useState<'decks' | 'posts'>('decks')
     const { fetchFriends, fetchUser, fetchUserDecks } = useFetch()
 
     const rankNames = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master"]
@@ -144,10 +143,7 @@ export default function ProfileViewer() {
                     </div> */}
                 </div>
                 <div className="profile-stats">
-                    <div className="profile-stat-card">
-                        <div className="profile-stat-value">{decks?.length || 0}</div>
-                        <div className="profile-stat-label">Decks</div>
-                    </div>
+                    {/* Decks counter hidden for now */}
                     <div 
                         className="profile-stat-card cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => setShowFriendsModal(true)}
@@ -155,69 +151,36 @@ export default function ProfileViewer() {
                         <div className="profile-stat-value">{friends?.length || 0}</div>
                         <div className="profile-stat-label">Friends</div>
                     </div>
-                    <div className="profile-stat-card">
-                        <div className="profile-stat-value">{(user.xp || 0).toLocaleString()}</div>
-                        <div className="profile-stat-label">XP</div>
-                    </div>
+                    {/* XP hidden for now */}
                 </div>
             </div>
-
-            {/* ==================== TABS ==================== */}
-            <div className="profile-tabs">
-                <button
-                    className={`profile-tab ${activeTab === 'decks' ? 'profile-tab-active' : ''}`}
-                    onClick={() => setActiveTab('decks')}
-                >
-                    Decks
-                </button>
-                <button
-                    className={`profile-tab ${activeTab === 'posts' ? 'profile-tab-active' : ''}`}
-                    onClick={() => setActiveTab('posts')}
-                >
-                    Posts
-                </button>
-            </div>
-
-            {/* ==================== DECKS SECTION ==================== */}
-            {activeTab === 'decks' && (
-                <div className='p-4'>
-                    {decks && decks.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {decks.map((deck: any) => (
-                                <DeckCard key={deck.id} deck={deck} />
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="color-txt-sub">No decks created yet</p>
-                    )}
-                </div>
-            )}
+            {/* ==================== ACTIVITY HEATMAP ==================== */}
+            {userID && <ActivityHeatmap uid={userID} />}
 
             {/* ==================== POSTS SECTION ==================== */}
-            {activeTab === 'posts' && (
-                <div className="p-4">
-                    {posts && posts.length > 0 ? (
-                        <div className="space-y-4">
-                            {posts.map((post: any) => (
-                                <PostCard
-                                    key={post.id}
-                                    userId={post.userId}
-                                    rank={post.rank}
-                                    content={post.content}
-                                    userImage={post.userImage}
-                                    username={post.username}
-                                    time={post.timestamp}
-                                    replyCount={post.replyCount}
-                                    imageURL={post.imageUrl}
-                                    onPressReplies={() => navigate(`/post/${post.id}`)}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="color-txt-sub">No posts yet</p>
-                    )}
-                </div>
-            )}
+            <div className="p-4">
+                <h2 className="text-lg font-bold color-txt-sub mb-3">Posts</h2>
+                {posts && posts.length > 0 ? (
+                    <div className="space-y-4">
+                        {posts.map((post: any) => (
+                            <PostCard
+                                key={post.id}
+                                userId={post.userId}
+                                rank={post.rank}
+                                content={post.content}
+                                userImage={post.userImage}
+                                username={post.username}
+                                time={post.timestamp}
+                                replyCount={post.replyCount}
+                                imageURL={post.imageUrl}
+                                onPressReplies={() => navigate(`/post/${post.id}`)}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <p className="color-txt-sub">No posts yet</p>
+                )}
+            </div>
 
             {/* ==================== FRIENDS MODAL ==================== */}
             {showFriendsModal && (

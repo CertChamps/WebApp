@@ -8,12 +8,17 @@ import usePosts from "../../hooks/usePosts";
 // Components
 import RenderMath from "../../components/math/mathdisplay";
 import ConfirmationPrompt from "../../components/prompts/confirmation";
+import PastPaperMarkingScheme from "../../components/questions/PastPaperMarkingScheme";
+import CroppedPdfRegions, { type PdfRegion } from "../../components/questions/CroppedPdfRegions";
 
 // Icons
 import { LuImage, LuTrash } from "react-icons/lu";
 import useNotifications from "../../hooks/useNotifications";
 import { useContext, useEffect, useState } from "react";
 import { UserContext } from "../../context/UserContext";
+import { getBlob, ref as storageRef } from "firebase/storage";
+import { doc, getDoc } from "firebase/firestore";
+import { db, storage } from "../../../firebase";
 
 
 
@@ -60,6 +65,10 @@ export default function Replies(
       ];
         
       const [replyPlaceholder, setReplyPlaceholder] = useState("");
+      const [paperBlob, setPaperBlob] = useState<Blob | null>(null);
+      const [paperPageRange, setPaperPageRange] = useState<{ start: number; end: number } | null>(null);
+      const [paperRegions, setPaperRegions] = useState<PdfRegion[] | null>(null);
+      const [paperLoading, setPaperLoading] = useState(false);
       console.log(fcAuthor) //unused
   
       //This will just pick a random placeholder whenever the screen renders
@@ -67,6 +76,58 @@ export default function Replies(
           const randomIndex = Math.floor(Math.random() * placeholders.length);
           setReplyPlaceholder(placeholders[randomIndex]);
       }, []);
+
+      useEffect(() => {
+          if (!post?.isPaperQuestion || !post.paperId) return;
+          let cancelled = false;
+          setPaperLoading(true);
+
+          (async () => {
+            try {
+              const subj = post.subject || "maths";
+              const lvl = post.level || "higher";
+
+              let sPath = post.storagePath as string | undefined;
+              if (!sPath) {
+                const paperRef = doc(db, "questions", "leavingcert", "subjects", subj, "levels", lvl, "papers", post.paperId);
+                const paperDoc = await getDoc(paperRef);
+                sPath = paperDoc.data()?.storagePath as string | undefined;
+              }
+
+              let pRange = post.pageRange as [number, number] | null | undefined;
+              let regions = post.pageRegions as PdfRegion[] | null | undefined;
+
+              if ((!pRange || !regions) && post.paperQuestionId) {
+                const qRef = doc(db, "questions", "leavingcert", "subjects", subj, "levels", lvl, "papers", post.paperId, "questions", post.paperQuestionId);
+                const qDoc = await getDoc(qRef);
+                const data = qDoc.data();
+                if (!pRange) {
+                  const raw = data?.pageRange;
+                  if (Array.isArray(raw) && raw.length >= 2) pRange = [raw[0], raw[1]];
+                }
+                if (!regions) {
+                  const raw = data?.pageRegions;
+                  if (Array.isArray(raw) && raw.length > 0) regions = raw as PdfRegion[];
+                }
+              }
+
+              if (cancelled) return;
+              if (pRange) setPaperPageRange({ start: pRange[0], end: pRange[1] });
+              if (regions && regions.length > 0) setPaperRegions(regions);
+
+              if (sPath) {
+                const blob = await getBlob(storageRef(storage, sPath));
+                if (!cancelled) setPaperBlob(blob);
+              }
+            } catch (err) {
+              console.error("Failed to fetch paper PDF:", err);
+            } finally {
+              if (!cancelled) setPaperLoading(false);
+            }
+          })();
+
+          return () => { cancelled = true; };
+      }, [post?.isPaperQuestion, post?.paperId]);
 
 
       const sendReply = () => {
@@ -247,7 +308,7 @@ export default function Replies(
         {/* ===================================================================================================== */}
       </div>
 
-      {/* ============================================== FLASCHARD ============================================== */}
+      {/* ============================================== FLASHCARD ============================================== */}
         {post?.isFlashcard && (
             <div className="mx-4 w-1/2">
               <div className="mx-auto w-[90%] color-bg-accent txt-heading-colour text-center py-1.5 rounded-out mb-6
@@ -260,7 +321,6 @@ export default function Replies(
                 question.map((part, idx) => (
                   <div key={part.id} className="mb-2 mx-4">
                     { question.length > 1 ? <p className="font-semibold txt inline">{toRoman(idx + 1)})  </p> : <></> }
-                    {/* <p className="mb-2">{part.question}</p> */}
                     <RenderMath text={part.question} className="txt inline" />
                     {part.image && (
                       <img
@@ -272,6 +332,50 @@ export default function Replies(
                     <div className=" h-0 border-1 color-shadow my-6"></div>
                   </div>
                 ))}
+            </div>
+        )}
+      {/* ===================================================================================================== */}
+
+      {/* ============================================ PAPER QUESTION ============================================ */}
+        {post?.isPaperQuestion && (
+            <div className="mx-4 w-1/2">
+              <div className="mx-auto w-[90%] color-bg-accent txt-heading-colour text-center py-1.5 rounded-out mb-6
+                hover:scale-95 duration-200 cursor-pointer"
+                 onClick={() => {
+                   const params = new URLSearchParams({
+                     mode: "pastpaper",
+                     paperId: post.paperId ?? "",
+                     indexInPaper: String(post.indexInPaper ?? 0),
+                   });
+                   navigate(`/practice/session?${params.toString()}`);
+                 }}>
+                <p>Go To Question</p>
+              </div>
+              <div className="mx-4 mb-4">
+                <p className="font-semibold color-txt-main text-lg">{post.paperLabel}</p>
+                <p className="color-txt-sub mb-4">{post.paperQuestionName}</p>
+                {paperLoading && (
+                  <p className="color-txt-sub text-sm py-4">Loading question…</p>
+                )}
+                {!paperLoading && paperBlob && paperRegions && paperRegions.length > 0 && (
+                  <div className="overflow-auto rounded-lg">
+                    <CroppedPdfRegions
+                      file={paperBlob}
+                      regions={paperRegions}
+                      pageWidth={500}
+                    />
+                  </div>
+                )}
+                {!paperLoading && paperBlob && !paperRegions && paperPageRange && (
+                  <div className="max-h-[600px] overflow-auto rounded-lg">
+                    <PastPaperMarkingScheme
+                      file={paperBlob}
+                      pageRange={paperPageRange}
+                      fillWidth
+                    />
+                  </div>
+                )}
+              </div>
             </div>
         )}
       {/* ===================================================================================================== */}

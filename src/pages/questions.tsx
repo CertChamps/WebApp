@@ -557,7 +557,24 @@ export default function Questions() {
             >
                 <CollapsibleSidebar
                     side={options.leftHandMode ? "left" : "right"}
-                    question={mode === "pastpaper" ? undefined : currentQuestion}
+                    question={mode === "pastpaper"
+                        ? (currentPaperQuestion && selectedPaper
+                            ? {
+                                id: `${selectedPaper.id}_${currentPaperQuestion.id}`,
+                                _paperThread: true,
+                                paperId: selectedPaper.id,
+                                paperQuestionId: currentPaperQuestion.id,
+                                questionName: currentPaperQuestion.questionName,
+                                paperLabel: selectedPaper.label,
+                                subject: selectedPaper.subject,
+                                level: selectedPaper.level,
+                                indexInPaper: paperQuestionIndexInFullList,
+                                storagePath: selectedPaper.storagePath,
+                                pageRange: currentPaperQuestion.pageRange,
+                                pageRegions: currentPaperQuestion.pageRegions,
+                            }
+                            : undefined)
+                        : currentQuestion}
                     getDrawingSnapshot={getDrawingSnapshot}
                     getPaperSnapshot={getPaperSnapshot}
                     open={sidebarOpen}

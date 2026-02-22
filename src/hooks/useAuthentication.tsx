@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "../context/UserContext";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { setDoc, doc, getDoc, getDocs, collection, updateDoc } from "firebase/firestore";
+import { setDoc, doc, getDoc, getDocs, collection, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import {
   GoogleAuthProvider,
@@ -115,6 +115,17 @@ const userSetup = async (uid: string, username: string, email: string) => {
       });
 
       console.log("2. Context Set. Verified:", isEmailVerified);
+
+      // Log daily login for activity heatmap
+      try {
+        const now = new Date();
+        const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        await setDoc(doc(db, "user-data", uid, "daily-logins", dateKey), {
+          timestamp: serverTimestamp(),
+        }, { merge: true });
+      } catch (e) {
+        console.warn("Failed to log daily login:", e);
+      }
 
       // --- NAVIGATION LOGIC ---
       if (!isEmailVerified) {

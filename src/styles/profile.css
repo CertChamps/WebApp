@@ -148,6 +148,11 @@
     @apply w-full min-w-0;
 }
 
+/* ================== ACTIVITY HEATMAP ================== */
+.activity-heatmap {
+    @apply color-bg shadow-small;
+}
+
 /* ================== LOADING STATE ================== */
 .profile-loading {
     @apply w-full h-full flex items-center justify-center;

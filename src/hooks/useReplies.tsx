@@ -27,6 +27,17 @@ type PostDoc = {
   isFlashcard?: boolean;
   flashcardId?: string;
   replyId?: string;
+  isPaperQuestion?: boolean;
+  paperId?: string;
+  paperQuestionId?: string;
+  paperQuestionName?: string;
+  paperLabel?: string;
+  subject?: string;
+  level?: string;
+  indexInPaper?: number;
+  storagePath?: string;
+  pageRange?: [number, number] | null;
+  pageRegions?: { page: number; x: number; y: number; width: number; height: number }[] | null;
 };
 
 type ReplyDoc = {
@@ -127,6 +138,17 @@ export function useReplies(id: string) {
         isFlashcard: !!data.isFlashcard,
         flashcardId: data.flashcardId,
         replyId: data.replyId,
+        isPaperQuestion: !!data.isPaperQuestion,
+        paperId: data.paperId,
+        paperQuestionId: data.paperQuestionId,
+        paperQuestionName: data.paperQuestionName,
+        paperLabel: data.paperLabel,
+        subject: data.subject,
+        level: data.level,
+        indexInPaper: data.indexInPaper,
+        storagePath: data.storagePath,
+        pageRange: data.pageRange ?? null,
+        pageRegions: data.pageRegions ?? null,
       });
     };
     run();
@@ -134,6 +156,23 @@ export function useReplies(id: string) {
 
   useEffect(() => {
     const run = async () => {
+      if (post?.isPaperQuestion && post.paperId && post.paperQuestionId && post.replyId) {
+        try {
+          const compositeId = `${post.paperId}_${post.paperQuestionId}`;
+          const parentRef = doc(db, "certchamps-questions", compositeId, "replies", post.replyId);
+          const parentSnap = await getDoc(parentRef);
+          if (parentSnap.exists()) {
+            const parentData = parentSnap.data();
+            const profile = await fetchProfileByUid(parentData.userId);
+            setFcAuthor(profile);
+          }
+        } catch {
+          setFcAuthor(null);
+        }
+        setQuestion(null);
+        return;
+      }
+
       if (!post?.isFlashcard || !post.flashcardId || !post.replyId) {
         setFcAuthor(null);
         setQuestion(null);
@@ -154,13 +193,37 @@ export function useReplies(id: string) {
       setQuestion(parts);
     };
     run();
-  }, [post?.isFlashcard, post?.flashcardId, post?.replyId]);
+  }, [post?.isFlashcard, post?.flashcardId, post?.replyId, post?.isPaperQuestion, post?.paperId, post?.paperQuestionId]);
 
   useEffect(() => {
     if (!id || post === null) return;
     let unsub = () => {};
     const wire = async () => {
-      if (post?.isFlashcard && post.flashcardId && post.replyId) {
+      if (post?.isPaperQuestion && post.paperId && post.paperQuestionId && post.replyId) {
+        const compositeId = `${post.paperId}_${post.paperQuestionId}`;
+        const qy = query(
+          collection(db, "certchamps-questions", compositeId, "replies", post.replyId, "replies"),
+          orderBy("timestamp", "asc")
+        );
+        unsub = onSnapshot(qy, async (snapshot) => {
+          const rows = await Promise.all(
+            snapshot.docs.map(async (d) => {
+              const r = d.data();
+              const profile = await fetchProfileByUid(r.userId);
+              const img = await pathToUrl(r.imageUrl);
+              return {
+                id: d.id,
+                content: r.content ?? "",
+                timestamp: r.timestamp,
+                username: profile.username,
+                userImage: profile.userImage,
+                imageUrl: img,
+              } as ReplyDoc;
+            })
+          );
+          setReplies(rows);
+        });
+      } else if (post?.isFlashcard && post.flashcardId && post.replyId) {
         const qy = query(
           collection(db, "certchamps-questions", post.flashcardId, "replies", post.replyId, "replies"),
           orderBy("timestamp", "asc")
@@ -223,7 +286,10 @@ export function useReplies(id: string) {
     if (attach) imageUrl = await uploadAttachment(attach);
     const payload: any = { content: text, timestamp: serverTimestamp(), userId: user.uid };
     if (imageUrl) payload.imageUrl = imageUrl;
-    if (post?.isFlashcard && post.flashcardId && post.replyId) {
+    if (post?.isPaperQuestion && post.paperId && post.paperQuestionId && post.replyId) {
+      const compositeId = `${post.paperId}_${post.paperQuestionId}`;
+      await addDoc(collection(db, "certchamps-questions", compositeId, "replies", post.replyId, "replies"), payload);
+    } else if (post?.isFlashcard && post.flashcardId && post.replyId) {
       await addDoc(collection(db, "certchamps-questions", post.flashcardId, "replies", post.replyId, "replies"), payload);
     } else if (id) {
       await addDoc(collection(db, "posts", id, "replies"), payload);

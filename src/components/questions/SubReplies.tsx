@@ -13,16 +13,20 @@ interface ReplyThreadProps {
     reply: any;
     questionId: string;
     onReply: (commentId: string, username: string) => void;
+    threadCollection?: string;
+    threadDocId?: string;
 }
 
-const ReplyThread: React.FC<ReplyThreadProps> = ({ reply, questionId, onReply }) => {
+const ReplyThread: React.FC<ReplyThreadProps> = ({ reply, questionId, onReply, threadCollection, threadDocId }) => {
     const [nestedReplies, setNestedReplies] = useState<any[]>([]);
     const [showNested, setShowNested] = useState(false);
 
     useEffect(() => {
         const fetchNestedReplies = async () => {
+            const col = threadCollection ?? 'certchamps-questions';
+            const docId = threadDocId ?? questionId;
             const q = query(
-                collection(db, 'certchamps-questions', questionId, 'replies', reply.id, 'replies'),
+                collection(db, col, docId, 'replies', reply.id, 'replies'),
                 orderBy('timestamp', 'asc')
             );
 

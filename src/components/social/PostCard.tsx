@@ -85,7 +85,7 @@ interface PostCardProps {
                 />
                 <div>
                     <p className="post-card-user-name cursor-pointer hover:opacity-80 transition-opacity" onClick={handleUserClick}>{username}</p>
-                    <p className="post-card-user-rank">{formatRankName(rank)}</p> 
+                    {/* Rank hidden for now */}
                 </div>
                 <span className="post-card-date">{formattedDate}</span>
             </div>

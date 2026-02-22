@@ -27,6 +27,17 @@ import SubReplies from './SubReplies';
 type questionType = {
   questionId: string;
   part: number;
+  paperThread?: boolean;
+  paperId?: string;
+  paperQuestionId?: string;
+  paperLabel?: string;
+  questionName?: string;
+  subject?: string;
+  level?: string;
+  indexInPaper?: number;
+  storagePath?: string;
+  pageRange?: [number, number];
+  pageRegions?: { page: number; x?: number; y?: number; width?: number; height?: number }[];
 };
 
 const QThread = (props: questionType) => {
@@ -49,10 +60,15 @@ const QThread = (props: questionType) => {
     }[]
   >([]);
 
+  const threadCollection = `certchamps-questions`;
+  const threadDocId = props.paperThread
+    ? `${props.paperId}_${props.paperQuestionId}`
+    : props.questionId;
+
   useEffect(() => {
     const fetchReplies = async () => {
       const q = query(
-        collection(db, 'certchamps-questions', props.questionId, 'replies'),
+        collection(db, threadCollection, threadDocId, 'replies'),
         orderBy('timestamp', 'desc')
       );
 
@@ -108,10 +124,10 @@ const QThread = (props: questionType) => {
       return () => unsubscribe();
     };
 
-    if (props.questionId) {
+    if (threadDocId) {
       fetchReplies();
     }
-  }, [props.questionId]);
+  }, [threadDocId, threadCollection]);
   //=========================================================================================
 
   //================= Get image URL for this part (if any) ================================
@@ -149,12 +165,11 @@ const QThread = (props: questionType) => {
         }
 
     try {
-      const image = await getImage();
+      const image = props.paperThread ? '' : await getImage();
 
       if (replyingTo && replyingTo.type === 'reply') {
-        // nested reply
         await addDoc(
-          collection(db, 'certchamps-questions', props.questionId, 'replies', replyingTo.id, 'replies'),
+          collection(db, threadCollection, threadDocId, 'replies', replyingTo.id, 'replies'),
           {
             userId: user.uid,
             content: message.trim(),
@@ -165,7 +180,7 @@ const QThread = (props: questionType) => {
         );
       } else {
         const practiceReplyDoc = await addDoc(
-          collection(db, 'certchamps-questions', props.questionId, 'replies'),
+          collection(db, threadCollection, threadDocId, 'replies'),
           {
             userId: user.uid,
             content: message.trim(),
@@ -173,17 +188,38 @@ const QThread = (props: questionType) => {
           }
         );
 
-        // also create a social post
-        await addDoc(collection(db, 'posts'), {
-          userId: user.uid,
-          content: message.trim(),
-          timestamp: serverTimestamp(),
-          imageUrl: image,
-          likes: 0,
-          isFlashcard: true,
-          flashcardId: props.questionId,
-          replyId: practiceReplyDoc.id,
-        });
+        if (props.paperThread) {
+          await addDoc(collection(db, 'posts'), {
+            userId: user.uid,
+            content: message.trim(),
+            timestamp: serverTimestamp(),
+            imageUrl: null,
+            likes: 0,
+            isPaperQuestion: true,
+            paperId: props.paperId,
+            paperQuestionId: props.paperQuestionId,
+            paperQuestionName: props.questionName ?? '',
+            paperLabel: props.paperLabel ?? '',
+            subject: props.subject ?? '',
+            level: props.level ?? '',
+            indexInPaper: props.indexInPaper ?? 0,
+            storagePath: props.storagePath ?? '',
+            pageRange: props.pageRange ?? null,
+            pageRegions: props.pageRegions ?? null,
+            replyId: practiceReplyDoc.id,
+          });
+        } else {
+          await addDoc(collection(db, 'posts'), {
+            userId: user.uid,
+            content: message.trim(),
+            timestamp: serverTimestamp(),
+            imageUrl: image,
+            likes: 0,
+            isFlashcard: true,
+            flashcardId: props.questionId,
+            replyId: practiceReplyDoc.id,
+          });
+        }
       }
 
       setMessage('');
@@ -224,6 +260,8 @@ const QThread = (props: questionType) => {
             reply={post}
             questionId={props.questionId}
             onReply={handleReplyToComment}
+            threadCollection={threadCollection}
+            threadDocId={threadDocId}
           />
         ))}
       </div> 

@@ -153,16 +153,19 @@ export default function FloatingLogTables({ pgNumber, onClose, file }: FloatingL
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {!isNullPage(pgNumber) && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                logTablesRef.current?.scrollToCurrentPage();
-              }}
-              className="px-2.5 py-1 text-xs font-medium rounded-lg color-bg-grey-10 color-txt-main hover:opacity-80 transition-all"
-            >
-              Jump to Pg {effectivePage(pgNumber)}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  logTablesRef.current?.scrollToCurrentPage();
+                }}
+                className="px-2.5 py-1 text-xs font-medium rounded-lg color-bg-grey-10 color-txt-main hover:opacity-80 transition-all"
+              >
+                Jump to Pg {effectivePage(pgNumber)}
+              </button>
+              <span className="text-xs color-txt-accent font-medium">← this is the page you want!</span>
+            </>
           )}
           {onClose && (
             <button
