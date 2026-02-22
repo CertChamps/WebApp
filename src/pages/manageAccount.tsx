@@ -1,9 +1,10 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { LuArrowLeft, LuPencil, LuCrown } from "react-icons/lu";
+import { LuArrowLeft, LuPencil, LuSparkles, LuCheck } from "react-icons/lu";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import Cropper from "react-easy-crop";
+import { motion, AnimatePresence } from "framer-motion";
 import { auth, db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import "../styles/settings.css";
@@ -12,6 +13,146 @@ const CREATE_PRO_CHECKOUT_URL = "https://us-central1-certchamps-a7527.cloudfunct
 const CREATE_BILLING_PORTAL_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/createBillingPortalSession";
 
 type TabId = "home" | "payments";
+
+const container = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.08, delayChildren: 0.2 } },
+};
+
+const fadeUp = {
+    hidden: { opacity: 0, y: 18 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] } },
+};
+
+const PaymentsTab = ({
+    user,
+    paymentSuccess,
+    paymentCancel,
+    checkoutLoading,
+    checkoutError,
+    portalLoading,
+    portalError,
+    onUpgrade,
+    onManage,
+}: {
+    user: any;
+    paymentSuccess: boolean;
+    paymentCancel: boolean;
+    checkoutLoading: boolean;
+    checkoutError: string | null;
+    portalLoading: boolean;
+    portalError: string | null;
+    onUpgrade: () => void;
+    onManage: () => void;
+}) => {
+    const isPro = !!user?.isPro;
+
+    return (
+        <motion.div variants={container} initial="hidden" animate="show" className="max-w-xl">
+            <motion.h1 variants={fadeUp} className="profile-heading text-3xl font-bold mb-2">
+                {isPro ? "Your Subscription" : "Upgrade to ACE"}
+            </motion.h1>
+            <motion.p variants={fadeUp} className="color-txt-sub text-base mb-8">
+                {isPro ? "You're on the ACE plan. Thanks for your support!" : "Unlock the full CertChamps experience."}
+            </motion.p>
+
+            <AnimatePresence>
+                {paymentSuccess && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="rounded-2xl p-4 mb-6 bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400 flex items-center gap-3"
+                    >
+                        <LuCheck size={20} />
+                        <span className="font-medium">Welcome to ACE! Your account has been upgraded.</span>
+                    </motion.div>
+                )}
+                {paymentCancel && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="rounded-2xl p-4 mb-6 color-bg border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center gap-3"
+                    >
+                        <span className="font-medium">Checkout was cancelled. You can upgrade anytime.</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Main card with animated gradient border */}
+            <motion.div variants={fadeUp} className="ace-card-wrapper rounded-2xl p-[2px] mb-6">
+                <div className="rounded-2xl color-bg p-6 relative overflow-hidden">
+                    {/* Subtle animated glow in the background */}
+                    <div className="ace-glow" />
+
+                    <div className="relative z-[1]">
+                        <div className="flex items-center gap-3 mb-1">
+                            <LuSparkles className="w-6 h-6 color-txt-accent" />
+                            <h2 className="text-2xl font-extrabold color-txt-main tracking-tight">CertChamps ACE</h2>
+                        </div>
+
+                        {isPro ? (
+                            <div className="mt-4 space-y-4">
+                                <motion.div
+                                    initial={{ scale: 0.9 }}
+                                    animate={{ scale: 1 }}
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl color-bg-accent font-semibold color-txt-accent text-sm"
+                                >
+                                    <span className="ace-active-dot" />
+                                    Active subscription
+                                </motion.div>
+                                {user?.subscriptionPeriodEnd && (
+                                    <p className="color-txt-sub text-sm">
+                                        Renews on{" "}
+                                        {new Date(user.subscriptionPeriodEnd * 1000).toLocaleDateString(undefined, { dateStyle: "long" })}
+                                    </p>
+                                )}
+                                <div className="pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={onManage}
+                                        disabled={portalLoading}
+                                        className="px-5 py-2.5 rounded-xl border border-color-border color-txt-main hover:color-bg-grey-10 disabled:opacity-60 disabled:cursor-not-allowed transition-all text-sm font-medium cursor-pointer"
+                                    >
+                                        {portalLoading ? "Opening…" : "Manage subscription"}
+                                    </button>
+                                    {portalError && <p className="text-red-500 text-sm mt-2">{portalError}</p>}
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="flex items-baseline gap-2 mt-4 mb-6">
+                                    <span className="text-4xl font-extrabold color-txt-main">€30</span>
+                                    <span className="color-txt-sub text-base font-medium">/ year</span>
+                                </div>
+
+                                <motion.p variants={fadeUp} className="color-txt-sub text-base leading-relaxed mb-8">
+                                    Everything. You get everything. For a full year. We won't cheap out on you.
+                                </motion.p>
+
+                                <motion.button
+                                    type="button"
+                                    onClick={onUpgrade}
+                                    disabled={checkoutLoading}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    className="ace-cta-btn w-full py-3.5 rounded-xl font-bold text-white text-base disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer relative overflow-hidden"
+                                >
+                                    <span className="ace-cta-shimmer" />
+                                    <span className="relative z-[1] color-txt-main font-bold">
+                                        {checkoutLoading ? "Redirecting to checkout…" : "Get ACE"}
+                                    </span>
+                                </motion.button>
+                                {checkoutError && <p className="text-red-500 text-sm mt-3">{checkoutError}</p>}
+                            </>
+                        )}
+                    </div>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+};
 
 const ManageAccount = () => {
     const { user, setUser } = useContext(UserContext);
@@ -275,69 +416,17 @@ const ManageAccount = () => {
                 )}
 
                 {activeTab === "payments" && (
-                    <>
-                        <h1 className="profile-heading text-3xl font-bold mb-8">Payments and Subscriptions</h1>
-                        <div className="max-w-xl space-y-6">
-                            {paymentSuccess && (
-                                <div className="rounded-xl p-4 bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400">
-                                    Thank you! Your account is now CertChamps ACE.
-                                </div>
-                            )}
-                            {paymentCancel && (
-                                <div className="rounded-xl p-4 color-bg border border-amber-500/30 text-amber-600 dark:text-amber-400">
-                                    Checkout was cancelled. You can upgrade anytime.
-                                </div>
-                            )}
-                            <div className="rounded-xl p-6 color-bg shadow-small border border-color-border">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <LuCrown className="w-8 h-8 color-txt-accent" />
-                                    <h2 className="text-xl font-bold color-txt-main">CertChamps ACE</h2>
-                                </div>
-                                <p className="color-txt-sub text-base mb-4">
-                                    €30 per year. Have everything CertChamps has to offer.
-                                </p>
-                                {user?.isPro ? (
-                                    <div className="flex flex-col gap-3">
-                                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/15 text-green-600 dark:text-green-400 font-medium">
-                                            <LuCrown size={20} /> You have ACE
-                                        </div>
-                                        {user?.subscriptionPeriodEnd && (
-                                            <p className="color-txt-sub text-sm">
-                                                Your subscription {new Date(user.subscriptionPeriodEnd * 1000) > new Date() ? "renews" : "renewed"} on{" "}
-                                                {new Date(user.subscriptionPeriodEnd * 1000).toLocaleDateString(undefined, { dateStyle: "long" })}
-                                            </p>
-                                        )}
-                                        <button
-                                            type="button"
-                                            onClick={handleManageSubscription}
-                                            
-                                            disabled={portalLoading}
-                                            className="w-fit px-4 py-2 rounded-xl border border-color-border color-txt-main hover:color-bg-grey-10 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-                                        >
-                                            {portalLoading ? "Opening…" : "Manage subscription"}
-                                        </button>
-                                        {portalError && (
-                                            <p className="text-red-500 text-sm">{portalError}</p>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <>
-                                        <button
-                                            type="button"
-                                            onClick={handleUpgradeToPro}
-                                            disabled={checkoutLoading}
-                                            className="px-5 py-2.5 rounded-xl font-semibold color-bg-accent color-txt-main hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
-                                        >
-                                            {checkoutLoading ? "Redirecting to checkout…" : "Upgrade to ACE — €30/year"}
-                                        </button>
-                                        {checkoutError && (
-                                            <p className="mt-3 text-red-500 text-sm">{checkoutError}</p>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </>
+                    <PaymentsTab
+                        user={user}
+                        paymentSuccess={paymentSuccess}
+                        paymentCancel={paymentCancel}
+                        checkoutLoading={checkoutLoading}
+                        checkoutError={checkoutError}
+                        portalLoading={portalLoading}
+                        portalError={portalError}
+                        onUpgrade={handleUpgradeToPro}
+                        onManage={handleManageSubscription}
+                    />
                 )}
             </div>
 

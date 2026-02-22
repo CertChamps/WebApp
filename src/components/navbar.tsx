@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import '../styles/navbar.css'
 
 // ======================= ICON IMPORTS ======================== // 
-import { LuPencil, LuSettings, LuUsers, LuChartSpline, LuFilePlus } from "react-icons/lu";
+import { LuPencil, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText } from "react-icons/lu";
 import { TbCards } from 'react-icons/tb';
 
 export default function Navbar () {
@@ -22,6 +22,7 @@ export default function Navbar () {
         if (path.startsWith('/decks')) return 'decks'
         if (path.startsWith('/social')) return 'social/social'
         if (path.startsWith('/progress')) return 'progress'
+        if (path.startsWith('/feedback')) return 'feedback'
         if (path.startsWith('/user/settings')) return 'user/settings'
         if (path.startsWith('/admin/add-questions')) return 'admin/add-questions'
         if (path.startsWith('/games')) return 'games'
@@ -118,6 +119,18 @@ export default function Navbar () {
                     fill={page == 'games' ? 'currentColor' : 'none'} />  
                 <p className={page == 'games' ? 'nav-txt-selected' : 'nav-txt'} >Games</p>
             </div> */}
+
+            {/* ============================= FEEDBACK ICON ================================ */}
+            <div 
+                data-tutorial-id="nav-feedback"
+                className={page == 'feedback' ? 'nav-item-selected' : 'nav-item'} 
+                onClick={() => {pageNaviagte('feedback')}}
+            >
+                <LuMessageSquareText strokeWidth={strokewidth} size={iconSize}
+                    className={page == 'feedback' ? 'nav-icon-selected' : 'nav-icon'}
+                    fill={page == 'feedback' ? 'currentColor' : 'none'} />
+                <p className={page == 'feedback' ? 'nav-txt-selected' : 'nav-txt'}>Feedback</p>
+            </div>
 
             {/* ============================= ADD QUESTIONS (ADMIN ONLY) ================================ */}
             {(user.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2") && (

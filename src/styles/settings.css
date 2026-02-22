@@ -79,6 +79,91 @@
     @apply w-20 py-2 text-center m-2 shadow-xl rounded-in block
 }
 
+/* ================================= ACE PAYMENTS ================================ */
+
+.ace-card-wrapper {
+    background: conic-gradient(
+        from var(--ace-border-angle, 0deg),
+        transparent 30%,
+        currentColor 50%,
+        transparent 70%
+    );
+    animation: ace-border-spin 4s linear infinite;
+}
+
+.ace-card-wrapper {
+    @apply color-txt-accent;
+}
+
+@keyframes ace-border-spin {
+    to { --ace-border-angle: 360deg; }
+}
+
+@property --ace-border-angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+}
+
+.ace-glow {
+    position: absolute;
+    inset: -50%;
+    opacity: 0.06;
+    border-radius: 9999px;
+    filter: blur(80px);
+    pointer-events: none;
+    animation: ace-glow-pulse 5s ease-in-out infinite alternate;
+}
+
+.ace-glow {
+    @apply color-bg-accent;
+    background: currentColor;
+}
+
+@keyframes ace-glow-pulse {
+    0% { transform: translate(-20%, -20%) scale(0.8); opacity: 0.04; }
+    100% { transform: translate(20%, 20%) scale(1.2); opacity: 0.1; }
+}
+
+.ace-cta-btn {
+    @apply color-bg-grey-10;
+}
+
+.ace-cta-shimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        110deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.15) 45%,
+        rgba(255, 255, 255, 0.25) 50%,
+        rgba(255, 255, 255, 0.15) 55%,
+        transparent 70%
+    );
+    animation: ace-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes ace-shimmer {
+    0% { transform: translateX(-120%); }
+    40%, 100% { transform: translateX(120%); }
+}
+
+.ace-active-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: ace-dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ace-dot-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* ======================================================================= */
+
 /* ================================= MANAGE ACCOUNT LAYOUT ================================ */
 .manage-account-layout {
     @apply flex flex-1 min-w-0 min-h-0 overflow-auto

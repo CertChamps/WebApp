@@ -18,6 +18,7 @@ import AddQuestions from "./pages/addQuestions";
 import ProfileViewer from "./pages/profileViewer";
 import { ProtectedRoute } from "./components/protectedRoute";
 import Progress from "./pages/progress/progress_main";
+import Feedback from "./pages/feedback";
 import Tutorial from "./components/tutorial/Tutorial";
 import { useTutorialContext } from "./context/TutorialContext";
 import MobileRedirect from "./pages/mobileRedirect";
@@ -159,6 +160,17 @@ const router = createHashRouter([
         <>
           <Navbar />
           <AddQuestions />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/feedback",
+    element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <Feedback />
         </>
       </ProtectedRoute>
     ),
