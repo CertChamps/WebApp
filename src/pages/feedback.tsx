@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from "react";
-import { addDoc, collection, doc, getDocs, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
-import { LuSend, LuCheck, LuBug, LuLightbulb, LuMessageCircle, LuHammer, LuHeart, LuSearch } from "react-icons/lu";
+import { LuSend, LuCheck, LuBug, LuLightbulb, LuMessageCircle, LuHammer, LuHeart, LuSearch, LuTrash2 } from "react-icons/lu";
 
 type FeedbackType = "bug" | "feature" | "general";
 type AdminTag = "working_on_it" | "love_it" | "looking_into_it" | null;
@@ -35,6 +35,17 @@ const TAG_OPTIONS: { id: AdminTag; label: string; icon: typeof LuHammer; color: 
     { id: "looking_into_it", label: "Looking into it", icon: LuSearch, color: "text-blue-500 bg-blue-500/15" },
 ];
 
+const PLACEHOLDERS = [
+    "What would make this better?",
+    "Any features you're dying for?",
+    "What's bugging you?",
+    "If you could change one thing...",
+    "How can we make your study life easier?",
+    "What's missing?",
+    "Roast us. We can take it.",
+    "YOUR FEEDBACK MATTERS TO US!!!!!!",
+];
+
 const STICKY_ROTATIONS = [
     "-rotate-1",
     "rotate-1",
@@ -55,6 +66,7 @@ export default function Feedback() {
     const [error, setError] = useState<string | null>(null);
     const [items, setItems] = useState<FeedbackItem[]>([]);
     const [tagMenuOpen, setTagMenuOpen] = useState<string | null>(null);
+    const [placeholder] = useState(() => PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)]);
 
     const fetchFeedback = async () => {
         const q = query(collection(db, "feedback"), orderBy("timestamp", "desc"));
@@ -114,6 +126,15 @@ export default function Feedback() {
         setTagMenuOpen(null);
     };
 
+    const handleDelete = async (itemId: string) => {
+        try {
+            await deleteDoc(doc(db, "feedback", itemId));
+            setItems((prev) => prev.filter((i) => i.id !== itemId));
+        } catch (e) {
+            console.error("Failed to delete feedback:", e);
+        }
+    };
+
     const timeAgo = (seconds: number | null) => {
         if (!seconds) return "";
         const diff = Math.floor(Date.now() / 1000 - seconds);
@@ -134,7 +155,7 @@ export default function Feedback() {
                     <div>
                         <h1 className="text-3xl font-bold color-txt-main">Feedback Wall</h1>
                         <p className="color-txt-sub text-base mt-1">
-                            Drop a note. All feedback is anonymous and visible to everyone.
+                            We want this to be the best Leaving Cert experience out there. Your feedback shapes what we build next. We act on it immediately.
                         </p>
                     </div>
 
@@ -158,7 +179,7 @@ export default function Feedback() {
                     <textarea
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        placeholder="What's on your mind?"
+                        placeholder={placeholder}
                         rows={4}
                         className="w-full rounded-xl color-bg-grey-5 color-txt-main p-4 text-base outline-none resize-none placeholder:color-txt-sub"
                     />
@@ -212,16 +233,25 @@ export default function Feedback() {
                                         </div>
                                     )}
 
-                                    {/* Admin tag button */}
+                                    {/* Admin controls */}
                                     {isAdmin && (
                                         <div className="mt-3 relative">
-                                            <button
-                                                type="button"
-                                                onClick={() => setTagMenuOpen(tagMenuOpen === item.id ? null : item.id)}
-                                                className="color-txt-sub hover:color-txt-main text-xs font-medium cursor-pointer transition-colors"
-                                            >
-                                                {item.adminTag ? "Change tag" : "Add tag"}
-                                            </button>
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setTagMenuOpen(tagMenuOpen === item.id ? null : item.id)}
+                                                    className="color-txt-sub hover:color-txt-main text-xs font-medium cursor-pointer transition-colors"
+                                                >
+                                                    {item.adminTag ? "Change tag" : "Add tag"}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDelete(item.id)}
+                                                    className="text-red-400 hover:text-red-500 text-xs font-medium cursor-pointer transition-colors flex items-center gap-1"
+                                                >
+                                                    <LuTrash2 size={12} /> Delete
+                                                </button>
+                                            </div>
 
                                             {tagMenuOpen === item.id && (
                                                 <div className="absolute bottom-full left-0 mb-2 color-bg rounded-xl shadow-md border border-color-border p-1.5 z-20 flex flex-col gap-1 min-w-[170px]">
