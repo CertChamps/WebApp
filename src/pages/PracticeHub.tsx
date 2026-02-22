@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Fuse from "fuse.js";
-import { useExamPapers, type ExamPaper, type PaperQuestion } from "../hooks/useExamPapers";
+import { useExamPapers, isPaperFree, type ExamPaper, type PaperQuestion } from "../hooks/useExamPapers";
+import { UserContext } from "../context/UserContext";
+import PaperProGate from "../components/PaperProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { motion, AnimatePresence } from "framer-motion";
 import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2 } from "react-icons/lu";
@@ -51,7 +53,9 @@ const LEVEL_DRAG_STEP_PX = 20;
 
 export default function PracticeHub() {
   const navigate = useNavigate();
-  const { papers, loading: papersLoading, getPaperBlob, getPaperQuestions } = useExamPapers();
+  const { user } = useContext(UserContext);
+  const { papers, loading: papersLoading, getPaperBlob, getPaperQuestions, firstFreePaper } = useExamPapers();
+  const [showPaperGateModal, setShowPaperGateModal] = useState(false);
 
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
   const [paperFilter, setPaperFilter] = useState<PaperFilter>("all");
@@ -234,8 +238,12 @@ export default function PracticeHub() {
 
   const goToSession = useCallback(() => {
     if (!selectedPaper) return;
+    if (!user?.isPro && !isPaperFree(selectedPaper)) {
+      setShowPaperGateModal(true);
+      return;
+    }
     navigate(`/practice/session?mode=pastpaper&paperId=${selectedPaper.id}`);
-  }, [selectedPaper, navigate]);
+  }, [selectedPaper, user?.isPro, navigate]);
 
   // Build global search index when user opens search (lazy)
   useEffect(() => {
@@ -281,13 +289,19 @@ export default function PracticeHub() {
 
   const goToQuestion = useCallback(
     (entry: GlobalSearchEntry) => {
+      if (!user?.isPro && !isPaperFree(entry.paper)) {
+        setShowPaperGateModal(true);
+        setGlobalSearchOpen(false);
+        setGlobalSearchQuery("");
+        return;
+      }
       navigate(
         `/practice/session?mode=pastpaper&paperId=${entry.paper.id}&indexInPaper=${entry.indexInPaper}`
       );
       setGlobalSearchOpen(false);
       setGlobalSearchQuery("");
     },
-    [navigate]
+    [navigate, user?.isPro]
   );
 
 
@@ -850,6 +864,15 @@ export default function PracticeHub() {
           </>
         )}
       </AnimatePresence>
+
+      {/* Paper pro gate modal – when non-pro tries to open locked paper */}
+      {showPaperGateModal && (
+        <PaperProGate
+          firstFreePaper={firstFreePaper}
+          asModal
+          onClose={() => setShowPaperGateModal(false)}
+        />
+      )}
     </div>
   );
 }

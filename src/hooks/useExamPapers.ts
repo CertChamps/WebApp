@@ -3,6 +3,14 @@ import { getBlob, ref } from "firebase/storage";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { storage, db } from "../../firebase";
 
+/** Derive paper number (1 or 2) from label or id. */
+function getPaperNumber(docId: string, label?: string): number | null {
+  const s = `${label ?? ""} ${docId ?? ""}`.toLowerCase();
+  if (/\bpaper\s*1\b|paper-1|1-paper/.test(s)) return 1;
+  if (/\bpaper\s*2\b|paper-2|2-paper/.test(s)) return 2;
+  return null;
+}
+
 export type ExamPaper = {
   id: string;
   label: string;
@@ -10,7 +18,21 @@ export type ExamPaper = {
   year?: number;
   subject?: string;
   level?: string;
+  /** If true, paper is free for non-pro users. From Firestore or derived for 2024 Paper 1 & 2 maths. */
+  isFree?: boolean;
 };
+
+/** Returns true if paper is free (2024 Paper 1 or 2, maths higher). */
+export function isPaperFree(paper: ExamPaper): boolean {
+  if (paper.isFree === true) return true;
+  const num = getPaperNumber(paper.id, paper.label);
+  return (
+    paper.year === 2024 &&
+    (num === 1 || num === 2) &&
+    (paper.subject ?? "").toLowerCase() === "maths" &&
+    (paper.level ?? "").toLowerCase() === "higher"
+  );
+}
 
 /** One page region defining a snippet of the question on a PDF page. */
 export type PaperPageRegion = {
@@ -117,6 +139,7 @@ export function useExamPapers() {
                 typeof data.label === "string" && data.label.trim()
                   ? data.label.trim()
                   : deriveLabel(d.id, year);
+              const isFree = data.isFree === true;
 
               allPapers.push({
                 id: d.id,
@@ -125,6 +148,7 @@ export function useExamPapers() {
                 year,
                 subject,
                 level,
+                isFree,
               });
             });
           }
@@ -302,6 +326,8 @@ export function useExamPapers() {
     []
   );
 
+  const firstFreePaper = papers.find((p) => isPaperFree(p)) ?? null;
+
   return {
     papers,
     loading,
@@ -309,5 +335,6 @@ export function useExamPapers() {
     getPaperBlob,
     getPaperQuestions,
     getMarkingSchemeBlob,
+    firstFreePaper,
   };
 }

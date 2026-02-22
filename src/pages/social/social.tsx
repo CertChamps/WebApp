@@ -18,6 +18,7 @@ import FriendsSearch from "../../components/social/friendsSearch";
 // CSS
 import { LuImage } from "react-icons/lu";
 import "../../styles/social.css"
+import ProGate from "../../components/ProGate"
 
 export default function Social() { 
 
@@ -288,6 +289,37 @@ export default function Social() {
     };
     //=======================================================================
 
+
+    if (!user?.isPro) {
+        return (
+            <div className="relative flex w-full h-full overflow-hidden">
+                <div className="flex w-full h-full filter blur-[2px] pointer-events-none select-none opacity-85">
+                    <div className="w-2/3 h-full p-6 space-y-4">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="rounded-xl color-bg-grey-5 p-6 space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full color-bg-grey-10" />
+                                    <div className="h-3 w-24 rounded color-bg-grey-10" />
+                                </div>
+                                <div className="h-3 w-full rounded color-bg-grey-10" />
+                                <div className="h-3 w-3/4 rounded color-bg-grey-10" />
+                            </div>
+                        ))}
+                    </div>
+                    <div className="w-1/3 h-full p-6 space-y-3">
+                        <div className="h-4 w-20 rounded color-bg-grey-10" />
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full color-bg-grey-10" />
+                                <div className="h-3 w-20 rounded color-bg-grey-10" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <ProGate />
+            </div>
+        );
+    }
 
     return (
         <div className="flex w-full h-full">

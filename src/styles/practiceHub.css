@@ -825,6 +825,32 @@
   border-radius: var(--radius-in);
 }
 
+/* Gate modal: paper only, no border, no gap between pages */
+.practice-hub__preview-wrap--gate {
+  height: 100%;
+  min-height: 200px;
+}
+
+.practice-hub__preview-wrap--gate .practice-hub__preview-pages {
+  gap: 0;
+}
+
+.practice-hub__preview-wrap--gate .practice-hub__preview-box {
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+/* A4 portrait (595:842) – prevent squashing to square */
+.practice-hub__preview-wrap--gate .practice-hub__preview-img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 595 / 842;
+  object-fit: contain;
+  display: block;
+}
+
 /* Full paper: stack of pages inside scrollable wrap */
 .practice-hub__preview-pages {
   display: flex;
