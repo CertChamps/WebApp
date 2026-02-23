@@ -155,6 +155,11 @@ export default function Questions() {
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
     }, []);
+    useEffect(() => {
+        const onCloseLogTables = () => setShowLogTables(false);
+        window.addEventListener("tutorial-close-logtables", onCloseLogTables);
+        return () => window.removeEventListener("tutorial-close-logtables", onCloseLogTables);
+    }, []);
     const paperScrollRef = useRef<HTMLDivElement | null>(null);
     const panelsScrollRef = useRef<HTMLDivElement | null>(null);
     const paperSnapshot = usePaperSnapshot(paperBlob, currentPaperPage);
@@ -899,6 +904,7 @@ export default function Questions() {
                                                 {currentPaperQuestion && (
                                                     <button
                                                         type="button"
+                                                        data-tutorial-id="sidebar-logtables"
                                                         onClick={() => {
                                                             setLogTablesQuestionIndex(paperQuestionIndexInFullList >= 0 ? paperQuestionIndexInFullList : 0);
                                                             setShowLogTables(true);

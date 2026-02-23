@@ -401,7 +401,7 @@ export default function Timer() {
             onClick={(e) => e.stopPropagation()}
           >
             <p id="times-up-title" className="text-2xl font-bold mb-2">Time's up!</p>
-            <p className="text-sm color-txt-sub mb-6">Hope you got through it. 🎉</p>
+            <p className="text-sm color-txt-sub mb-6">Hope you got through it.</p>
             <button
               type="button"
               onClick={() => setShowTimesUpModal(false)}

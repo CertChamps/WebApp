@@ -734,9 +734,6 @@ export default function PracticeHub() {
                   />
                 ))}
               </div>
-              <div className="flex justify-center py-2">
-                <LuChevronDown size={20} className="color-txt-sub" aria-hidden />
-              </div>
             </>
           )}
         </div>

@@ -31,7 +31,7 @@ export default function PaperProGate({ firstFreePaper, asModal, onClose, sideCon
                 <img src={crownImg} alt="" className="w-24 h-24 object-contain" />
                 <h2 className="text-xl font-bold color-txt-main">CertChamps ACE</h2>
                 <p className="color-txt-sub text-sm leading-relaxed">
-                    We know it&apos;s silly to put papers behind a paywall — so you can view here! It&apos;s just our features that are included in ACE.
+                    We know it&apos;s silly to put papers behind a paywall, so you can view here! It&apos;s just our features that are included in ACE.
                 </p>
                 <div className="flex flex-col gap-3 w-full">
                     {firstFreePaper && (

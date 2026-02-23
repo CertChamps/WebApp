@@ -12,7 +12,7 @@ import { UserContext } from "../../context/UserContext";
 
 // Components 
 import Lottie  from 'lottie-react';
-import { LuCheck, LuShare2 } from 'react-icons/lu';
+import { LuCheck, LuShare2, LuUsers } from 'react-icons/lu';
 
 const getRankName = (rankNumber: number): string => {
     const ranks = ['Novice', 'Apprentice', 'Scholar', 'Expert', 'Master', 'Grandmaster'];
@@ -101,7 +101,7 @@ export default function SharePanel() {
                 ))
             ) : (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
-                    <div className="text-4xl opacity-40">👥</div>
+                    <LuUsers size={48} className="opacity-40 color-txt-sub" />
                     <p className="txt-sub text-center">No friends to share with yet</p>
                 </div>
             )

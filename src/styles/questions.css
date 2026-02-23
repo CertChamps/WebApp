@@ -5,16 +5,16 @@
   @apply w-full shrink-0;
 }
 .questions-top-bar__inner {
-  @apply flex items-center gap-2 px-4 py-2;
+  @apply grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2;
 }
 .questions-top-bar__left {
-  @apply flex items-center gap-2 shrink-0;
+  @apply flex items-center gap-2 justify-self-start min-w-0;
 }
 .questions-top-bar__center {
-  @apply flex-1 flex items-center justify-center min-w-0;
+  @apply flex items-center justify-center min-w-0 justify-self-center;
 }
 .questions-top-bar__right {
-  @apply flex items-center gap-2 shrink-0 ml-auto;
+  @apply flex items-center gap-2 justify-self-end min-w-0;
 }
 .questions-top-bar__btn {
   @apply inline-flex items-center gap-1.5 rounded-out px-3 py-1.5 text-sm font-medium

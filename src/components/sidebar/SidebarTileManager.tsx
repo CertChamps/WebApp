@@ -78,7 +78,7 @@ export function SidebarTileManager({
   )
 
   return (
-    <div className="sidebar-tile-manager flex h-full flex-col overflow-hidden rounded-xl border border-grey/25 backdrop-blur-xl color-bg">
+    <div className="sidebar-tile-manager flex h-full flex-col overflow-hidden rounded-xl border border-grey/25 backdrop-blur-xl color-bg" data-tutorial-id="sidebar">
       {/* Tab bar: separated “window” tabs + collapse */}
       <div className="sidebar-tile-manager__tabs flex shrink-0 items-center justify-center gap-1 py-2">
         <div className="flex items-center gap-1">
@@ -90,6 +90,7 @@ export function SidebarTileManager({
                 type="button"
                 onClick={() => togglePanel(p.id)}
                 title={p.label}
+                data-tutorial-id={`sidebar-${p.id}`}
                 className={`sidebar-tile-manager__tab flex items-center justify-center p-2 transition-all duration-200 ${
                   isOpen ? "color-txt-accent" : "color-txt-sub hover:color-txt-main"
                 }`}
@@ -123,6 +124,7 @@ export function SidebarTileManager({
             <motion.div
               key={openPanelId}
               layout
+              data-tutorial-id={`sideview-${openPanelId}`}
               className="sidebar-tile-manager__tile flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg color-bg"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}

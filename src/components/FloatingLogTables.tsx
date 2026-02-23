@@ -9,17 +9,21 @@ const MIN_HEIGHT = 400;
 const DEFAULT_WIDTH = 520;
 const DEFAULT_HEIGHT = 70;
 
+const BOTTOM_BAR_CLEARANCE = 72; // Leave space for the bottom floating bar (Log tables, Full paper, etc.)
+
 function getDefaultPosition() {
   if (typeof window === "undefined") return { left: 80, top: 60 };
-  const h = Math.min(0.7 * window.innerHeight, 720);
+  const h = getDefaultHeight();
+  const maxTop = window.innerHeight - h - BOTTOM_BAR_CLEARANCE;
   return {
     left: Math.max(20, (window.innerWidth - DEFAULT_WIDTH) / 2),
-    top: Math.max(20, (window.innerHeight - h) / 2),
+    top: Math.max(20, Math.min(maxTop, (window.innerHeight - h) / 2)),
   };
 }
 function getDefaultHeight() {
   if (typeof window === "undefined") return 560;
-  return Math.min(0.7 * window.innerHeight, 720);
+  const available = window.innerHeight - BOTTOM_BAR_CLEARANCE - 40;
+  return Math.min(0.6 * window.innerHeight, 720, available);
 }
 
 type FloatingLogTablesProps = {
@@ -127,6 +131,7 @@ export default function FloatingLogTables({ pgNumber, onClose, file }: FloatingL
   const panel = (
     <div data-theme={options.theme}>
       <div
+        data-tutorial-id="sideview-logtables"
         className="fixed flex flex-col rounded-xl overflow-hidden border-2 color-shadow color-bg"
         style={{
           left: pos.left,

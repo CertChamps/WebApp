@@ -47,6 +47,7 @@ export default function QuestionsTopBar({
             className="questions-top-bar__btn"
             title={laptopMode ? "Tablet layout" : "Laptop layout"}
             aria-label={laptopMode ? "Switch to tablet layout" : "Switch to laptop layout"}
+            data-tutorial-id="laptop-tablet-toggle"
           >
             {laptopMode ? (
               <LuMonitor size={20} strokeWidth={2} className="shrink-0" />
