@@ -32,19 +32,23 @@
 
 /* ================== PROFILE STATS GRID ================== */
 .profile-stats {
-    @apply flex gap-8 md:gap-10;
+    @apply flex gap-8 md:gap-12;
 }
 
 .profile-stat-card {
-    @apply flex flex-col gap-2 items-center;
+    @apply flex flex-col gap-1 items-start;
 }
 
 .profile-stat-value {
     @apply text-2xl font-black color-txt-accent;
 }
 
+.profile-stat-value-main {
+    @apply color-txt-main;
+}
+
 .profile-stat-label {
-    @apply txt-sub text-xs uppercase tracking-wide;
+    @apply txt-sub text-xs uppercase tracking-wider font-medium;
 }
 
 /* ================== PROFILE SECTION ================== */

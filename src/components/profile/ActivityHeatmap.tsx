@@ -87,15 +87,15 @@ export default function ActivityHeatmap({ uid }: Props) {
   if (loading) {
     return (
       <div className="activity-heatmap rounded-lg p-4 animate-pulse">
-        <div className="h-[100px] w-full rounded color-bg-grey-10" />
+        <div className="h-[140px] w-full rounded color-bg-grey-10" />
       </div>
     );
   }
 
   return (
     <div className="activity-heatmap rounded-lg p-4">
-      <div className="overflow-x-auto scrollbar-minimal color-txt-accent">
-        <div className="inline-grid gap-[3px]" style={{
+      <div className="overflow-x-auto scrollbar-minimal color-txt-accent flex justify-center">
+        <div className="inline-grid gap-[5px]" style={{
           gridTemplateColumns: `auto repeat(${TOTAL_WEEKS}, 1fr)`,
           gridTemplateRows: `auto repeat(7, 1fr)`,
         }}>
@@ -104,7 +104,7 @@ export default function ActivityHeatmap({ uid }: Props) {
           {Array.from({ length: TOTAL_WEEKS }, (_, w) => {
             const header = monthHeaders.find((m) => m.col === w);
             return (
-              <div key={`mh-${w}`} className="text-[10px] color-txt-sub leading-none h-3 whitespace-nowrap">
+              <div key={`mh-${w}`} className="text-[11px] color-txt-sub leading-none h-[22px] whitespace-nowrap">
                 {header ? header.label : ""}
               </div>
             );
@@ -113,18 +113,18 @@ export default function ActivityHeatmap({ uid }: Props) {
           {/* Grid rows: 7 days (Mon=0 .. Sun=6) */}
           {Array.from({ length: 7 }, (_, d) => (
             <>
-              <div key={`dl-${d}`} className="text-[10px] color-txt-sub leading-none flex items-center pr-1 h-[13px]">
+              <div key={`dl-${d}`} className="text-[11px] color-txt-sub leading-none flex items-center pr-1 h-[22px]">
                 {DAY_LABELS[d] ?? ""}
               </div>
               {weeks.map((week, w) => {
                 const cell = week[d];
                 if (cell.future) {
-                  return <div key={`c-${w}-${d}`} className="w-[13px] h-[13px]" />;
+                  return <div key={`c-${w}-${d}`} className="w-[22px] h-[22px]" />;
                 }
                 return (
                   <div
                     key={`c-${w}-${d}`}
-                    className={`w-[13px] h-[13px] rounded-[2px] ${cell.active ? "bg-current" : "color-bg-grey-10"}`}
+                    className={`w-[22px] h-[22px] rounded-[4px] ${cell.active ? "bg-current" : "color-bg-grey-10"}`}
                     title={cell.key}
                   />
                 );

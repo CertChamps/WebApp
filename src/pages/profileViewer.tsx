@@ -28,6 +28,14 @@ export default function ProfileViewer() {
         return rankNames[Math.min(rankNames.length - 1, rank - 1)] || "Unranked"
     }
 
+    const formatStudyTime = (seconds?: number) => {
+        if (seconds == null || seconds < 0) return "00:00:00"
+        const h = Math.floor(seconds / 3600)
+        const m = Math.floor((seconds % 3600) / 60)
+        const s = seconds % 60
+        return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":")
+    }
+
     const fetchUserPosts = async (uid: string | undefined) => {
         if (!uid) return []
 
@@ -143,15 +151,17 @@ export default function ProfileViewer() {
                     </div> */}
                 </div>
                 <div className="profile-stats">
-                    {/* Decks counter hidden for now */}
                     <div 
                         className="profile-stat-card cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => setShowFriendsModal(true)}
                     >
-                        <div className="profile-stat-value">{friends?.length || 0}</div>
                         <div className="profile-stat-label">Friends</div>
+                        <div className="profile-stat-value profile-stat-value-main">{friends?.length || 0}</div>
                     </div>
-                    {/* XP hidden for now */}
+                    <div className="profile-stat-card">
+                        <div className="profile-stat-label">Total study time</div>
+                        <div className="profile-stat-value profile-stat-value-main tabular-nums">{formatStudyTime(user?.totalStudySeconds)}</div>
+                    </div>
                 </div>
             </div>
             {/* ==================== ACTIVITY HEATMAP ==================== */}
