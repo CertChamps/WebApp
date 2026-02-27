@@ -114,9 +114,9 @@ export default function ExtractQuestionsFlow({
   initialFile = null,
   onInitialFileConsumed,
   paperMetadata = null,
-  firestoreUploadPath,
-  subject,
-  level,
+  firestoreUploadPath: _firestoreUploadPath,
+  subject: _subject,
+  level: _level,
   onUploadToFirestore,
   isUploading = false,
   uploadProgress = "",
@@ -127,7 +127,7 @@ export default function ExtractQuestionsFlow({
   const [paperYear, setPaperYear] = useState<number | null>(() => paperMetadata?.year ?? null);
   const [logTablesBlob, setLogTablesBlob] = useState<Blob | null>(null);
   const [markingSchemeBlobFromYear, setMarkingSchemeBlobFromYear] = useState<Blob | null>(null);
-  const [markingSchemeYearLoading, setMarkingSchemeYearLoading] = useState(false);
+  const [_markingSchemeYearLoading, setMarkingSchemeYearLoading] = useState(false);
   const [includeLogTablesAndMarkingScheme, setIncludeLogTablesAndMarkingScheme] = useState(false);
   const initialFileConsumedRef = useRef(false);
 
@@ -199,9 +199,9 @@ export default function ExtractQuestionsFlow({
   const [pastedJson, setPastedJson] = useState("");
 
   const { snapshots, loading: snapshotsLoading } = useAllPageSnapshots(pdfFile);
-  const { snapshots: logTableSnapshots, loading: logTableSnapshotsLoading } = useAllPageSnapshots(logTablesBlob, 45);
+  const { snapshots: logTableSnapshots, loading: _logTableSnapshotsLoading } = useAllPageSnapshots(logTablesBlob, 45);
   const markingSchemeSource: Blob | null = markingSchemeFile ?? markingSchemeBlobFromYear;
-  const { snapshots: markingSchemeSnapshots, loading: markingSchemeSnapshotsLoading } = useAllPageSnapshots(
+  const { snapshots: markingSchemeSnapshots, loading: _markingSchemeSnapshotsLoading } = useAllPageSnapshots(
     markingSchemeSource,
     30
   );
@@ -226,7 +226,7 @@ export default function ExtractQuestionsFlow({
 
     const doFetch = async (
       body: Record<string, unknown>,
-      stepLabel: string
+      _stepLabel: string
     ): Promise<{ ok: boolean; data: Record<string, unknown>; res: Response }> => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), STEP_TIMEOUT_MS);
@@ -241,7 +241,7 @@ export default function ExtractQuestionsFlow({
       return { ok: res.ok, data: data as Record<string, unknown>, res };
     };
 
-    const setErrorFromResponse = (data: Record<string, unknown>, res: Response, fallback: string) => {
+    const setErrorFromResponse = (data: Record<string, unknown>, res: Response, _fallback: string) => {
       const errMsg = (data.error as string) || `Request failed: ${res.status}`;
       const details = data.details != null ? String(data.details) : "";
       setExtractError(details ? `${errMsg}\n\n--- AI / server response ---\n${details}` : errMsg);
@@ -252,7 +252,7 @@ export default function ExtractQuestionsFlow({
     try {
       // Step 1: regions — reprompt until AI marks paper_finished or we get no new regions
       let regionsList: ExtractedRegion[] = [];
-      let paperFinished = false;
+      let _paperFinished = false;
       let continueFrom: string | null = null;
       let continuationCount = 0;
 
@@ -271,7 +271,8 @@ export default function ExtractQuestionsFlow({
           return;
         }
         const raw1 = Array.isArray(step1.data.regions) ? step1.data.regions : [];
-        paperFinished = step1.data.paper_finished === true;
+        _paperFinished = step1.data.paper_finished === true;
+        if (_paperFinished && raw1.length === 0) break;
         if (raw1.length === 0) {
           if (regionsList.length === 0) {
             const details = step1.data.details != null ? String(step1.data.details) : "";
@@ -353,11 +354,18 @@ export default function ExtractQuestionsFlow({
               const direct = markById.get(regId);
               if (direct) return direct;
               const baseId = regId.match(/^([Qq]\d+)/i)?.[1];
-              return (baseId && markById.get(baseId)) ?? null;
+              return baseId ? (markById.get(baseId) ?? null) : null;
             };
             regionsList = regionsList.map((reg) => {
               const range = rangeForRegion(reg.id);
-              return { ...reg, marking_scheme_page_range: range ?? reg.marking_scheme_page_range ?? null };
+              const rawVal = range ?? (reg.marking_scheme_page_range != null && typeof reg.marking_scheme_page_range === "object" && !Array.isArray(reg.marking_scheme_page_range)
+                ? reg.marking_scheme_page_range
+                : null);
+              const marking_scheme_page_range: { start: number; end: number } | null =
+                rawVal != null && typeof (rawVal as { start?: number }).start === "number"
+                  ? (rawVal as { start: number; end: number })
+                  : null;
+              return { ...reg, marking_scheme_page_range };
             });
             missingMarkingIds = regionsList.filter((r) => r.marking_scheme_page_range == null).map((r) => r.id);
           }
@@ -615,8 +623,8 @@ export default function ExtractQuestionsFlow({
   const [fixerEditing, setFixerEditing] = useState<"y" | "height">("y");
   const [fixerDraftY, setFixerDraftY] = useState(0);
   const [fixerDraftHeight, setFixerDraftHeight] = useState(150);
-  const [fixerDisplayY, setFixerDisplayY] = useState(0);
-  const [fixerDisplayHeight, setFixerDisplayHeight] = useState(150);
+  const [_fixerDisplayY, setFixerDisplayY] = useState(0);
+  const [_fixerDisplayHeight, setFixerDisplayHeight] = useState(150);
   const fixerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fixerReloadKey, setFixerReloadKey] = useState(0);
   const FIXER_STEP = 5;

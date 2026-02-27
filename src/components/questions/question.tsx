@@ -1,5 +1,5 @@
 // Icons 
-import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuPencil, LuSearch, LuTimer, LuListOrdered, LuLayoutList} from "react-icons/lu";
+import { LuChevronRight, LuMessageSquareText, LuShare2, LuBookMarked, LuCheck, LuFilter, LuSearch, LuTimer, LuListOrdered, LuLayoutList} from "react-icons/lu";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import { TbCards } from "react-icons/tb";
 
@@ -21,18 +21,11 @@ import MarkingScheme from "../../components/marking_scheme"
 import Timer from "../../components/timer"
 import QSearch from "./qSearch";
 import ViewQuestionsList from "./viewQuestionsList";
-import RankBar from "../../components/rankbar";
 import AnswerNoti from "../math/answerNoti";
 import WrongAnswerNoti from "../math/wrongAnswerNoti";
 import StreakDisplay from "../streakDisplay";
 import Confetti from "../Confetti";
 import ThemePicker, { ThemePickerButton } from "../ThemePicker";
-import DrawingCanvas from "./DrawingCanvas";
-import TestDraw from "./test_draw";
-
-// Style Imports 
-import '../../styles/questions.css'
-import '../../styles/navbar.css'
 import useMaths from "../../hooks/useMaths";
 
 // Sounds
@@ -96,7 +89,7 @@ export default function Question(props: questionsProps) {
         }
     }, [content, props.deckmode]);
 
-    const [ viewFilter, setViewFilter ] = useState(false)
+    const [ _viewFilter, _setViewFilter ] = useState(false)
 
     const [isRight, setIsRight] = useState(false);   // result of last check
     const [showNoti, setShowNoti] = useState(false); // controls AnswerNoti
@@ -115,7 +108,7 @@ export default function Question(props: questionsProps) {
     const rankRef = useRef<HTMLDivElement>(null);
     const partRefs = useRef<(HTMLDivElement | null)[]>([]);
     const cardContainerRef = useRef<HTMLDivElement>(null);
-    const { rank, progress, streak, onCheck } = useRank({
+    const { streak, onCheck } = useRank({
         rankRef, 
         setIsRight, 
         setShowNoti, 
@@ -156,7 +149,6 @@ export default function Question(props: questionsProps) {
     }, [user?.xp]);
 
     //=========================================== Constants =====================================//
-    const iconSize = 40 + attempts - attempts 
     const strokewidth = 1.75
     const sidebarIconSize = 22
 

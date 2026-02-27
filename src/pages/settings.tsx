@@ -14,7 +14,7 @@ import { useTutorialContext } from "../context/TutorialContext";
 import { TutorialTriggerButton } from "../components/tutorial/Tutorial";
 
 // Styles & Icons
-import { LuLogOut, LuRotateCcw, LuPencil, LuUserCog } from "react-icons/lu";
+import { LuLogOut, LuRotateCcw, LuUserCog } from "react-icons/lu";
 import '../styles/settings.css'
 
 export default function Settings() {

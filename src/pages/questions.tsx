@@ -82,7 +82,7 @@ export default function Questions() {
   const initialPaths = getPathsForMode(initialMode, urlSubject || null);
 
   //==============================================> State <========================================//
-  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const [filters, _setFilters] = useState<Record<string, string[]>>({});
   const [position, setPosition] = useState(0);
   const [questions, setQuestions] = useState<any[]>([]);
   const [showSearch, setShowSearch] = useState(false);
@@ -101,7 +101,6 @@ export default function Questions() {
   const [collectionPaths, setCollectionPaths] = useState<string[]>(initialPaths);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-    const cardContainerRef = useRef<HTMLElement | null>(null);
     const pastPaperFilterRef = useRef<HTMLDivElement>(null);
     /** When set, next paperQuestions effect will jump here (used for random across papers). */
     const pendingRandomRef = useRef<{ pos: number } | { questionId: string } | null>(null);

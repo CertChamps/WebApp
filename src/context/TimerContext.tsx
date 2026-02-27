@@ -27,6 +27,7 @@ type TimerContextType = {
   pause: () => void;
   reset: () => void;
   toggle: () => void;
+  advancePomodoro: () => void;
 };
 
 const defaultState: TimerState = {
@@ -226,6 +227,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     pause,
     reset,
     toggle,
+    advancePomodoro,
   };
 
   return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>;

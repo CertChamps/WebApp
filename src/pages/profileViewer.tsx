@@ -17,7 +17,7 @@ export default function ProfileViewer() {
     const { user: currentUser } = useContext(UserContext)
     const [user, setUser] = useState<any>()
     const [friends, setFriends] = useState<any>()
-    const [decks, setDecks] = useState<any>()
+    const [_decks, setDecks] = useState<any>()
     const [posts, setPosts] = useState<any[]>([])
     const [showFriendsModal, setShowFriendsModal] = useState(false)
     const { fetchFriends, fetchUser, fetchUserDecks } = useFetch()

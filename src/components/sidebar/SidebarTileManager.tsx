@@ -1,4 +1,4 @@
-import { useState, useCallback, useContext, Component, type ReactNode } from "react";
+import { useState, useCallback, useContext } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose, LuClipboardList } from "react-icons/lu";
 import { AIChat } from "../ai";
@@ -8,7 +8,7 @@ import PastPaperMarkingScheme from "../questions/PastPaperMarkingScheme";
 import ProGate from "../ProGate";
 import { UserContext } from "../../context/UserContext";
 
-const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] };
+const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const };
 
 export type SidebarPanelId = "ai" | "threads" | "timer" | "markingscheme";
 
@@ -162,17 +162,6 @@ export function SidebarTileManager({
 }
 
 /** Catches render errors (e.g. from react-pdf) and shows a fallback. */
-class TileErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }> {
-  state = { hasError: false };
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-  render() {
-    if (this.state.hasError) return this.props.fallback;
-    return this.props.children;
-  }
-}
-
 function TileContent({
   panelId,
   question,
@@ -181,7 +170,7 @@ function TileContent({
   markingSchemeBlob,
   markingSchemePageRange,
   markingSchemeQuestionName,
-  onClosePanel,
+  onClosePanel: _onClosePanel,
 }: {
   panelId: SidebarPanelId;
   question?: any;

@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "../context/UserContext";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
-import { setDoc, doc, getDoc, getDocs, collection, updateDoc, serverTimestamp } from "firebase/firestore";
+import { setDoc, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import {
   GoogleAuthProvider,

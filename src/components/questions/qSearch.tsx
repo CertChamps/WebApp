@@ -5,6 +5,9 @@ import RenderMath from "../math/mathdisplay"
 import { LuSearch, LuX } from "react-icons/lu"
 import type { ExamPaper, PaperQuestion } from "../../hooks/useExamPapers"
 
+/** Fuse.js v7 search result type */
+type FuseResult<T> = { item: T; refIndex: number; score?: number }
+
 type CertChampsSearchProps = {
     mode: "certchamps";
     setShowSearch: React.Dispatch<React.SetStateAction<boolean>>;
@@ -37,7 +40,7 @@ export type QSearchProps = CertChampsSearchProps | PastPaperSearchProps;
 
 export default function QSearch(props: QSearchProps) {
 
-    const [results, setResults] = useState<Fuse.FuseResult<PaperSearchEntry | any>[]>([])
+    const [results, setResults] = useState<FuseResult<PaperSearchEntry | any>[]>([])
     const [search, setSearch] = useState('')
     const [isVisible, setIsVisible] = useState(false)
     const [loadingAllPapers, setLoadingAllPapers] = useState(false)
@@ -177,7 +180,7 @@ export default function QSearch(props: QSearchProps) {
                             <span>Loading questions from all papers…</span>
                         </div>
                     ) : (
-                    results.map((result: Fuse.FuseResult<PaperSearchEntry | any>) => {
+                    results.map((result: FuseResult<PaperSearchEntry | any>) => {
                         const item = result.item;
                         if (isPaperEntry(item)) {
                             return (

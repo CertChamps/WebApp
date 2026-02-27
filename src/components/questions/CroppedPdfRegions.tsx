@@ -2,8 +2,6 @@ import { memo } from "react";
 import { Document } from "react-pdf";
 import PdfThemeWrapper from "../PdfThemeWrapper";
 
-const PDF_ASPECT = 842 / 595;
-
 export type PdfRegion = {
   page: number;
   x: number;
