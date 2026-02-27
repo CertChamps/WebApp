@@ -80,11 +80,31 @@ export const PRACTICE_HUB_SUBJECTS: SubjectOption[] = LABELS.map((label) => ({
   label,
 }));
 
-/** Map our subject id (slug) to possible Firestore subject values for filtering papers. */
+/** Map our subject id (slug) or Firestore subject doc id to possible backend values for filtering papers. */
 export const SUBJECT_ID_TO_BACKEND: Record<string, string[]> = {
   mathematics: ["maths", "mathematics"],
-  "applied-mathematics": ["applied-mathematics", "applied maths"],
+  "applied-mathematics": ["applied-maths", "applied-mathematics", "applied maths"],
+  /** Firestore document id under leavingcert/subjects (must match sections array). */
+  "applied-maths": ["applied-maths"],
 };
+
+/** Map Firestore/backend subject id to display label (for dropdown when using sections from Firestore). */
+const BACKEND_ID_TO_LABEL: Record<string, string> = (() => {
+  const m: Record<string, string> = {};
+  PRACTICE_HUB_SUBJECTS.forEach((s) => {
+    m[s.id] = s.label;
+    SUBJECT_ID_TO_BACKEND[s.id]?.forEach((b) => (m[b] = s.label));
+  });
+  return m;
+})();
+
+export function getSubjectLabel(backendId: string): string {
+  const label = BACKEND_ID_TO_LABEL[backendId];
+  if (label) return label;
+  return backendId
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export function subjectMatchesPaper(subjectId: string | null, paperSubject: string | undefined): boolean {
   if (!subjectId) return true;

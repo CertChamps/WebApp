@@ -7,7 +7,7 @@ import PaperProGate from "../components/PaperProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { motion, AnimatePresence } from "framer-motion";
 import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2 } from "react-icons/lu";
-import { subjectMatchesPaper } from "../data/practiceHubSubjects";
+import { subjectMatchesPaper, getSubjectLabel } from "../data/practiceHubSubjects";
 import { MATHS_HIGHER_TOPICS, TOPIC_TO_SUB_TOPICS } from "../data/mathsHigherTopics";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import "../styles/decks.css";
@@ -58,6 +58,8 @@ export default function PracticeHub() {
   const [showPaperGateModal, setShowPaperGateModal] = useState(false);
 
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
+  const { papers, loading: papersLoading, subjectIds, subjectIdsLoading, getPaperBlob, getPaperQuestions } =
+    useExamPapers(subjectFilter);
   const [paperFilter, setPaperFilter] = useState<PaperFilter>("all");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
   const [yearFilter, setYearFilter] = useState<YearFilterValue>("all");
@@ -123,6 +125,11 @@ export default function PracticeHub() {
     setPanelTagsExpanded(false);
     setTagsVisibleWhenCollapsed(1);
   }, [selectedPaper?.id]);
+
+  const subjectOptions = useMemo(
+    () => subjectIds.map((id) => ({ id, label: getSubjectLabel(id) })),
+    [subjectIds]
+  );
 
   const filteredByMeta = useMemo(() => {
     return papers.filter((p) => {
@@ -424,7 +431,12 @@ export default function PracticeHub() {
         {/* Top bar: subject (oval) left, search right */}
         <section className="topBar flex flex-shrink-0 items-center justify-between w-full mb-2">
           <div className="practice-hub__subject-field practice-hub__subject-field--oval shrink-0">
-            <SubjectDropdown value={subjectFilter} onChange={setSubjectFilter} id="ph-subject" />
+            <SubjectDropdown
+              value={subjectFilter}
+              onChange={setSubjectFilter}
+              subjects={subjectIdsLoading ? null : subjectOptions}
+              id="ph-subject"
+            />
           </div>
           <div ref={globalSearchContainerRef} className="flex items-center txtbox color-bg w-1/4 max-w-80 rounded-out min-w-0 relative ml-auto">
             <input

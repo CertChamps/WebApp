@@ -68,34 +68,82 @@ function deriveLabel(docId: string, year?: number): string {
   return part || docId;
 }
 
-export function useExamPapers() {
+export type UseExamPapersOptions = {
+  /** When true and subjectId is null, load papers for all subjects (e.g. questions page). Default false = load no papers when null (practice tab). */
+  loadAllWhenNull?: boolean;
+};
+
+/** Load papers for the given subject. When subjectId is null: if loadAllWhenNull, load all subjects; otherwise load none. */
+export function useExamPapers(
+  subjectId: string | null,
+  options: UseExamPapersOptions = {}
+) {
+  const { loadAllWhenNull = false } = options;
+  const [subjectIds, setSubjectIds] = useState<string[]>([]);
+  const [subjectIdsLoading, setSubjectIdsLoading] = useState(true);
   const [papers, setPapers] = useState<ExamPaper[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load leaving cert sections (subject ids) once
   useEffect(() => {
     let cancelled = false;
-
-    async function load() {
+    (async () => {
       try {
         const lcRef = doc(db, "questions", "leavingcert");
         const lcSnap = await getDoc(lcRef);
-        if (!lcSnap.exists()) {
-          setPapers([]);
-          setError(null);
-          return;
-        }
+        if (cancelled) return;
+        const ids = (lcSnap.exists() && (lcSnap.data()?.sections as string[] | undefined)) ?? [];
+        setSubjectIds(ids);
+      } catch {
+        if (!cancelled) setSubjectIds([]);
+      } finally {
+        if (!cancelled) setSubjectIdsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-        const subjectIds = (lcSnap.data()?.sections as string[] | undefined) ?? [];
+  // Load papers: for one subject when subjectId is set, or all when subjectId is null and loadAllWhenNull
+  useEffect(() => {
+    const shouldLoadAll = subjectId === null && loadAllWhenNull;
+    if (subjectId === null && !shouldLoadAll) {
+      setPapers([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    if (shouldLoadAll && subjectIds.length === 0) {
+      setLoading(true);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    async function load() {
+      try {
+        const idsToLoad = shouldLoadAll ? subjectIds : [subjectId!];
+
         const allPapers: ExamPaper[] = [];
 
-        for (const subject of subjectIds) {
+        for (const subId of idsToLoad) {
           if (cancelled) return;
-          const subjRef = doc(db, "questions", "leavingcert", "subjects", subject);
+          const subjRef = doc(db, "questions", "leavingcert", "subjects", subId);
           const subjSnap = await getDoc(subjRef);
           if (!subjSnap.exists()) continue;
 
-          const levelIds = (subjSnap.data()?.sections as string[] | undefined) ?? [];
+          let levelIds = (subjSnap.data()?.sections as string[] | undefined) ?? [];
+          // Fallback when subject doc has no sections: try common level ids (e.g. applied-maths same structure as maths)
+          const usingFallbackLevels =
+            levelIds.length === 0 && (subId === "maths" || subId === "applied-maths");
+          if (usingFallbackLevels) {
+            levelIds = ["higher", "ordinary"];
+          }
 
           for (const level of levelIds) {
             if (cancelled) return;
@@ -104,23 +152,25 @@ export function useExamPapers() {
               "questions",
               "leavingcert",
               "subjects",
-              subject,
+              subId,
               "levels",
               level
             );
             const levelSnap = await getDoc(levelRef);
-            if (!levelSnap.exists()) continue;
-
-            const levelSections =
-              (levelSnap.data()?.sections as string[] | undefined) ?? [];
-            if (!levelSections.includes("papers")) continue;
+            // When using fallback level ids, still try the papers collection even if level doc is missing or has no "papers" in sections
+            if (!usingFallbackLevels) {
+              if (!levelSnap.exists()) continue;
+              const levelSections =
+                (levelSnap.data()?.sections as string[] | undefined) ?? [];
+              if (!levelSections.includes("papers")) continue;
+            }
 
             const papersRef = collection(
               db,
               "questions",
               "leavingcert",
               "subjects",
-              subject,
+              subId,
               "levels",
               level,
               "papers"
@@ -146,7 +196,7 @@ export function useExamPapers() {
                 label,
                 storagePath,
                 year,
-                subject,
+                subject: subId,
                 level,
                 isFree,
               });
@@ -178,7 +228,7 @@ export function useExamPapers() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [subjectId, loadAllWhenNull, subjectIds]);
 
   // In-memory blob cache (LRU, max 10) so switching papers is instant when revisiting
   const paperBlobCache = useRef<Map<string, Blob>>(new Map());
@@ -332,6 +382,8 @@ export function useExamPapers() {
     papers,
     loading,
     error,
+    subjectIds,
+    subjectIdsLoading,
     getPaperBlob,
     getPaperQuestions,
     getMarkingSchemeBlob,

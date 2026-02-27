@@ -11,15 +11,20 @@ import "../../styles/practiceHub.css";
 type Props = {
   value: string | null;
   onChange: (subjectId: string | null) => void;
+  /** When provided, only these subjects are shown (e.g. from Firestore leaving cert > subjects). */
+  subjects?: SubjectOption[] | null;
   id?: string;
   "aria-label"?: string;
 };
 
-export default function SubjectDropdown({ value, onChange, id = "ph-subject", "aria-label": ariaLabel }: Props) {
+export default function SubjectDropdown({ value, onChange, subjects, id = "ph-subject", "aria-label": ariaLabel }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [favourites, setFavourites] = useState<string[]>(() => getFavouriteSubjectIds());
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const options = subjects != null && subjects.length > 0 ? subjects : PRACTICE_HUB_SUBJECTS;
+  const allowAllSubjects = subjects == null || subjects.length === 0;
 
   useEffect(() => {
     setFavourites(getFavouriteSubjectIds());
@@ -37,15 +42,15 @@ export default function SubjectDropdown({ value, onChange, id = "ph-subject", "a
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return PRACTICE_HUB_SUBJECTS;
-    return PRACTICE_HUB_SUBJECTS.filter(
+    if (!q) return options;
+    return options.filter(
       (s) => s.label.toLowerCase().includes(q) || s.id.toLowerCase().includes(q)
     );
-  }, [search]);
+  }, [search, options]);
 
   const selectedLabel = useMemo(
-    () => PRACTICE_HUB_SUBJECTS.find((s) => s.id === value)?.label ?? "All subjects",
-    [value]
+    () => options.find((s) => s.id === value)?.label ?? (allowAllSubjects ? "All subjects" : "Select subject"),
+    [value, options, allowAllSubjects]
   );
 
   const handleSelect = useCallback(
@@ -63,8 +68,8 @@ export default function SubjectDropdown({ value, onChange, id = "ph-subject", "a
   }, []);
 
   const favouriteSubjects = useMemo(
-    () => PRACTICE_HUB_SUBJECTS.filter((s) => favourites.includes(s.id)),
-    [favourites]
+    () => options.filter((s) => favourites.includes(s.id)),
+    [favourites, options]
   );
 
   return (
@@ -128,10 +133,10 @@ export default function SubjectDropdown({ value, onChange, id = "ph-subject", "a
 
           <div className="practice-hub__subject-group">
             <div className="practice-hub__subject-group-label">
-              {search.trim() ? "Results" : "All subjects"}
+              {search.trim() ? "Results" : allowAllSubjects ? "All subjects" : "Subjects"}
             </div>
             <div className="practice-hub__subject-list">
-              {!search.trim() && (
+              {!search.trim() && allowAllSubjects && (
                 <button
                   type="button"
                   role="option"
