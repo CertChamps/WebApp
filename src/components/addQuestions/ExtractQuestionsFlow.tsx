@@ -618,9 +618,26 @@ export default function ExtractQuestionsFlow({
   const [fixerDisplayY, setFixerDisplayY] = useState(0);
   const [fixerDisplayHeight, setFixerDisplayHeight] = useState(150);
   const fixerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdKeyRef = useRef<"j" | "f" | "d" | null>(null);
+  const fixerDraftYRef = useRef(0);
+  const fixerDraftHeightRef = useRef(150);
+  const fixerEditingRef = useRef<"y" | "height">("y");
+  const fixerRegionIdxRef = useRef(0);
+  const fixerPageRegionIdxRef = useRef(0);
+  const updatePageRegionRef = useRef(updatePageRegion);
+  updatePageRegionRef.current = updatePageRegion;
+  fixerDraftYRef.current = fixerDraftY;
+  fixerDraftHeightRef.current = fixerDraftHeight;
+  fixerEditingRef.current = fixerEditing;
+  fixerRegionIdxRef.current = fixerRegionIdx;
+  fixerPageRegionIdxRef.current = fixerPageRegionIdx;
   const [fixerReloadKey, setFixerReloadKey] = useState(0);
   const FIXER_STEP = 5;
   const FIXER_DEBOUNCE_MS = 400;
+  const FIXER_HOLD_INITIAL_MS = 400;
+  const FIXER_HOLD_INTERVAL_MS = 80;
   const [showFullPdf, setShowFullPdf] = useState(true);
   const [showMarkingSchemePreview, setShowMarkingSchemePreview] = useState(true);
   const [showLogTablesPreview, setShowLogTablesPreview] = useState(true);
@@ -663,23 +680,62 @@ export default function ExtractQuestionsFlow({
     }
   }, [fixerRegionIdx, fixerPageRegionIdx, fixerDraftY, fixerDraftHeight, regions, updatePageRegion]);
 
+  const clearHoldRepeat = useCallback(() => {
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+    holdKeyRef.current = null;
+  }, []);
+
   useEffect(() => {
     if (!fixerMode || regions.length === 0) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.repeat) return;
-      const region = regions[fixerRegionIdx];
-      const pr = region?.pageRegions?.[fixerPageRegionIdx];
+    const region = regions[fixerRegionIdx];
+    const pr = region?.pageRegions?.[fixerPageRegionIdx];
+
+    const applyStep = (delta: number) => {
+      const rIdx = fixerRegionIdxRef.current;
+      const pIdx = fixerPageRegionIdxRef.current;
+      const editing = fixerEditingRef.current;
+      const y = fixerDraftYRef.current;
+      const h = fixerDraftHeightRef.current;
+      if (editing === "y") {
+        const newY = Math.max(0, Math.min(842 - h, y + delta));
+        fixerDraftYRef.current = newY;
+        setFixerDraftY(newY);
+        setFixerDisplayY(newY);
+        updatePageRegionRef.current(rIdx, pIdx, { y: newY, height: h });
+      } else {
+        const newH = Math.max(20, Math.min(842 - y, h + delta));
+        fixerDraftHeightRef.current = newH;
+        setFixerDraftHeight(newH);
+        setFixerDisplayHeight(newH);
+        updatePageRegionRef.current(rIdx, pIdx, { y, height: newH });
+      }
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
       if (!pr) return;
+      const keyLower = e.key.toLowerCase();
       if (e.key === "Escape") {
+        if (e.repeat) return;
+        clearHoldRepeat();
         fixerFlush();
         setFixerMode(false);
         return;
       }
       if (e.key === "k" || e.key === "K") {
+        if (e.repeat) return;
+        clearHoldRepeat();
         setFixerEditing((v) => (v === "y" ? "height" : "y"));
         return;
       }
-      if (e.key === "d" || e.key === "D") {
+      if (e.key === "a" || e.key === "A") {
+        if (e.repeat) return;
         setFixerReloadKey((k) => k + 1);
         return;
       }
@@ -708,15 +764,49 @@ export default function ExtractQuestionsFlow({
           });
         }
       };
-      if (e.key === "f" || e.key === "F") {
-        doAdjust(-FIXER_STEP);
+      if (keyLower === "f" || keyLower === "d") {
+        const delta = -FIXER_STEP;
+        if (holdKeyRef.current === keyLower) return;
+        clearHoldRepeat();
+        if (fixerDebounceRef.current) {
+          clearTimeout(fixerDebounceRef.current);
+          fixerDebounceRef.current = null;
+        }
+        holdKeyRef.current = keyLower;
+        doAdjust(delta);
+        holdTimeoutRef.current = setTimeout(() => {
+          holdTimeoutRef.current = null;
+          if (fixerDebounceRef.current) {
+            clearTimeout(fixerDebounceRef.current);
+            fixerDebounceRef.current = null;
+          }
+          holdIntervalRef.current = setInterval(() => applyStep(delta), FIXER_HOLD_INTERVAL_MS);
+        }, FIXER_HOLD_INITIAL_MS);
         return;
       }
-      if (e.key === "j" || e.key === "J") {
-        doAdjust(FIXER_STEP);
+      if (keyLower === "j") {
+        const delta = FIXER_STEP;
+        if (holdKeyRef.current === "j") return;
+        clearHoldRepeat();
+        if (fixerDebounceRef.current) {
+          clearTimeout(fixerDebounceRef.current);
+          fixerDebounceRef.current = null;
+        }
+        holdKeyRef.current = "j";
+        doAdjust(delta);
+        holdTimeoutRef.current = setTimeout(() => {
+          holdTimeoutRef.current = null;
+          if (fixerDebounceRef.current) {
+            clearTimeout(fixerDebounceRef.current);
+            fixerDebounceRef.current = null;
+          }
+          holdIntervalRef.current = setInterval(() => applyStep(delta), FIXER_HOLD_INTERVAL_MS);
+        }, FIXER_HOLD_INITIAL_MS);
         return;
       }
       if (e.key === "Enter") {
+        if (e.repeat) return;
+        clearHoldRepeat();
         fixerFlush();
         const nextPrIdx = fixerPageRegionIdx + 1;
         if (nextPrIdx < (region?.pageRegions?.length ?? 0)) {
@@ -732,10 +822,37 @@ export default function ExtractQuestionsFlow({
           }
         }
       }
+      if (e.key === "Backspace") {
+        if (e.repeat) return;
+        e.preventDefault();
+        clearHoldRepeat();
+        fixerFlush();
+        if (fixerPageRegionIdx > 0) {
+          setFixerPageRegionIdx(fixerPageRegionIdx - 1);
+        } else if (fixerRegionIdx > 0) {
+          const prevRegionIdx = fixerRegionIdx - 1;
+          const prevRegion = regions[prevRegionIdx];
+          const prevPrCount = prevRegion?.pageRegions?.length ?? 1;
+          setFixerRegionIdx(prevRegionIdx);
+          setFixerPageRegionIdx(prevPrCount - 1);
+          setSelectedIndex(prevRegionIdx);
+        }
+      }
     };
-    window.addEventListener("keydown", handler);
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      const keyLower = e.key.toLowerCase();
+      if (keyLower === "j" || keyLower === "f" || keyLower === "d") {
+        if (holdKeyRef.current === keyLower) clearHoldRepeat();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
     return () => {
-      window.removeEventListener("keydown", handler);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      clearHoldRepeat();
       if (fixerDebounceRef.current) clearTimeout(fixerDebounceRef.current);
     };
   }, [
@@ -779,6 +896,26 @@ export default function ExtractQuestionsFlow({
             </span>
             <button
               type="button"
+              disabled={currentSegment <= 1}
+              onClick={() => {
+                fixerFlush();
+                if (fixerPageRegionIdx > 0) {
+                  setFixerPageRegionIdx(fixerPageRegionIdx - 1);
+                } else if (fixerRegionIdx > 0) {
+                  const prevRegionIdx = fixerRegionIdx - 1;
+                  const prevRegion = regions[prevRegionIdx];
+                  const prevPrCount = prevRegion?.pageRegions?.length ?? 1;
+                  setFixerRegionIdx(prevRegionIdx);
+                  setFixerPageRegionIdx(prevPrCount - 1);
+                  setSelectedIndex(prevRegionIdx);
+                }
+              }}
+              className="px-3 py-1.5 rounded-lg text-sm color-bg-grey-10 color-txt-main hover:color-bg-grey-5 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Previous (Backspace)
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 fixerFlush();
                 setFixerMode(false);
@@ -818,11 +955,12 @@ export default function ExtractQuestionsFlow({
               </div>
             </div>
             <div className="color-txt-sub text-xs mt-auto space-y-1">
-              <div><strong>F</strong> decrease</div>
-              <div><strong>J</strong> increase</div>
+              <div><strong>F</strong> or <strong>D</strong> decrease (hold to auto-step)</div>
+              <div><strong>J</strong> increase (hold to auto-step)</div>
               <div><strong>K</strong> switch y/height</div>
-              <div><strong>D</strong> reload PDF</div>
+              <div><strong>A</strong> reload PDF</div>
               <div><strong>Enter</strong> next</div>
+              <div><strong>Backspace</strong> previous</div>
               <div><strong>Esc</strong> exit</div>
             </div>
           </div>

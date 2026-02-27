@@ -123,7 +123,7 @@ export default function Questions() {
         getPaperBlob,
         getPaperQuestions,
         getMarkingSchemeBlob,
-    } = useExamPapers();
+    } = useExamPapers(null, { loadAllWhenNull: true });
     const { availableSets } = useFilters();
     const certChampsSet = availableSets.find((s) => s.id === "certchamps");
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
