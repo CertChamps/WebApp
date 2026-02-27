@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { LuSendHorizontal } from "react-icons/lu";
 import { UserContext } from "../../context/UserContext";
@@ -13,8 +13,23 @@ type AIChatProps = {
   getPaperSnapshot?: (() => string | null) | null;
 };
 
+const AI_PLACEHOLDERS = [
+  "Ask me anything about this question...",
+  "Stuck? I can give you a hint...",
+  "Type your answer and I'll check it...",
+  "Need a step-by-step walkthrough?",
+  "What part are you unsure about?",
+  "Try explaining your approach to me...",
+  "Want me to break this down?",
+  "Not sure where to start? Ask me...",
+  "I can see your drawing, ask away! <3",
+  "If you want to give up, I'm here for you.",
+  "No question is a stupid question:)",
+];
+
 export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AIChatProps) {
   const { user } = useContext(UserContext);
+  const [aiPlaceholder] = useState(() => AI_PLACEHOLDERS[Math.floor(Math.random() * AI_PLACEHOLDERS.length)]);
   const {
     messages,
     streamingContent,
@@ -31,7 +46,7 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AICha
 
   const displayName = user?.username?.trim() || "there";
   const emptyMessage = hasQuestion
-    ? "Ask about this question—I can explain concepts, give hints, or walk through steps. If you draw maths or handwriting on the canvas, I can see it too. If you have a past paper open, I can see it as well."
+    ? "Ask about this question. I can explain concepts, give hints, or walk through steps. If you draw maths or handwriting on the canvas, I can see it too. If you have a past paper open, I can see it as well."
     : "How can I can help? I can explain concepts, hints, or steps. Draw on the canvas and I’ll recognise it. If you have a past paper open, I can see it too.";
 
   return (
@@ -60,7 +75,7 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AICha
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Could input your answers here too?"
+            placeholder={aiPlaceholder}
             rows={2}
             disabled={loading}
             className="flex-1 resize-none min-h-[2.75rem] max-h-24 border-0 bg-transparent color-txt-main pl-4 pr-2 py-2.5 text-sm placeholder:color-txt-sub/70 focus:outline-none focus:ring-0 disabled:opacity-50"

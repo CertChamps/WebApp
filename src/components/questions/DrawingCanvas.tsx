@@ -13,6 +13,8 @@ const GRID_STEP = 40;
 const GRID_DOT_RADIUS = 1.5;
 const ERASER_WIDTH = 24;
 const BASE_PEN_WIDTH = 2;
+/** Hold still for this long (ms) to snap stroke to straight line */
+const HOLD_TO_STRAIGHTEN_MS = 600;
 
 /** Call with a function that returns the current drawing as PNG data URL, or null. Called on mount, cleared on unmount. */
 export type RegisterDrawingSnapshot = (getSnapshot: (() => string | null) | null) => void;
@@ -43,6 +45,8 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: Draw
 	const pinchStartRef = useRef<{ distance: number; center: { x: number; y: number }; scale: number; pan: { x: number; y: number } } | null>(null);
 	const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 	const pointerIdsRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+	const holdStraightenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const currentStrokeRef = useRef<Stroke | null>(null);
 
 	// Read theme colors from DOM (follows data-theme) - pen: color-txt-main, grid: color-bg-grey-5
 	useLayoutEffect(() => {
@@ -161,6 +165,51 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: Draw
 		draw();
 	}, [draw]);
 
+	// Keep ref in sync for timer callback
+	useEffect(() => {
+		currentStrokeRef.current = currentStroke;
+	}, [currentStroke]);
+
+	/** Snap stroke to nearest angle (snap step in degrees, e.g. 15 = every 15°) */
+	const ANGLE_SNAP_DEG = 15;
+	function straightenStroke(stroke: Stroke): Stroke {
+		if (stroke.tool !== "pen" || stroke.points.length < 2) return stroke;
+		const start = stroke.points[0];
+		const end = stroke.points[stroke.points.length - 1];
+		const dx = end.x - start.x;
+		const dy = end.y - start.y;
+		const dist = Math.hypot(dx, dy);
+		if (dist < 1e-6) return stroke;
+
+		const angleRad = Math.atan2(dy, dx);
+		const snapStepRad = (ANGLE_SNAP_DEG * Math.PI) / 180;
+		const snappedAngle = Math.round(angleRad / snapStepRad) * snapStepRad;
+		const snappedEnd: Point = {
+			x: start.x + dist * Math.cos(snappedAngle),
+			y: start.y + dist * Math.sin(snappedAngle),
+			pressure: end.pressure,
+		};
+		return { ...stroke, points: [start, snappedEnd] };
+	}
+
+	const scheduleHoldStraighten = useCallback(() => {
+		if (holdStraightenTimerRef.current) clearTimeout(holdStraightenTimerRef.current);
+		holdStraightenTimerRef.current = setTimeout(() => {
+			holdStraightenTimerRef.current = null;
+			const stroke = currentStrokeRef.current;
+			if (stroke && stroke.tool === "pen" && stroke.points.length >= 2) {
+				setCurrentStroke(straightenStroke(stroke));
+			}
+		}, HOLD_TO_STRAIGHTEN_MS);
+	}, []);
+
+	const cancelHoldStraighten = useCallback(() => {
+		if (holdStraightenTimerRef.current) {
+			clearTimeout(holdStraightenTimerRef.current);
+			holdStraightenTimerRef.current = null;
+		}
+	}, []);
+
 	// Expose current drawing as PNG for AI/vision (strokes only, no grid)
 	const getSnapshot = useCallback(() => {
 		if (strokes.length === 0 && !currentStroke) return null;
@@ -239,6 +288,8 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: Draw
 
 			if (pointers.size === 2) {
 				// Start pinch
+				holdStraightenTimerRef.current && clearTimeout(holdStraightenTimerRef.current);
+				holdStraightenTimerRef.current = null;
 				const [a, b] = Array.from(pointers.entries());
 				const dx = a[1].x - b[1].x;
 				const dy = a[1].y - b[1].y;
@@ -319,9 +370,10 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: Draw
 					prev ? { ...prev, points: [...prev.points, world] } : null
 				);
 				lastPointRef.current = world;
+				if (currentStroke.tool === "pen") scheduleHoldStraighten();
 			}
 		},
-		[currentStroke, screenToWorld]
+		[currentStroke, screenToWorld, scheduleHoldStraighten]
 	);
 
 	const handlePointerUp = useCallback(
@@ -334,6 +386,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: Draw
 			if (pointerIdsRef.current.size === 0) {
 				pinchStartRef.current = null;
 				panStartRef.current = null;
+				cancelHoldStraighten();
 				if (isDrawingRef.current && currentStroke && currentStroke.points.length > 0) {
 					setStrokes((prev) => [...prev, currentStroke]);
 					setCurrentStroke(null);
@@ -341,7 +394,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: Draw
 				isDrawingRef.current = false;
 			}
 		},
-		[currentStroke]
+		[currentStroke, cancelHoldStraighten]
 	);
 
 	const handleWheel = useCallback(
@@ -413,7 +466,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: Draw
 				/>
 				{/* Floating bar - mostly transparent with blur */}
 				<div
-					className="drawing-canvas-toolbar absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center gap-1 py-1.5 px-2 rounded-[var(--radius-out)] border color-shadow"
+					className="drawing-canvas-toolbar absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center gap-1 py-1.5 px-2 rounded-[var(--radius-out)] color-shadow"
 					style={{
 						background: "rgba(128, 128, 128, 0.05)",
 						backdropFilter: "blur(6px)",

@@ -1,10 +1,12 @@
-import { useState, useCallback, Component, type ReactNode } from "react";
+import { useState, useCallback, useContext, Component, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose, LuClipboardList } from "react-icons/lu";
 import { AIChat } from "../ai";
 import QThread from "../questions/q_thread";
 import Timer from "../timer";
 import PastPaperMarkingScheme from "../questions/PastPaperMarkingScheme";
+import ProGate from "../ProGate";
+import { UserContext } from "../../context/UserContext";
 
 const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] };
 
@@ -76,7 +78,7 @@ export function SidebarTileManager({
   )
 
   return (
-    <div className="sidebar-tile-manager flex h-full flex-col overflow-hidden rounded-xl border border-grey/25 backdrop-blur-xl color-bg">
+    <div className="sidebar-tile-manager flex h-full flex-col overflow-hidden rounded-xl border border-grey/25 backdrop-blur-xl color-bg" data-tutorial-id="sidebar">
       {/* Tab bar: separated “window” tabs + collapse */}
       <div className="sidebar-tile-manager__tabs flex shrink-0 items-center justify-center gap-1 py-2">
         <div className="flex items-center gap-1">
@@ -88,6 +90,7 @@ export function SidebarTileManager({
                 type="button"
                 onClick={() => togglePanel(p.id)}
                 title={p.label}
+                data-tutorial-id={`sidebar-${p.id}`}
                 className={`sidebar-tile-manager__tab flex items-center justify-center p-2 transition-all duration-200 ${
                   isOpen ? "color-txt-accent" : "color-txt-sub hover:color-txt-main"
                 }`}
@@ -121,6 +124,7 @@ export function SidebarTileManager({
             <motion.div
               key={openPanelId}
               layout
+              data-tutorial-id={`sideview-${openPanelId}`}
               className="sidebar-tile-manager__tile flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg color-bg"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -196,31 +200,7 @@ function TileContent({
       return <AIChat question={question} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />;
     case "threads": {
       const isPaperThread = !!question?._paperThread;
-      return (
-        <div className="h-full overflow-auto color-bg">
-          {questionId ? (
-            <QThread
-              questionId={questionId}
-              part={part}
-              paperThread={isPaperThread}
-              paperId={isPaperThread ? question.paperId : undefined}
-              paperQuestionId={isPaperThread ? question.paperQuestionId : undefined}
-              paperLabel={isPaperThread ? question.paperLabel : undefined}
-              questionName={isPaperThread ? question.questionName : undefined}
-              subject={isPaperThread ? question.subject : undefined}
-              level={isPaperThread ? question.level : undefined}
-              indexInPaper={isPaperThread ? question.indexInPaper : undefined}
-              storagePath={isPaperThread ? question.storagePath : undefined}
-              pageRange={isPaperThread ? question.pageRange : undefined}
-              pageRegions={isPaperThread ? question.pageRegions : undefined}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center p-4 text-sm color-txt-sub">
-              Select a question to view threads.
-            </div>
-          )}
-        </div>
-      );
+      return <ThreadsPanel questionId={questionId} part={part} isPaperThread={isPaperThread} question={question} />;
     }
     case "timer":
       return (
@@ -253,4 +233,54 @@ function TileContent({
     default:
       return null;
   }
+}
+
+function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionId: string; part: number; isPaperThread: boolean; question?: any }) {
+  const { user } = useContext(UserContext);
+
+  if (!user?.isPro) {
+    return (
+      <div className="relative h-full overflow-hidden color-bg">
+        <div className="h-full filter blur-[2px] pointer-events-none select-none opacity-85 p-4 space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="rounded-xl color-bg-grey-5 p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full color-bg-grey-10" />
+                <div className="h-2.5 w-16 rounded color-bg-grey-10" />
+              </div>
+              <div className="h-2.5 w-full rounded color-bg-grey-10" />
+              <div className="h-2.5 w-2/3 rounded color-bg-grey-10" />
+            </div>
+          ))}
+        </div>
+        <ProGate />
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-auto color-bg">
+      {questionId ? (
+        <QThread
+          questionId={questionId}
+          part={part}
+          paperThread={isPaperThread}
+          paperId={isPaperThread ? question.paperId : undefined}
+          paperQuestionId={isPaperThread ? question.paperQuestionId : undefined}
+          paperLabel={isPaperThread ? question.paperLabel : undefined}
+          questionName={isPaperThread ? question.questionName : undefined}
+          subject={isPaperThread ? question.subject : undefined}
+          level={isPaperThread ? question.level : undefined}
+          indexInPaper={isPaperThread ? question.indexInPaper : undefined}
+          storagePath={isPaperThread ? question.storagePath : undefined}
+          pageRange={isPaperThread ? question.pageRange : undefined}
+          pageRegions={isPaperThread ? question.pageRegions : undefined}
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center p-4 text-sm color-txt-sub">
+          Select a question to view threads.
+        </div>
+      )}
+    </div>
+  );
 }

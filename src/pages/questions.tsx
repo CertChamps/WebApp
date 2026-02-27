@@ -3,7 +3,8 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "r
 import { useSearchParams, useNavigate } from "react-router-dom";
 import useQuestions from "../hooks/useQuestions";
 import { OptionsContext } from "../context/OptionsContext";
-import { useExamPapers, type ExamPaper, type PaperQuestion } from "../hooks/useExamPapers";
+import { UserContext } from "../context/UserContext";
+import { useExamPapers, isPaperFree, type ExamPaper, type PaperQuestion } from "../hooks/useExamPapers";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
 import useFilters from "../hooks/useFilters";
 
@@ -24,6 +25,7 @@ import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
 import { TimerProvider } from "../context/TimerContext";
 import { TimerFloatingWidget } from "../components/TimerFloatingWidget";
 import PastPaperFilterPanel from "../components/questions/PastPaperFilterPanel";
+import PaperProGate from "../components/PaperProGate";
 
 // Style Imports
 import "../styles/questions.css";
@@ -66,6 +68,7 @@ function formatTags(tags: string[] | string | undefined): string {
 
 export default function Questions() {
   const { options, setOptions } = useContext(OptionsContext);
+  const { user } = useContext(UserContext);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -123,6 +126,7 @@ export default function Questions() {
         getPaperBlob,
         getPaperQuestions,
         getMarkingSchemeBlob,
+        firstFreePaper,
     } = useExamPapers(null, { loadAllWhenNull: true });
     const { availableSets } = useFilters();
     const certChampsSet = availableSets.find((s) => s.id === "certchamps");
@@ -150,6 +154,11 @@ export default function Questions() {
         const onResize = () => setViewportWidth(window.innerWidth);
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
+    }, []);
+    useEffect(() => {
+        const onCloseLogTables = () => setShowLogTables(false);
+        window.addEventListener("tutorial-close-logtables", onCloseLogTables);
+        return () => window.removeEventListener("tutorial-close-logtables", onCloseLogTables);
     }, []);
     const paperScrollRef = useRef<HTMLDivElement | null>(null);
     const panelsScrollRef = useRef<HTMLDivElement | null>(null);
@@ -895,6 +904,7 @@ export default function Questions() {
                                                 {currentPaperQuestion && (
                                                     <button
                                                         type="button"
+                                                        data-tutorial-id="sidebar-logtables"
                                                         onClick={() => {
                                                             setLogTablesQuestionIndex(paperQuestionIndexInFullList >= 0 ? paperQuestionIndexInFullList : 0);
                                                             setShowLogTables(true);
@@ -1198,6 +1208,11 @@ export default function Questions() {
 
             </div>
             {/*===============================================================================================*/}
+
+            {/* Paper pro gate: when non-pro loads a locked past paper */}
+            {mode === "pastpaper" && selectedPaper && !user?.isPro && !isPaperFree(selectedPaper) && (
+                <PaperProGate firstFreePaper={firstFreePaper} />
+            )}
         </div>
         <TimerFloatingWidget leftHandMode={options.leftHandMode} />
         </TimerProvider>

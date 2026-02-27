@@ -33,13 +33,12 @@
   min-width: 160px;
 }
 
-/* Oval subject pill – grey, matches image */
+/* Oval subject pill – themed */
 .practice-hub__subject-field--oval .practice-hub__subject-trigger {
   border-radius: 9999px;
   padding-left: 1.25rem;
   padding-right: 1.25rem;
-  background: var(--color-bg-grey-10);
-  border: 2px solid var(--color-grey);
+  @apply color-bg-grey-10 border-2 color-shadow;
 }
 
 .practice-hub__search-wrap {
@@ -175,21 +174,20 @@
   padding: 0.625rem 0.75rem;
   font-size: 0.9375rem;
   border-radius: 0.5rem;
-  border: 2px solid var(--color-grey, #9ca3af);
-  background: var(--color-bg, #fff);
-  color: var(--color-txt-main, #111);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
   text-align: left;
+  @apply color-txt-main color-bg border-2 color-shadow;
 }
 
 .practice-hub__subject-trigger:hover {
-  border-color: var(--color-blue, #27548a);
+  @apply border-[var(--color-blue)];
 }
 
 .practice-hub__subject-trigger-label {
   flex: 1;
   min-width: 0;
+  @apply color-txt-main;
 }
 
 .practice-hub__subject-arrow {
@@ -197,8 +195,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-txt-sub);
   transition: transform 0.2s ease;
+  @apply color-txt-sub;
 }
 
 .practice-hub__subject-wrap[data-state="open"] .practice-hub__subject-arrow {
@@ -220,10 +218,9 @@
   display: flex;
   flex-direction: column;
   border-radius: 0.5rem;
-  border: 2px solid var(--color-grey, #9ca3af);
-  background: var(--color-bg, #fff);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-black, #353535) 0.12);
   z-index: 50;
+  @apply color-bg border-2 color-shadow;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-black, #353535) 0.12);
 }
 
 .practice-hub__subject-search-wrap {
@@ -231,13 +228,13 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--color-bg-grey-10, #f3f4f6);
   flex-shrink: 0;
+  @apply border-b color-shadow;
 }
 
 .practice-hub__subject-search-icon {
-  color: var(--color-txt-sub, #6b7280);
   flex-shrink: 0;
+  @apply color-txt-sub;
 }
 
 .practice-hub__subject-search {
@@ -247,7 +244,7 @@
   font-size: 0.875rem;
   border: none;
   background: none;
-  color: var(--color-txt-main, #111);
+  @apply color-txt-main;
 }
 
 .practice-hub__subject-search:focus {
@@ -264,8 +261,8 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-txt-sub, #6b7280);
   padding: 0.5rem 0.75rem 0.25rem;
+  @apply color-txt-sub;
 }
 
 .practice-hub__subject-list {
@@ -281,14 +278,14 @@
   font-size: 0.875rem;
   border: none;
   background: none;
-  color: var(--color-txt-main, #111);
   cursor: pointer;
   text-align: left;
   transition: background 0.15s;
+  @apply color-txt-main;
 }
 
 .practice-hub__subject-option:hover {
-  background: var(--color-bg-grey-10, #f3f4f6);
+  @apply color-bg-grey-10;
 }
 
 .practice-hub__subject-option[aria-selected="true"] {
@@ -306,15 +303,15 @@
   padding: 0.25rem;
   border: none;
   background: none;
-  color: var(--color-txt-sub, #6b7280);
   cursor: pointer;
   border-radius: 0.25rem;
   transition: color 0.15s, background 0.15s;
+  @apply color-txt-sub;
 }
 
 .practice-hub__subject-fav:hover {
+  @apply color-bg-grey-10;
   color: var(--color-blue, #27548a);
-  background: var(--color-bg-grey-10, #f3f4f6);
 }
 
 .practice-hub__subject-fav--on {
@@ -823,6 +820,32 @@
   overflow-y: auto;
   max-height: 500px;
   border-radius: var(--radius-in);
+}
+
+/* Gate modal: paper only, no border, no gap between pages */
+.practice-hub__preview-wrap--gate {
+  height: 100%;
+  min-height: 200px;
+}
+
+.practice-hub__preview-wrap--gate .practice-hub__preview-pages {
+  gap: 0;
+}
+
+.practice-hub__preview-wrap--gate .practice-hub__preview-box {
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+/* A4 portrait (595:842) – prevent squashing to square */
+.practice-hub__preview-wrap--gate .practice-hub__preview-img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 595 / 842;
+  object-fit: contain;
+  display: block;
 }
 
 /* Full paper: stack of pages inside scrollable wrap */

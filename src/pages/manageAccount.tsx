@@ -173,6 +173,12 @@ const ManageAccount = () => {
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [paymentCancel, setPaymentCancel] = useState(false);
 
+    useEffect(() => {
+        if (searchParams.get("tab") === "payments") {
+            setActiveTab("payments");
+        }
+    }, []);
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {

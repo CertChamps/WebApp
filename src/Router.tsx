@@ -23,6 +23,7 @@ import Tutorial from "./components/tutorial/Tutorial";
 import { useTutorialContext } from "./context/TutorialContext";
 import MobileRedirect from "./pages/mobileRedirect";
 import PhoneRedirect from "./components/PhoneRedirect";
+import SessionTracker from "./components/SessionTracker";
 
 /** Redirects /practice/:id (deck links from social) to /decks/:id */
 function PracticeToDeckRedirect() {
@@ -36,6 +37,7 @@ function RootLayout() {
   
   return (
     <>
+      <SessionTracker />
       <PhoneRedirect />
       <Outlet />
       <Tutorial

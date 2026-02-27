@@ -102,7 +102,6 @@
   padding: 20px;
   border-radius: 16px;
   z-index: 10;
-  border: 2px solid;
   display: flex;
   flex-direction: column;
   gap: 10px;

@@ -2,22 +2,16 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  LuPencil, 
-  LuUsers, 
-  LuChartSpline, 
   LuChevronRight, 
   LuSparkles,
   LuTarget,
-  LuTrophy,
   LuMessageCircle,
   LuRocket,
   LuMousePointerClick,
   LuX,
   LuBookMarked,
-  LuFilter,
   LuTimer
 } from 'react-icons/lu';
-import { TbCards } from 'react-icons/tb';
 import '../../styles/tutorial.css';
 
 // Tutorial step definitions
@@ -39,110 +33,42 @@ export type TutorialStep = {
 const tutorialSteps: TutorialStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to CertChamps! 🎉',
+    title: 'Welcome to CertChamps!',
     description: 'Let\'s take a quick tour to help you get the most out of our platform. We\'ll guide you through the key features.',
     icon: LuRocket,
     position: 'center',
     showSkip: true,
   },
   {
-    id: 'navbar-intro',
-    title: 'Navigation Bar',
-    description: 'This is your navigation bar. It\'s how you\'ll move between different sections of the app.',
-    icon: LuTarget,
-    targetSelector: '.container.group',
-    position: 'right',
-  },
-  {
-    id: 'practice-intro',
-    title: 'Practice Mode ✏️',
-    description: 'You\'re currently in Practice mode. This is where you\'ll answer questions from real exam papers.',
-    icon: LuPencil,
-    targetId: 'nav-practice',
-    position: 'right',
-  },
-  {
-    id: 'question-sidebar',
-    title: 'Question Tools',
-    description: 'These buttons give you access to helpful tools. Let\'s explore each one!',
-    icon: LuTarget,
-    targetId: 'question-sidebar',
+    id: 'ai-intro',
+    title: 'Your AI Assistant',
+    description: 'This is your AI assistant. It can see your working and the exam paper. Ask it anything about the question and it will help you work through it!',
+    icon: LuSparkles,
+    targetId: 'sidebar',
     position: 'left',
   },
   {
-    id: 'click-threads',
-    title: 'Discussion Threads 💬',
-    description: 'Click this button to see discussions about the current question!',
-    icon: LuMessageCircle,
+    id: 'sidebar-intro',
+    title: 'The Sidebar',
+    description: 'This sidebar has AI, Threads for discussions, a Timer, and more. Click the Threads icon to explore!',
+    icon: LuTarget,
     targetId: 'sidebar-threads',
     position: 'left',
     waitForClick: true,
-    tip: 'Stuck on a question? Check if others have discussed it!',
+    tip: 'Click the Threads icon in the tab bar above.',
   },
   {
     id: 'threads-opened',
-    title: 'Discussion Panel 💬',
+    title: 'Discussion Threads',
     description: 'This panel shows discussions about the current question. Ask questions or help others here!',
     icon: LuMessageCircle,
     targetId: 'sideview-threads',
     position: 'left',
   },
   {
-    id: 'click-logtables',
-    title: 'Log Tables 📚',
-    description: 'Click this button to access log tables and reference materials!',
-    icon: LuBookMarked,
-    targetId: 'sidebar-logtables',
-    position: 'left',
-    waitForClick: true,
-  },
-  {
-    id: 'logtables-opened',
-    title: 'Reference Materials 📚',
-    description: 'Access log tables, formulas, and other reference materials you need during exams.',
-    icon: LuBookMarked,
-    targetId: 'sideview-logtables',
-    position: 'left',
-  },
-  {
-    id: 'click-filter',
-    title: 'Filter Questions 🎯',
-    description: 'Click the filter button to customize which questions appear!',
-    icon: LuFilter,
-    targetId: 'sidebar-filter',
-    position: 'left',
-    waitForClick: true,
-  },
-  {
-    id: 'filter-opened',
-    title: 'Customise Your Practice 🎯',
-    description: 'Filter by topic, year, paper, or difficulty to focus on what you need most.',
-    icon: LuFilter,
-    targetId: 'sideview-filter',
-    position: 'left',
-  },
-  {
-    id: 'click-decks-sidebar',
-    title: 'Save to Decks 📦',
-    description: 'Click this button to save questions to your study decks!',
-    icon: TbCards,
-    targetId: 'sidebar-decks',
-    position: 'left',
-    waitForClick: true,
-  },
-  {
-    id: 'decks-sidebar-opened',
-    title: 'Your Study Decks 📦',
-    description: 'Save tricky questions to decks for later revision. Create themed collections!',
-    icon: TbCards,
-    targetId: 'sideview-decks',
-    position: 'left',
-    tip: 'Pro tip: Create separate decks for different topics!',
-  },
-  {
     id: 'click-timer',
-    title: 'Practice Timer ⏱️',
-    description: 'Click the timer button to practice under exam conditions!',
+    title: 'Practice Timer',
+    description: 'Click the Timer icon to practice under exam conditions!',
     icon: LuTimer,
     targetId: 'sidebar-timer',
     position: 'left',
@@ -150,75 +76,49 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: 'timer-opened',
-    title: 'Exam Timer ⏱️',
+    title: 'Exam Timer',
     description: 'Use the timer to simulate real exam conditions and improve your speed.',
     icon: LuTimer,
     targetId: 'sideview-timer',
     position: 'left',
   },
   {
-    id: 'click-social',
-    title: 'Let\'s Explore Social',
-    description: 'Click on the Social tab to see how you can connect with other learners!',
-    icon: LuUsers,
-    targetId: 'nav-social',
-    requiredAction: 'navigate',
-    requiredPath: '/social',
-    position: 'right',
+    id: 'laptop-tablet',
+    title: 'Laptop or Tablet Mode',
+    description: 'Switch between laptop layout (PDF beside question) and tablet layout (full screen). Use whichever works best for you!',
+    icon: LuTarget,
+    targetId: 'laptop-tablet-toggle',
+    position: 'bottom',
   },
   {
-    id: 'social-intro',
-    title: 'Social Hub 👥',
-    description: 'See posts from the community, share achievements, and connect with friends!',
+    id: 'click-logtables',
+    title: 'Log Tables',
+    description: 'Click this icon to open the log tables and formula booklet. You\'ll need these for exam questions!',
+    icon: LuBookMarked,
+    targetId: 'sidebar-logtables',
+    position: 'right',
+    waitForClick: true,
+  },
+  {
+    id: 'logtables-opened',
+    title: 'Log Tables',
+    description: 'Reference materials at your fingertips. The log tables opens to the exact page you need for the current question.',
+    icon: LuBookMarked,
+    targetId: 'sideview-logtables',
+    position: 'left',
+  },
+  {
+    id: 'feedback-tab',
+    title: 'Feedback',
+    description: 'Found a bug or have a suggestion? Use the Feedback tab in the navbar to let us know. We read every submission!',
     icon: LuMessageCircle,
-    position: 'center',
-  },
-  {
-    id: 'click-progress',
-    title: 'Check Your Progress',
-    description: 'Click on Progress to see your stats and track your improvement!',
-    icon: LuChartSpline,
-    targetId: 'nav-progress',
-    requiredAction: 'navigate',
-    requiredPath: '/progress',
+    targetId: 'nav-feedback',
     position: 'right',
-  },
-  {
-    id: 'progress-intro',
-    title: 'Track Your Journey 📊',
-    description: 'View your daily activity, track subjects, and monitor your improvement over time.',
-    icon: LuChartSpline,
-    position: 'center',
-  },
-  {
-    id: 'click-decks',
-    title: 'Explore Study Decks',
-    description: 'Click on Decks to discover and create custom study collections!',
-    icon: TbCards,
-    targetId: 'nav-decks',
-    requiredAction: 'navigate',
-    requiredPath: '/decks',
-    position: 'right',
-  },
-  {
-    id: 'decks-intro',
-    title: 'Study Decks 📚',
-    description: 'Browse community decks or create your own. Perfect for focused revision!',
-    icon: TbCards,
-    position: 'center',
-    tip: 'Pro tip: Save tricky questions to a deck for focused revision!',
-  },
-  {
-    id: 'gamification',
-    title: 'Level Up System 🎮',
-    description: 'Earn XP for correct answers, build streaks, climb ranks, and compete with friends!',
-    icon: LuTrophy,
-    position: 'center',
   },
   {
     id: 'complete',
-    title: 'You\'re All Set! 🚀',
-    description: 'You\'ve completed the tour! Start practicing to earn XP and climb the ranks. Good luck!',
+    title: 'You\'re All Set!',
+    description: 'You\'ve completed the tour! Start practicing and good luck!',
     icon: LuSparkles,
     position: 'center',
   },
@@ -275,9 +175,9 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
     if (isOpen) {
       setCurrentStep(0);
       setIsWaitingForAction(false);
-      // Navigate to practice page when tutorial starts
-      if (!location.pathname.includes('practice')) {
-        navigate('/practice');
+      // Navigate to practice session so sidebar with AI is visible
+      if (!location.pathname.includes('practice/session')) {
+        navigate('/practice/session');
       }
     }
   }, [isOpen]);
@@ -348,6 +248,13 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
       clearInterval(interval);
     };
   }, [isOpen, currentStep, updateTargetRect]);
+
+  // Close log tables when advancing to feedback step
+  useEffect(() => {
+    if (isOpen && step?.id === 'feedback-tab') {
+      window.dispatchEvent(new CustomEvent('tutorial-close-logtables'));
+    }
+  }, [isOpen, currentStep, step?.id]);
 
   // Check for required navigation
   useEffect(() => {
@@ -581,15 +488,17 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
           </div>
 
           {/* Tooltip card */}
-          <motion.div
-            className="tutorial-tooltip color-bg color-shadow"
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            style={getTooltipStyle()}
-            key={currentStep}
-          >
+          {step?.position === 'center' ? (
+            <div className="fixed inset-0 z-10 flex items-center justify-center pointer-events-none">
+              <div className="pointer-events-auto">
+                <motion.div
+                  className="tutorial-tooltip color-bg color-shadow"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  key={currentStep}
+                >
             {/* Close button */}
             <button className="tutorial-close color-txt-sub" onClick={handleSkip}>
               <LuX size={18} />
@@ -694,6 +603,123 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
               ))}
             </div>
           </motion.div>
+              </div>
+            </div>
+          ) : (
+            <motion.div
+              className="tutorial-tooltip color-bg color-shadow"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              style={getTooltipStyle()}
+              key={currentStep}
+            >
+            {/* Close button */}
+            <button className="tutorial-close color-txt-sub" onClick={handleSkip}>
+              <LuX size={18} />
+            </button>
+
+            {/* Step counter */}
+            <div className="tutorial-step-counter txt-sub color-txt-sub">
+              {currentStep + 1} / {tutorialSteps.length}
+            </div>
+
+            {/* Icon */}
+            <motion.div 
+              className="tutorial-icon-wrapper color-bg-accent"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', damping: 15, delay: 0.1 }}
+            >
+              <IconComponent size={28} className="color-txt-accent" />
+            </motion.div>
+
+            {/* Content */}
+            <motion.h3 
+              className="tutorial-title txt-heading color-txt-main"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              {step?.title}
+            </motion.h3>
+            <motion.p 
+              className="tutorial-description color-txt-sub"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              {step?.description}
+            </motion.p>
+
+            {/* Tip */}
+            {step?.tip && (
+              <motion.div 
+                className="tutorial-tip-box color-bg-grey-5"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <LuSparkles size={14} className="color-txt-accent" />
+                <span className="txt-sub color-txt-sub">{step.tip}</span>
+              </motion.div>
+            )}
+
+            {/* Action indicator */}
+            {isWaitingForAction && (
+              <motion.div 
+                className="tutorial-action-indicator color-bg-accent"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: [1, 1.02, 1] }}
+                transition={{ scale: { repeat: Infinity, duration: 1.5 } }}
+              >
+                <LuMousePointerClick size={16} className="color-txt-accent" />
+                <span className="txt-sub color-txt-accent">Click the highlighted element</span>
+              </motion.div>
+            )}
+
+            {/* Navigation */}
+            <div className="tutorial-nav">
+              {step?.showSkip && (
+                <button className="tutorial-skip-link txt-sub color-txt-sub" onClick={handleSkip}>
+                  Skip tutorial
+                </button>
+              )}
+              
+              {!isWaitingForAction && (
+                <motion.button 
+                  className="tutorial-next-btn blue-btn"
+                  onClick={handleNext}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {isLastStep ? (
+                    <>
+                      <span>Get Started</span>
+                      <LuRocket size={18} />
+                    </>
+                  ) : (
+                    <>
+                      <span>Next</span>
+                      <LuChevronRight size={18} />
+                    </>
+                  )}
+                </motion.button>
+              )}
+            </div>
+
+            {/* Step dots */}
+            <div className="tutorial-dots">
+              {tutorialSteps.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`tutorial-dot ${idx === currentStep ? 'active' : ''} ${idx < currentStep ? 'completed' : ''}`}
+                />
+              ))}
+            </div>
+          </motion.div>
+          )}
         </div>
       )}
     </AnimatePresence>
@@ -705,7 +731,7 @@ export function TutorialTriggerButton({ onClick }: { onClick: () => void }) {
   const navigate = useNavigate();
   
   const handleClick = () => {
-    navigate('/practice');
+    navigate('/practice/session');
     setTimeout(onClick, 150);
   };
   
