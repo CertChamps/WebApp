@@ -85,8 +85,6 @@ export default function useQuestions(props?: QuestionProps) {
         // props.filters is now Record<string, string[]>
         const localizedFilters: Record<string, string[]> = props?.filters || {};
 
-        const allMatchingLocations: QuestionLocation[] = [];
-
         const queryPromises = targetPaths.map(async (path) => {
             // Extract setId from path: "questions/certchamps/algebra" -> "certchamps"
             const segments = path.split('/');
@@ -145,6 +143,20 @@ export default function useQuestions(props?: QuestionProps) {
             console.error(error)
             throw error
         }
+    }
+
+    /** Fetch a question by id only; resolves path from collectionPaths. Use when you have only the question id (e.g. from a deck). */
+    const getQuestionById = async (id: string) => {
+        const rawPaths = props?.collectionPaths || ['questions/certchamps']
+        const targetPaths = await resolvePaths(rawPaths)
+        for (const p of targetPaths) {
+            const cached = allIdsCache.current?.find((x) => x.id === id && x.path === p)
+            if (cached) return fetchQuestion(id, p)
+            const ref = doc(db, p, id)
+            const snap = await getDoc(ref)
+            if (snap.exists()) return fetchQuestion(id, p)
+        }
+        throw new Error(`Could not locate question ${id} in any configured path`)
     }
 
     const loadQuestions = async (id?: string) => {
@@ -264,5 +276,5 @@ const fetchAllQuestions = async () => {
         clearCache();
     }, [props?.filters, props?.collectionPaths]);
 
-    return { getRandomQuestion, fetchQuestion, loadQuestions, toRoman, fetchAllQuestions, allQuestions, clearCache }
+    return { getRandomQuestion, fetchQuestion, getQuestionById, loadQuestions, toRoman, fetchAllQuestions, allQuestions, clearCache }
 }

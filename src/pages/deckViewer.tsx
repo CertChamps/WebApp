@@ -28,7 +28,7 @@ export default function DeckViewer () {
     const { id, "*": isPrev } = useParams()
     const isPreviewMode = isPrev === "preview"
     const { getDeckbyID , saveProgress, getUsersDeckSaveData, getFriendsAnswers, updateDeck, deleteDeck, removeUserFromDeck } = useDeckHandler()
-    const { fetchQuestion } = useQuestions()
+    const { getQuestionById } = useQuestions({ collectionPaths: ['questions/certchamps'] })
     const { fetchFriends } = useFetch()
     const navigate = useNavigate()
     const location = useLocation()
@@ -109,7 +109,7 @@ export default function DeckViewer () {
             start()
             // Map to array of promises
             const questionPromises = (deckData?.questions || []).map(async (qID: string) => {
-                return await fetchQuestion(qID);
+                return await getQuestionById(qID);
             });
 
             const questionData = await Promise.all(questionPromises);
@@ -312,6 +312,7 @@ export default function DeckViewer () {
                 questions={questions}
                 position={position}
                 setPosition={setPosition}
+                setCollectionPaths={() => {}}
                 nextQuestion={() => setPosition(prev => (prev < questions.length - 1 ? prev + 1 : 0))}
                 setFilters={() => {}}
                 deckmode

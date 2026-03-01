@@ -20,19 +20,11 @@ interface PostCardProps {
     onPressReplies?: () => void;
   }
 
-    const rankNames = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Master"];
-
-    const formatRankName = (rank?: number) => {
-        if (!rank || rank < 1) return "Unranked";
-        return rankNames[Math.min(rankNames.length - 1, rank - 1)] || "Unranked";
-    };
-  
-
   const PostCard: React.FC<PostCardProps> = ({
     userImage,
     username,
     userId,
-    rank,
+    rank: _rank,
     time,
     content,
     replyCount,

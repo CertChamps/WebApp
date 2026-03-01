@@ -89,7 +89,8 @@ export default function Replies(
 
               let sPath = post.storagePath as string | undefined;
               if (!sPath) {
-                const paperRef = doc(db, "questions", "leavingcert", "subjects", subj, "levels", lvl, "papers", post.paperId);
+                const paperId = post.paperId as string;
+                const paperRef = doc(db, "questions", "leavingcert", "subjects", subj, "levels", lvl, "papers", paperId);
                 const paperDoc = await getDoc(paperRef);
                 sPath = paperDoc.data()?.storagePath as string | undefined;
               }
@@ -98,7 +99,8 @@ export default function Replies(
               let regions = post.pageRegions as PdfRegion[] | null | undefined;
 
               if ((!pRange || !regions) && post.paperQuestionId) {
-                const qRef = doc(db, "questions", "leavingcert", "subjects", subj, "levels", lvl, "papers", post.paperId, "questions", post.paperQuestionId);
+                const paperId = post.paperId as string;
+                const qRef = doc(db, "questions", "leavingcert", "subjects", subj, "levels", lvl, "papers", paperId, "questions", post.paperQuestionId);
                 const qDoc = await getDoc(qRef);
                 const data = qDoc.data();
                 if (!pRange) {

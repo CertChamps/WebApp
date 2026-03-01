@@ -23,7 +23,6 @@ function PanelContent({
   setPendingSubTopicFilter,
   availableSubTopics,
   onApply,
-  onClose,
 }: {
   pendingTopicFilter: string[];
   setPendingTopicFilter: React.Dispatch<React.SetStateAction<string[]>>;

@@ -33,7 +33,7 @@ export default function QReplies() {
   const [newReply, setNewReply] = useState('');
 
   // For displaying the flashcard content
-  const { fetchQuestion} = useQuestions();
+  const { getQuestionById } = useQuestions({ collectionPaths: ['questions/certchamps'] });
   const [question, setQuestion] = useState<any>(null);
 
   // Contexts
@@ -88,7 +88,7 @@ export default function QReplies() {
       }
     };
 
-    setQuestion(fetchQuestion(flashcardId!));
+    getQuestionById(flashcardId!).then(setQuestion);
     fetchAuthor();
   }, [flashcardId, replyId]);
   // ==============================================================================

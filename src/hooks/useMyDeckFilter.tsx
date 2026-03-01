@@ -39,7 +39,7 @@ export default function useMyDeckFilter(userId?: string) {
 	const fuse = useRef<Fuse<Deck> | null>(null)
 
 	const { fetchUserDecks } = useFetch()
-	const { fetchQuestion } = useQuestions()
+	const { getQuestionById } = useQuestions({ collectionPaths: ['questions/certchamps'] })
 
 	// Fuse.js options
 	const fuseOptions = {
@@ -54,7 +54,7 @@ export default function useMyDeckFilter(userId?: string) {
 
 		try {
 			const questionPromises = deck.questions.slice(0, 10).map(async (qId: string) => {
-				return await fetchQuestion(qId)
+				return await getQuestionById(qId)
 			})
 			const questions = await Promise.all(questionPromises)
 

@@ -28,7 +28,7 @@ type DeckCardProps = {
 export default function DeckCard({ deck, questionId, onAddQuestion }: DeckCardProps) {
 	const { user } = useContext(UserContext)
 	const { fetchUsernameByID, fetchUserImage } = useFetch()
-	const { fetchQuestion } = useQuestions()
+	const { getQuestionById } = useQuestions({ collectionPaths: ['questions/certchamps'] })
 	const navigate = useNavigate()
 	const [creatorName, setCreatorName] = useState<string>('')
 	const [creatorImage, setCreatorImage] = useState<string | null>(null)
@@ -76,7 +76,7 @@ export default function DeckCard({ deck, questionId, onAddQuestion }: DeckCardPr
 
 			try {
 				const questionPromises = deck.questions.map(async (qId: string) => {
-					return await fetchQuestion(qId)
+					return await getQuestionById(qId)
 				})
 				const questions = await Promise.all(questionPromises)
 				

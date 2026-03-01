@@ -1,4 +1,4 @@
-import { LuArrowUpRight, LuClipboardList, LuBookOpen } from "react-icons/lu";
+import { LuArrowUpRight } from "react-icons/lu";
 import type { PaperQuestion } from "../../hooks/useExamPapers";
 
 type PaperQuestionRegionPanelProps = {
@@ -42,11 +42,11 @@ export function isStartOfQuestion(question: PaperQuestion, index: number): boole
 export default function PaperQuestionRegionPanel({
   question,
   index,
-  paperLabel,
+  paperLabel: _paperLabel,
   onGoToQuestion,
-  hasMarkingScheme,
-  onOpenMarkingScheme,
-  onOpenLogTables,
+  hasMarkingScheme: _hasMarkingScheme,
+  onOpenMarkingScheme: _onOpenMarkingScheme,
+  onOpenLogTables: _onOpenLogTables,
   compact = false,
 }: PaperQuestionRegionPanelProps) {
   const rawName = question.questionName || `Question ${index + 1}`;

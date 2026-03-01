@@ -7,7 +7,6 @@ import LogTables, { type LogTablesHandle } from "./logtables";
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 400;
 const DEFAULT_WIDTH = 520;
-const DEFAULT_HEIGHT = 70;
 
 const BOTTOM_BAR_CLEARANCE = 72; // Leave space for the bottom floating bar (Log tables, Full paper, etc.)
 

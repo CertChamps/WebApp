@@ -66,7 +66,7 @@ function defaultPaperId(year: number, label: string): string {
 
 // Firestore requires document paths to have an even number of segments.
 // So we use subcollections "subjects" and "levels": leavingcert/subjects/maths, subjects/maths/levels/higher.
-async function ensureParentStructure(
+async function _ensureParentStructure(
   subject: SubjectId,
   level: LevelId
 ): Promise<void> {
@@ -302,11 +302,13 @@ export default function AddQuestions() {
       );
       return;
     }
+    const pathTuple = pathSegments as [string, ...string[]];
 
     setIsUploading(true);
     setUploadProgress("Starting upload...");
 
     try {
+      await _ensureParentStructure(subject, level);
       for (let i = 0; i < toUpload.length; i++) {
         const row = toUpload[i];
         const docId =
@@ -353,7 +355,7 @@ export default function AddQuestions() {
           start: q.pageRange[0],
           end: q.pageRange[1],
         }));
-        const parentRef = doc(db, ...pathSegments, docId);
+        const parentRef = doc(collection(db, ...pathTuple), docId);
 
         await setDoc(
           parentRef,
@@ -373,10 +375,7 @@ export default function AddQuestions() {
               ? String(q.id).trim().replace(/\//g, "-")
               : `q${idx + 1}`;
             const questionRef = doc(
-              db,
-              ...pathSegments,
-              docId,
-              "questions",
+              collection(db, ...pathTuple, docId, "questions"),
               questionDocId
             );
             batch.set(questionRef, {
@@ -427,6 +426,7 @@ export default function AddQuestions() {
       );
       return;
     }
+    const pathTuple = pathSegments as [string, ...string[]];
 
     const meta = pendingPaperMetadata ?? {
       paperId: slugify(file.name.replace(/\.pdf$/i, "")) || "paper",
@@ -440,6 +440,7 @@ export default function AddQuestions() {
     setUploadProgress("Uploading PDF...");
 
     try {
+      await _ensureParentStructure(subject, level);
       const filename = meta.paperId.endsWith(".pdf")
         ? meta.paperId
         : `${meta.paperId}.pdf`;
@@ -455,7 +456,7 @@ export default function AddQuestions() {
         return { start: min, end: max };
       });
 
-      const parentRef = doc(db, ...pathSegments, docId);
+      const parentRef = doc(collection(db, ...pathTuple), docId);
       await setDoc(
         parentRef,
         {
@@ -479,10 +480,7 @@ export default function AddQuestions() {
             Math.max(...pages),
           ];
           const questionRef = doc(
-            db,
-            ...pathSegments,
-            docId,
-            "questions",
+            collection(db, ...pathTuple, docId, "questions"),
             questionDocId
           );
           const logTablePage = typeof r.log_table_page === "number" ? r.log_table_page : null;
