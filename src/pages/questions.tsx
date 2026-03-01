@@ -26,6 +26,7 @@ import { TimerProvider } from "../context/TimerContext";
 import { TimerFloatingWidget } from "../components/TimerFloatingWidget";
 import PastPaperFilterPanel from "../components/questions/PastPaperFilterPanel";
 import PaperProGate from "../components/PaperProGate";
+import Filter from "../components/filter";
 
 // Style Imports
 import "../styles/questions.css";
@@ -88,6 +89,7 @@ export default function Questions() {
   const [showSearch, setShowSearch] = useState(false);
   const [randomise, setRandomise] = useState(false);
   const [showPastPaperFilter, setShowPastPaperFilter] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
   const [selectedSubTopics, setSelectedSubTopics] = useState<string[]>([]);
 
   const [mode, setMode] = useState<QuestionsMode>(initialMode);
@@ -118,6 +120,7 @@ export default function Questions() {
     const { loadQuestions } = useQuestions({
         setQuestions,
         collectionPaths,
+        filters,
     });
     const {
         papers,
@@ -191,6 +194,40 @@ export default function Questions() {
         ? String(currentQuestion.properties.markingScheme)
         : "";
     const msYear = msCode.length >= 2 ? msCode.substring(0, 2) : (mode === "pastpaper" ? "25" : "");
+
+    // ---- Cross-paper helpers for topic filtering ----
+
+    /** Given a list of subtopic strings, find the first paper (starting at `startIdx`, searching forward)
+     *  that contains at least one matching question. Returns { paper, questions, filtered } or null. */
+    const findPaperWithTopics = useCallback(
+        async (
+            subTopics: string[],
+            startIdx: number,
+            direction: "forward" | "backward" = "forward"
+        ): Promise<{ paper: ExamPaper; questions: PaperQuestion[]; filtered: PaperQuestion[] } | null> => {
+            if (papers.length === 0 || !getPaperQuestions) return null;
+            const tagSet = new Set(subTopics.map((s) => normTag(s)));
+            const step = direction === "forward" ? 1 : -1;
+            for (
+                let i = startIdx;
+                direction === "forward" ? i < papers.length : i >= 0;
+                i += step
+            ) {
+                const p = papers[i];
+                try {
+                    const list = await getPaperQuestions(p);
+                    if (list.length === 0) continue;
+                    if (subTopics.length === 0) return { paper: p, questions: list, filtered: list };
+                    const filtered = list.filter((q) =>
+                        q.tags?.some((tag) => tagSet.has(normTag(String(tag))))
+                    );
+                    if (filtered.length > 0) return { paper: p, questions: list, filtered };
+                } catch { /* skip broken papers */ }
+            }
+            return null;
+        },
+        [papers, getPaperQuestions]
+    );
 
     //==============================================================================================//
 
@@ -313,8 +350,13 @@ export default function Questions() {
                             }
                         }
                     } else {
+                        // Apply active subtopic filter so we scroll to first matching question
+                        const subSet = new Set(selectedSubTopics.map((s) => normTag(s)));
+                        const filtered = selectedSubTopics.length === 0
+                            ? list
+                            : list.filter((qq) => qq.tags?.some((tag) => subSet.has(normTag(String(tag)))));
                         setPaperQuestionPosition(1);
-                        const firstQ = list[0];
+                        const firstQ = filtered[0] ?? list[0];
                         const firstPage = firstQ?.pageRegions?.[0]?.page ?? firstQ?.pageRange?.[0] ?? null;
                         setScrollToPage(firstPage);
                     }
@@ -334,15 +376,34 @@ export default function Questions() {
         };
     }, [selectedPaper, getPaperQuestions, selectedSubTopics]);
 
-    // Clamp past-paper position when filter shrinks the list
+    // Clamp past-paper position when filter shrinks the list.
+    // If no questions match in the current paper, auto-switch to a paper that has matches.
     useEffect(() => {
-        if (filteredPaperQuestions.length === 0) return;
-        if (paperQuestionPosition > filteredPaperQuestions.length) {
-            setPaperQuestionPosition(1);
-            const q = filteredPaperQuestions[0];
-            if (q) setScrollToPage(q?.pageRegions?.[0]?.page ?? q?.pageRange?.[0] ?? null);
+        if (filteredPaperQuestions.length > 0) {
+            if (paperQuestionPosition > filteredPaperQuestions.length) {
+                setPaperQuestionPosition(1);
+                const q = filteredPaperQuestions[0];
+                if (q) setScrollToPage(q?.pageRegions?.[0]?.page ?? q?.pageRange?.[0] ?? null);
+            }
+            return;
         }
-    }, [filteredPaperQuestions.length, paperQuestionPosition]);
+        // Current paper has 0 filtered questions — find the nearest paper that does
+        if (selectedSubTopics.length === 0 || papers.length === 0 || paperQuestions.length === 0) return;
+        let searching = true;
+        (async () => {
+            const curIdx = selectedPaper ? papers.findIndex((p) => p.id === selectedPaper.id) : 0;
+            // Search forward first (newer papers are at lower indices), then backward
+            const result =
+                (await findPaperWithTopics(selectedSubTopics, curIdx + 1, "forward")) ??
+                (await findPaperWithTopics(selectedSubTopics, curIdx - 1, "backward"));
+            if (!searching) return;
+            if (result) {
+                pendingRandomRef.current = { questionId: result.filtered[0].id };
+                setSelectedPaper(result.paper);
+            }
+        })();
+        return () => { searching = false; };
+    }, [filteredPaperQuestions.length, paperQuestionPosition, selectedSubTopics, selectedPaper, papers, paperQuestions.length]);
 
     // Do NOT sync PDF page/scroll to question — question only changes via arrows or "Open question".
 
@@ -616,8 +677,8 @@ export default function Questions() {
                             ? "Failed to load"
                             : filteredPaperQuestions.length > 0
                                 ? filteredPaperQuestions[paperQuestionPosition - 1]?.questionName ?? ""
-                                : paperQuestions.length > 0
-                                    ? "No questions match filter"
+                                : selectedSubTopics.length > 0
+                                    ? "Searching for matching paper…"
                                     : selectedPaper?.label ?? "Select a paper"
                     : undefined;
                 const centerLabel = overrideTitle ?? currentQuestion?.properties?.name ?? "...";
@@ -627,14 +688,25 @@ export default function Questions() {
                     : formatTags(currentQuestion?.properties?.tags);
 
                 const onPrev = mode === "pastpaper"
-                    ? () => {
+                    ? async () => {
                         if (filteredPaperQuestions.length > 0 && paperQuestionPosition > 1) {
                             setPaperQuestionPosition((p) => p - 1);
                             const prevQ = filteredPaperQuestions[paperQuestionPosition - 2];
                             setScrollToPage(prevQ?.pageRegions?.[0]?.page ?? prevQ?.pageRange?.[0] ?? null);
                         } else {
+                            // Cross-paper: find previous paper with matching topics
                             const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
-                            if (idx > 0) setSelectedPaper(papers[idx - 1]);
+                            if (idx <= 0) return;
+                            if (selectedSubTopics.length === 0) {
+                                setSelectedPaper(papers[idx - 1]);
+                                return;
+                            }
+                            const result = await findPaperWithTopics(selectedSubTopics, idx - 1, "backward");
+                            if (result) {
+                                // Jump to last filtered question of that paper
+                                pendingRandomRef.current = { questionId: result.filtered[result.filtered.length - 1].id };
+                                setSelectedPaper(result.paper);
+                            }
                         }
                     }
                     : previousQuestion;
@@ -642,29 +714,46 @@ export default function Questions() {
                 const onNext = mode === "pastpaper"
                     ? async () => {
                         if (randomise) {
+                            // Random: build a pool of all papers that have matching questions
+                            const tagSet = selectedSubTopics.length > 0
+                                ? new Set(selectedSubTopics.map((s) => normTag(s)))
+                                : null;
                             const mathsHigherPapers = papers.filter(
                                 (p: ExamPaper) => (p.subject ?? "maths") === "maths" && (p.level ?? "higher") === "higher"
                             );
                             if (mathsHigherPapers.length === 0) return;
-                            const randomPaper = mathsHigherPapers[Math.floor(Math.random() * mathsHigherPapers.length)];
-                            const list = await getPaperQuestions(randomPaper);
-                            if (list.length === 0) return;
-                            const filtered = selectedSubTopics.length === 0
-                                ? list
-                                : list.filter((q) =>
-                                    q.tags?.some((tag) =>
-                                        selectedSubTopics.some((st) => normTag(String(tag)) === normTag(st))
-                                    )
-                                  );
-                            if (filtered.length === 0) return;
-                            const randomPos = 1 + Math.floor(Math.random() * filtered.length);
-                            const q = filtered[randomPos - 1];
-                            if (randomPaper.id === selectedPaper?.id) {
-                                setPaperQuestionPosition(randomPos);
-                                setScrollToPage(q?.pageRegions?.[0]?.page ?? q?.pageRange?.[0] ?? null);
-                            } else {
-                                pendingRandomRef.current = { questionId: q.id };
-                                setSelectedPaper(randomPaper);
+
+                            // Try up to 10 random papers to find one with matching questions
+                            const tried = new Set<string>();
+                            for (let attempt = 0; attempt < Math.min(10, mathsHigherPapers.length); attempt++) {
+                                const randomPaper = mathsHigherPapers[Math.floor(Math.random() * mathsHigherPapers.length)];
+                                if (tried.has(randomPaper.id)) continue;
+                                tried.add(randomPaper.id);
+                                const list = await getPaperQuestions(randomPaper);
+                                if (list.length === 0) continue;
+                                const filtered = tagSet
+                                    ? list.filter((q) =>
+                                        q.tags?.some((tag) => tagSet.has(normTag(String(tag))))
+                                      )
+                                    : list;
+                                if (filtered.length === 0) continue;
+                                const randomPos = 1 + Math.floor(Math.random() * filtered.length);
+                                const q = filtered[randomPos - 1];
+                                if (randomPaper.id === selectedPaper?.id) {
+                                    setPaperQuestionPosition(randomPos);
+                                    setScrollToPage(q?.pageRegions?.[0]?.page ?? q?.pageRange?.[0] ?? null);
+                                } else {
+                                    pendingRandomRef.current = { questionId: q.id };
+                                    setSelectedPaper(randomPaper);
+                                }
+                                return;
+                            }
+                            // Fallback: scan all papers sequentially
+                            const result = await findPaperWithTopics(selectedSubTopics, 0, "forward");
+                            if (result) {
+                                const rIdx = Math.floor(Math.random() * result.filtered.length);
+                                pendingRandomRef.current = { questionId: result.filtered[rIdx].id };
+                                setSelectedPaper(result.paper);
                             }
                         } else {
                             if (filteredPaperQuestions.length > 0 && paperQuestionPosition < filteredPaperQuestions.length) {
@@ -672,8 +761,30 @@ export default function Questions() {
                                 const nextQ = filteredPaperQuestions[paperQuestionPosition];
                                 setScrollToPage(nextQ?.pageRegions?.[0]?.page ?? nextQ?.pageRange?.[0] ?? null);
                             } else {
+                                // Cross-paper: find next paper with matching topics
                                 const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.id === selectedPaper.id) : -1;
-                                if (idx >= 0 && idx < papers.length - 1) setSelectedPaper(papers[idx + 1]);
+                                if (idx < 0 || idx >= papers.length - 1) {
+                                    // Wrap around to first paper if at end
+                                    if (selectedSubTopics.length > 0) {
+                                        const result = await findPaperWithTopics(selectedSubTopics, 0, "forward");
+                                        if (result) {
+                                            pendingRandomRef.current = { questionId: result.filtered[0].id };
+                                            setSelectedPaper(result.paper);
+                                        }
+                                    }
+                                    return;
+                                }
+                                if (selectedSubTopics.length === 0) {
+                                    setSelectedPaper(papers[idx + 1]);
+                                    return;
+                                }
+                                const result =
+                                    (await findPaperWithTopics(selectedSubTopics, idx + 1, "forward")) ??
+                                    (await findPaperWithTopics(selectedSubTopics, 0, "forward")); // wrap
+                                if (result) {
+                                    pendingRandomRef.current = { questionId: result.filtered[0].id };
+                                    setSelectedPaper(result.paper);
+                                }
                             }
                         }
                     }
@@ -760,20 +871,38 @@ export default function Questions() {
                                             open={showPastPaperFilter}
                                             onClose={() => setShowPastPaperFilter(false)}
                                             selectedSubTopics={selectedSubTopics}
-                                            onApply={(subTopics) => {
+                                            onApply={async (subTopics) => {
                                                 setSelectedSubTopics(subTopics);
                                                 setShowPastPaperFilter(false);
-                                                setPaperQuestionPosition(1);
-                                                if (paperQuestions.length > 0 && subTopics.length > 0) {
-                                                    const set = new Set(subTopics.map((s) => normTag(s)));
-                                                    const filtered = paperQuestions.filter((q) =>
-                                                        q.tags?.some((tag) => set.has(normTag(String(tag))))
-                                                    );
-                                                    const first = filtered[0];
-                                                    if (first) setScrollToPage(first?.pageRegions?.[0]?.page ?? first?.pageRange?.[0] ?? null);
-                                                } else if (paperQuestions.length > 0) {
-                                                    const first = paperQuestions[0];
+
+                                                if (subTopics.length === 0) {
+                                                    // Clearing filter — stay on current paper
+                                                    setPaperQuestionPosition(1);
+                                                    if (paperQuestions.length > 0) {
+                                                        const first = paperQuestions[0];
+                                                        setScrollToPage(first?.pageRegions?.[0]?.page ?? first?.pageRange?.[0] ?? null);
+                                                    }
+                                                    return;
+                                                }
+
+                                                // Check if current paper has matching questions
+                                                const tagSet = new Set(subTopics.map((s) => normTag(s)));
+                                                const localFiltered = paperQuestions.filter((q) =>
+                                                    q.tags?.some((tag) => tagSet.has(normTag(String(tag))))
+                                                );
+
+                                                if (localFiltered.length > 0) {
+                                                    // Current paper has matches — jump to first match
+                                                    setPaperQuestionPosition(1);
+                                                    const first = localFiltered[0];
                                                     setScrollToPage(first?.pageRegions?.[0]?.page ?? first?.pageRange?.[0] ?? null);
+                                                } else {
+                                                    // Current paper has NO matches — search ALL papers (newest first)
+                                                    const result = await findPaperWithTopics(subTopics, 0, "forward");
+                                                    if (result) {
+                                                        pendingRandomRef.current = { questionId: result.filtered[0].id };
+                                                        setSelectedPaper(result.paper);
+                                                    }
                                                 }
                                             }}
                                         />
@@ -782,7 +911,8 @@ export default function Questions() {
                                     <button
                                         type="button"
                                         aria-label="Filter questions by topic"
-                                        className="question-selector-button pointer-events-auto"
+                                        className={`question-selector-button pointer-events-auto ${Object.values(filters).some(v => v.length > 0) ? "question-selector-button-active" : ""}`}
+                                        onClick={() => setShowFilter(true)}
                                     >
                                         <LuFilter size={18} strokeWidth={2} />
                                         <span>filter</span>
@@ -1176,6 +1306,27 @@ export default function Questions() {
                         }}
                         file={logTablesBlob}
                     />,
+                    document.body
+                )}
+
+            {showFilter && mode !== "pastpaper" &&
+                typeof document !== "undefined" &&
+                createPortal(
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-black/50" onClick={() => setShowFilter(false)} aria-hidden="true" />
+                        <div className="relative z-10 w-full max-w-md h-[80vh]">
+                            <Filter
+                                onApply={(tags, paths) => {
+                                    setFilters(tags);
+                                    if (paths.length > 0) setCollectionPaths(paths);
+                                    setQuestions([]);
+                                    setPosition(0);
+                                    setShowFilter(false);
+                                }}
+                                onClose={() => setShowFilter(false)}
+                            />
+                        </div>
+                    </div>,
                     document.body
                 )}
 

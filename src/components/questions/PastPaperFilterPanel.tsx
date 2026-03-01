@@ -150,7 +150,22 @@ export default function PastPaperFilterPanel({
   }, [open, selectedSubTopics]);
 
   const handleApply = () => {
-    onApply(pendingSubTopicFilter);
+    // For each selected main topic: if specific subtopics were picked, use those;
+    // otherwise include ALL subtopics of that main topic.
+    const effectiveSubTopics: string[] = [];
+    pendingTopicFilter.forEach((topic) => {
+      const allSubsForTopic = TOPIC_TO_SUB_TOPICS[topic] ?? [];
+      const explicitlySelected = pendingSubTopicFilter.filter((st) =>
+        allSubsForTopic.includes(st)
+      );
+      if (explicitlySelected.length > 0) {
+        effectiveSubTopics.push(...explicitlySelected);
+      } else {
+        // No explicit subtopics → include every subtopic of this main topic
+        effectiveSubTopics.push(...allSubsForTopic);
+      }
+    });
+    onApply([...new Set(effectiveSubTopics)]);
     onClose();
   };
 
@@ -177,10 +192,7 @@ export default function PastPaperFilterPanel({
           pendingSubTopicFilter={pendingSubTopicFilter}
           setPendingSubTopicFilter={setPendingSubTopicFilter}
           availableSubTopics={availableSubTopics}
-          onApply={() => {
-            onApply(pendingSubTopicFilter);
-            onClose();
-          }}
+          onApply={handleApply}
         />
       </div>
     );
