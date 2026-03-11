@@ -19,22 +19,74 @@ const HOLD_TO_STRAIGHTEN_MS = 600;
 /** Call with a function that returns the current drawing as PNG data URL, or null. Called on mount, cleared on unmount. */
 export type RegisterDrawingSnapshot = (getSnapshot: (() => string | null) | null) => void;
 
+export type DrawingStroke = Stroke;
+
 type DrawingCanvasProps = {
 	onClose?: () => void;
 	/** Register a getter for the current canvas image (so e.g. AI can include it). */
 	registerDrawingSnapshot?: RegisterDrawingSnapshot;
+	/** Pre-populate canvas with previously saved strokes. */
+	initialStrokes?: Stroke[] | null;
+	/** Called (debounced) when strokes change (stroke completed, erased, or cleared). */
+	onStrokesChange?: (strokes: Stroke[]) => void;
 };
 
-export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: DrawingCanvasProps) {
+export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initialStrokes, onStrokesChange }: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const colorSampleRef = useRef<HTMLDivElement>(null);
 	const gridColorSampleRef = useRef<HTMLDivElement>(null);
 
-	const [strokes, setStrokes] = useState<Stroke[]>([]);
+	const [strokes, setStrokes] = useState<Stroke[]>(initialStrokes ?? []);
 	const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
 	const [pan, setPan] = useState({ x: 0, y: 0 });
 	const [scale, setScale] = useState(1);
+
+	// Sync strokes when initialStrokes changes (question navigation)
+	const prevInitialRef = useRef(initialStrokes);
+	useEffect(() => {
+		if (prevInitialRef.current !== initialStrokes) {
+			prevInitialRef.current = initialStrokes;
+			setStrokes(initialStrokes ?? []);
+			setCurrentStroke(null);
+			setPan({ x: 0, y: 0 });
+			setScale(1);
+		}
+	}, [initialStrokes]);
+
+	// Debounced callback when strokes change
+	const onStrokesChangeRef = useRef(onStrokesChange);
+	onStrokesChangeRef.current = onStrokesChange;
+	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const strokesRef = useRef(strokes);
+	strokesRef.current = strokes;
+	const isInitialMountRef = useRef(true);
+	useEffect(() => {
+		// Skip the initial render (don't fire callback for initialStrokes load)
+		if (isInitialMountRef.current) {
+			isInitialMountRef.current = false;
+			return;
+		}
+		if (!onStrokesChangeRef.current) return;
+		if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+		const s = strokes; // capture current value
+		debounceTimerRef.current = setTimeout(() => {
+			debounceTimerRef.current = null;
+			onStrokesChangeRef.current?.(s);
+		}, 2000);
+		return () => { if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current); };
+	}, [strokes]);
+
+	// Flush pending save on unmount so navigating away doesn't lose work
+	useEffect(() => {
+		return () => {
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
+				debounceTimerRef.current = null;
+				onStrokesChangeRef.current?.(strokesRef.current);
+			}
+		};
+	}, []);
 	const [tool, setTool] = useState<"pen" | "eraser">("pen");
 	const [gridMode, setGridMode] = useState<GridMode>("lines");
 	const [strokeColor, setStrokeColor] = useState("");
@@ -419,6 +471,8 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot }: Draw
 	const clearCanvas = useCallback(() => {
 		setStrokes([]);
 		setCurrentStroke(null);
+		// Immediately notify parent of clear (bypass debounce)
+		onStrokesChangeRef.current?.([]);
 	}, []);
 
 	const isEmbedded = onClose == null;
