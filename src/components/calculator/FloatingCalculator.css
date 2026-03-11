@@ -1,0 +1,371 @@
+/* ─────────────────────────────────────────────────────────
+   Casio fx-83GT CW  –  Pixel-perfect emulator skin
+   ───────────────────────────────────────────────────────── */
+
+/* ── wrapper ────────────────────────────────────────────── */
+.casio-emu {
+  --emu-body: #1a1a1a;
+  --emu-border: #2a2a2a;
+  --emu-lcd: #c8d4b8;
+  --emu-lcd-text: #2a3a2a;
+  --emu-key-dark: #2d2d2d;
+  --emu-key-num: #9e9e9e;
+  --emu-key-txt: #ffffff;
+  --emu-key-num-txt: #1a1a1a;
+  --emu-orange: #e8821a;
+  --emu-blue: #4a9eff;
+  --emu-font: 'Roboto', 'Arial', sans-serif;
+
+  font-family: var(--emu-font);
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #252525 0%, var(--emu-body) 8%, var(--emu-body) 100%);
+  border-radius: 24px;
+  border: 1.5px solid var(--emu-border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+  overflow: hidden;
+  color: #fff;
+  position: relative;
+}
+
+/* ── branding ───────────────────────────────────────────── */
+.casio-emu__brand {
+  padding: 3.5% 5% 1%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.casio-emu__brand-casio {
+  font-size: clamp(13px, 5%, 19px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #fff;
+  text-transform: uppercase;
+}
+.casio-emu__brand-model {
+  font-size: clamp(9px, 3.2%, 13px);
+  font-weight: 400;
+  color: rgba(255,255,255,0.75);
+  letter-spacing: 0.04em;
+}
+
+/* ── LCD screen ─────────────────────────────────────────── */
+.casio-emu__screen-wrap {
+  padding: 0 5% 1.5%;
+  flex-shrink: 0;
+}
+.casio-emu__screen {
+  background: var(--emu-lcd);
+  border: 2px solid #555;
+  border-radius: 6px;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+  padding: 6% 5%;
+  aspect-ratio: 2.6;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ── LCD home-screen grid ───────────────────────────────── */
+.casio-emu__lcd-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4%;
+  width: 100%;
+  height: 100%;
+}
+.casio-emu__lcd-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4%;
+  border-radius: 4px;
+  border: 1.5px solid transparent;
+}
+.casio-emu__lcd-cell--active {
+  border-color: var(--emu-lcd-text);
+  background: rgba(42,58,42,0.12);
+}
+.casio-emu__lcd-icon {
+  font-size: clamp(10px, 3.8%, 18px);
+  line-height: 1;
+  color: var(--emu-lcd-text);
+}
+.casio-emu__lcd-label {
+  font-size: clamp(6px, 2.4%, 10px);
+  font-weight: 600;
+  color: var(--emu-lcd-text);
+  text-align: center;
+  line-height: 1.1;
+}
+
+/* ── CLASSWIZ label ─────────────────────────────────────── */
+.casio-emu__classwiz {
+  text-align: center;
+  font-size: clamp(7px, 2.6%, 11px);
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  color: rgba(200,200,200,0.7);
+  text-transform: uppercase;
+  padding: 0.5% 0 0.5%;
+  flex-shrink: 0;
+}
+
+/* ── button area ────────────────────────────────────────── */
+.casio-emu__keys {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 4.5% 3.5%;
+  gap: 1.4%;
+  justify-content: flex-start;
+}
+
+/* ── system row (ON, HOME, SETTINGS, D-pad) ─────────── */
+.casio-emu__row-system {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8%;
+  margin-bottom: 0.5%;
+}
+.casio-emu__sys-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+.casio-emu__sys-pills {
+  display: flex;
+  gap: 6%;
+}
+.casio-emu__pill {
+  background: var(--emu-key-dark);
+  color: var(--emu-key-txt);
+  font-size: clamp(6px, 2.2%, 10px);
+  font-weight: 600;
+  padding: 3px 8%;
+  border-radius: 8px;
+  border: none;
+  cursor: default;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  white-space: nowrap;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.3;
+}
+.casio-emu__settings-label {
+  font-size: clamp(5px, 1.7%, 7px);
+  color: var(--emu-blue);
+  padding-left: 2px;
+  margin-top: -1px;
+}
+
+/* ── d-pad cluster ──────────────────────────────────────── */
+.casio-emu__dpad-area {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.casio-emu__dpad {
+  position: relative;
+  width: clamp(52px, 18%, 76px);
+  aspect-ratio: 1;
+  flex-shrink: 0;
+}
+.casio-emu__dpad-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #222;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+.casio-emu__dpad-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28%;
+  height: 28%;
+  border-radius: 50%;
+  background: #3a3a3a;
+  border: 1px solid #444;
+  z-index: 2;
+}
+.casio-emu__dpad-btn {
+  position: absolute;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.85);
+  font-size: clamp(7px, 2.6%, 12px);
+  cursor: default;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.casio-emu__dpad-btn--up    { top: 4%;  left: 50%; transform: translateX(-50%); width: 30%; height: 25%; }
+.casio-emu__dpad-btn--down  { bottom: 4%; left: 50%; transform: translateX(-50%); width: 30%; height: 25%; }
+.casio-emu__dpad-btn--left  { left: 4%;  top: 50%; transform: translateY(-50%); width: 25%; height: 30%; }
+.casio-emu__dpad-btn--right { right: 4%; top: 50%; transform: translateY(-50%); width: 25%; height: 30%; }
+
+/* d-pad side chevrons */
+.casio-emu__dpad-chevrons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.casio-emu__chevron-btn {
+  background: var(--emu-key-dark);
+  border: none;
+  color: rgba(255,255,255,0.7);
+  font-size: clamp(7px, 2.2%, 10px);
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: default;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  line-height: 1;
+}
+
+/* ── generic key row ────────────────────────────────────── */
+.casio-emu__row {
+  display: grid;
+  gap: 3.2%;
+  align-items: end;
+}
+.casio-emu__row--mode  { grid-template-columns: repeat(5, 1fr); }
+.casio-emu__row--func  { grid-template-columns: repeat(6, 1fr); }
+.casio-emu__row--trig  { grid-template-columns: repeat(6, 1fr); }
+.casio-emu__row--num5  { grid-template-columns: repeat(5, 1fr); }
+.casio-emu__row--num4  { grid-template-columns: repeat(4, 1fr); }
+.casio-emu__row--num4w { grid-template-columns: repeat(4, 1fr); }
+.casio-emu__row--bot   { grid-template-columns: 1fr 1fr 1fr 1fr 0.8fr 1.25fr; }
+
+/* ── key cell (label above + button) ────────────────────── */
+.casio-emu__kcell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+/* ── secondary labels above keys ────────────────────────── */
+.casio-emu__sec {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  height: clamp(7px, 2.2%, 11px);
+  line-height: 1;
+  white-space: nowrap;
+  min-width: 0;
+  overflow: visible;
+}
+.casio-emu__sec-shift {
+  font-size: clamp(5.5px, 1.9%, 8px);
+  font-weight: 600;
+  color: var(--emu-blue);
+}
+.casio-emu__sec-alpha {
+  font-size: clamp(5.5px, 1.9%, 8px);
+  font-weight: 600;
+  color: var(--emu-orange);
+}
+
+/* ── button base ────────────────────────────────────────── */
+.casio-emu__btn {
+  width: 100%;
+  aspect-ratio: 1.3;
+  border: none;
+  border-radius: 5px;
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--emu-font);
+  font-size: clamp(8px, 2.8%, 13px);
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  transition: transform 0.04s ease;
+  padding: 0 2px;
+  line-height: 1;
+  position: relative;
+}
+.casio-emu__btn:active {
+  transform: scale(0.97);
+}
+
+/* ── button variants ────────────────────────────────────── */
+.casio-emu__btn--dark {
+  background: var(--emu-key-dark);
+  color: var(--emu-key-txt);
+}
+.casio-emu__btn--num {
+  background: var(--emu-key-num);
+  color: var(--emu-key-num-txt);
+  font-weight: 700;
+  font-size: clamp(10px, 3.4%, 16px);
+}
+.casio-emu__btn--shift {
+  background: var(--emu-orange);
+  color: var(--emu-key-txt);
+  font-weight: 700;
+}
+.casio-emu__btn--wide {
+  aspect-ratio: auto;
+  padding: 6% 0;
+}
+.casio-emu__btn--exe {
+  background: var(--emu-key-dark);
+  color: var(--emu-key-txt);
+  font-weight: 700;
+}
+.casio-emu__btn--ac {
+  background: var(--emu-key-dark);
+  color: var(--emu-key-txt);
+}
+
+/* ── number rows: taller keys ───────────────────────────── */
+.casio-emu__row--num4 .casio-emu__btn--num,
+.casio-emu__row--num4w .casio-emu__btn--num {
+  aspect-ratio: 1.1;
+}
+
+/* ── special key labels ─────────────────────────────────── */
+.casio-emu__btn sup {
+  font-size: 0.65em;
+  vertical-align: super;
+  line-height: 0;
+}
+.casio-emu__btn sub {
+  font-size: 0.65em;
+  vertical-align: sub;
+  line-height: 0;
+}
+
+/* ── top-left fraction template icon ────────────────────── */
+.casio-emu__frac-icon {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0px;
+  font-size: 0.7em;
+  line-height: 0.9;
+}
+.casio-emu__frac-icon span {
+  display: block;
+}
+.casio-emu__frac-icon .frac-bar {
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+}

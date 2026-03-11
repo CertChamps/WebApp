@@ -15,12 +15,14 @@ import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas, { type RegisterDrawingSnapshot } from "../components/questions/DrawingCanvas";
+import { useCanvasStorage } from "../hooks/useCanvasStorage";
 import RenderMath from "../components/math/mathdisplay";
 import { AnimatePresence, motion } from "framer-motion";
 import PaperPdfPlaceholder, { getQuestionScrollOffset } from "../components/questions/PaperPdfPlaceholder";
 import PaperQuestionRegionPanel from "../components/questions/PaperQuestionRegionPanel";
 import CroppedPdfRegions from "../components/questions/CroppedPdfRegions";
 import FloatingLogTables from "../components/FloatingLogTables";
+import FloatingCalculator from "../components/calculator/FloatingCalculator";
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
 import { TimerProvider } from "../context/TimerContext";
 import { TimerFloatingWidget } from "../components/TimerFloatingWidget";
@@ -113,6 +115,11 @@ export default function Questions() {
         getDrawingSnapshotRef.current = getSnapshot;
     }, []);
     const getDrawingSnapshot = useCallback(() => getDrawingSnapshotRef.current?.() ?? null, []);
+
+    // ---- Canvas persistence (state declared here; effects placed after derived vars below) ----
+    const { saveCanvas, loadCanvas } = useCanvasStorage();
+    const [canvasStrokes, setCanvasStrokes] = useState<any[]>([]);
+    const [canvasLoading, setCanvasLoading] = useState(false);
     //===============================================================================================//
 
     //==============================================> Hooks <========================================//
@@ -145,6 +152,7 @@ export default function Questions() {
     const [markingSchemeQuestionIndex, setMarkingSchemeQuestionIndex] = useState<number | null>(null);
     const [logTablesQuestionIndex, setLogTablesQuestionIndex] = useState<number | null>(null);
     const [showLogTables, setShowLogTables] = useState(false);
+    const [showCalculator, setShowCalculator] = useState(false);
     const [paperDocumentLoaded, setPaperDocumentLoaded] = useState(false);
     const [paperNumPages, setPaperNumPages] = useState(0);
     const [logTablesBlob, setLogTablesBlob] = useState<Blob | null>(null);
@@ -193,6 +201,48 @@ export default function Questions() {
         ? String(currentQuestion.properties.markingScheme)
         : "";
     const msYear = msCode.length >= 2 ? msCode.substring(0, 2) : (mode === "pastpaper" ? "25" : "");
+
+    // ---- Canvas persistence (derived + effects, after all deps are declared) ----
+    const activeCanvasQuestionId = useMemo(() => {
+        if (mode === "pastpaper" && selectedPaper && currentPaperQuestion) {
+            return `${selectedPaper.id}_${currentPaperQuestion.id}`;
+        }
+        if (mode === "certchamps" && currentQuestion?.id) {
+            return currentQuestion.id as string;
+        }
+        return null;
+    }, [mode, selectedPaper, currentPaperQuestion, currentQuestion]);
+
+    // Load saved strokes whenever the active question changes
+    useEffect(() => {
+        if (!activeCanvasQuestionId) {
+            setCanvasStrokes([]);
+            setCanvasLoading(false);
+            return;
+        }
+        setCanvasLoading(true);
+        let cancelled = false;
+        loadCanvas(activeCanvasQuestionId)
+            .then((loaded) => {
+                if (cancelled) return;
+                setCanvasStrokes(loaded ?? []);
+                setCanvasLoading(false);
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setCanvasStrokes([]);
+                setCanvasLoading(false);
+            });
+        return () => { cancelled = true; };
+    }, [activeCanvasQuestionId, loadCanvas]);
+
+    const handleStrokesChange = useCallback(
+        (strokes: any[]) => {
+            if (!activeCanvasQuestionId) return;
+            saveCanvas(activeCanvasQuestionId, strokes);
+        },
+        [activeCanvasQuestionId, saveCanvas]
+    );
 
     // ---- Cross-paper helpers for topic filtering ----
 
@@ -613,10 +663,15 @@ export default function Questions() {
                     </button>
                 </div>
             )}
-            {/* Drawing canvas: disabled in laptop mode; render first so it sits behind (z-0) */}
-            {!options.laptopMode && (
+            {/* Drawing canvas: disabled in laptop mode; only mount after saved strokes have loaded */}
+            {!options.laptopMode && !canvasLoading && (
                 <div className="absolute inset-0 z-0">
-                    <DrawingCanvas registerDrawingSnapshot={registerDrawingSnapshot} />
+                    <DrawingCanvas
+                        key={activeCanvasQuestionId ?? "no-question"}
+                        registerDrawingSnapshot={registerDrawingSnapshot}
+                        initialStrokes={canvasStrokes}
+                        onStrokesChange={handleStrokesChange}
+                    />
                 </div>
             )}
 
@@ -1049,8 +1104,9 @@ export default function Questions() {
                                                 {currentPaperQuestion && (
                                                     <button
                                                         type="button"
-                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub opacity-60 cursor-not-allowed"
-                                                        title="Calculator (coming soon)"
+                                                        onClick={() => setShowCalculator(true)}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                                        title="Calculator"
                                                         aria-label="Calculator"
                                                     >
                                                         <LuCalculator size={14} strokeWidth={2} />
@@ -1305,6 +1361,14 @@ export default function Questions() {
                         }}
                         file={logTablesBlob}
                     />,
+                    document.body
+                )}
+
+            {/* Floating calculator — rendered via portal */}
+            {showCalculator &&
+                typeof document !== "undefined" &&
+                createPortal(
+                    <FloatingCalculator onClose={() => setShowCalculator(false)} />,
                     document.body
                 )}
 

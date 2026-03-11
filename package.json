@@ -28,6 +28,7 @@
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.562.0",
     "magicmouse.js": "^2.0.0",
+    "mathjs": "^15.1.1",
     "mathlive": "^0.106.0",
     "nerdamer": "^1.1.13",
     "pdfjs-dist": "^5.3.93",
