@@ -237,7 +237,7 @@ export function useExamPapers(
   const MAX_BLOB_CACHE = 10;
 
   const getPaperBlob = useCallback(async (paper: ExamPaper): Promise<Blob> => {
-    const key = paper.id;
+    const key = paper.storagePath;
     const cached = paperBlobCache.current.get(key);
     if (cached) {
       // Move to end (most recently used)
@@ -268,19 +268,20 @@ export function useExamPapers(
   const msBlobCache = useRef<Map<string, Blob | null>>(new Map());
   const getMarkingSchemeBlob = useCallback(
     async (paper: ExamPaper): Promise<Blob | null> => {
-      const cached = msBlobCache.current.get(paper.id);
+      const msPath = getMarkingSchemeStoragePath(paper);
+      const cached = msBlobCache.current.get(msPath);
       if (cached !== undefined) return cached;
       try {
-        const pathRef = ref(storage, getMarkingSchemeStoragePath(paper));
+        const pathRef = ref(storage, msPath);
         const blob = await getBlob(pathRef);
-        msBlobCache.current.set(paper.id, blob);
+        msBlobCache.current.set(msPath, blob);
         if (msBlobCache.current.size > 5) {
           const firstKey = msBlobCache.current.keys().next().value;
           if (firstKey != null) msBlobCache.current.delete(firstKey);
         }
         return blob;
       } catch {
-        msBlobCache.current.set(paper.id, null);
+        msBlobCache.current.set(msPath, null);
         return null;
       }
     },

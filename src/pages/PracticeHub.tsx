@@ -247,7 +247,7 @@ export default function PracticeHub() {
       setShowPaperGateModal(true);
       return;
     }
-    navigate(`/practice/session?mode=pastpaper&paperId=${selectedPaper.id}`);
+    navigate(`/practice/session?mode=pastpaper&paperId=${selectedPaper.id}&level=${selectedPaper.level ?? ""}&subject=${selectedPaper.subject ?? ""}`);
   }, [selectedPaper, user?.isPro, navigate]);
 
   // Build global search index when user opens search (lazy)
@@ -301,7 +301,7 @@ export default function PracticeHub() {
         return;
       }
       navigate(
-        `/practice/session?mode=pastpaper&paperId=${entry.paper.id}&indexInPaper=${entry.indexInPaper}`
+        `/practice/session?mode=pastpaper&paperId=${entry.paper.id}&level=${entry.paper.level ?? ""}&subject=${entry.paper.subject ?? ""}&indexInPaper=${entry.indexInPaper}`
       );
       setGlobalSearchOpen(false);
       setGlobalSearchQuery("");
