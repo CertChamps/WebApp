@@ -171,6 +171,16 @@ export default function AddQuestions() {
   const [firestoreUploadPath, setFirestoreUploadPath] = useState(
     "questions/leavingcert/subjects/maths/levels/higher/papers"
   );
+
+  // Auto-sync Firestore upload path when subject or level changes
+  const updateSubject = (s: SubjectId) => {
+    setSubject(s);
+    setFirestoreUploadPath(`questions/leavingcert/subjects/${s}/levels/${level}/papers`);
+  };
+  const updateLevel = (l: LevelId) => {
+    setLevel(l);
+    setFirestoreUploadPath(`questions/leavingcert/subjects/${subject}/levels/${l}/papers`);
+  };
   const [pendingPdfForExtract, setPendingPdfForExtract] = useState<File | null>(
     null
   );
@@ -614,7 +624,7 @@ export default function AddQuestions() {
           <label className="block color-txt-sub text-sm mb-1">Subject</label>
           <select
             value={subject}
-            onChange={(e) => setSubject(e.target.value as SubjectId)}
+            onChange={(e) => updateSubject(e.target.value as SubjectId)}
             className="px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50"
           >
             {SUBJECTS.map((s) => (
@@ -628,7 +638,7 @@ export default function AddQuestions() {
           <label className="block color-txt-sub text-sm mb-1">Level</label>
           <select
             value={level}
-            onChange={(e) => setLevel(e.target.value as LevelId)}
+            onChange={(e) => updateLevel(e.target.value as LevelId)}
             className="px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50"
           >
             {LEVELS.map((l) => (

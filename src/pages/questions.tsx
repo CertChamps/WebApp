@@ -772,15 +772,13 @@ export default function Questions() {
                             const tagSet = selectedSubTopics.length > 0
                                 ? new Set(selectedSubTopics.map((s) => normTag(s)))
                                 : null;
-                            const mathsHigherPapers = papers.filter(
-                                (p: ExamPaper) => (p.subject ?? "maths") === "maths" && (p.level ?? "higher") === "higher"
-                            );
-                            if (mathsHigherPapers.length === 0) return;
+                            // Randomise across all loaded papers (any subject/level)
+                            if (papers.length === 0) return;
 
                             // Try up to 10 random papers to find one with matching questions
                             const tried = new Set<string>();
-                            for (let attempt = 0; attempt < Math.min(10, mathsHigherPapers.length); attempt++) {
-                                const randomPaper = mathsHigherPapers[Math.floor(Math.random() * mathsHigherPapers.length)];
+                            for (let attempt = 0; attempt < Math.min(10, papers.length); attempt++) {
+                                const randomPaper = papers[Math.floor(Math.random() * papers.length)];
                                 if (tried.has(randomPaper.id)) continue;
                                 tried.add(randomPaper.id);
                                 const list = await getPaperQuestions(randomPaper);
