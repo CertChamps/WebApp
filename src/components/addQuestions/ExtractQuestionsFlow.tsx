@@ -772,15 +772,35 @@ export default function ExtractQuestionsFlow({
           });
         }
       };
-      if (keyLower === "f" || keyLower === "d") {
+      if (keyLower === "d") {
         const delta = -FIXER_STEP;
-        if (holdKeyRef.current === keyLower) return;
+        if (holdKeyRef.current === "d") return;
         clearHoldRepeat();
         if (fixerDebounceRef.current) {
           clearTimeout(fixerDebounceRef.current);
           fixerDebounceRef.current = null;
         }
-        holdKeyRef.current = keyLower;
+        holdKeyRef.current = "d";
+        doAdjust(delta);
+        holdTimeoutRef.current = setTimeout(() => {
+          holdTimeoutRef.current = null;
+          if (fixerDebounceRef.current) {
+            clearTimeout(fixerDebounceRef.current);
+            fixerDebounceRef.current = null;
+          }
+          holdIntervalRef.current = setInterval(() => applyStep(delta), FIXER_HOLD_INTERVAL_MS);
+        }, FIXER_HOLD_INITIAL_MS);
+        return;
+      }
+      if (keyLower === "f") {
+        const delta = FIXER_STEP;
+        if (holdKeyRef.current === "f") return;
+        clearHoldRepeat();
+        if (fixerDebounceRef.current) {
+          clearTimeout(fixerDebounceRef.current);
+          fixerDebounceRef.current = null;
+        }
+        holdKeyRef.current = "f";
         doAdjust(delta);
         holdTimeoutRef.current = setTimeout(() => {
           holdTimeoutRef.current = null;
@@ -963,8 +983,7 @@ export default function ExtractQuestionsFlow({
               </div>
             </div>
             <div className="color-txt-sub text-xs mt-auto space-y-1">
-              <div><strong>F</strong> or <strong>D</strong> decrease (hold to auto-step)</div>
-              <div><strong>J</strong> increase (hold to auto-step)</div>
+              <div><strong>D</strong> down, <strong>F</strong> up, <strong>J</strong> up (hold to auto-step)</div>
               <div><strong>K</strong> switch y/height</div>
               <div><strong>A</strong> reload PDF</div>
               <div><strong>Enter</strong> next</div>

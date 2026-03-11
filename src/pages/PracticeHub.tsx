@@ -54,12 +54,10 @@ const LEVEL_DRAG_STEP_PX = 20;
 export default function PracticeHub() {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
-  const { papers, loading: papersLoading, getPaperBlob, getPaperQuestions, firstFreePaper } = useExamPapers();
-  const [showPaperGateModal, setShowPaperGateModal] = useState(false);
-
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
-  const { papers, loading: papersLoading, subjectIds, subjectIdsLoading, getPaperBlob, getPaperQuestions } =
+  const { papers, loading: papersLoading, subjectIds, subjectIdsLoading, getPaperBlob, getPaperQuestions, firstFreePaper } =
     useExamPapers(subjectFilter);
+  const [showPaperGateModal, setShowPaperGateModal] = useState(false);
   const [paperFilter, setPaperFilter] = useState<PaperFilter>("all");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
   const [yearFilter, setYearFilter] = useState<YearFilterValue>("all");

@@ -93,7 +93,8 @@ export function useExamPapers(
         const lcRef = doc(db, "questions", "leavingcert");
         const lcSnap = await getDoc(lcRef);
         if (cancelled) return;
-        const ids = (lcSnap.exists() && (lcSnap.data()?.sections as string[] | undefined)) ?? [];
+        const raw = lcSnap.exists() ? (lcSnap.data()?.sections as string[] | undefined) : undefined;
+        const ids = Array.isArray(raw) ? raw : [];
         setSubjectIds(ids);
       } catch {
         if (!cancelled) setSubjectIds([]);

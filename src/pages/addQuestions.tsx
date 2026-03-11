@@ -1,4 +1,4 @@
-import { useContext, useState, useRef } from "react";
+import { useContext, useState, useRef, useEffect } from "react";
 import { UserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import { ref, uploadBytes } from "firebase/storage";
@@ -34,8 +34,12 @@ const ADMIN_UIDS = [
   "gJIqKYlc1OdXUQGZQkR4IzfCIoL2",
 ];
 
-const SUBJECTS = ["maths", "irish"] as const;
+const SUBJECTS = ["maths", "applied-maths", "physics", "irish"] as const;
 const LEVELS = ["higher", "ordinary"] as const;
+
+function firestorePathForSubjectLevel(subject: SubjectId, level: LevelId): string {
+  return `questions/leavingcert/subjects/${subject}/levels/${level}/papers`;
+}
 
 type SubjectId = (typeof SUBJECTS)[number];
 type LevelId = (typeof LEVELS)[number];
@@ -48,6 +52,84 @@ type PaperRow = {
   paperId: string;
   existingStoragePath: string | null;
 };
+
+const ADD_QUESTIONS_STORAGE_KEY = "addQuestions_state";
+
+/** State we can persist (rows without File objects). */
+type PersistedAddQuestionsState = {
+  subject: SubjectId;
+  level: LevelId;
+  firestoreUploadPath: string;
+  tab: AddQuestionsTab;
+  rows: Array<Omit<PaperRow, "file"> & { file?: null }>;
+};
+
+function loadAddQuestionsStateFromStorage(): PersistedAddQuestionsState | null {
+  try {
+    const raw = localStorage.getItem(ADD_QUESTIONS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    const o = parsed as Record<string, unknown>;
+    const subjectVal = o.subject;
+    const subject: SubjectId =
+      subjectVal === "irish"
+        ? "irish"
+        : subjectVal === "applied-maths"
+          ? "applied-maths"
+          : subjectVal === "physics"
+            ? "physics"
+            : "maths";
+    const level = o.level === "ordinary" ? "ordinary" : "higher";
+    const firestoreUploadPath =
+      typeof o.firestoreUploadPath === "string" && o.firestoreUploadPath.trim()
+        ? o.firestoreUploadPath.trim()
+        : "questions/leavingcert/subjects/maths/levels/higher/papers";
+    const tab = o.tab === "extract" ? "extract" : "upload";
+    const rowsRaw = Array.isArray(o.rows) ? o.rows : [];
+    const rows: Array<Omit<PaperRow, "file"> & { file?: null }> = rowsRaw
+      .filter((r: unknown) => r && typeof r === "object")
+      .map((r: Record<string, unknown>) => ({
+        id: typeof r.id === "string" ? r.id : crypto.randomUUID(),
+        file: null,
+        year:
+          typeof r.year === "number" && Number.isFinite(r.year)
+            ? r.year
+            : new Date().getFullYear(),
+        label: typeof r.label === "string" ? r.label : "",
+        paperId: typeof r.paperId === "string" ? r.paperId : "",
+        existingStoragePath:
+          typeof r.existingStoragePath === "string" ? r.existingStoragePath : null,
+      }));
+    if (rows.length === 0) {
+      rows.push({
+        id: crypto.randomUUID(),
+        file: null,
+        year: new Date().getFullYear(),
+        label: "",
+        paperId: "",
+        existingStoragePath: null,
+      });
+    }
+    return {
+      subject,
+      level,
+      firestoreUploadPath,
+      tab,
+      rows,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveAddQuestionsStateToStorage(state: PersistedAddQuestionsState): void {
+  try {
+    localStorage.setItem(ADD_QUESTIONS_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore quota or other storage errors
+  }
+}
 
 function slugify(s: string): string {
   return s
@@ -161,15 +243,34 @@ export async function extractQuestionsFromPDF(
   ];
 }
 
+const DEFAULT_FIRESTORE_PATH = firestorePathForSubjectLevel("maths", "higher");
+
+const defaultRows = (): PaperRow[] => [
+  {
+    id: crypto.randomUUID(),
+    file: null,
+    year: new Date().getFullYear(),
+    label: "",
+    paperId: "",
+    existingStoragePath: null,
+  },
+];
+
 export default function AddQuestions() {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const [subject, setSubject] = useState<SubjectId>("maths");
-  const [level, setLevel] = useState<LevelId>("higher");
+  const [persistedOnce] = useState<PersistedAddQuestionsState | null>(() =>
+    loadAddQuestionsStateFromStorage()
+  );
+
+  const [subject, setSubject] = useState<SubjectId>(
+    persistedOnce?.subject ?? "maths"
+  );
+  const [level, setLevel] = useState<LevelId>(persistedOnce?.level ?? "higher");
   const [firestoreUploadPath, setFirestoreUploadPath] = useState(
-    "questions/leavingcert/subjects/maths/levels/higher/papers"
+    persistedOnce?.firestoreUploadPath ?? DEFAULT_FIRESTORE_PATH
   );
   const [pendingPdfForExtract, setPendingPdfForExtract] = useState<File | null>(
     null
@@ -179,16 +280,11 @@ export default function AddQuestions() {
     year: number;
     label: string;
   } | null>(null);
-  const [rows, setRows] = useState<PaperRow[]>([
-    {
-      id: crypto.randomUUID(),
-      file: null,
-      year: new Date().getFullYear(),
-      label: "",
-      paperId: "",
-      existingStoragePath: null,
-    },
-  ]);
+  const [rows, setRows] = useState<PaperRow[]>(() =>
+    (persistedOnce?.rows?.length
+      ? (persistedOnce.rows as PaperRow[])
+      : defaultRows())
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [loadExistingError, setLoadExistingError] = useState<string | null>(
@@ -196,7 +292,30 @@ export default function AddQuestions() {
   );
 
   const isAdmin = user?.uid && ADMIN_UIDS.includes(user.uid);
-  const [tab, setTab] = useState<AddQuestionsTab>("upload");
+  const [tab, setTab] = useState<AddQuestionsTab>(
+    persistedOnce?.tab ?? "upload"
+  );
+
+  // Keep Firestore path in sync with subject/level so papers are stored in the correct subject folder
+  useEffect(() => {
+    setFirestoreUploadPath(firestorePathForSubjectLevel(subject, level));
+  }, [subject, level]);
+
+  useEffect(() => {
+    saveAddQuestionsStateToStorage({
+      subject,
+      level,
+      firestoreUploadPath,
+      tab,
+      rows: rows.map(({ id, year, label, paperId, existingStoragePath }) => ({
+        id,
+        year,
+        label,
+        paperId,
+        existingStoragePath,
+      })),
+    });
+  }, [subject, level, firestoreUploadPath, tab, rows]);
 
   const addRow = () => {
     const year = new Date().getFullYear();
@@ -619,7 +738,7 @@ export default function AddQuestions() {
           >
             {SUBJECTS.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {s === "applied-maths" ? "Applied maths" : s.charAt(0).toUpperCase() + s.slice(1)}
               </option>
             ))}
           </select>
