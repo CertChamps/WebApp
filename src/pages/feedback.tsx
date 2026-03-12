@@ -3,11 +3,10 @@ import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTime
 import { db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { LuSend, LuCheck, LuBug, LuLightbulb, LuMessageCircle, LuHammer, LuHeart, LuSearch, LuTrash2 } from "react-icons/lu";
+import { ADMIN_UIDS } from "../constants/adminUids";
 
 type FeedbackType = "bug" | "feature" | "general";
 type AdminTag = "working_on_it" | "love_it" | "looking_into_it" | null;
-
-const ADMIN_UIDS = ["NkN9UBqoPEYpE21MC89fipLn0SP2", "gJIqKYlc1OdXUQGZQkR4IzfCIoL2"];
 
 type FeedbackItem = {
     id: string;

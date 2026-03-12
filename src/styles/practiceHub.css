@@ -35,10 +35,10 @@
 
 /* Oval subject pill – themed */
 .practice-hub__subject-field--oval .practice-hub__subject-trigger {
-  border-radius: 9999px;
-  padding-left: 1.25rem;
-  padding-right: 1.25rem;
-  @apply color-bg-grey-10 border-2 color-shadow;
+  border-radius: var(--radius-in, 5px);
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  @apply color-bg border-2 color-shadow;
 }
 
 .practice-hub__search-wrap {
@@ -171,17 +171,22 @@
   justify-content: space-between;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.625rem 0.75rem;
-  font-size: 0.9375rem;
-  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: var(--radius-in, 5px);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
   text-align: left;
-  @apply color-txt-main color-bg border-2 color-shadow;
+  @apply color-txt-main color-bg txt-bold border-2 color-shadow;
 }
 
 .practice-hub__subject-trigger:hover {
-  @apply border-[var(--color-blue)];
+  opacity: 0.9;
+}
+
+.practice-hub__subject-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-blue) 25%, transparent);
 }
 
 .practice-hub__subject-trigger-label {
@@ -289,8 +294,7 @@
 }
 
 .practice-hub__subject-option[aria-selected="true"] {
-  background: color-mix(in srgb, var(--color-blue) 12%, transparent);
-  color: var(--color-blue, #27548a);
+  @apply color-bg-accent color-txt-accent txt-bold;
 }
 
 .practice-hub__subject-option > span:first-child {
@@ -311,11 +315,7 @@
 
 .practice-hub__subject-fav:hover {
   @apply color-bg-grey-10;
-  color: var(--color-blue, #27548a);
-}
 
-.practice-hub__subject-fav--on {
-  color: var(--color-blue, #27548a);
 }
 
 .practice-hub__subject-empty {
@@ -379,7 +379,7 @@
 }
 
 .practice-hub__pill:hover {
-  border-color: var(--color-blue);
+  /* border-color: var(--color-blue); */
   color: var(--color-txt-main);
 }
 
@@ -498,12 +498,12 @@
 }
 
 .practice-hub__select:hover {
-  border-color: var(--color-blue, #27548a);
+  /* border-color: var(--color-blue, #27548a); */
 }
 
 .practice-hub__select:focus {
   outline: none;
-  border-color: var(--color-blue, #27548a);
+  /* border-color: var(--color-blue, #27548a); */
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-blue) 25%, transparent);
 }
 

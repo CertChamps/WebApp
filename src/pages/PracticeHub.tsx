@@ -424,11 +424,11 @@ export default function PracticeHub() {
   );
 
   return (
-    <div className="practice-hub w-full min-h-full h-full flex flex-col overflow-x-hidden p-4 scrollbar-minimal pt-[env(safe-area-inset-top,0px)]">
+    <div className="practice-hub w-full min-h-full h-full flex flex-col overflow-x-hidden px-3 pb-3 scrollbar-minimal pt-[env(safe-area-inset-top,0px)]">
       <div className="practice-hub__inner flex flex-col flex-1 w-full min-h-0">
         {/* Top bar: subject (oval) left, search right */}
-        <section className="topBar flex flex-shrink-0 items-center justify-between w-full mb-2">
-          <div className="practice-hub__subject-field practice-hub__subject-field--oval shrink-0">
+        <section className="topBar flex flex-shrink-0 items-center justify-between w-full mb-1">
+          <div className="practice-hub__subject-field practice-hub__subject-field--oval">
             <SubjectDropdown
               value={subjectFilter}
               onChange={setSubjectFilter}
@@ -498,7 +498,7 @@ export default function PracticeHub() {
         </section>
 
         {/* Filter section – left blank for you to add your own controls */}
-        <section className="flex items-center justify-start practice-hub__filter-section py-2 w-full flex-shrink-0  mb-2" aria-label="Filters">
+        <section className="flex items-center justify-start practice-hub__filter-section pb-2 w-full flex-shrink-0 mb-2" aria-label="Filters">
             <h2 className="txt-heading-colour text-xl font-bold mr-3">State Exam Papers</h2>
 
             <YearClockPicker
