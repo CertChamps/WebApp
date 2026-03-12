@@ -177,7 +177,7 @@ export default function QSearch(props: QSearchProps) {
                     {loadingAllPapers ? (
                         <div className="flex flex-col items-center justify-center py-12 color-txt-sub">
                             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--grey-10)] border-t-[var(--grey-5)] mb-3" />
-                            <span>Loading questions from all papers…</span>
+                            <span>Loading questions from available papers…</span>
                         </div>
                     ) : (
                     results.map((result: FuseResult<PaperSearchEntry | any>) => {

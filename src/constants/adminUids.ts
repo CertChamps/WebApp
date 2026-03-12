@@ -3,3 +3,7 @@ export const ADMIN_UIDS = [
   "gJIqKYlc1OdXUQGZQkR4IzfCIoL2",
   "AN3cIuQxmXfXb5kEmXuHcM5vWyH3",
 ];
+
+export function isAdminUid(uid?: string | null): boolean {
+  return !!uid && ADMIN_UIDS.includes(uid);
+}

@@ -1,9 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { LuX } from "react-icons/lu";
-import {
-  MATHS_HIGHER_TOPICS,
-  TOPIC_TO_SUB_TOPICS,
-} from "../../data/mathsHigherTopics";
+import type { PastPaperTopicScope } from "../../data/mathsHigherTopics";
 import "../../styles/questions.css";
 import "../../styles/practiceHub.css";
 
@@ -12,6 +9,7 @@ export type PastPaperFilterPanelProps = {
   onClose: () => void;
   selectedSubTopics: string[];
   onApply: (subTopics: string[]) => void;
+  topicScope: PastPaperTopicScope | null;
   /** When true, render only the dropdown panel (no overlay). Same as Practice Hub Topics popup. */
   asDropdown?: boolean;
 };
@@ -21,6 +19,8 @@ function PanelContent({
   setPendingTopicFilter,
   pendingSubTopicFilter,
   setPendingSubTopicFilter,
+  topics,
+  topicToSubTopics,
   availableSubTopics,
   onApply,
 }: {
@@ -28,14 +28,24 @@ function PanelContent({
   setPendingTopicFilter: React.Dispatch<React.SetStateAction<string[]>>;
   pendingSubTopicFilter: string[];
   setPendingSubTopicFilter: React.Dispatch<React.SetStateAction<string[]>>;
+  topics: readonly string[];
+  topicToSubTopics: Record<string, string[]>;
   availableSubTopics: string[];
   onApply: () => void;
 }) {
+  if (topics.length === 0) {
+    return (
+      <p className="text-xs color-txt-sub">
+        No topic list configured for this subject and level yet.
+      </p>
+    );
+  }
+
   return (
     <>
       <p className="practice-hub__topics-heading txt-bold color-txt-main mb-2">topic</p>
       <div className="practice-hub__topics-tags flex flex-wrap gap-2 mb-4">
-        {MATHS_HIGHER_TOPICS.map((tag) => {
+        {topics.map((tag) => {
           const selected = pendingTopicFilter.some(
             (t) => t.toLowerCase() === tag.toLowerCase()
           );
@@ -54,7 +64,7 @@ function PanelContent({
                     prev.filter((t) => t.toLowerCase() !== tag.toLowerCase())
                   );
                   setPendingSubTopicFilter((prev) =>
-                    prev.filter((st) => !(TOPIC_TO_SUB_TOPICS[tag] ?? []).includes(st))
+                    prev.filter((st) => !(topicToSubTopics[tag] ?? []).includes(st))
                   );
                 } else {
                   setPendingTopicFilter((prev) => [...prev, tag]);
@@ -122,43 +132,54 @@ export default function PastPaperFilterPanel({
   onClose,
   selectedSubTopics,
   onApply,
+  topicScope,
   asDropdown = false,
 }: PastPaperFilterPanelProps) {
   const [pendingTopicFilter, setPendingTopicFilter] = useState<string[]>([]);
   const [pendingSubTopicFilter, setPendingSubTopicFilter] = useState<string[]>([]);
 
+  const topics = topicScope?.topics ?? [];
+  const topicToSubTopics = topicScope?.topicToSubTopics ?? {};
+
   const availableSubTopics = useMemo(() => {
     if (pendingTopicFilter.length === 0) return [];
     const set = new Set<string>();
     pendingTopicFilter.forEach((t) => {
-      TOPIC_TO_SUB_TOPICS[t]?.forEach((st) => set.add(st));
+      topicToSubTopics[t]?.forEach((st) => set.add(st));
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-  }, [pendingTopicFilter]);
+  }, [pendingTopicFilter, topicToSubTopics]);
 
   useEffect(() => {
     if (!open) return;
     const subtopics = [...selectedSubTopics];
     const topics: string[] = [];
-    MATHS_HIGHER_TOPICS.forEach((topic) => {
-      const subs = TOPIC_TO_SUB_TOPICS[topic] ?? [];
-      if (subs.some((st) => selectedSubTopics.includes(st))) topics.push(topic);
+    (topicScope?.topics ?? []).forEach((topic) => {
+      const subs = topicToSubTopics[topic] ?? [];
+      if (subs.length === 0) {
+        if (selectedSubTopics.includes(topic)) topics.push(topic);
+      } else if (subs.some((st) => selectedSubTopics.includes(st))) {
+        topics.push(topic);
+      }
     });
     setPendingTopicFilter(topics);
     setPendingSubTopicFilter(subtopics);
-  }, [open, selectedSubTopics]);
+  }, [open, selectedSubTopics, topicScope, topicToSubTopics]);
 
   const handleApply = () => {
     // For each selected main topic: if specific subtopics were picked, use those;
     // otherwise include ALL subtopics of that main topic.
     const effectiveSubTopics: string[] = [];
     pendingTopicFilter.forEach((topic) => {
-      const allSubsForTopic = TOPIC_TO_SUB_TOPICS[topic] ?? [];
+      const allSubsForTopic = topicToSubTopics[topic] ?? [];
       const explicitlySelected = pendingSubTopicFilter.filter((st) =>
         allSubsForTopic.includes(st)
       );
       if (explicitlySelected.length > 0) {
         effectiveSubTopics.push(...explicitlySelected);
+      } else if (allSubsForTopic.length === 0) {
+        // If no subtopics are defined for a topic, filter by the topic tag itself.
+        effectiveSubTopics.push(topic);
       } else {
         // No explicit subtopics → include every subtopic of this main topic
         effectiveSubTopics.push(...allSubsForTopic);
@@ -190,6 +211,8 @@ export default function PastPaperFilterPanel({
           setPendingTopicFilter={setPendingTopicFilter}
           pendingSubTopicFilter={pendingSubTopicFilter}
           setPendingSubTopicFilter={setPendingSubTopicFilter}
+          topics={topics}
+          topicToSubTopics={topicToSubTopics}
           availableSubTopics={availableSubTopics}
           onApply={handleApply}
         />
@@ -229,6 +252,8 @@ export default function PastPaperFilterPanel({
             setPendingTopicFilter={setPendingTopicFilter}
             pendingSubTopicFilter={pendingSubTopicFilter}
             setPendingSubTopicFilter={setPendingSubTopicFilter}
+            topics={topics}
+            topicToSubTopics={topicToSubTopics}
             availableSubTopics={availableSubTopics}
             onApply={handleApply}
           />

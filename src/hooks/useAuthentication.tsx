@@ -4,6 +4,7 @@ import { UserContext } from "../context/UserContext";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
 import { setDoc, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
+import { isAdminUid } from "../constants/adminUids";
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -51,6 +52,7 @@ export default function useAuthentication(props?: authprops) {
       highestStreak: 0,
       savedQuestions: [],
       emailVerified,
+      isAdmin: isAdminUid(uid),
       isPro: false,
     };
 
@@ -110,6 +112,7 @@ const userSetup = async (uid: string, username: string, email: string) => {
         savedQuestions: userData.savedQuestions || [],
         //decks,
         emailVerified: isEmailVerified,
+        isAdmin: userData.isAdmin === true || isAdminUid(userDoc.id),
         isPro: userData.isPro === true,
         subscriptionPeriodEnd: typeof userData.subscriptionPeriodEnd === "number" ? userData.subscriptionPeriodEnd : undefined,
       });

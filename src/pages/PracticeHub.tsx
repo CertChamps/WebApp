@@ -1,14 +1,20 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Fuse from "fuse.js";
-import { useExamPapers, isPaperFree, type ExamPaper, type PaperQuestion } from "../hooks/useExamPapers";
+import {
+  useExamPapers,
+  isPaperFree,
+  normalizePaperLevel,
+  getExamPaperKey,
+  type ExamPaper,
+  type PaperQuestion,
+} from "../hooks/useExamPapers";
 import { UserContext } from "../context/UserContext";
 import PaperProGate from "../components/PaperProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { motion, AnimatePresence } from "framer-motion";
 import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2 } from "react-icons/lu";
 import { subjectMatchesPaper, getSubjectLabel } from "../data/practiceHubSubjects";
-import { MATHS_HIGHER_TOPICS, TOPIC_TO_SUB_TOPICS } from "../data/mathsHigherTopics";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
@@ -33,8 +39,15 @@ function getPaperNumber(paper: ExamPaper): number | null {
 
 /** Format level for display */
 function formatLevel(level: string | undefined): string {
-  if (!level) return "—";
-  return level === "higher" ? "Higher" : level === "ordinary" ? "Ordinary" : level === "foundation" ? "Foundation" : level;
+  const normalized = normalizePaperLevel(level);
+  if (!normalized) return "—";
+  return normalized === "higher"
+    ? "Higher"
+    : normalized === "ordinary"
+      ? "Ordinary"
+      : normalized === "foundation"
+        ? "Foundation"
+        : normalized;
 }
 
 type PaperFilter = "1" | "2" | "all";
@@ -76,11 +89,10 @@ export default function PracticeHub() {
   const globalSearchContainerRef = useRef<HTMLDivElement>(null);
 
   const [topicsOpen, setTopicsOpen] = useState(false);
-  const [pendingTopicFilter, setPendingTopicFilter] = useState<string[]>([]);
-  const [pendingSubTopicFilter, setPendingSubTopicFilter] = useState<string[]>([]);
+  const [, setPendingTopicFilter] = useState<string[]>([]);
+  const [, setPendingSubTopicFilter] = useState<string[]>([]);
   const topicsContainerRef = useRef<HTMLDivElement>(null);
 
-  const topicSet = useMemo(() => new Set<string>(MATHS_HIGHER_TOPICS), []);
   const resetAllFilters = useCallback(() => {
     setSubjectFilter(null);
     setPaperFilter("all");
@@ -91,15 +103,25 @@ export default function PracticeHub() {
     setPendingSubTopicFilter([]);
     setTopicsOpen(false);
   }, []);
-  const availableSubTopics = useMemo(() => {
-    if (pendingTopicFilter.length === 0) return [];
-    const set = new Set<string>();
-    pendingTopicFilter.forEach((t) => {
-      TOPIC_TO_SUB_TOPICS[t]?.forEach((st) => set.add(st));
-    });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-  }, [pendingTopicFilter]);
 
+  const openSubjectPicker = useCallback(() => {
+    const trigger = document.getElementById("ph-subject") as HTMLButtonElement | null;
+    if (!trigger) return;
+
+    trigger.focus();
+
+    const isExpanded = trigger.getAttribute("aria-expanded") === "true";
+    if (!isExpanded) {
+      trigger.click();
+    }
+
+    // Search input mounts after opening; focus it on the next frame.
+    requestAnimationFrame(() => {
+      const searchInput = document.querySelector<HTMLInputElement>(".practice-hub__subject-search");
+      searchInput?.focus();
+      searchInput?.select();
+    });
+  }, []);
   const [levelOpen, setLevelOpen] = useState(false);
   const [levelTriggerDragging, setLevelTriggerDragging] = useState(false);
   const levelContainerRef = useRef<HTMLDivElement>(null);
@@ -117,12 +139,17 @@ export default function PracticeHub() {
   const panelTagsContainerRef = useRef<HTMLDivElement>(null);
   const panelTagsMeasureRef = useRef<HTMLDivElement>(null);
 
+  const selectedPaperKey = useMemo(
+    () => (selectedPaper ? getExamPaperKey(selectedPaper) : null),
+    [selectedPaper]
+  );
+
   levelFilterRef.current = levelFilter;
 
   useEffect(() => {
     setPanelTagsExpanded(false);
     setTagsVisibleWhenCollapsed(1);
-  }, [selectedPaper?.id]);
+  }, [selectedPaperKey]);
 
   const subjectOptions = useMemo(
     () => subjectIds.map((id) => ({ id, label: getSubjectLabel(id) })),
@@ -137,7 +164,7 @@ export default function PracticeHub() {
         const want = paperFilter === "1" ? 1 : 2;
         if (num !== want) return false;
       }
-      if (levelFilter !== "all" && (p.level ?? "").toLowerCase() !== levelFilter) return false;
+      if (levelFilter !== "all" && normalizePaperLevel(p.level) !== normalizePaperLevel(levelFilter)) return false;
       if (yearFilter !== "all" && p.year !== yearFilter) return false;
       return true;
     });
@@ -148,7 +175,7 @@ export default function PracticeHub() {
     if (topicFilter.length === 0) return filteredByMeta;
     const set = new Set(topicFilter.map(normTag));
     return filteredByMeta.filter((p) => {
-      const tags = paperTagsMap[p.id] ?? [];
+      const tags = paperTagsMap[getExamPaperKey(p)] ?? [];
       return tags.some((tag) => set.has(normTag(String(tag))));
     });
   }, [filteredByMeta, topicFilter, paperTagsMap, normTag]);
@@ -172,16 +199,18 @@ export default function PracticeHub() {
     filteredByMeta.forEach((paper) => {
       getPaperQuestions(paper).then((questions) => {
         if (cancelled) return;
+        const paperKey = getExamPaperKey(paper);
         const tags = new Set<string>();
         questions.forEach((q) => q.tags?.forEach((t) => tags.add(String(t))));
-        nextTags[paper.id] = Array.from(tags);
-        nextCounts[paper.id] = questions.length;
+        nextTags[paperKey] = Array.from(tags);
+        nextCounts[paperKey] = questions.length;
         pending--;
         if (pending === 0) done();
       }).catch(() => {
         if (cancelled) return;
-        nextTags[paper.id] = [];
-        nextCounts[paper.id] = 0;
+        const paperKey = getExamPaperKey(paper);
+        nextTags[paperKey] = [];
+        nextCounts[paperKey] = 0;
         pending--;
         if (pending === 0) done();
       });
@@ -247,7 +276,8 @@ export default function PracticeHub() {
       setShowPaperGateModal(true);
       return;
     }
-    navigate(`/practice/session?mode=pastpaper&paperId=${selectedPaper.id}&level=${selectedPaper.level ?? ""}&subject=${selectedPaper.subject ?? ""}`);
+    const normalizedLevel = normalizePaperLevel(selectedPaper.level);
+    navigate(`/practice/session?mode=pastpaper&paperId=${selectedPaper.id}&level=${normalizedLevel}&subject=${selectedPaper.subject ?? ""}`);
   }, [selectedPaper, user?.isPro, navigate]);
 
   // Build global search index when user opens search (lazy)
@@ -300,8 +330,9 @@ export default function PracticeHub() {
         setGlobalSearchQuery("");
         return;
       }
+      const normalizedLevel = normalizePaperLevel(entry.paper.level);
       navigate(
-        `/practice/session?mode=pastpaper&paperId=${entry.paper.id}&level=${entry.paper.level ?? ""}&subject=${entry.paper.subject ?? ""}&indexInPaper=${entry.indexInPaper}`
+        `/practice/session?mode=pastpaper&paperId=${entry.paper.id}&level=${normalizedLevel}&subject=${entry.paper.subject ?? ""}&indexInPaper=${entry.indexInPaper}`
       );
       setGlobalSearchOpen(false);
       setGlobalSearchQuery("");
@@ -424,7 +455,7 @@ export default function PracticeHub() {
   );
 
   return (
-    <div className="practice-hub w-full min-h-full h-full flex flex-col overflow-x-hidden px-3 pb-3 scrollbar-minimal pt-[env(safe-area-inset-top,0px)]">
+    <div className="practice-hub w-full min-h-full h-full flex flex-col overflow-x-hidden px-10 pb-3 scrollbar-minimal pt-[env(safe-area-inset-top,0px)]">
       <div className="practice-hub__inner flex flex-col flex-1 w-full min-h-0">
         {/* Top bar: subject (oval) left, search right */}
         <section className="topBar flex flex-shrink-0 items-center justify-between w-full mb-1">
@@ -467,7 +498,7 @@ export default function PracticeHub() {
                   ) : (
                     globalSearchResults.map((entry) => (
                       <button
-                        key={`${entry.paper.id}-${entry.question.id}`}
+                        key={`${getExamPaperKey(entry.paper)}-${entry.question.id}-${entry.indexInPaper}`}
                         type="button"
                         role="option"
                         className="practice-hub__search-result"
@@ -498,7 +529,7 @@ export default function PracticeHub() {
         </section>
 
         {/* Filter section – left blank for you to add your own controls */}
-        <section className="flex items-center justify-start practice-hub__filter-section pb-2 w-full flex-shrink-0 mb-2" aria-label="Filters">
+        <section className="flex items-center justify-start gap-2 practice-hub__filter-section pb-2 w-full flex-shrink-0 mb-2" aria-label="Filters">
             <h2 className="txt-heading-colour text-xl font-bold mr-3">State Exam Papers</h2>
 
             <YearClockPicker
@@ -513,7 +544,7 @@ export default function PracticeHub() {
               <button
                 ref={levelTriggerRef}
                 type="button"
-                className={`practice-hub__level-trigger flex color-txt-sub font-bold py-0.5 px-2 items-center justify-center rounded-out color-bg-grey-5 gap-1 mx-2 cursor-pointer border-0 ${levelTriggerDragging ? "practice-hub__level-trigger--dragging" : ""}`}
+                className={`practice-hub__level-trigger flex color-txt-sub font-bold py-0.5 px-2 items-center justify-center rounded-out color-bg-grey-5 gap-1 cursor-pointer border-0 ${levelTriggerDragging ? "practice-hub__level-trigger--dragging" : ""}`}
                 onMouseDown={onLevelTriggerMouseDown}
                 onTouchStart={onLevelTriggerTouchStart}
                 aria-expanded={levelOpen}
@@ -582,129 +613,16 @@ export default function PracticeHub() {
               </button>
             </div>
 
-            {/* Topics dropdown – end of row, same pill style as others */}
+            {/* Topics filter temporarily disabled.
             <div ref={topicsContainerRef} className="practice-hub__topics-wrap relative ml-auto">
-              <button
-                type="button"
-                className="flex color-txt-sub font-bold py-0.5 px-2 items-center justify-center rounded-out color-bg-grey-5 gap-1 mx-2 cursor-pointer border-0"
-                onClick={() => {
-                  if (!topicsOpen) {
-                    const topics: string[] = [];
-                    const subtopics: string[] = [];
-                    topicFilter.forEach((t) => {
-                      if (topicSet.has(t)) topics.push(t);
-                      else subtopics.push(t);
-                    });
-                    setPendingTopicFilter(topics);
-                    setPendingSubTopicFilter(subtopics);
-                  }
-                  setTopicsOpen((o) => !o);
-                }}
-                aria-expanded={topicsOpen}
-                aria-haspopup="dialog"
-                aria-label="Filter by topic"
-              >
-                <span>Topics</span>
-                <LuChevronDown size={16} className="color-txt-sub" aria-hidden />
-              </button>
-              {topicsOpen && (
-                <div
-                  className="practice-hub__topics-panel color-bg rounded-out border-2 color-shadow"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-label="Topic filter"
-                >
-                  <p className="practice-hub__topics-heading txt-bold color-txt-main mb-2">topic</p>
-                  <div className="practice-hub__topics-tags flex flex-wrap gap-2 mb-4">
-                    {MATHS_HIGHER_TOPICS.map((tag) => {
-                      const selected = pendingTopicFilter.some(
-                        (t) => t.toLowerCase() === tag.toLowerCase()
-                      );
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          className={`practice-hub__topic-tag rounded-in px-1.5 py-0.5 text-xs font-medium border-0 cursor-pointer flex items-center gap-1 ${
-                            selected
-                              ? "color-bg-accent color-txt-accent"
-                              : "color-bg-grey-5 color-txt-sub"
-                          }`}
-                          onClick={() => {
-                            if (selected) {
-                              setPendingTopicFilter((prev) =>
-                                prev.filter((t) => t.toLowerCase() !== tag.toLowerCase())
-                              );
-                              setPendingSubTopicFilter((prev) =>
-                                prev.filter((st) => !(TOPIC_TO_SUB_TOPICS[tag] ?? []).includes(st))
-                              );
-                            } else {
-                              setPendingTopicFilter((prev) => [...prev, tag]);
-                            }
-                          }}
-                          aria-pressed={selected}
-                        >
-                          <span>{tag}</span>
-                          {selected && <LuX size={12} strokeWidth={2.5} aria-hidden />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {availableSubTopics.length > 0 && (
-                    <>
-                      <p className="practice-hub__topics-heading txt-bold color-txt-main mb-2">subtopic</p>
-                      <div className="practice-hub__topics-tags flex flex-wrap gap-2 mb-4">
-                        {availableSubTopics.map((tag) => {
-                          const selected = pendingSubTopicFilter.some(
-                            (t) => t.toLowerCase() === tag.toLowerCase()
-                          );
-                          return (
-                            <button
-                              key={tag}
-                              type="button"
-                              className={`practice-hub__topic-tag rounded-in px-1.5 py-0.5 text-xs font-medium border-0 cursor-pointer flex items-center gap-1 ${
-                                selected
-                                  ? "color-bg-accent color-txt-accent"
-                                  : "color-bg-grey-5 color-txt-sub"
-                              }`}
-                              onClick={() => {
-                                if (selected) {
-                                  setPendingSubTopicFilter((prev) =>
-                                    prev.filter((t) => t.toLowerCase() !== tag.toLowerCase())
-                                  );
-                                } else {
-                                  setPendingSubTopicFilter((prev) => [...prev, tag]);
-                                }
-                              }}
-                              aria-pressed={selected}
-                            >
-                              <span>{tag}</span>
-                              {selected && <LuX size={12} strokeWidth={2.5} aria-hidden />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      className="blue-btn color-bg-accent color-txt-accent txt-bold rounded-in px-3 py-1.5"
-                      onClick={() => {
-                        setTopicFilter([...pendingTopicFilter, ...pendingSubTopicFilter]);
-                        setTopicsOpen(false);
-                      }}
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
-              )}
+              ...
             </div>
+            */}
 
             <button
               type="button"
               onClick={resetAllFilters}
-              className="flex items-center justify-center p-1.5 rounded-out color-txt-sub hover:color-txt-main hover:color-bg-grey-5 border-0 cursor-pointer ml-1"
+              className="ml-auto flex items-center justify-center p-1.5 rounded-out color-txt-sub hover:color-txt-main hover:color-bg-grey-5 border-0 cursor-pointer"
               aria-label="Reset all filters"
             >
               <LuTrash2 size={18} aria-hidden />
@@ -723,6 +641,24 @@ export default function PracticeHub() {
                 </div>
               ))}
             </div>
+          ) : subjectFilter == null ? (
+            <div className="h-full min-h-[360px] w-full flex items-center justify-center px-4">
+              <div className="max-w-xl text-center">
+                <p className="txt-heading-colour text-2xl font-bold mb-2">yo wsg</p>
+                <p className="txt-sub color-txt-sub mb-5">
+                  Pick a subject to get started and we will line up the right papers for you.
+                </p>
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    className="blue-btn px-5 py-2.5"
+                    onClick={openSubjectPicker}
+                  >
+                    Choose a subject
+                  </button>
+                </div>
+              </div>
+            </div>
           ) : filteredPapers.length === 0 ? (
             <p className="txt-sub color-txt-sub py-4 ml-4">
               No papers match the selected filters.
@@ -732,11 +668,11 @@ export default function PracticeHub() {
               <div className="deck-grid">
                 {filteredPapers.map((paper) => (
                   <PaperCard
-                    key={paper.id}
+                    key={getExamPaperKey(paper)}
                     paper={paper}
                     getPaperBlob={getPaperBlob}
-                    questionCount={paperQuestionCountMap[paper.id]}
-                    tags={paperTagsMap[paper.id] ?? []}
+                    questionCount={paperQuestionCountMap[getExamPaperKey(paper)]}
+                    tags={paperTagsMap[getExamPaperKey(paper)] ?? []}
                     onSelect={() => {
                       setSelectedPaper(paper);
                       setPanelAnimationDone(false);

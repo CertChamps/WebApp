@@ -3,6 +3,21 @@ import { getBlob, ref } from "firebase/storage";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { storage, db } from "../../firebase";
 
+export function normalizePaperLevel(level: string | undefined | null): string {
+  const raw = String(level ?? "").trim().toLowerCase();
+  if (!raw) return "";
+  if (raw === "hl" || raw === "higher" || raw === "higher-level" || raw === "higher level") {
+    return "higher";
+  }
+  if (raw === "ol" || raw === "ordinary" || raw === "ordinary-level" || raw === "ordinary level") {
+    return "ordinary";
+  }
+  if (raw === "fd" || raw === "foundation" || raw === "foundation-level" || raw === "foundation level") {
+    return "foundation";
+  }
+  return raw;
+}
+
 /** Derive paper number (1 or 2) from label or id. */
 function getPaperNumber(docId: string, label?: string): number | null {
   const s = `${label ?? ""} ${docId ?? ""}`.toLowerCase();
@@ -21,6 +36,12 @@ export type ExamPaper = {
   /** If true, paper is free for non-pro users. From Firestore or derived for 2024 Paper 1 & 2 maths. */
   isFree?: boolean;
 };
+
+export function getExamPaperKey(paper: Pick<ExamPaper, "id" | "subject" | "level">): string {
+  const subject = String(paper.subject ?? "unknown").trim().toLowerCase();
+  const level = normalizePaperLevel(paper.level) || "unknown";
+  return `${subject}::${level}::${paper.id}`;
+}
 
 /** Returns true if paper is free (2024 Paper 1 or 2, maths higher). */
 export function isPaperFree(paper: ExamPaper): boolean {
