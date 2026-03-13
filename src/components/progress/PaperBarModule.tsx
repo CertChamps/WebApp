@@ -18,7 +18,7 @@ type Props = {
   editing?: boolean;
 };
 
-export default function PaperRingModule({ config, entries, onRemove, editing }: Props) {
+export default function PaperBarModule({ config, entries, onRemove, editing }: Props) {
   const filtered = useMemo(
     () =>
       entries.filter(
@@ -33,55 +33,32 @@ export default function PaperRingModule({ config, entries, onRemove, editing }: 
   const total = filtered.reduce((s, e) => s + e.totalQuestions, 0);
   const pct = total > 0 ? completed / total : 0;
 
-  const vb = 100;
-  const strokeWidth = 12;
-  const radius = (vb - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - pct);
-
   return (
-    <div className="progress-module progress-module--ring">
+    <div className="progress-module progress-module--bar">
       {editing && (
         <button
           type="button"
           onClick={onRemove}
-          className="progress-module__remove progress-module__remove--visible progress-ring__remove"
+          className="progress-module__remove progress-module__remove--visible progress-bar__remove"
           aria-label="Remove module"
         >
           <LuX size={12} />
         </button>
       )}
 
-      <svg viewBox={`0 0 ${vb} ${vb}`} className="progress-ring__svg">
-        <circle
-          cx={vb / 2}
-          cy={vb / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={strokeWidth}
-          className="stroke-current color-txt-sub opacity-10"
-        />
-        <circle
-          cx={vb / 2}
-          cy={vb / 2}
-          r={radius}
-          fill="none"
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className={`transition-all duration-700 ease-out ${pct >= 1 ? "text-green-500" : "color-txt-accent"}`}
-          style={{ stroke: "currentColor" }}
-        />
-      </svg>
-
-      <div className="progress-ring__label">
+      <div className="progress-bar__label">
         <span className="text-xs font-bold color-txt-main truncate">
           {formatSubject(config.subject)}
         </span>
-        <span className="text-xs color-txt-sub">
+        <span className="text-[10px] color-txt-sub truncate">
           {formatLevel(config.level)}
         </span>
+      </div>
+      <div className="progress-bar__track">
+        <div
+          className={`progress-bar__fill ${pct >= 1 ? "progress-bar__fill--complete" : ""}`}
+          style={{ width: `${pct * 100}%` }}
+        />
       </div>
     </div>
   );

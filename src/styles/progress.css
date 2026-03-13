@@ -404,7 +404,11 @@
 
 /*================ MODULAR PROGRESS DASHBOARD ================*/
 .progress-dashboard {
-    @apply w-full h-full p-6 md:p-10 flex flex-col gap-6 overflow-auto scrollbar-minimal;
+    @apply w-full h-full min-h-0 p-6 md:p-10 flex flex-col gap-6 overflow-hidden;
+}
+
+.progress-dashboard--dragging {
+    overflow: visible;
 }
 
 .progress-dashboard__header {
@@ -425,12 +429,17 @@
 
 /*-- Widget grid area --*/
 .progress-grid-area {
-    @apply flex-1 w-full rounded-2xl;
+    @apply flex-1 w-full min-h-0 rounded-2xl overflow-hidden color-bg;
 }
 
 .progress-grid-area--editing {
     background-image: radial-gradient(circle, var(--grey-10, rgba(128,128,128,0.12)) 1px, transparent 1px);
     background-size: calc(100% / 12) calc(100% / 12);
+}
+
+/* Allow dragged/resized items to extend past edges without clipping */
+.progress-grid-area--dragging {
+    overflow: visible;
 }
 
 .progress-grid-layout {
@@ -462,9 +471,9 @@
     @apply opacity-100;
 }
 
-/* Ring module — fills the cell with the ring */
+/* Ring module — 1x1 cell, circle fills it */
 .progress-module--ring {
-    @apply relative items-center justify-center p-4;
+    @apply relative items-center justify-center p-2;
 }
 
 .progress-ring__svg {
@@ -476,6 +485,71 @@
 }
 
 .progress-ring__remove {
+    @apply absolute top-1.5 right-1.5 z-10;
+}
+
+.progress-module--bar {
+    @apply relative flex flex-row items-center gap-2 p-2;
+}
+
+.progress-bar__label {
+    @apply flex flex-col min-w-0 shrink-0;
+}
+
+.progress-bar__track {
+    @apply flex-1 min-w-0 h-2 flex flex-row rounded-full
+        color-bg-grey-10 overflow-hidden;
+}
+
+.progress-bar__fill {
+    @apply h-full rounded-full color-bg-accent color-txt-accent
+        transition-all duration-700 ease-out;
+}
+
+.progress-module--bar .progress-bar__fill {
+    background-color: currentColor;
+}
+
+.progress-bar__fill--complete {
+    @apply text-green-500;
+}
+
+.progress-bar__remove {
+    @apply absolute top-1.5 right-1.5 z-10;
+}
+
+/* Text note module */
+.progress-module--text {
+    @apply relative p-3;
+}
+
+.progress-text__input {
+    @apply w-full h-full resize-none bg-transparent color-txt-main
+        text-sm leading-snug outline-none placeholder:color-txt-sub overflow-hidden;
+}
+
+.progress-text__input--readonly {
+    @apply cursor-default pointer-events-none;
+}
+
+.progress-text__remove {
+    @apply absolute top-1.5 right-1.5 z-10;
+}
+
+/* Drawing note module */
+.progress-module--drawing {
+    @apply relative p-2 overflow-hidden;
+}
+
+.progress-drawing__canvas-wrap {
+    @apply w-full h-full min-h-0 min-w-0 relative rounded-lg overflow-hidden;
+}
+
+.progress-drawing__canvas-wrap canvas {
+    display: block;
+}
+
+.progress-drawing__remove {
     @apply absolute top-1.5 right-1.5 z-10;
 }
 
@@ -495,6 +569,11 @@
     @apply shadow-lg opacity-90;
 }
 
+/* Hide the red placeholder – just have the component itself snap */
+.react-grid-item.react-grid-placeholder {
+    display: none !important;
+}
+
 /* Add-module modal option rows */
 .add-module-option {
     @apply flex items-center gap-3 p-3 rounded-xl w-full text-left
@@ -505,56 +584,70 @@
         color-bg-grey-5 color-txt-accent shrink-0;
 }
 
-/*================ PAPER HEATMAP ================*/
-.heatmap-wrap {
-    @apply flex flex-wrap gap-1.5 pt-2;
-}
-
-.heatmap-cell {
-    @apply relative rounded-md flex items-center justify-center
-        overflow-hidden color-bg-accent transition-all duration-300
-        px-1.5 py-1;
-}
-
-.heatmap-cell__fill {
-    @apply absolute inset-0 color-bg-accent transition-opacity duration-300;
-    opacity: var(--heatmap-opacity, 0);
-}
-
-.heatmap-cell__label {
-    @apply relative z-10 text-[10px] font-bold tabular-nums leading-none color-txt-main;
-}
-
-
-
 /*================ QUESTION HEATMAP ================*/
 .qheatmap-scroll {
     @apply pt-2;
 }
 
 .qheatmap-columns {
-    @apply flex gap-1;
+    @apply flex;
+}
+
+.qheatmap-col-divider {
+    flex: 0 0 0.35rem;
+    position: relative;
+}
+
+.qheatmap-col-divider::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    transform: translateX(-50%);
+    background-color: var(--grey-10, rgba(0, 0, 0, 0.12));
 }
 
 .qheatmap-col {
-    @apply flex flex-col items-center gap-0.5;
+    @apply flex flex-col items-center gap-1;
 }
 
 .qheatmap-col-header {
-    @apply text-[9px] font-bold color-txt-sub text-center whitespace-nowrap;
+    @apply text-[11px] font-bold color-txt-sub text-center whitespace-nowrap;
+}
+
+.qheatmap-year-split {
+    display: flex;
+    flex-direction: row;
+    gap: 0.35rem;
+    width: 100%;
+}
+
+.qheatmap-col--half {
+    flex: 1;
+    min-width: 0;
+}
+
+.qheatmap-col--half .qheatmap-cell {
+    width: 0.875rem;
 }
 
 .qheatmap-boxes {
-    @apply flex flex-col gap-0.5;
+    @apply flex flex-col gap-1;
 }
 
 .qheatmap-cell {
-    @apply relative rounded-sm overflow-hidden color-bg-accent transition-all duration-300;
-    width: 1.25rem;
-    height: 0.5rem;
+    @apply relative overflow-hidden transition-all duration-300 color-txt-accent;
+    width: 1.75rem;
+    height: 0.35rem;
+    border-radius: 9999px;
+    background-color: var(--grey-10, rgba(0,0,0,0.06));
 }
 
 .qheatmap-cell__fill {
-    @apply absolute inset-0 color-bg-accent transition-opacity duration-300;
+    @apply absolute inset-0 transition-opacity duration-300;
+    border-radius: 9999px;
+    background-color: currentColor;
     opacity: var(--heatmap-opacity, 0);
 }

@@ -29,9 +29,15 @@ type DrawingCanvasProps = {
 	initialStrokes?: Stroke[] | null;
 	/** Called (debounced) when strokes change (stroke completed, erased, or cleared). */
 	onStrokesChange?: (strokes: Stroke[]) => void;
+	/** Optional class for the wrapper (e.g. color-bg-grey-5 for embedded grey background). */
+	wrapperClassName?: string;
+	/** When true, hide toolbar and prevent drawing/pan/zoom (view-only mode). */
+	readOnly?: boolean;
+	/** Initial grid mode. Use "off" for no grid (e.g. in progress dashboard). */
+	defaultGridMode?: GridMode;
 };
 
-export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initialStrokes, onStrokesChange }: DrawingCanvasProps) {
+export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initialStrokes, onStrokesChange, wrapperClassName, readOnly = false, defaultGridMode = "lines" }: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const colorSampleRef = useRef<HTMLDivElement>(null);
@@ -88,7 +94,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 		};
 	}, []);
 	const [tool, setTool] = useState<"pen" | "eraser">("pen");
-	const [gridMode, setGridMode] = useState<GridMode>("lines");
+	const [gridMode, setGridMode] = useState<GridMode>(defaultGridMode);
 	const [strokeColor, setStrokeColor] = useState("");
 	const [gridColor, setGridColor] = useState("");
 
@@ -328,6 +334,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const handlePointerDown = useCallback(
 		(e: React.PointerEvent) => {
 			e.preventDefault();
+			if (readOnly) return;
 			const canvas = canvasRef.current;
 			if (!canvas) return;
 			canvas.setPointerCapture(e.pointerId);
@@ -370,12 +377,13 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 				}
 			}
 		},
-		[pan, scale, screenToWorld, tool]
+		[pan, scale, screenToWorld, tool, readOnly]
 	);
 
 	const handlePointerMove = useCallback(
 		(e: React.PointerEvent) => {
 			e.preventDefault();
+			if (readOnly) return;
 			const pointers = pointerIdsRef.current;
 			const rect = canvasRef.current?.getBoundingClientRect();
 			if (!rect) return;
@@ -425,7 +433,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 				if (currentStroke.tool === "pen") scheduleHoldStraighten();
 			}
 		},
-		[currentStroke, screenToWorld, scheduleHoldStraighten]
+		[currentStroke, screenToWorld, scheduleHoldStraighten, readOnly]
 	);
 
 	const handlePointerUp = useCallback(
@@ -452,6 +460,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const handleWheel = useCallback(
 		(e: React.WheelEvent) => {
 			e.preventDefault();
+			if (readOnly) return;
 			const canvas = canvasRef.current;
 			if (!canvas) return;
 			const rect = canvas.getBoundingClientRect();
@@ -465,7 +474,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 			setScale(newScale);
 			setPan({ x: newPanX, y: newPanY });
 		},
-		[pan, scale]
+		[pan, scale, readOnly]
 	);
 
 	const clearCanvas = useCallback(() => {
@@ -480,7 +489,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	return (
 		<div
 			ref={containerRef}
-			className={`drawing-canvas-wrapper flex flex-col color-bg select-none ${isEmbedded ? "absolute inset-0" : "fixed inset-0 z-50"}`}
+			className={`drawing-canvas-wrapper flex flex-col select-none ${wrapperClassName ?? "color-bg"} ${isEmbedded ? "absolute inset-0" : "fixed inset-0 z-50"}`}
 			style={{
 				touchAction: "none",
 				WebkitUserSelect: "none",
@@ -518,7 +527,8 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 						WebkitTapHighlightColor: "transparent",
 					}}
 				/>
-				{/* Floating bar - mostly transparent with blur */}
+				{/* Floating bar - mostly transparent with blur (hidden in readOnly) */}
+				{!readOnly && (
 				<div
 					className="drawing-canvas-toolbar absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center gap-1 py-1.5 px-2 rounded-[var(--radius-out)] color-shadow"
 					style={{
@@ -570,6 +580,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 					</button>
 				)}
 				</div>
+				)}
 			</div>
 		</div>
 	);

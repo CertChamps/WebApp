@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { LuX } from "react-icons/lu";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import ScaleToFit from "./ScaleToFit";
@@ -141,9 +141,17 @@ export default function QuestionHeatmapModule({ config, entries, onRemove, editi
     return map;
   }, [entries, config.subject, config.level]);
 
-  const hasMultiplePaperNums = useMemo(() => {
-    const nums = new Set(papers.map((p) => p.paperNum ?? 1));
-    return nums.size > 1;
+  const papersByYear = useMemo(() => {
+    const map = new Map<number, PaperInfo[]>();
+    for (const p of papers) {
+      const list = map.get(p.year) ?? [];
+      list.push(p);
+      map.set(p.year, list);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => (a.paperNum ?? 99) - (b.paperNum ?? 99));
+    }
+    return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
   }, [papers]);
 
   function getHeat(paperId: string, questionId: string): number {
@@ -153,21 +161,34 @@ export default function QuestionHeatmapModule({ config, entries, onRemove, editi
     return 0;
   }
 
-  function colHeader(paper: PaperInfo): string {
-    const yr = paper.year > 0 ? String(paper.year) : "?";
-    if (hasMultiplePaperNums && paper.paperNum) return `${yr} P${paper.paperNum}`;
-    return yr;
+  function renderPaperCells(paper: PaperInfo) {
+    return paper.questions.map((q) => {
+      const heat = getHeat(paper.id, q.id);
+      return (
+        <div
+          key={q.id}
+          className="qheatmap-cell"
+          title={`${q.name} — ${heat >= 1 ? "Completed" : heat > 0 ? "Drawn on" : "Not started"}`}
+        >
+          <div
+            className="qheatmap-cell__fill"
+            style={{ "--heatmap-opacity": heat } as React.CSSProperties}
+          />
+        </div>
+      );
+    });
   }
 
   return (
     <div className="progress-module">
       <div className="progress-module__header">
-        <div className="flex flex-col gap-0.5 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <span className="text-sm font-bold color-txt-main truncate">
             {formatSubject(config.subject)}
           </span>
-          <span className="text-xs color-txt-sub">
-            {formatLevel(config.level)} · Question Heatmap
+          <span className="h-3 w-px color-bg-grey-10 shrink-0" aria-hidden />
+          <span className="text-xs color-txt-sub shrink-0">
+            {formatLevel(config.level)}
           </span>
         </div>
         {editing && (
@@ -196,29 +217,32 @@ export default function QuestionHeatmapModule({ config, entries, onRemove, editi
       ) : papers.length === 0 ? (
         <p className="text-xs color-txt-sub py-4 text-center">No papers found.</p>
       ) : (
-        <ScaleToFit>
+        <ScaleToFit
+          contentKey={`${papersByYear.length}-${papersByYear.map(([y, ps]) => `${y}:${ps.map((p) => p.id).join(",")}`).join(";")}`}
+        >
           <div className="qheatmap-columns">
-            {papers.map((p) => (
-              <div key={p.id} className="qheatmap-col">
-                <span className="qheatmap-col-header">{colHeader(p)}</span>
-                <div className="qheatmap-boxes">
-                  {p.questions.map((q) => {
-                    const heat = getHeat(p.id, q.id);
-                    return (
-                      <div
-                        key={q.id}
-                        className="qheatmap-cell"
-                        title={`${q.name} — ${heat >= 1 ? "Completed" : heat > 0 ? "Drawn on" : "Not started"}`}
-                      >
-                        <div
-                          className="qheatmap-cell__fill"
-                          style={{ "--heatmap-opacity": heat } as React.CSSProperties}
-                        />
-                      </div>
-                    );
-                  })}
+            {papersByYear.map(([year, papersInYear], i) => (
+              <React.Fragment key={year}>
+                {i > 0 && <div className="qheatmap-col-divider" aria-hidden="true" />}
+                <div className="qheatmap-col">
+                  <span className="qheatmap-col-header">
+                    {year > 0 ? String(year) : "?"}
+                  </span>
+                  {papersInYear.length > 1 ? (
+                    <div className="qheatmap-year-split">
+                      {papersInYear.map((p) => (
+                        <div key={p.id} className="qheatmap-col qheatmap-col--half">
+                          <div className="qheatmap-boxes">{renderPaperCells(p)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="qheatmap-boxes">
+                      {renderPaperCells(papersInYear[0])}
+                    </div>
+                  )}
                 </div>
-              </div>
+              </React.Fragment>
             ))}
           </div>
         </ScaleToFit>

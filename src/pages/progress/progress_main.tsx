@@ -1,64 +1,96 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LuPlus, LuLayoutGrid, LuPencil, LuCheck } from "react-icons/lu";
 import { default as ReactGridLayout } from "react-grid-layout/legacy";
 import type { Layout, LayoutItem } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
-import { useProgressModules, MODULE_SIZES } from "../../hooks/useProgressModules";
+import { useProgressModules, getModuleSize } from "../../hooks/useProgressModules";
 import { useAllPaperProgress } from "../../hooks/usePaperProgress";
 import PaperRingModule from "../../components/progress/PaperRingModule";
-import PaperHeatmapModule from "../../components/progress/PaperHeatmapModule";
+import PaperBarModule from "../../components/progress/PaperBarModule";
 import QuestionHeatmapModule from "../../components/progress/QuestionHeatmapModule";
+import TextModule from "../../components/progress/TextModule";
+import DrawingModule from "../../components/progress/DrawingModule";
 import AddModuleModal from "../../components/progress/AddModuleModal";
 import "../../styles/progress.css";
 
 const GRID_COLS = 12;
-const GRID_MARGIN: [number, number] = [16, 16];
+const GRID_MARGIN: [number, number] = [2, 2];
 
 const Progress = () => {
-  const { modules, loading: modulesLoading, addModule, removeModule, updateLayouts } =
+  const { modules, loading: modulesLoading, addModule, removeModule, updateLayouts, updateModuleText, updateModuleDrawing } =
     useProgressModules();
   const { entries: progressEntries, loading: progressLoading } = useAllPaperProgress();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
 
   const containerRef = useCallback((el: HTMLDivElement | null) => {
     if (!el) return;
-    setContainerWidth(el.clientWidth);
+    setContainerSize({ w: el.clientWidth, h: el.clientHeight });
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width);
+        const { width, height } = entry.contentRect;
+        setContainerSize({ w: width, h: height });
       }
     });
     ro.observe(el);
   }, []);
 
   const rowHeight = useMemo(() => {
-    if (containerWidth <= 0) return 80;
-    return (containerWidth - GRID_MARGIN[0] * (GRID_COLS - 1)) / GRID_COLS;
-  }, [containerWidth]);
+    const { w } = containerSize;
+    if (w <= 0) return 80;
+    return (w - GRID_MARGIN[0] * (GRID_COLS - 1)) / GRID_COLS;
+  }, [containerSize]);
+
+  const maxRows = useMemo(() => {
+    const { w, h } = containerSize;
+    if (w <= 0 || h <= 0) return 6;
+    const cell = (w - GRID_MARGIN[0] * (GRID_COLS - 1)) / GRID_COLS;
+    return Math.max(1, Math.floor((h + GRID_MARGIN[1]) / (cell + GRID_MARGIN[1])));
+  }, [containerSize]);
+
+  const RESIZABLE_TYPES = new Set(["text", "drawing"]);
 
   const layout: Layout = useMemo(
     () =>
-      modules.map((m): LayoutItem => ({
-        i: m.id,
-        x: m.x,
-        y: m.y,
-        w: MODULE_SIZES[m.type].w,
-        h: MODULE_SIZES[m.type].h,
-        static: !editing,
-      })),
-    [modules, editing]
+      modules.map((m): LayoutItem => {
+        const size = getModuleSize(m);
+        const maxY = Math.max(0, maxRows - size.h);
+        return {
+          i: m.id,
+          x: m.x,
+          y: Math.min(m.y, maxY),
+          w: size.w,
+          h: size.h,
+          static: !editing,
+          isResizable: editing && RESIZABLE_TYPES.has(m.type),
+          minW: 1,
+          minH: 1,
+        };
+      }),
+    [modules, editing, maxRows]
   );
 
   const onLayoutChange = useCallback(
     (newLayout: Layout) => {
       if (!editing) return;
-      updateLayouts(newLayout.map((l) => ({ i: l.i, x: l.x, y: l.y })));
+      const clamped = newLayout.map((l) => {
+        const maxY = Math.max(0, maxRows - l.h);
+        return { i: l.i, x: l.x, y: Math.min(l.y, maxY), w: l.w, h: l.h };
+      });
+      updateLayouts(clamped);
     },
-    [editing, updateLayouts]
+    [editing, updateLayouts, maxRows]
   );
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [isDragging]);
 
   const loading = modulesLoading || progressLoading;
 
@@ -82,7 +114,7 @@ const Progress = () => {
   }
 
   return (
-    <div className="progress-dashboard">
+    <div className={`progress-dashboard${isDragging ? " progress-dashboard--dragging" : ""}`}>
       <div className="progress-dashboard__header">
         <h1 className="text-xl font-bold color-txt-main">Progress</h1>
         <div className="flex items-center gap-2">
@@ -139,21 +171,27 @@ const Progress = () => {
       ) : (
         <div
           ref={containerRef}
-          className={`progress-grid-area${editing ? " progress-grid-area--editing" : ""}`}
+          className={`progress-grid-area${editing ? " progress-grid-area--editing" : ""}${isDragging ? " progress-grid-area--dragging" : ""}`}
         >
-          {containerWidth > 0 && (
+          {containerSize.w > 0 && containerSize.h > 0 && (
             <ReactGridLayout
               className="progress-grid-layout"
               layout={layout}
               cols={GRID_COLS}
               rowHeight={rowHeight}
-              width={containerWidth}
+              maxRows={maxRows}
+              width={containerSize.w}
               margin={GRID_MARGIN}
               isDraggable={editing}
-              isResizable={false}
+              isResizable={editing}
+              draggableHandle={editing ? ".progress-module__drag-handle" : undefined}
               compactType={null}
               preventCollision
               onLayoutChange={onLayoutChange}
+              onDragStart={() => setIsDragging(true)}
+              onDragStop={() => setIsDragging(false)}
+              onResizeStart={() => setIsDragging(true)}
+              onResizeStop={() => setIsDragging(false)}
             >
               {modules.map((mod) => {
                 const sharedProps = {
@@ -168,19 +206,49 @@ const Progress = () => {
                   case "paper-ring":
                     inner = <PaperRingModule {...sharedProps} />;
                     break;
-                  case "paper-heatmap":
-                    inner = <PaperHeatmapModule {...sharedProps} />;
+                  case "paper-bar":
+                    inner = <PaperBarModule {...sharedProps} />;
                     break;
                   case "question-heatmap":
                     inner = <QuestionHeatmapModule {...sharedProps} />;
+                    break;
+                  case "text":
+                    inner = (
+                      <TextModule
+                        config={mod}
+                        onRemove={() => removeModule(mod.id)}
+                        onTextChange={(t) => updateModuleText(mod.id, t)}
+                        editing={editing}
+                      />
+                    );
+                    break;
+                  case "drawing":
+                    inner = (
+                      <DrawingModule
+                        config={mod}
+                        onRemove={() => removeModule(mod.id)}
+                        onDrawingChange={(d) => updateModuleDrawing(mod.id, d)}
+                        editing={editing}
+                      />
+                    );
                     break;
                   default:
                     inner = null;
                 }
 
                 return (
-                  <div key={mod.id} className="progress-grid-item">
-                    {inner}
+                  <div key={mod.id} className={`progress-grid-item flex flex-col min-h-0 ${editing ? "rounded-2xl" : ""}`}>
+                    <div className={`flex-1 min-h-0 overflow-hidden relative ${editing ? "rounded-2xl" : "rounded-2xl"}`}>
+                      {inner}
+                      {editing && (
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
+                          <div
+                            className="progress-module__drag-handle w-3 h-1 rounded-full color-bg-grey-10 hover:color-bg-grey-20 cursor-grab active:cursor-grabbing"
+                            title="Drag to move"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -191,7 +259,7 @@ const Progress = () => {
 
       {showAddModal && (
         <AddModuleModal
-          onAdd={addModule}
+          onAdd={(type, subject, level, customSize) => addModule(type, subject, level, customSize, maxRows)}
           onClose={() => setShowAddModal(false)}
         />
       )}
