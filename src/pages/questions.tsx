@@ -185,8 +185,6 @@ export default function Questions() {
     }, []);
     const paperScrollRef = useRef<HTMLDivElement | null>(null);
     const panelsScrollRef = useRef<HTMLDivElement | null>(null);
-    const paperSnapshot = usePaperSnapshot(paperBlob, currentPaperPage);
-    const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
 
     const currentQuestion = questions[position - 1];
 
@@ -231,6 +229,14 @@ export default function Questions() {
             : currentPaperQuestion;
     const questionForLogTables =
         logTablesQuestionIndex != null ? paperQuestions[logTablesQuestionIndex] : currentPaperQuestion;
+    const aiPaperPage = useMemo(() => {
+        if (mode !== "pastpaper") return currentPaperPage;
+        const activeQ = currentPaperQuestion ?? filteredPaperQuestions[0] ?? paperQuestions[0];
+        return activeQ?.pageRegions?.[0]?.page ?? activeQ?.pageRange?.[0] ?? currentPaperPage;
+    }, [mode, currentPaperPage, currentPaperQuestion, filteredPaperQuestions, paperQuestions]);
+    const paperSnapshot = usePaperSnapshot(paperBlob, aiPaperPage);
+    const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
+
     const msCode = currentQuestion?.properties?.markingScheme
         ? String(currentQuestion.properties.markingScheme)
         : "";
@@ -784,6 +790,7 @@ export default function Questions() {
                                 paperId: selectedPaper.id,
                                 paperQuestionId: currentPaperQuestion.id,
                                 questionName: currentPaperQuestion.questionName,
+                                tags: currentPaperQuestion.tags,
                                 paperLabel: selectedPaper.label,
                                 subject: selectedPaper.subject,
                                 level: selectedPaper.level,

@@ -9,17 +9,72 @@ export type GetPaperSnapshot = () => string | null;
 
 const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
 
+function romanToInt(input: string): number | null {
+  const s = input.trim().toUpperCase();
+  if (!s) return null;
+  const map: Record<string, number> = { I: 1, V: 5, X: 10, L: 50, C: 100 };
+  let total = 0;
+  let prev = 0;
+  for (let i = s.length - 1; i >= 0; i--) {
+    const val = map[s[i] ?? ""];
+    if (!val) return null;
+    if (val < prev) total -= val;
+    else total += val;
+    prev = val;
+  }
+  return total > 0 ? total : null;
+}
+
+function parsePartIndexFromName(name: string | undefined): number | null {
+  if (!name) return null;
+  const alpha = name.match(/(?:^|\b)part\s*([a-z])\b/i) ?? name.match(/\(([a-z])\)/i);
+  if (alpha) {
+    const ch = alpha[1]?.toUpperCase();
+    if (ch) return ch.charCodeAt(0) - 64;
+  }
+  const roman =
+    name.match(/(?:^|\b)part\s*(i{1,3}|iv|v|vi{0,3}|ix|x)\b/i) ??
+    name.match(/\((i{1,3}|iv|v|vi{0,3}|ix|x)\)/i);
+  if (roman?.[1]) {
+    const n = romanToInt(roman[1]);
+    if (n != null) return n;
+  }
+  const numeric = name.match(/(?:^|\b)part\s*(\d+)\b/i);
+  if (numeric?.[1]) {
+    const n = Number(numeric[1]);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  const qSuffix = name.match(/\bq(?:uestion)?\s*\d+\s*([a-z])\b/i);
+  if (qSuffix?.[1]) {
+    const ch = qSuffix[1].toUpperCase();
+    return ch.charCodeAt(0) - 64;
+  }
+  return null;
+}
+
 function buildQuestionContext(question: any): string | undefined {
-  if (!question?.content?.length) return undefined;
+  const name = question?.properties?.name ?? question?.questionName;
+  const tags = question?.properties?.tags ?? question?.tags;
+  const rawContent = Array.isArray(question?.content) ? question.content : [];
+  const partIndex = parsePartIndexFromName(typeof name === "string" ? name : undefined);
+  const scopedContent =
+    partIndex != null && partIndex > 0 && partIndex <= rawContent.length
+      ? [rawContent[partIndex - 1]]
+      : rawContent;
+
   const parts: string[] = [];
-  const name = question?.properties?.name;
-  const tags = question?.properties?.tags;
   if (name) parts.push(`Question: ${name}`);
   if (Array.isArray(tags) && tags.length) parts.push(`Topics: ${tags.join(", ")}`);
-  const questionTexts = question.content
+  if (partIndex != null) {
+    parts.push(`Scope: Answer ONLY this specific part (Part ${partIndex}) unless the user explicitly asks about another part.`);
+  }
+  const questionTexts = scopedContent
     .map((c: any, i: number) => (c?.question ? `Part ${i + 1}: ${c.question}` : null))
     .filter(Boolean);
   if (questionTexts.length) parts.push(`\n${questionTexts.join("\n\n")}`);
+  if (!questionTexts.length && name) {
+    parts.push("Use only the named question/part above as context. Do not answer other parts unless asked.");
+  }
   return parts.length ? parts.join("\n") : undefined;
 }
 
