@@ -401,3 +401,160 @@
 .progress-skeleton-list {
     @apply flex flex-col gap-2;
 }
+
+/*================ MODULAR PROGRESS DASHBOARD ================*/
+.progress-dashboard {
+    @apply w-full h-full p-6 md:p-10 flex flex-col gap-6 overflow-auto scrollbar-minimal;
+}
+
+.progress-dashboard__header {
+    @apply flex items-center justify-between;
+}
+
+.progress-dashboard__add-btn {
+    @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold
+        color-bg-grey-5 color-txt-main
+        hover:color-bg-grey-10 active:scale-[0.97] transition-all duration-200 cursor-pointer;
+}
+
+.progress-dashboard__edit-btn {
+    @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold
+        color-bg-accent color-txt-accent
+        hover:opacity-90 active:scale-[0.97] transition-all duration-200 cursor-pointer;
+}
+
+/*-- Widget grid area --*/
+.progress-grid-area {
+    @apply flex-1 w-full rounded-2xl;
+}
+
+.progress-grid-area--editing {
+    background-image: radial-gradient(circle, var(--grey-10, rgba(128,128,128,0.12)) 1px, transparent 1px);
+    background-size: calc(100% / 12) calc(100% / 12);
+}
+
+.progress-grid-layout {
+    min-height: 200px;
+}
+
+.progress-grid-item {
+    @apply w-full h-full;
+}
+
+.progress-module {
+    @apply flex flex-col p-4 rounded-2xl color-bg-grey-5 transition-shadow duration-200
+        w-full h-full overflow-hidden;
+}
+
+.progress-module__header {
+    @apply flex items-start justify-between gap-2 mb-2;
+}
+
+.progress-module__remove {
+    @apply p-1 rounded-lg color-txt-sub opacity-0 pointer-events-none
+        hover:color-bg-grey-10 transition-all cursor-pointer;
+}
+
+.progress-module__remove--visible {
+    @apply opacity-60 pointer-events-auto;
+}
+.progress-module__remove--visible:hover {
+    @apply opacity-100;
+}
+
+/* Ring module — fills the cell with the ring */
+.progress-module--ring {
+    @apply relative items-center justify-center p-4;
+}
+
+.progress-ring__svg {
+    @apply w-full h-full max-w-full max-h-full transform -rotate-90;
+}
+
+.progress-ring__label {
+    @apply absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none;
+}
+
+.progress-ring__remove {
+    @apply absolute top-1.5 right-1.5 z-10;
+}
+
+/* Scale-to-fit wrapper */
+.scale-to-fit {
+    @apply flex-1 overflow-hidden relative min-h-0 min-w-0;
+}
+
+.scale-to-fit__inner {
+    @apply origin-top-left;
+    width: max-content;
+    height: max-content;
+}
+
+/* react-grid-layout overrides */
+.react-grid-item.react-draggable-dragging .progress-module {
+    @apply shadow-lg opacity-90;
+}
+
+/* Add-module modal option rows */
+.add-module-option {
+    @apply flex items-center gap-3 p-3 rounded-xl w-full text-left
+        hover:color-bg-grey-5 active:scale-[0.98] transition-all duration-150 cursor-pointer;
+}
+.add-module-option__icon {
+    @apply flex items-center justify-center w-10 h-10 rounded-xl
+        color-bg-grey-5 color-txt-accent shrink-0;
+}
+
+/*================ PAPER HEATMAP ================*/
+.heatmap-wrap {
+    @apply flex flex-wrap gap-1.5 pt-2;
+}
+
+.heatmap-cell {
+    @apply relative rounded-md flex items-center justify-center
+        overflow-hidden color-bg-accent transition-all duration-300
+        px-1.5 py-1;
+}
+
+.heatmap-cell__fill {
+    @apply absolute inset-0 color-bg-accent transition-opacity duration-300;
+    opacity: var(--heatmap-opacity, 0);
+}
+
+.heatmap-cell__label {
+    @apply relative z-10 text-[10px] font-bold tabular-nums leading-none color-txt-main;
+}
+
+
+
+/*================ QUESTION HEATMAP ================*/
+.qheatmap-scroll {
+    @apply pt-2;
+}
+
+.qheatmap-columns {
+    @apply flex gap-1;
+}
+
+.qheatmap-col {
+    @apply flex flex-col items-center gap-0.5;
+}
+
+.qheatmap-col-header {
+    @apply text-[9px] font-bold color-txt-sub text-center whitespace-nowrap;
+}
+
+.qheatmap-boxes {
+    @apply flex flex-col gap-0.5;
+}
+
+.qheatmap-cell {
+    @apply relative rounded-sm overflow-hidden color-bg-accent transition-all duration-300;
+    width: 1.25rem;
+    height: 0.5rem;
+}
+
+.qheatmap-cell__fill {
+    @apply absolute inset-0 color-bg-accent transition-opacity duration-300;
+    opacity: var(--heatmap-opacity, 0);
+}

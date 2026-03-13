@@ -81,6 +81,19 @@
   @apply color-bg-accent color-txt-accent 
 }
 
+/* Tick-off button for marking paper questions complete */
+.questions-top-bar__tick {
+  @apply inline-flex items-center justify-center w-8 h-8 rounded-full
+    color-txt-sub border border-transparent
+    hover:color-bg-grey-5 active:scale-90 transition-all duration-200 cursor-pointer;
+}
+.questions-top-bar__tick--done {
+  @apply text-green-500;
+}
+.questions-top-bar__progress-pill {
+  @apply text-xs font-bold color-txt-sub tabular-nums;
+}
+
 /* Single-line truncation with ellipsis for question title and tags */
 .question-selector-truncate {
   overflow: hidden;

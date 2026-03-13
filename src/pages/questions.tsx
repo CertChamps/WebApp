@@ -7,6 +7,7 @@ import { UserContext } from "../context/UserContext";
 import { useExamPapers, isPaperFree, type ExamPaper, type PaperQuestion } from "../hooks/useExamPapers";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
 import useFilters from "../hooks/useFilters";
+import { usePaperProgress } from "../hooks/usePaperProgress";
 
 // Components
 import { createPortal } from "react-dom";
@@ -142,6 +143,7 @@ export default function Questions() {
         firstFreePaper,
     } = useExamPapers(null, { loadAllWhenNull: true });
     const { availableSets } = useFilters();
+    const { completedForPaper, loadPaperProgress, toggleQuestion, isQuestionCompleted } = usePaperProgress();
     const certChampsSet = availableSets.find((s) => s.id === "certchamps");
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
     const [paperBlob, setPaperBlob] = useState<Blob | null>(null);
@@ -428,6 +430,11 @@ export default function Questions() {
             cancelled = true;
         };
     }, [selectedPaper, getPaperQuestions, selectedSubTopics]);
+
+    // Load paper progress when paper is selected
+    useEffect(() => {
+        if (selectedPaper) loadPaperProgress(selectedPaper);
+    }, [selectedPaper, loadPaperProgress]);
 
     // Clamp past-paper position when filter shrinks the list.
     // If no questions match in the current paper, auto-switch to a paper that has matches.
@@ -896,6 +903,14 @@ export default function Questions() {
                         subjectFilter={subjectFilter}
                         onSubjectFilterChange={setSubjectFilter}
                         subjectOptions={certChampsSet?.sections?.map((sec) => ({ value: sec, label: formatSectionLabel(sec) })) ?? []}
+                        questionCompleted={mode === "pastpaper" && currentPaperQuestion ? isQuestionCompleted(currentPaperQuestion.id) : undefined}
+                        onToggleQuestionCompleted={mode === "pastpaper" && selectedPaper && currentPaperQuestion ? () => {
+                            toggleQuestion(selectedPaper, currentPaperQuestion.id, paperQuestions.length);
+                        } : undefined}
+                        paperProgress={mode === "pastpaper" && paperQuestions.length > 0 ? {
+                            completed: completedForPaper.size,
+                            total: paperQuestions.length,
+                        } : undefined}
                         centerContent={!hideTitleAndArrows ? (
                             <div className="flex items-center gap-1">
                                 <button

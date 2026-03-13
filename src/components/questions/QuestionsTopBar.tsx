@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { LuArrowLeft, LuMonitor, LuTablet } from "react-icons/lu";
+import { LuArrowLeft, LuMonitor, LuTablet, LuCircleCheck, LuCircle } from "react-icons/lu";
 
 type QuestionsMode = "certchamps" | "pastpaper";
 
@@ -13,6 +13,9 @@ type QuestionsTopBarProps = {
   subjectOptions: { value: string; label: string }[];
   centerContent?: ReactNode;
   rightContent?: ReactNode;
+  questionCompleted?: boolean;
+  onToggleQuestionCompleted?: () => void;
+  paperProgress?: { completed: number; total: number };
 };
 
 export default function QuestionsTopBar({
@@ -25,6 +28,9 @@ export default function QuestionsTopBar({
   subjectOptions,
   centerContent,
   rightContent,
+  questionCompleted,
+  onToggleQuestionCompleted,
+  paperProgress,
 }: QuestionsTopBarProps) {
   return (
     <div className="questions-top-bar pointer-events-auto">
@@ -56,6 +62,29 @@ export default function QuestionsTopBar({
             )}
             <span className="txt-bold color-txt-sub">{laptopMode ? "Laptop" : "Tablet"}</span>
           </button>
+
+          {mode === "pastpaper" && onToggleQuestionCompleted && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={onToggleQuestionCompleted}
+                className={`questions-top-bar__tick ${questionCompleted ? "questions-top-bar__tick--done" : ""}`}
+                aria-label={questionCompleted ? "Mark question incomplete" : "Mark question complete"}
+                title={questionCompleted ? "Mark incomplete" : "Mark complete"}
+              >
+                {questionCompleted ? (
+                  <LuCircleCheck size={18} strokeWidth={2.2} />
+                ) : (
+                  <LuCircle size={18} strokeWidth={1.8} />
+                )}
+              </button>
+              {paperProgress && paperProgress.total > 0 && (
+                <span className="questions-top-bar__progress-pill">
+                  {paperProgress.completed}/{paperProgress.total}
+                </span>
+              )}
+            </div>
+          )}
 
           {mode === "certchamps" && subjectOptions.length > 0 && (
             <>
