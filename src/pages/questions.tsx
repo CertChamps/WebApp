@@ -12,6 +12,7 @@ import {
     type PaperQuestion,
 } from "../hooks/useExamPapers";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
+import { usePaperProgress } from "../hooks/usePaperProgress";
 import useFilters from "../hooks/useFilters";
 import { getPastPaperTopicScope } from "../data/mathsHigherTopics";
 
