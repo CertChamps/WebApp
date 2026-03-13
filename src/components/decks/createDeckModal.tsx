@@ -5,6 +5,7 @@ import { Reorder } from 'framer-motion'
 import useQuestions from '../../hooks/useQuestions'
 import RenderMath from '../math/mathdisplay'
 import { UserContext } from '../../context/UserContext'
+import { isAdminUid } from '../../constants/adminUids'
 
 // Add inline styles for animation
 const styleSheet = `
@@ -357,7 +358,7 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
         {/* Official Toggle and Visibility */}
         <div className="mb-6">
 
-          {(user?.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user?.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2") ? (
+          {isAdminUid(user?.uid) ? (
           <div className="mb-4">
             <label className="color-txt-main block mb-2 font-semibold">Make it official?</label>
             <button

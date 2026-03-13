@@ -26,13 +26,9 @@ import ExtractQuestionsFlow, {
   type ExtractedRegion,
 } from "../components/addQuestions/ExtractQuestionsFlow";
 import "../styles/settings.css";
+import { ADMIN_UIDS } from "../constants/adminUids";
 
 type AddQuestionsTab = "upload" | "extract";
-
-const ADMIN_UIDS = [
-  "NkN9UBqoPEYpE21MC89fipLn0SP2",
-  "gJIqKYlc1OdXUQGZQkR4IzfCIoL2",
-];
 
 const SUBJECTS = ["maths", "applied-maths", "physics", "irish"] as const;
 const LEVELS = ["higher", "ordinary"] as const;

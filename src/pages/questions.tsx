@@ -4,10 +4,16 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import useQuestions from "../hooks/useQuestions";
 import { OptionsContext } from "../context/OptionsContext";
 import { UserContext } from "../context/UserContext";
-import { useExamPapers, isPaperFree, type ExamPaper, type PaperQuestion } from "../hooks/useExamPapers";
+import {
+    useExamPapers,
+    isPaperFree,
+    normalizePaperLevel,
+    type ExamPaper,
+    type PaperQuestion,
+} from "../hooks/useExamPapers";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
 import useFilters from "../hooks/useFilters";
-import { usePaperProgress } from "../hooks/usePaperProgress";
+import { getPastPaperTopicScope } from "../data/mathsHigherTopics";
 
 // Components
 import { createPortal } from "react-dom";
@@ -82,13 +88,15 @@ export default function Questions() {
   const urlLevel = searchParams.get("level");
   const urlIndexInPaper = searchParams.get("indexInPaper");
   const urlQuestionId = searchParams.get("questionId");
+    const normalizedUrlLevel = normalizePaperLevel(urlLevel);
+    const normalizedUrlSubject = (urlSubject ?? "").trim().toLowerCase();
 
   const initialMode: QuestionsMode =
     urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
   const initialPaths = getPathsForMode(initialMode, urlSubject || null);
 
   //==============================================> State <========================================//
-  const [filters, _setFilters] = useState<Record<string, string[]>>({});
+    const [filters, setFilters] = useState<Record<string, string[]>>({});
   const [position, setPosition] = useState(0);
   const [questions, setQuestions] = useState<any[]>([]);
   const [showSearch, setShowSearch] = useState(false);
@@ -109,9 +117,9 @@ export default function Questions() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
     const pastPaperFilterRef = useRef<HTMLDivElement>(null);
-    /** When set, next paperQuestions effect will jump here (used for random across papers). */
+    /** When set, next paperQuestions effect will jump here (used for random across scoped papers). */
     const pendingRandomRef = useRef<{ pos: number } | { questionId: string } | null>(null);
-    /** When set, next paperQuestions effect will jump to this index (used when selecting from all-papers search). */
+    /** When set, next paperQuestions effect will jump to this index (used when selecting from scoped-paper search). */
     const pendingSearchRef = useRef<{ indexInPaper: number } | null>(null);
     /** Tracks whether the initial urlQuestionId has been consumed (certchamps mode). */
     const urlQuestionIdConsumedRef = useRef(false);
@@ -178,10 +186,29 @@ export default function Questions() {
     }, []);
     const paperScrollRef = useRef<HTMLDivElement | null>(null);
     const panelsScrollRef = useRef<HTMLDivElement | null>(null);
-    const paperSnapshot = usePaperSnapshot(paperBlob, currentPaperPage);
-    const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
 
     const currentQuestion = questions[position - 1];
+
+    // Past-paper scope: once in a paper session, keep all paper operations within subject+level.
+    const scopedSubject = useMemo(
+        () => normalizedUrlSubject || String(selectedPaper?.subject ?? "").trim().toLowerCase(),
+        [normalizedUrlSubject, selectedPaper?.subject]
+    );
+    const scopedLevel = useMemo(
+        () => normalizedUrlLevel || normalizePaperLevel(selectedPaper?.level),
+        [normalizedUrlLevel, selectedPaper?.level]
+    );
+    const scopedPapers = useMemo(() => {
+        return papers.filter((p) => {
+            if (scopedSubject && (p.subject ?? "").toLowerCase() !== scopedSubject) return false;
+            if (scopedLevel && normalizePaperLevel(p.level) !== scopedLevel) return false;
+            return true;
+        });
+    }, [papers, scopedSubject, scopedLevel]);
+    const pastPaperTopicScope = useMemo(
+        () => getPastPaperTopicScope(scopedSubject, scopedLevel),
+        [scopedSubject, scopedLevel]
+    );
 
     // Normalise tag for matching (e.g. "Area & Volume" <-> "Area and Volume")
     const normTag = (t: string) =>
@@ -203,6 +230,14 @@ export default function Questions() {
             : currentPaperQuestion;
     const questionForLogTables =
         logTablesQuestionIndex != null ? paperQuestions[logTablesQuestionIndex] : currentPaperQuestion;
+    const aiPaperPage = useMemo(() => {
+        if (mode !== "pastpaper") return currentPaperPage;
+        const activeQ = currentPaperQuestion ?? filteredPaperQuestions[0] ?? paperQuestions[0];
+        return activeQ?.pageRegions?.[0]?.page ?? activeQ?.pageRange?.[0] ?? currentPaperPage;
+    }, [mode, currentPaperPage, currentPaperQuestion, filteredPaperQuestions, paperQuestions]);
+    const paperSnapshot = usePaperSnapshot(paperBlob, aiPaperPage);
+    const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
+
     const msCode = currentQuestion?.properties?.markingScheme
         ? String(currentQuestion.properties.markingScheme)
         : "";
@@ -258,17 +293,18 @@ export default function Questions() {
         async (
             subTopics: string[],
             startIdx: number,
-            direction: "forward" | "backward" = "forward"
+            direction: "forward" | "backward" = "forward",
+            sourcePapers: ExamPaper[] = scopedPapers
         ): Promise<{ paper: ExamPaper; questions: PaperQuestion[]; filtered: PaperQuestion[] } | null> => {
-            if (papers.length === 0 || !getPaperQuestions) return null;
+            if (sourcePapers.length === 0 || !getPaperQuestions) return null;
             const tagSet = new Set(subTopics.map((s) => normTag(s)));
             const step = direction === "forward" ? 1 : -1;
             for (
                 let i = startIdx;
-                direction === "forward" ? i < papers.length : i >= 0;
+                direction === "forward" ? i < sourcePapers.length : i >= 0;
                 i += step
             ) {
-                const p = papers[i];
+                const p = sourcePapers[i];
                 try {
                     const list = await getPaperQuestions(p);
                     if (list.length === 0) continue;
@@ -281,7 +317,7 @@ export default function Questions() {
             }
             return null;
         },
-        [papers, getPaperQuestions]
+        [scopedPapers, getPaperQuestions]
     );
 
     //==============================================================================================//
@@ -327,9 +363,9 @@ export default function Questions() {
             .then((blob) => {
                 if (!cancelled) setPaperBlob(blob);
                 // Preload next paper so "Next" is instant
-                const idx = papers.findIndex((p: ExamPaper) => p.storagePath === selectedPaper.storagePath);
-                if (idx >= 0 && idx < papers.length - 1) {
-                    getPaperBlob(papers[idx + 1]!).catch(() => {});
+                const idx = scopedPapers.findIndex((p: ExamPaper) => p.storagePath === selectedPaper.storagePath);
+                if (idx >= 0 && idx < scopedPapers.length - 1) {
+                    getPaperBlob(scopedPapers[idx + 1]!).catch(() => {});
                 }
             })
             .catch((err) => {
@@ -342,7 +378,7 @@ export default function Questions() {
         return () => {
             cancelled = true;
         };
-    }, [selectedPaper, getPaperBlob, papers]);
+    }, [selectedPaper, getPaperBlob, scopedPapers]);
 
     // Reset "current page" when user selects a different paper
     useEffect(() => {
@@ -448,10 +484,10 @@ export default function Questions() {
             return;
         }
         // Current paper has 0 filtered questions — find the nearest paper that does
-        if (selectedSubTopics.length === 0 || papers.length === 0 || paperQuestions.length === 0) return;
+        if (selectedSubTopics.length === 0 || scopedPapers.length === 0 || paperQuestions.length === 0) return;
         let searching = true;
         (async () => {
-            const curIdx = selectedPaper ? papers.findIndex((p) => p.storagePath === selectedPaper.storagePath) : 0;
+            const curIdx = selectedPaper ? scopedPapers.findIndex((p) => p.storagePath === selectedPaper.storagePath) : 0;
             // Search forward first (newer papers are at lower indices), then backward
             const result =
                 (await findPaperWithTopics(selectedSubTopics, curIdx + 1, "forward")) ??
@@ -463,7 +499,16 @@ export default function Questions() {
             }
         })();
         return () => { searching = false; };
-    }, [filteredPaperQuestions.length, paperQuestionPosition, selectedSubTopics, selectedPaper, papers, paperQuestions.length]);
+    }, [filteredPaperQuestions.length, paperQuestionPosition, selectedSubTopics, selectedPaper, scopedPapers, paperQuestions.length, findPaperWithTopics]);
+
+    // If the selected paper drifts outside the active scope (subject+level), snap to first scoped paper.
+    useEffect(() => {
+        if (mode !== "pastpaper" || !selectedPaper || scopedPapers.length === 0) return;
+        const inScope = scopedPapers.some((p) => p.storagePath === selectedPaper.storagePath);
+        if (!inScope) {
+            setSelectedPaper(scopedPapers[0]);
+        }
+    }, [mode, selectedPaper, scopedPapers]);
 
     // Do NOT sync PDF page/scroll to question — question only changes via arrows or "Open question".
 
@@ -592,18 +637,30 @@ export default function Questions() {
 
     // Preselect paper: URL paperId > current question year > first paper
     useEffect(() => {
-        if (papers.length === 0 || selectedPaper !== null) return;
+        if (scopedPapers.length === 0 || selectedPaper !== null) return;
         let match: ExamPaper | undefined;
         if (urlPaperId) {
-            match = papers.find((p) => p.id === urlPaperId && (!urlLevel || p.level === urlLevel))
-                ?? papers.find((p) => p.id === urlPaperId);
+            match = scopedPapers.find(
+                (p) =>
+                    p.id === urlPaperId &&
+                    (!normalizedUrlLevel || normalizePaperLevel(p.level) === normalizedUrlLevel) &&
+                    (!normalizedUrlSubject || (p.subject ?? "").toLowerCase() === normalizedUrlSubject)
+            );
+
+            if (!match && !normalizedUrlLevel) {
+                match = scopedPapers.find(
+                    (p) =>
+                        p.id === urlPaperId &&
+                        (!normalizedUrlSubject || (p.subject ?? "").toLowerCase() === normalizedUrlSubject)
+                );
+            }
         }
         if (!match && msYear) {
-            match = papers.find((p) => p.label.toLowerCase().startsWith("20" + msYear)) ?? papers[0];
+            match = scopedPapers.find((p) => p.label.toLowerCase().startsWith("20" + msYear)) ?? scopedPapers[0];
         }
-        if (!match) match = papers[0];
+        if (!match) match = scopedPapers[0];
         setSelectedPaper(match);
-    }, [papers, msYear, selectedPaper, urlPaperId, urlLevel]);
+    }, [scopedPapers, msYear, selectedPaper, urlPaperId, normalizedUrlLevel, normalizedUrlSubject]);
 
     // When landing in certchamps mode with a questionId URL param, jump to that question once questions load
     useEffect(() => {
@@ -739,6 +796,7 @@ export default function Questions() {
                                 paperId: selectedPaper.id,
                                 paperQuestionId: currentPaperQuestion.id,
                                 questionName: currentPaperQuestion.questionName,
+                                tags: currentPaperQuestion.tags,
                                 paperLabel: selectedPaper.label,
                                 subject: selectedPaper.subject,
                                 level: selectedPaper.level,
@@ -799,10 +857,10 @@ export default function Questions() {
                             setScrollToPage(prevQ?.pageRegions?.[0]?.page ?? prevQ?.pageRange?.[0] ?? null);
                         } else {
                             // Cross-paper: find previous paper with matching topics
-                            const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.storagePath === selectedPaper.storagePath) : -1;
+                            const idx = selectedPaper ? scopedPapers.findIndex((p: ExamPaper) => p.storagePath === selectedPaper.storagePath) : -1;
                             if (idx <= 0) return;
                             if (selectedSubTopics.length === 0) {
-                                setSelectedPaper(papers[idx - 1]);
+                                setSelectedPaper(scopedPapers[idx - 1]);
                                 return;
                             }
                             const result = await findPaperWithTopics(selectedSubTopics, idx - 1, "backward");
@@ -818,17 +876,16 @@ export default function Questions() {
                 const onNext = mode === "pastpaper"
                     ? async () => {
                         if (randomise) {
-                            // Random: build a pool of all papers that have matching questions
+                            // Random: build a pool of scoped papers that have matching questions
                             const tagSet = selectedSubTopics.length > 0
                                 ? new Set(selectedSubTopics.map((s) => normTag(s)))
                                 : null;
-                            // Randomise across all loaded papers (any subject/level)
-                            if (papers.length === 0) return;
+                            if (scopedPapers.length === 0) return;
 
-                            // Try up to 10 random papers to find one with matching questions
+                            // Try up to 10 random scoped papers to find one with matching questions
                             const tried = new Set<string>();
-                            for (let attempt = 0; attempt < Math.min(10, papers.length); attempt++) {
-                                const randomPaper = papers[Math.floor(Math.random() * papers.length)];
+                            for (let attempt = 0; attempt < Math.min(10, scopedPapers.length); attempt++) {
+                                const randomPaper = scopedPapers[Math.floor(Math.random() * scopedPapers.length)];
                                 if (tried.has(randomPaper.id)) continue;
                                 tried.add(randomPaper.id);
                                 const list = await getPaperQuestions(randomPaper);
@@ -850,7 +907,7 @@ export default function Questions() {
                                 }
                                 return;
                             }
-                            // Fallback: scan all papers sequentially
+                            // Fallback: scan scoped papers sequentially
                             const result = await findPaperWithTopics(selectedSubTopics, 0, "forward");
                             if (result) {
                                 const rIdx = Math.floor(Math.random() * result.filtered.length);
@@ -864,8 +921,8 @@ export default function Questions() {
                                 setScrollToPage(nextQ?.pageRegions?.[0]?.page ?? nextQ?.pageRange?.[0] ?? null);
                             } else {
                                 // Cross-paper: find next paper with matching topics
-                                const idx = selectedPaper ? papers.findIndex((p: ExamPaper) => p.storagePath === selectedPaper.storagePath) : -1;
-                                if (idx < 0 || idx >= papers.length - 1) {
+                                const idx = selectedPaper ? scopedPapers.findIndex((p: ExamPaper) => p.storagePath === selectedPaper.storagePath) : -1;
+                                if (idx < 0 || idx >= scopedPapers.length - 1) {
                                     // Wrap around to first paper if at end
                                     if (selectedSubTopics.length > 0) {
                                         const result = await findPaperWithTopics(selectedSubTopics, 0, "forward");
@@ -877,7 +934,7 @@ export default function Questions() {
                                     return;
                                 }
                                 if (selectedSubTopics.length === 0) {
-                                    setSelectedPaper(papers[idx + 1]);
+                                    setSelectedPaper(scopedPapers[idx + 1]);
                                     return;
                                 }
                                 const result =
@@ -981,6 +1038,7 @@ export default function Questions() {
                                             open={showPastPaperFilter}
                                             onClose={() => setShowPastPaperFilter(false)}
                                             selectedSubTopics={selectedSubTopics}
+                                            topicScope={pastPaperTopicScope}
                                             onApply={async (subTopics) => {
                                                 setSelectedSubTopics(subTopics);
                                                 setShowPastPaperFilter(false);
@@ -1007,7 +1065,7 @@ export default function Questions() {
                                                     const first = localFiltered[0];
                                                     setScrollToPage(first?.pageRegions?.[0]?.page ?? first?.pageRange?.[0] ?? null);
                                                 } else {
-                                                    // Current paper has NO matches — search ALL papers (newest first)
+                                                    // Current paper has NO matches — search scoped papers (newest first)
                                                     const result = await findPaperWithTopics(subTopics, 0, "forward");
                                                     if (result) {
                                                         pendingRandomRef.current = { questionId: result.filtered[0].id };
@@ -1456,7 +1514,7 @@ export default function Questions() {
                         <QSearch
                             mode="pastpaper"
                             setShowSearch={setShowSearch}
-                            papers={papers}
+                            papers={scopedPapers}
                             getPaperQuestions={getPaperQuestions}
                             onSelectPaperQuestion={(paper, indexInPaper) => {
                                 pendingSearchRef.current = { indexInPaper };

@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState } from 'react'
 import { UserContext } from '../context/UserContext'
+import { isAdminUid } from '../constants/adminUids'
 import { useNavigate, useLocation } from "react-router-dom";
 import '../styles/navbar.css'
 
@@ -15,6 +16,7 @@ export default function Navbar () {
 
     // Context and State and Hooks
     const { user } = useContext(UserContext)
+    const isAdmin = isAdminUid(user?.uid)
     const navigate = useNavigate()
     const location = useLocation()
 
@@ -133,7 +135,7 @@ export default function Navbar () {
             </div>
 
             {/* ============================= ADD QUESTIONS (ADMIN ONLY) ================================ */}
-            {(user.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2") && (
+            {isAdmin && (
                 <div className={page == 'admin/add-questions' ? 'nav-settings-selected' : 'nav-settings'} onClick={() => {pageNaviagte('admin/add-questions')}}> 
                     <LuFilePlus strokeWidth={strokewidth} size={iconSize} 
                         className={page == 'admin/add-questions' ? 'nav-icon-selected' : 'nav-icon'}
@@ -144,7 +146,7 @@ export default function Navbar () {
             
             <div 
                 data-tutorial-id="nav-settings"
-                className={page == 'user/settings' ? (user.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" ? 'nav-bottom-selected' : 'nav-settings-selected') : (user.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" ? 'nav-bottom' : 'nav-settings')} 
+                className={page == 'user/settings' ? (isAdmin ? 'nav-bottom-selected' : 'nav-settings-selected') : (isAdmin ? 'nav-bottom' : 'nav-settings')} 
                 onClick={() => {pageNaviagte('user/settings')}}
             > 
                 <LuSettings strokeWidth={strokewidth} size={iconSize} 

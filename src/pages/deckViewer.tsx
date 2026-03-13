@@ -18,6 +18,7 @@ import DeckComplete from "../components/decks/deckComplete";
 
 // Context 
 import { UserContext } from "../context/UserContext";
+import { isAdminUid } from "../constants/adminUids";
 
 // Firebase
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
@@ -88,7 +89,7 @@ export default function DeckViewer () {
             }
 
             if (deckData?.createdBy === 'CertChamps') {
-                setIsOwner(user?.uid === "NkN9UBqoPEYpE21MC89fipLn0SP2" || user?.uid === "gJIqKYlc1OdXUQGZQkR4IzfCIoL2")
+                setIsOwner(isAdminUid(user?.uid))
             } else {
                 setIsOwner(user?.uid === deckData?.createdBy)
             }

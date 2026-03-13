@@ -34,6 +34,7 @@ import XPFly from "./XPFly";
 // User Context
 import { useContext } from "react";
 import { UserContext } from "../../context/UserContext";
+import { isAdminUid } from "../../constants/adminUids";
 //import { OptionsContext } from "../../context/OptionsContext";
 import Filter from "../filter";
 
@@ -556,7 +557,7 @@ export default function Question(props: questionsProps) {
                           <p className="txt-bold color-txt-accent">{properties?.name}
                               <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
 
-                              { user.uid == "gJIqKYlc1OdXUQGZQkR4IzfCIoL2" || user.uid == "NkN9UBqoPEYpE21MC89fipLn0SP2" ? (
+                              {isAdminUid(user?.uid) ? (
                                 Array.isArray(content?.[part]?.inputs) && content[part].inputs.length ? (
                                   content[part].inputs.map((input: any, idx: number) => (
                                     Array.isArray(input.answer) ? input.answer.map((ans: any, aidx: number) => (

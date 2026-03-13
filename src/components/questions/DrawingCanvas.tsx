@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot } from "lucide-react";
+import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2 } from "lucide-react";
 
 type Point = { x: number; y: number; pressure: number };
 type Stroke = { points: Point[]; tool: "pen" | "eraser" };
@@ -12,9 +12,86 @@ const MAX_SCALE = 10;
 const GRID_STEP = 40;
 const GRID_DOT_RADIUS = 1.5;
 const ERASER_WIDTH = 24;
+const ERASER_PREVIEW_WIDTH = 3;
 const BASE_PEN_WIDTH = 2;
+const STROKE_ERASER_HIT_RADIUS = ERASER_WIDTH / 2 + 3;
+const ERASE_TARGET_STROKE_COLOR = "rgba(128, 128, 128, 0.7)";
 /** Hold still for this long (ms) to snap stroke to straight line */
 const HOLD_TO_STRAIGHTEN_MS = 600;
+
+function distanceSquaredPointToSegment(point: Point, start: Point, end: Point): number {
+	const dx = end.x - start.x;
+	const dy = end.y - start.y;
+	if (dx === 0 && dy === 0) {
+		const deltaX = point.x - start.x;
+		const deltaY = point.y - start.y;
+		return deltaX * deltaX + deltaY * deltaY;
+	}
+	const t = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy)));
+	const projX = start.x + t * dx;
+	const projY = start.y + t * dy;
+	const diffX = point.x - projX;
+	const diffY = point.y - projY;
+	return diffX * diffX + diffY * diffY;
+}
+
+function orientation(a: Point, b: Point, c: Point): number {
+	return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+
+function onSegment(a: Point, b: Point, point: Point): boolean {
+	return (
+		Math.min(a.x, b.x) <= point.x &&
+		point.x <= Math.max(a.x, b.x) &&
+		Math.min(a.y, b.y) <= point.y &&
+		point.y <= Math.max(a.y, b.y)
+	);
+}
+
+function segmentsIntersect(a1: Point, a2: Point, b1: Point, b2: Point): boolean {
+	const o1 = orientation(a1, a2, b1);
+	const o2 = orientation(a1, a2, b2);
+	const o3 = orientation(b1, b2, a1);
+	const o4 = orientation(b1, b2, a2);
+
+	if (o1 === 0 && onSegment(a1, a2, b1)) return true;
+	if (o2 === 0 && onSegment(a1, a2, b2)) return true;
+	if (o3 === 0 && onSegment(b1, b2, a1)) return true;
+	if (o4 === 0 && onSegment(b1, b2, a2)) return true;
+
+	return (o1 > 0) !== (o2 > 0) && (o3 > 0) !== (o4 > 0);
+}
+
+function distanceSquaredSegmentToSegment(a1: Point, a2: Point, b1: Point, b2: Point): number {
+	if (segmentsIntersect(a1, a2, b1, b2)) return 0;
+	return Math.min(
+		distanceSquaredPointToSegment(a1, b1, b2),
+		distanceSquaredPointToSegment(a2, b1, b2),
+		distanceSquaredPointToSegment(b1, a1, a2),
+		distanceSquaredPointToSegment(b2, a1, a2)
+	);
+}
+
+function strokeIntersectsEraser(stroke: Stroke, eraserStroke: Stroke, hitRadius: number): boolean {
+	if (stroke.tool !== "pen" || stroke.points.length === 0 || eraserStroke.points.length === 0) return false;
+	const thresholdSquared = hitRadius * hitRadius;
+	const strokeSegmentCount = Math.max(1, stroke.points.length - 1);
+	const eraserSegmentCount = Math.max(1, eraserStroke.points.length - 1);
+
+	for (let strokeIndex = 0; strokeIndex < strokeSegmentCount; strokeIndex++) {
+		const strokeStart = stroke.points[strokeIndex];
+		const strokeEnd = stroke.points[strokeIndex + 1] ?? strokeStart;
+		for (let eraserIndex = 0; eraserIndex < eraserSegmentCount; eraserIndex++) {
+			const eraserStart = eraserStroke.points[eraserIndex];
+			const eraserEnd = eraserStroke.points[eraserIndex + 1] ?? eraserStart;
+			if (distanceSquaredSegmentToSegment(strokeStart, strokeEnd, eraserStart, eraserEnd) <= thresholdSquared) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
 
 /** Call with a function that returns the current drawing as PNG data URL, or null. Called on mount, cleared on unmount. */
 export type RegisterDrawingSnapshot = (getSnapshot: (() => string | null) | null) => void;
@@ -44,6 +121,8 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const gridColorSampleRef = useRef<HTMLDivElement>(null);
 
 	const [strokes, setStrokes] = useState<Stroke[]>(initialStrokes ?? []);
+	const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
+	const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
 	const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
 	const [pan, setPan] = useState({ x: 0, y: 0 });
 	const [scale, setScale] = useState(1);
@@ -54,6 +133,8 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 		if (prevInitialRef.current !== initialStrokes) {
 			prevInitialRef.current = initialStrokes;
 			setStrokes(initialStrokes ?? []);
+			setUndoStack([]);
+			setRedoStack([]);
 			setCurrentStroke(null);
 			setPan({ x: 0, y: 0 });
 			setScale(1);
@@ -66,6 +147,10 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const strokesRef = useRef(strokes);
 	strokesRef.current = strokes;
+	const undoStackRef = useRef(undoStack);
+	undoStackRef.current = undoStack;
+	const redoStackRef = useRef(redoStack);
+	redoStackRef.current = redoStack;
 	const isInitialMountRef = useRef(true);
 	useEffect(() => {
 		// Skip the initial render (don't fire callback for initialStrokes load)
@@ -105,6 +190,19 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const pointerIdsRef = useRef<Map<number, { x: number; y: number }>>(new Map());
 	const holdStraightenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const currentStrokeRef = useRef<Stroke | null>(null);
+
+	const commitStrokeChange = useCallback((updater: (previous: Stroke[]) => Stroke[]) => {
+		setStrokes((previous) => {
+			const next = updater(previous);
+			const changed =
+				next !== previous &&
+				(next.length !== previous.length || next.some((stroke, index) => stroke !== previous[index]));
+			if (!changed) return previous;
+			setUndoStack((history) => [...history, previous]);
+			setRedoStack([]);
+			return next;
+		});
+	}, []);
 
 	// Read theme colors from DOM (follows data-theme) - pen: color-txt-main, grid: color-bg-grey-5
 	useLayoutEffect(() => {
@@ -159,6 +257,16 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 		const ctx = canvas?.getContext("2d");
 		if (!canvas || !ctx) return;
 
+		const targetedStrokeIndexes = new Set<number>();
+		if (tool === "eraser" && currentStroke) {
+			for (let index = 0; index < strokes.length; index++) {
+				const stroke = strokes[index];
+				if (stroke.tool === "pen" && strokeIntersectsEraser(stroke, currentStroke, STROKE_ERASER_HIT_RADIUS)) {
+					targetedStrokeIndexes.add(index);
+				}
+			}
+		}
+
 		const dpr = window.devicePixelRatio || 1;
 		const rect = canvas.getBoundingClientRect();
 		const w = rect.width;
@@ -175,11 +283,11 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 		ctx.scale(scale, scale);
 
 		// Draw strokes first (eraser only affects these; grid is drawn on top so it cannot be erased)
-		for (const stroke of strokes) {
-			drawStroke(ctx, stroke);
+		for (let index = 0; index < strokes.length; index++) {
+			drawStroke(ctx, strokes[index], { muted: targetedStrokeIndexes.has(index) });
 		}
 		if (currentStroke) {
-			drawStroke(ctx, currentStroke);
+			drawStroke(ctx, currentStroke, { preview: true });
 		}
 
 		// Grid on top (not erasable) - lines or dots
@@ -217,7 +325,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 			}
 		}
 		ctx.restore();
-	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor]);
+	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool]);
 
 	useEffect(() => {
 		draw();
@@ -288,7 +396,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 		ctx.translate(pan.x, pan.y);
 		ctx.scale(scale, scale);
 		for (const stroke of strokes) drawStroke(ctx, stroke);
-		if (currentStroke) drawStroke(ctx, currentStroke);
+		if (currentStroke?.tool === "pen") drawStroke(ctx, currentStroke);
 		ctx.restore();
 		return off.toDataURL("image/png");
 	}, [pan, scale, strokes, currentStroke]);
@@ -298,9 +406,40 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 		return () => registerDrawingSnapshot(null);
 	}, [registerDrawingSnapshot, getSnapshot]);
 
-	function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
-		if (stroke.points.length < 2) return;
+	function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke, options?: { preview?: boolean; muted?: boolean }) {
+		const preview = options?.preview === true;
+		const muted = options?.muted === true;
+		if (stroke.points.length < 2) {
+			if (stroke.tool === "eraser" && preview && stroke.points.length === 1) {
+				ctx.globalCompositeOperation = "source-over";
+				ctx.setLineDash([]);
+				ctx.globalAlpha = 1;
+				ctx.fillStyle = "rgba(128, 128, 128, 0.5)";
+				ctx.beginPath();
+				ctx.arc(stroke.points[0].x, stroke.points[0].y, ERASER_PREVIEW_WIDTH / 2, 0, Math.PI * 2);
+				ctx.fill();
+			}
+			return;
+		}
 		if (stroke.tool === "eraser") {
+			if (preview) {
+				ctx.globalCompositeOperation = "source-over";
+				ctx.strokeStyle = "rgba(128, 128, 128, 0.75)";
+				ctx.globalAlpha = 1;
+				ctx.setLineDash([]);
+				ctx.lineCap = "round";
+				ctx.lineJoin = "round";
+				ctx.lineWidth = ERASER_PREVIEW_WIDTH;
+				ctx.beginPath();
+				ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+				for (let i = 1; i < stroke.points.length; i++) {
+					ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+				}
+				ctx.stroke();
+				ctx.setLineDash([]);
+				ctx.globalAlpha = 1;
+				return;
+			}
 			ctx.globalCompositeOperation = "destination-out";
 			ctx.strokeStyle = "rgba(0,0,0,1)";
 			ctx.lineCap = "round";
@@ -315,7 +454,9 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 			ctx.globalCompositeOperation = "source-over";
 		} else if (strokeColor) {
 			ctx.globalCompositeOperation = "source-over";
-			ctx.strokeStyle = strokeColor;
+			ctx.setLineDash([]);
+			ctx.globalAlpha = muted ? 0.5 : 1;
+			ctx.strokeStyle = muted ? ERASE_TARGET_STROKE_COLOR : strokeColor;
 			ctx.lineCap = "round";
 			ctx.lineJoin = "round";
 			for (let i = 0; i < stroke.points.length - 1; i++) {
@@ -448,13 +589,22 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 				panStartRef.current = null;
 				cancelHoldStraighten();
 				if (isDrawingRef.current && currentStroke && currentStroke.points.length > 0) {
-					setStrokes((prev) => [...prev, currentStroke]);
+					if (currentStroke.tool === "eraser") {
+						commitStrokeChange((previous) => {
+							const next = previous.filter(
+								(stroke) => stroke.tool !== "pen" || !strokeIntersectsEraser(stroke, currentStroke, STROKE_ERASER_HIT_RADIUS)
+							);
+							return next.length === previous.length ? previous : next;
+						});
+					} else {
+						commitStrokeChange((previous) => [...previous, currentStroke]);
+					}
 					setCurrentStroke(null);
 				}
 				isDrawingRef.current = false;
 			}
 		},
-		[currentStroke, cancelHoldStraighten]
+		[currentStroke, cancelHoldStraighten, commitStrokeChange]
 	);
 
 	const handleWheel = useCallback(
@@ -478,13 +628,43 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	);
 
 	const clearCanvas = useCallback(() => {
-		setStrokes([]);
+		commitStrokeChange((previous) => (previous.length > 0 ? [] : previous));
 		setCurrentStroke(null);
 		// Immediately notify parent of clear (bypass debounce)
 		onStrokesChangeRef.current?.([]);
-	}, []);
+	}, [commitStrokeChange]);
+
+	const undo = useCallback(() => {
+		if (undoStackRef.current.length === 0) return;
+		cancelHoldStraighten();
+		setCurrentStroke(null);
+		isDrawingRef.current = false;
+		setUndoStack((history) => {
+			if (history.length === 0) return history;
+			const previous = history[history.length - 1];
+			setRedoStack((future) => [...future, strokesRef.current]);
+			setStrokes(previous);
+			return history.slice(0, -1);
+		});
+	}, [cancelHoldStraighten]);
+
+	const redo = useCallback(() => {
+		if (redoStackRef.current.length === 0) return;
+		cancelHoldStraighten();
+		setCurrentStroke(null);
+		isDrawingRef.current = false;
+		setRedoStack((future) => {
+			if (future.length === 0) return future;
+			const next = future[future.length - 1];
+			setUndoStack((history) => [...history, strokesRef.current]);
+			setStrokes(next);
+			return future.slice(0, -1);
+		});
+	}, [cancelHoldStraighten]);
 
 	const isEmbedded = onClose == null;
+	const canUndo = undoStack.length > 0;
+	const canRedo = redoStack.length > 0;
 
 	return (
 		<div
@@ -537,6 +717,24 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 						WebkitBackdropFilter: "blur(6px)",
 					}}
 				>
+				<button
+					type="button"
+					onClick={undo}
+					disabled={!canUndo}
+					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main ${canUndo ? "hover:opacity-90 hover:color-bg-grey-10" : "opacity-40 cursor-not-allowed"}`}
+					title="Undo"
+				>
+					<Undo2 size={18} strokeWidth={2} />
+				</button>
+				<button
+					type="button"
+					onClick={redo}
+					disabled={!canRedo}
+					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main ${canRedo ? "hover:opacity-90 hover:color-bg-grey-10" : "opacity-40 cursor-not-allowed"}`}
+					title="Redo"
+				>
+					<Redo2 size={18} strokeWidth={2} />
+				</button>
 				<button
 					type="button"
 					onClick={() => setTool("pen")}

@@ -8,19 +8,14 @@ import useFriends from "../../hooks/useFriends";
 import Lottie from 'lottie-react';
 import Notifications from "./notifications";
 import { UserContext } from "../../context/UserContext";
-
-// Moderator user IDs
-const MODERATOR_UIDS = [
-  "NkN9UBqoPEYpE21MC89fipLn0SP2",
-  "gJIqKYlc1OdXUQGZQkR4IzfCIoL2"
-];
+import { isAdminUid } from "../../constants/adminUids";
 
 export default function FriendsSearch() {
   const { getSearch, getAllUsers, sendFriendRequest } = useFriends();
   const { user } = useContext(UserContext)
   
   // Check if current user is a moderator
-  const isModerator = user?.uid && MODERATOR_UIDS.includes(user.uid);
+  const isModerator = isAdminUid(user?.uid);
 
   const [search, setSearch] = useState<string>('');
   const [usersFound, setUsersFound] = useState<any[]>([]);

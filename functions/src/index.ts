@@ -68,7 +68,7 @@ export const chat = functions.https.onRequest({
     const systemMessage = typeof context === "string" && context.trim()
         ? {
             role: "system",
-            content: `The user is working on the following math question. Use this as context when answering. Do not give away the final answer unless they ask—prefer hints, explanations, and step-by-step guidance.\n\n---\n${context}\n---`
+            content: `The user is working on the following math question. Use this as context when answering. If the context specifies a particular question part, stay strictly within that part unless the user explicitly asks to switch. Do not give away the final answer unless they ask; prefer hints, explanations, and step-by-step guidance.\n\n---\n${context}\n---`
         }
         : null;
 
