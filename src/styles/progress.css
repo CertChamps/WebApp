@@ -402,9 +402,62 @@
     @apply flex flex-col gap-2;
 }
 
+/*================ OVERALL STATS BANNER ================*/
+.stats-banner {
+    @apply grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-4 p-6 md:p-10 pb-0 shrink-0;
+}
+
+.stats-banner__card {
+    @apply rounded-2xl color-bg-grey-5 p-5 md:p-6;
+}
+
+.stats-banner__card--left {
+    @apply flex items-center gap-6;
+}
+
+.stats-banner__card--right {
+    @apply flex flex-col items-center justify-center gap-2 text-center;
+}
+
+.stats-banner__card-title {
+    @apply text-sm font-bold color-txt-main block mb-1;
+}
+
+.stats-banner__gauge-section {
+    @apply flex flex-col items-center shrink-0;
+}
+
+.stats-banner__gauge-svg {
+    @apply w-32 h-auto -mb-2;
+}
+
+.stats-banner__stats-col {
+    @apply flex flex-col gap-3 flex-1;
+}
+
+.stats-banner__stat {
+    @apply flex items-baseline gap-3;
+}
+
+.stats-banner__stat-label {
+    @apply text-xs color-txt-sub whitespace-nowrap;
+}
+
+.stats-banner__stat-value {
+    @apply text-2xl font-black color-txt-main tabular-nums;
+}
+
+.stats-banner__stat-value--muted {
+    @apply color-txt-sub opacity-30;
+}
+
+.stats-banner__time {
+    @apply text-4xl md:text-5xl font-black color-txt-main tabular-nums tracking-tight;
+}
+
 /*================ MODULAR PROGRESS DASHBOARD ================*/
 .progress-dashboard {
-    @apply w-full h-full min-h-0 p-6 md:p-10 flex flex-col gap-6 overflow-hidden;
+    @apply flex-1 min-w-0 min-h-0 w-full flex flex-col overflow-y-auto;
 }
 
 .progress-dashboard--dragging {
@@ -429,7 +482,7 @@
 
 /*-- Widget grid area --*/
 .progress-grid-area {
-    @apply flex-1 w-full min-h-0 rounded-2xl overflow-hidden color-bg;
+    @apply w-full min-h-[400px] rounded-2xl overflow-hidden color-bg;
 }
 
 .progress-grid-area--editing {

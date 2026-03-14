@@ -5,12 +5,14 @@ import type { Layout, LayoutItem } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import { useProgressModules, getModuleSize } from "../../hooks/useProgressModules";
 import { useAllPaperProgress } from "../../hooks/usePaperProgress";
+import { useSubjectLevels } from "../../hooks/useSubjectLevels";
 import PaperRingModule from "../../components/progress/PaperRingModule";
 import PaperBarModule from "../../components/progress/PaperBarModule";
 import QuestionHeatmapModule from "../../components/progress/QuestionHeatmapModule";
 import TextModule from "../../components/progress/TextModule";
 import DrawingModule from "../../components/progress/DrawingModule";
 import AddModuleModal from "../../components/progress/AddModuleModal";
+import SubjectProgressCard from "../../components/progress/SubjectProgressCard";
 import "../../styles/progress.css";
 
 const GRID_COLS = 12;
@@ -20,6 +22,7 @@ const Progress = () => {
   const { modules, loading: modulesLoading, addModule, removeModule, updateLayouts, updateModuleText, updateModuleDrawing } =
     useProgressModules();
   const { entries: progressEntries, loading: progressLoading } = useAllPaperProgress();
+  const { pairs: subjectLevels, loading: subjectLevelsLoading } = useSubjectLevels();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -97,10 +100,7 @@ const Progress = () => {
   if (loading) {
     return (
       <div className="progress-dashboard">
-        <div className="progress-dashboard__header">
-          <h1 className="text-xl font-bold color-txt-main">Progress</h1>
-        </div>
-        <div className="flex flex-wrap gap-4">
+        <div className="p-6 md:p-10 flex flex-wrap gap-4">
           {[1, 2].map((i) => (
             <div key={i} className="progress-module animate-pulse" style={{ width: 220, height: 220 }}>
               <div className="h-4 w-28 rounded color-bg-grey-10 mb-4" />
@@ -115,9 +115,10 @@ const Progress = () => {
 
   return (
     <div className={`progress-dashboard${isDragging ? " progress-dashboard--dragging" : ""}`}>
-      <div className="progress-dashboard__header">
-        <h1 className="text-xl font-bold color-txt-main">Progress</h1>
-        <div className="flex items-center gap-2">
+      <div className="p-6 md:p-10 pb-0 flex flex-col gap-6 shrink-0">
+        <div className="progress-dashboard__header">
+          <h1 className="text-xl font-bold color-txt-main">Canvas</h1>
+          <div className="flex items-center gap-2">
           {editing && (
             <button
               type="button"
@@ -149,11 +150,11 @@ const Progress = () => {
               )}
             </button>
           )}
+          </div>
         </div>
-      </div>
 
       {modules.length === 0 ? (
-        <div className="flex flex-col items-center justify-center flex-1 gap-4 py-20">
+        <div className="flex flex-col items-center justify-center gap-4 py-20 min-h-[300px]">
           <LuLayoutGrid size={48} className="color-txt-sub opacity-20" />
           <h2 className="text-lg font-bold color-txt-main">Your Dashboard is Empty</h2>
           <p className="color-txt-sub text-sm text-center max-w-xs">
@@ -256,6 +257,35 @@ const Progress = () => {
           )}
         </div>
       )}
+      </div>
+
+      <div className="progress-by-subject p-6 md:p-10 pt-8 flex flex-col gap-4 shrink-0">
+        <h2 className="text-lg font-bold color-txt-main">Progress by Subject</h2>
+        {subjectLevelsLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="rounded-2xl color-bg-grey-5 p-4 animate-pulse flex items-center justify-between gap-4"
+              >
+                <div className="h-4 w-24 rounded color-bg-grey-10" />
+                <div className="w-12 h-12 rounded-full color-bg-grey-10" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {subjectLevels.map(({ subject, level }) => (
+              <SubjectProgressCard
+                key={`${subject}-${level}`}
+                subject={subject}
+                level={level}
+                entries={progressEntries}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {showAddModal && (
         <AddModuleModal
