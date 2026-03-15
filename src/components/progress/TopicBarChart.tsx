@@ -149,10 +149,6 @@ export default function TopicBarChart({ subject, level, entries }: Props) {
   }
 
   const maxCompleted = Math.max(...topicStats.map((s) => s.completed), 1);
-  const highestIdx = topicStats.reduce(
-    (best, s, i) => (s.completed > topicStats[best].completed ? i : best),
-    0
-  );
   const hasAnyCompleted = topicStats.some((s) => s.completed > 0);
 
   return (
@@ -167,7 +163,7 @@ export default function TopicBarChart({ subject, level, entries }: Props) {
         <div className="topic-bar-chart__bars">
           {topicStats.map((stat, i) => {
             const pct = maxCompleted > 0 ? (stat.completed / maxCompleted) * 100 : 0;
-            const isHighest = i === highestIdx && hasAnyCompleted;
+            const isHighest = hasAnyCompleted && stat.completed === maxCompleted;
             return (
               <div key={stat.topic} className="topic-bar-chart__col">
                 {isHighest && (
