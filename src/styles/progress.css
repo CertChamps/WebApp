@@ -404,7 +404,7 @@
 
 /*================ OVERALL STATS BANNER ================*/
 .stats-banner {
-    @apply grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-4 p-6 md:p-10 pb-0 shrink-0;
+    @apply grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-4 px-6 md:px-10 pt-3 pb-0 shrink-0;
 }
 
 .stats-banner__card {
@@ -420,7 +420,7 @@
 }
 
 .stats-banner__card-title {
-    @apply text-sm font-bold color-txt-main block mb-1;
+    @apply text-base font-extrabold color-txt-main block mb-1;
 }
 
 .stats-banner__gauge-section {
@@ -453,6 +453,111 @@
 
 .stats-banner__time {
     @apply text-4xl md:text-5xl font-black color-txt-main tabular-nums tracking-tight;
+}
+
+/*================ TOPIC BAR CHART ================*/
+.topic-bar-chart__container {
+    @apply flex gap-2;
+}
+
+.topic-bar-chart__y-axis {
+    @apply flex flex-col justify-between items-end shrink-0 h-48 pr-2 pb-6;
+}
+
+.topic-bar-chart__bars {
+    @apply flex-1 flex items-end gap-1.5 h-48 border-b border-l border-[var(--grey-10,rgba(128,128,128,0.15))] pb-0 pl-0 relative;
+}
+
+.topic-bar-chart__col {
+    @apply flex-1 flex flex-col items-center min-w-0;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.topic-bar-chart__crown {
+    @apply w-10 h-10 object-contain mb-0.5 shrink-0;
+    animation: crown-float 2s ease-in-out infinite;
+}
+
+@keyframes crown-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+.topic-bar-chart__bar-wrapper {
+    @apply w-full flex items-end justify-center flex-1;
+}
+
+.topic-bar-chart__bar {
+    @apply w-full max-w-[40px] rounded-t transition-all duration-500 ease-out color-txt-accent;
+    background-color: currentColor;
+    min-height: 2px;
+}
+
+.topic-bar-chart__label {
+    @apply text-[9px] leading-tight color-txt-sub text-center mt-1.5 truncate w-full shrink-0;
+}
+
+/*================ SUBJECT HEATMAP (full page) ================*/
+.subject-heatmap__scroll {
+    @apply pb-2;
+    overflow-x: auto;
+}
+
+.subject-heatmap__grid {
+    display: grid;
+    gap: 0.35rem;
+    width: max-content;
+}
+
+.subject-heatmap__col-header {
+    @apply text-xs font-bold color-txt-sub text-center pb-0.5;
+}
+
+.subject-heatmap__cell {
+    @apply flex items-center justify-center text-center transition-all duration-300;
+    padding: 0.3rem 0.15rem;
+    min-height: 1.75rem;
+    border-radius: 0.5rem;
+}
+
+.subject-heatmap__cell--complete {
+    @apply color-txt-accent;
+    background-color: currentColor;
+}
+
+.subject-heatmap__cell--complete .subject-heatmap__cell-label {
+    color: var(--bg, #fff);
+}
+
+.subject-heatmap__cell--partial {
+    @apply color-txt-accent;
+    background-color: currentColor;
+    opacity: 0.4;
+}
+
+.subject-heatmap__cell--partial .subject-heatmap__cell-label {
+    color: var(--bg, #fff);
+    opacity: 1;
+}
+
+.subject-heatmap__cell--empty-q {
+    background-color: var(--grey-10, rgba(128,128,128,0.15));
+}
+
+.subject-heatmap__cell--empty-q .subject-heatmap__cell-label {
+    @apply color-txt-sub;
+}
+
+.subject-heatmap__cell--empty {
+    min-height: 1.75rem;
+}
+
+.subject-heatmap__cell-label {
+    @apply text-[10px] font-bold leading-none select-none;
+    white-space: nowrap;
 }
 
 /*================ MODULAR PROGRESS DASHBOARD ================*/

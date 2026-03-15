@@ -18,6 +18,44 @@ import "../../styles/progress.css";
 const GRID_COLS = 12;
 const GRID_MARGIN: [number, number] = [2, 2];
 
+const QUOTES: [string, string][] = [
+  ["You don't have to be great to start, but you have to start to be great.", "Zig Ziglar"],
+  ["The expert in anything was once a beginner.", "Helen Hayes"],
+  ["Believe you can and you're halfway there.", "Theodore Roosevelt"],
+  ["Success is the sum of small efforts repeated daily.", "Robert Collier"],
+  ["Don't watch the clock; do what it does — keep going.", "Sam Levenson"],
+  ["It always seems impossible until it's done.", "Nelson Mandela"],
+  ["Hard work beats talent when talent doesn't work hard.", "Tim Notke"],
+  ["The only way to do great work is to love what you do.", "Steve Jobs"],
+  ["Dream big. Start small. Act now.", "Robin Sharma"],
+  ["Discipline is choosing between what you want now and what you want most.", "Abraham Lincoln"],
+  ["The journey of a thousand miles begins with one step.", "Lao Tzu"],
+  ["Whether you think you can or you think you can't, you're right.", "Henry Ford"],
+  ["I have not failed. I've just found 10,000 ways that won't work.", "Thomas A. Edison"],
+  ["You miss 100% of the shots you don't take.", "Wayne Gretzky"],
+  ["Do, or do not. There is no try.", "Yoda"],
+  ["Success is not final, failure is not fatal: it is the courage to continue that counts.", "Winston Churchill"],
+  ["The future belongs to those who believe in the beauty of their dreams.", "Eleanor Roosevelt"],
+  ["The only limit to our realization of tomorrow is our doubts of today.", "Franklin D. Roosevelt"],
+  ["In the middle of every difficulty lies opportunity.", "Albert Einstein"],
+  ["Fall seven times and stand up eight.", "Japanese Proverb"],
+  ["The best time to plant a tree was 20 years ago. The second best time is now.", "Chinese Proverb"],
+  ["Everything you've ever wanted is on the other side of fear.", "George Addair"],
+  ["If you are going through hell, keep going.", "Winston Churchill"],
+  ["We are what we repeatedly do. Excellence, then, is not an act, but a habit.", "Will Durant"],
+  ["What you get by achieving your goals is not as important as what you become by achieving your goals.", "Zig Ziglar"],
+  ["I attribute my success to this: I never gave or took any excuse.", "Florence Nightingale"],
+  ["Definiteness of purpose is the starting point of all achievement.", "W. Clement Stone"],
+  ["Twenty years from now you will be more disappointed by the things that you didn't do than by the ones you did do.", "Mark Twain"],
+  ["Eighty percent of success is showing up.", "Woody Allen"],
+  ["Your time is limited, so don't waste it living someone else's life.", "Steve Jobs"],
+  ["Winning isn't everything, but wanting to win is.", "Vince Lombardi"],
+  ["I am not a product of my circumstances. I am a product of my decisions.", "Stephen Covey"],
+  ["Every strike brings me closer to the next home run.", "Babe Ruth"],
+  ["The two most important days in your life are the day you are born and the day you find out why.", "Mark Twain"],
+  ["There is only one way to avoid criticism: do nothing, say nothing, and be nothing.", "Aristotle"]
+];
+
 const Progress = () => {
   const { modules, loading: modulesLoading, addModule, removeModule, updateLayouts, updateModuleText, updateModuleDrawing } =
     useProgressModules();
@@ -26,6 +64,10 @@ const Progress = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [quote] = useState(() => {
+    const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+    return q;
+  });
 
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
 
@@ -117,7 +159,10 @@ const Progress = () => {
     <div className={`progress-dashboard${isDragging ? " progress-dashboard--dragging" : ""}`}>
       <div className="p-6 md:p-10 pb-0 flex flex-col gap-6 shrink-0">
         <div className="progress-dashboard__header">
-          <h1 className="text-xl font-bold color-txt-main">Canvas</h1>
+          <div className="flex items-baseline gap-4 min-w-0">
+            <h1 className="text-3xl font-black color-txt-main shrink-0">Canvas</h1>
+            <span className="text-sm color-txt-sub italic truncate">&ldquo;{quote[0]}&rdquo; ~ {quote[1]}</span>
+          </div>
           <div className="flex items-center gap-2">
           {editing && (
             <button
@@ -260,7 +305,7 @@ const Progress = () => {
       </div>
 
       <div className="progress-by-subject p-6 md:p-10 pt-8 flex flex-col gap-4 shrink-0">
-        <h2 className="text-lg font-bold color-txt-main">Progress by Subject</h2>
+        <h2 className="text-3xl font-black color-txt-main">Progress by Subject</h2>
         {subjectLevelsLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (

@@ -28,7 +28,7 @@ export default function SubjectProgressCard({ subject, level, entries }: Props) 
   const pct = total > 0 ? completed / total : 0;
 
   const vb = 100;
-  const strokeWidth = 10;
+  const strokeWidth = 14;
   const radius = (vb - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - pct);
