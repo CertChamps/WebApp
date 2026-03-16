@@ -336,30 +336,30 @@ math-field::part(virtual-keyboard-toggle) {
 @custom-variant pastelPink (&:where([data-theme="pastelPink"] &));
 
 /* Paper card overlay gradient: set on themed wrapper (data-theme is on #themed-root, not html) */
-:root { --paper-card-fade: var(--color-white); }
-[data-theme="dark"] { --paper-card-fade: var(--color-black); }
-[data-theme="markoblank"] { --paper-card-fade: var(--color-markoteal); }
-[data-theme="tangerine"] { --paper-card-fade: var(--color-tangerineBG); }
-[data-theme="icebergLight"] { --paper-card-fade: var(--color-icebergLightBG); }
-[data-theme="icebergDark"] { --paper-card-fade: var(--color-icebergDarkBG); }
-[data-theme="husqy"] { --paper-card-fade: var(--color-husqyBG); }
-[data-theme="shadow"] { --paper-card-fade: var(--color-shadowBG); }
-[data-theme="modernInk"] { --paper-card-fade: var(--color-modernInkBG); }
-[data-theme="gruvbox"] { --paper-card-fade: var(--color-gruvboxBG); }
-[data-theme="magicGirl"] { --paper-card-fade: var(--color-magicGirlBG); }
-[data-theme="menthol"] { --paper-card-fade: var(--color-mentholBG); }
-[data-theme="lavendar"] { --paper-card-fade: var(--color-lavendarBG); }
-[data-theme="airplane"] { --paper-card-fade: var(--color-airplaneBG); }
-[data-theme="nordLight"] { --paper-card-fade: var(--color-nordLightBG); }
-[data-theme="sewingTinLight"] { --paper-card-fade: var(--color-sewingTinLightBG); }
-[data-theme="camping"] { --paper-card-fade: var(--color-campingBG); }
-[data-theme="paper"] { --paper-card-fade: var(--color-paperBG); }
-[data-theme="aurora"] { --paper-card-fade: var(--color-auroraBG); }
-[data-theme="nordDark"] { --paper-card-fade: var(--color-nordDarkBG); }
-[data-theme="blueberryLight"] { --paper-card-fade: var(--color-blueberryLightBG); }
-[data-theme="blueberryDark"] { --paper-card-fade: var(--color-blueberryDarkBG); }
-[data-theme="darkFuchsia"] { --paper-card-fade: var(--color-darkFuchsiaBG); }
-[data-theme="pastelPink"] { --paper-card-fade: var(--color-pastelPinkBG); }
+:root                         { --paper-card-fade: var(--color-white);            --theme-txt-main: var(--color-black);                 --theme-txt-accent: var(--color-blue);                   --theme-txt-sub: var(--color-grey); }
+[data-theme="dark"]           { --paper-card-fade: var(--color-black);            --theme-txt-main: #ffffff;                            --theme-txt-accent: var(--color-blue-light);             --theme-txt-sub: var(--color-light-grey); }
+[data-theme="markoblank"]     { --paper-card-fade: var(--color-markoteal);        --theme-txt-main: var(--color-markobrown);            --theme-txt-accent: var(--color-markored);               --theme-txt-sub: var(--color-markogrey); }
+[data-theme="tangerine"]      { --paper-card-fade: var(--color-tangerineBG);      --theme-txt-main: var(--color-tangerinePrimary);      --theme-txt-accent: var(--color-tangerineAccent);        --theme-txt-sub: var(--color-tangerineSub); }
+[data-theme="icebergLight"]   { --paper-card-fade: var(--color-icebergLightBG);   --theme-txt-main: var(--color-icebergLightPrimary);   --theme-txt-accent: var(--color-icebergLightAccent);     --theme-txt-sub: var(--color-icebergLightSub); }
+[data-theme="icebergDark"]    { --paper-card-fade: var(--color-icebergDarkBG);    --theme-txt-main: var(--color-icebergDarkPrimary);    --theme-txt-accent: var(--color-icebergDarkAccent);      --theme-txt-sub: var(--color-icebergDarkSub); }
+[data-theme="husqy"]          { --paper-card-fade: var(--color-husqyBG);          --theme-txt-main: var(--color-husqyPrimary);          --theme-txt-accent: var(--color-husqyAccent);            --theme-txt-sub: var(--color-husqySub); }
+[data-theme="shadow"]         { --paper-card-fade: var(--color-shadowBG);         --theme-txt-main: var(--color-shadowPrimary);         --theme-txt-accent: var(--color-shadowAccent);           --theme-txt-sub: var(--color-shadowSub); }
+[data-theme="modernInk"]      { --paper-card-fade: var(--color-modernInkBG);      --theme-txt-main: var(--color-modernInkPrimary);      --theme-txt-accent: var(--color-modernInkAccent);        --theme-txt-sub: var(--color-modernInkSub); }
+[data-theme="gruvbox"]        { --paper-card-fade: var(--color-gruvboxBG);        --theme-txt-main: var(--color-gruvboxPrimary);        --theme-txt-accent: var(--color-gruvboxAccent);          --theme-txt-sub: var(--color-gruvboxSub); }
+[data-theme="magicGirl"]      { --paper-card-fade: var(--color-magicGirlBG);      --theme-txt-main: var(--color-magicGirlPrimary);      --theme-txt-accent: var(--color-magicGirlAccent);        --theme-txt-sub: var(--color-magicGirlSub); }
+[data-theme="menthol"]        { --paper-card-fade: var(--color-mentholBG);        --theme-txt-main: var(--color-mentholPrimary);        --theme-txt-accent: var(--color-mentholAccent);          --theme-txt-sub: var(--color-mentholSub); }
+[data-theme="lavendar"]       { --paper-card-fade: var(--color-lavendarBG);       --theme-txt-main: var(--color-lavendarPrimary);       --theme-txt-accent: var(--color-lavendarAccent);         --theme-txt-sub: var(--color-lavendarSub); }
+[data-theme="airplane"]       { --paper-card-fade: var(--color-airplaneBG);       --theme-txt-main: var(--color-airplanePrimary);       --theme-txt-accent: var(--color-airplaneAccent);         --theme-txt-sub: var(--color-airplaneSub); }
+[data-theme="nordLight"]      { --paper-card-fade: var(--color-nordLightBG);      --theme-txt-main: var(--color-nordLightPrimary);      --theme-txt-accent: var(--color-nordLightAccent);        --theme-txt-sub: var(--color-nordLightSub); }
+[data-theme="sewingTinLight"] { --paper-card-fade: var(--color-sewingTinLightBG); --theme-txt-main: var(--color-sewingTinLightPrimary); --theme-txt-accent: var(--color-sewingTinLightAccent);   --theme-txt-sub: var(--color-sewingTinLightSub); }
+[data-theme="camping"]        { --paper-card-fade: var(--color-campingBG);        --theme-txt-main: var(--color-campingPrimary);        --theme-txt-accent: var(--color-campingAccent);          --theme-txt-sub: var(--color-campingSub); }
+[data-theme="paper"]          { --paper-card-fade: var(--color-paperBG);          --theme-txt-main: var(--color-paperPrimary);          --theme-txt-accent: var(--color-paperAccent);            --theme-txt-sub: var(--color-paperSub); }
+[data-theme="aurora"]         { --paper-card-fade: var(--color-auroraBG);         --theme-txt-main: var(--color-auroraPrimary);         --theme-txt-accent: var(--color-auroraAccent1);          --theme-txt-sub: var(--color-auroraSub1); }
+[data-theme="nordDark"]       { --paper-card-fade: var(--color-nordDarkBG);       --theme-txt-main: var(--color-nordDarkPrimary);       --theme-txt-accent: var(--color-nordDarkAccent);         --theme-txt-sub: var(--color-nordDarkSub); }
+[data-theme="blueberryLight"] { --paper-card-fade: var(--color-blueberryLightBG); --theme-txt-main: var(--color-blueberryLightPrimary); --theme-txt-accent: var(--color-blueberryLightAccent);   --theme-txt-sub: var(--color-blueberryLightSub); }
+[data-theme="blueberryDark"]  { --paper-card-fade: var(--color-blueberryDarkBG);  --theme-txt-main: var(--color-blueberryDarkPrimary);  --theme-txt-accent: var(--color-blueberryDarkAccent);    --theme-txt-sub: var(--color-blueberryDarkSub); }
+[data-theme="darkFuchsia"]    { --paper-card-fade: var(--color-darkFuchsiaBG);    --theme-txt-main: var(--color-darkFuchsiaPrimary);    --theme-txt-accent: var(--color-darkFuchsiaAccent);      --theme-txt-sub: var(--color-darkFuchsiaSub); }
+[data-theme="pastelPink"]     { --paper-card-fade: var(--color-pastelPinkBG);     --theme-txt-main: var(--color-pastelPinkPrimary);     --theme-txt-accent: var(--color-pastelPinkAccent);       --theme-txt-sub: var(--color-pastelPinkSub); }
 
 @utility color-txt-main {
   @apply 

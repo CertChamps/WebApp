@@ -18,6 +18,7 @@ import AddQuestions from "./pages/addQuestions";
 import ProfileViewer from "./pages/profileViewer";
 import { ProtectedRoute } from "./components/protectedRoute";
 import Progress from "./pages/progress/progress_main";
+import SubjectProgressPage from "./pages/progress/SubjectProgressPage";
 import Feedback from "./pages/feedback";
 import Tutorial from "./components/tutorial/Tutorial";
 import { useTutorialContext } from "./context/TutorialContext";
@@ -126,10 +127,21 @@ const router = createHashRouter([
     path: "/progress",
     element: (
       <ProtectedRoute>
-        <>
+        <div className="flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <Progress />
-        </>
+        </div>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/progress/subject/:subject/:level",
+    element: (
+      <ProtectedRoute>
+        <div className="flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+          <Navbar />
+          <SubjectProgressPage />
+        </div>
       </ProtectedRoute>
     ),
   },

@@ -27,7 +27,7 @@
 .questions-top-bar__dropdown {
   @apply min-w-[140px] rounded-out pl-3 pr-9 py-1.5 text-sm font-medium
     color-bg-grey-5 color-txt-main
-    border border-solid color-bg-grey-10
+    border border-solid border-[var(--grey-10)]
     cursor-pointer
     focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue/40
     appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.25rem_1.25rem];
@@ -56,7 +56,7 @@
 .practice-mode-dropdown {
   @apply min-w-[200px] rounded-out pl-3 pr-9 py-2 text-sm font-medium
     color-bg-grey-5 color-txt-main
-    border border-solid color-bg-grey-10
+    border border-solid border-[var(--grey-10)]
     cursor-pointer
     focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue/40
     appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.25rem_1.25rem];
@@ -79,6 +79,52 @@
 
 .question-selector-button-active {
   @apply color-bg-accent color-txt-accent 
+}
+
+/* Questions search modal (utility-themed) */
+.q-search-overlay {
+  @apply color-bg-grey-10;
+}
+
+.q-search-panel {
+  @apply color-bg border-2 color-shadow;
+}
+
+.q-search-bar {
+  @apply color-bg-grey-5 color-txt-main;
+}
+
+.q-search-icon {
+  @apply color-txt-sub;
+}
+
+.q-search-input {
+  @apply bg-transparent border-none outline-none color-txt-main placeholder:color-txt-sub;
+}
+
+.q-search-loading {
+  @apply color-txt-sub;
+}
+
+.q-search-spinner {
+  @apply border-2 color-shadow border-t-transparent;
+}
+
+.q-search-result {
+  @apply border-b-2 color-shadow hover:color-bg-grey-5;
+}
+
+/* Tick-off button for marking paper questions complete */
+.questions-top-bar__tick {
+  @apply inline-flex items-center justify-center w-8 h-8 rounded-full
+    color-txt-sub border border-transparent
+    hover:color-bg-grey-5 active:scale-90 transition-all duration-200 cursor-pointer;
+}
+.questions-top-bar__tick--done {
+  @apply text-green-500;
+}
+.questions-top-bar__progress-pill {
+  @apply text-xs font-bold color-txt-sub tabular-nums;
 }
 
 /* Single-line truncation with ellipsis for question title and tags */
@@ -294,4 +340,74 @@
 }
 .questions-top-left .questions-math-preview {
   font-size: 0.8125rem;
+}
+
+/* Whiteboard comment chips (collapsed/expanded) */
+.whiteboard-comment-chip {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  width: 7.25rem;
+  max-height: 1.85rem;
+  padding: 0.28rem 0.45rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  overflow: hidden;
+  transform-origin: left top;
+  will-change: transform, opacity, width, max-height;
+  transition:
+    width 340ms cubic-bezier(0.22, 1, 0.36, 1),
+    max-height 340ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 340ms cubic-bezier(0.22, 1.18, 0.36, 1),
+    opacity 220ms ease,
+    border-radius 240ms ease,
+    padding 260ms ease;
+}
+
+.whiteboard-comment-chip:hover {
+  transform: translateY(-1px);
+}
+
+.whiteboard-comment-chip__icon {
+  opacity: 0.85;
+  margin-top: 0.06rem;
+}
+
+.whiteboard-comment-chip__text {
+  display: inline-block;
+  max-width: 5.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-size: 0.67rem;
+  line-height: 1.2;
+  transition: max-width 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.whiteboard-comment-chip.is-collapsed {
+  width: 7.25rem;
+  max-height: 1.85rem;
+  border-radius: 0.5rem;
+}
+
+.whiteboard-comment-chip.is-expanded {
+  width: 16.25rem;
+  max-height: 9rem;
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.55rem;
+  transform: translateY(-1px);
+}
+
+.whiteboard-comment-chip.is-expanded .whiteboard-comment-chip__text {
+  max-width: 14.25rem;
+  max-height: 7.75rem;
+  white-space: normal;
+  text-overflow: clip;
+  overflow: auto;
+  line-height: 1.35;
+}
+
+.whiteboard-comment-chip.is-expanded:hover {
+  transform: translateY(-1px);
 }

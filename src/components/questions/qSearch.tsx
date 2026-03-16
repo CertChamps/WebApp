@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react"
+import { useContext, useEffect, useRef, useState } from "react"
 import Fuse from 'fuse.js'
 import useQuestions from "../../hooks/useQuestions"
 import RenderMath from "../math/mathdisplay"
 import { LuSearch, LuX } from "react-icons/lu"
 import type { ExamPaper, PaperQuestion } from "../../hooks/useExamPapers"
+import { OptionsContext } from "../../context/OptionsContext"
 
 /** Fuse.js v7 search result type */
 type FuseResult<T> = { item: T; refIndex: number; score?: number }
@@ -39,6 +40,7 @@ type PastPaperSearchProps = {
 export type QSearchProps = CertChampsSearchProps | PastPaperSearchProps;
 
 export default function QSearch(props: QSearchProps) {
+    const { options } = useContext(OptionsContext)
 
     const [results, setResults] = useState<FuseResult<PaperSearchEntry | any>[]>([])
     const [search, setSearch] = useState('')
@@ -147,36 +149,35 @@ export default function QSearch(props: QSearchProps) {
 
     return (
         <div
-            className={`fixed left-0 top-0 w-[100vw] h-[100vh] color-bg-grey-10 z-[9999]
+            data-theme={options.theme}
+            className={`fixed left-0 top-0 w-[100vw] h-[100vh] q-search-overlay z-[9999]
                 flex items-center justify-center transition-opacity duration-300
                 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
         >
             <div
                 ref={searchContainerRef}
-                className={`w-[50%] h-[60%] color-bg border-2 color-shadow rounded-out p-4
+                className={`w-[50%] h-[60%] q-search-panel rounded-out p-4
                     transition-transform duration-300
                     ${isVisible ? 'scale-100' : 'scale-95'}`}
             >
-                <div className="outline-none w-full color-bg-grey-5 font-bold placeholder:color-txt-sub
-                    color-txt-main rounded-out flex items-center p-1">
-                    <LuSearch className="color-txt-sub ml-2" strokeWidth={2} size={20} />
+                <div className="outline-none w-full q-search-bar font-bold rounded-out flex items-center p-1">
+                    <LuSearch className="q-search-icon ml-2" strokeWidth={2} size={20} />
                     <input
                         type="text"
                         ref={inputRef}
-                        className="outline-none w-full p-2 font-bold placeholder:color-txt-sub
-                            color-txt-main rounded-out"
+                        className="q-search-input w-full p-2 font-bold rounded-out"
                         placeholder={props.mode === "pastpaper" ? "Search paper questions..." : "Search questions..."}
                         value={search}
                         onChange={(txt) => setSearch(txt.target.value)}
                     />
-                    <LuX className="color-txt-sub mr-2 justify-self-end" strokeWidth={2} size={24}
+                    <LuX className="q-search-icon mr-2 justify-self-end" strokeWidth={2} size={24}
                         onClick={handleClose} />
                 </div>
 
                 <div className="h-[85%] overflow-auto scrollbar-minimal mt-2">
                     {loadingAllPapers ? (
-                        <div className="flex flex-col items-center justify-center py-12 color-txt-sub">
-                            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--grey-10)] border-t-[var(--grey-5)] mb-3" />
+                        <div className="q-search-loading flex flex-col items-center justify-center py-12">
+                            <div className="q-search-spinner h-8 w-8 animate-spin rounded-full mb-3" />
                             <span>Loading questions from available papers…</span>
                         </div>
                     ) : (
@@ -186,7 +187,7 @@ export default function QSearch(props: QSearchProps) {
                             return (
                                 <div
                                     key={`${item.paper.id}-${item.question.id}`}
-                                    className="p-3 border-b-2 color-shadow hover:color-bg-grey-5 cursor-pointer"
+                                    className="q-search-result p-3 cursor-pointer"
                                     onClick={() => handleSelect(item)}
                                 >
                                     <div>
@@ -207,7 +208,7 @@ export default function QSearch(props: QSearchProps) {
                         return (
                             <div
                                 key={item?.id ?? result.refIndex}
-                                className="p-3 border-b-2 color-shadow hover:color-bg-grey-5 cursor-pointer"
+                                className="q-search-result p-3 cursor-pointer"
                                 onClick={() => handleSelect(item)}
                             >
                                 <div>

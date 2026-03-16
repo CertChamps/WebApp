@@ -401,3 +401,411 @@
 .progress-skeleton-list {
     @apply flex flex-col gap-2;
 }
+
+/*================ OVERALL STATS BANNER ================*/
+.stats-banner {
+    @apply grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-4 px-6 md:px-10 pt-3 pb-0 shrink-0;
+}
+
+.stats-banner__card {
+    @apply rounded-2xl color-bg-grey-5 p-5 md:p-6;
+}
+
+.stats-banner__card--left {
+    @apply flex items-center gap-6;
+}
+
+.stats-banner__card--right {
+    @apply flex flex-col items-center justify-center gap-2 text-center;
+}
+
+.stats-banner__card-title {
+    @apply text-base font-extrabold color-txt-main block mb-1;
+}
+
+.stats-banner__gauge-section {
+    @apply flex flex-col items-center shrink-0;
+}
+
+.stats-banner__gauge-svg {
+    @apply w-32 h-auto -mb-2;
+}
+
+.stats-banner__stats-col {
+    @apply flex flex-col gap-3 flex-1;
+}
+
+.stats-banner__stat {
+    @apply flex items-baseline gap-3;
+}
+
+.stats-banner__stat-label {
+    @apply text-xs color-txt-sub whitespace-nowrap;
+}
+
+.stats-banner__stat-value {
+    @apply text-2xl font-black color-txt-main tabular-nums;
+}
+
+.stats-banner__stat-value--muted {
+    @apply color-txt-sub opacity-30;
+}
+
+.stats-banner__time {
+    @apply text-4xl md:text-5xl font-black color-txt-main tabular-nums tracking-tight;
+}
+
+/*================ TOPIC BAR CHART ================*/
+.topic-bar-chart__container {
+    @apply flex gap-2;
+}
+
+.topic-bar-chart__y-axis {
+    @apply flex flex-col justify-between items-end shrink-0 h-48 pr-2 pb-6;
+}
+
+.topic-bar-chart__bars {
+    @apply flex-1 flex items-end gap-1.5 h-48 border-b border-l border-[var(--grey-10,rgba(128,128,128,0.15))] pb-0 pl-0 relative;
+}
+
+.topic-bar-chart__col {
+    @apply flex-1 flex flex-col items-center min-w-0;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.topic-bar-chart__crown {
+    @apply w-10 h-10 object-contain mb-0.5 shrink-0;
+    animation: crown-float 2s ease-in-out infinite;
+}
+
+@keyframes crown-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+.topic-bar-chart__bar-wrapper {
+    @apply w-full flex items-end justify-center flex-1;
+}
+
+.topic-bar-chart__bar {
+    @apply w-full max-w-[40px] rounded-t transition-all duration-500 ease-out color-txt-accent;
+    background-color: currentColor;
+    min-height: 2px;
+}
+
+.topic-bar-chart__label {
+    @apply text-[9px] leading-tight color-txt-sub text-center mt-1.5 truncate w-full shrink-0;
+}
+
+/*================ SUBJECT HEATMAP (full page) ================*/
+.subject-heatmap__scroll {
+    @apply pb-2;
+    overflow-x: auto;
+}
+
+.subject-heatmap__grid {
+    display: grid;
+    gap: 0.35rem;
+    width: max-content;
+}
+
+.subject-heatmap__col-header {
+    @apply text-xs font-bold color-txt-sub text-center pb-0.5;
+}
+
+.subject-heatmap__cell {
+    @apply flex items-center justify-center text-center transition-all duration-300;
+    padding: 0.3rem 0.15rem;
+    min-height: 1.75rem;
+    border-radius: 0.5rem;
+}
+
+.subject-heatmap__cell--complete {
+    @apply color-txt-accent;
+    background-color: currentColor;
+}
+
+.subject-heatmap__cell--complete .subject-heatmap__cell-label {
+    color: var(--bg, #fff);
+}
+
+.subject-heatmap__cell--partial {
+    @apply color-txt-accent;
+    background-color: currentColor;
+    opacity: 0.4;
+}
+
+.subject-heatmap__cell--partial .subject-heatmap__cell-label {
+    color: var(--bg, #fff);
+    opacity: 1;
+}
+
+.subject-heatmap__cell--empty-q {
+    background-color: var(--grey-10, rgba(128,128,128,0.15));
+}
+
+.subject-heatmap__cell--empty-q .subject-heatmap__cell-label {
+    @apply color-txt-sub;
+}
+
+.subject-heatmap__cell--empty {
+    min-height: 1.75rem;
+}
+
+.subject-heatmap__cell-label {
+    @apply text-[10px] font-bold leading-none select-none;
+    white-space: nowrap;
+}
+
+/*================ MODULAR PROGRESS DASHBOARD ================*/
+.progress-dashboard {
+    @apply flex-1 min-w-0 min-h-0 w-full flex flex-col overflow-y-auto;
+}
+
+.progress-dashboard--dragging {
+    overflow: visible;
+}
+
+.progress-dashboard__header {
+    @apply flex items-center justify-between;
+}
+
+.progress-dashboard__add-btn {
+    @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold
+        color-bg-grey-5 color-txt-main
+        hover:color-bg-grey-10 active:scale-[0.97] transition-all duration-200 cursor-pointer;
+}
+
+.progress-dashboard__edit-btn {
+    @apply inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold
+        color-bg-accent color-txt-accent
+        hover:opacity-90 active:scale-[0.97] transition-all duration-200 cursor-pointer;
+}
+
+/*-- Widget grid area --*/
+.progress-grid-area {
+    @apply w-full min-h-[400px] rounded-2xl overflow-hidden color-bg;
+}
+
+.progress-grid-area--editing {
+    background-image: radial-gradient(circle, var(--grey-10, rgba(128,128,128,0.12)) 1px, transparent 1px);
+    background-size: calc(100% / 12) calc(100% / 12);
+}
+
+/* Allow dragged/resized items to extend past edges without clipping */
+.progress-grid-area--dragging {
+    overflow: visible;
+}
+
+.progress-grid-layout {
+    min-height: 200px;
+}
+
+.progress-grid-item {
+    @apply w-full h-full;
+}
+
+.progress-module {
+    @apply flex flex-col p-4 rounded-2xl color-bg-grey-5 transition-shadow duration-200
+        w-full h-full overflow-hidden;
+}
+
+.progress-module__header {
+    @apply flex items-start justify-between gap-2 mb-2;
+}
+
+.progress-module__remove {
+    @apply p-1 rounded-lg color-txt-sub opacity-0 pointer-events-none
+        hover:color-bg-grey-10 transition-all cursor-pointer;
+}
+
+.progress-module__remove--visible {
+    @apply opacity-60 pointer-events-auto;
+}
+.progress-module__remove--visible:hover {
+    @apply opacity-100;
+}
+
+/* Ring module — 1x1 cell, circle fills it */
+.progress-module--ring {
+    @apply relative items-center justify-center p-2;
+}
+
+.progress-ring__svg {
+    @apply w-full h-full max-w-full max-h-full transform -rotate-90;
+}
+
+.progress-ring__label {
+    @apply absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none;
+}
+
+.progress-ring__remove {
+    @apply absolute top-1.5 right-1.5 z-10;
+}
+
+.progress-module--bar {
+    @apply relative flex flex-row items-center gap-2 p-2;
+}
+
+.progress-bar__label {
+    @apply flex flex-col min-w-0 shrink-0;
+}
+
+.progress-bar__track {
+    @apply flex-1 min-w-0 h-2 flex flex-row rounded-full
+        color-bg-grey-10 overflow-hidden;
+}
+
+.progress-bar__fill {
+    @apply h-full rounded-full color-bg-accent color-txt-accent
+        transition-all duration-700 ease-out;
+}
+
+.progress-module--bar .progress-bar__fill {
+    background-color: currentColor;
+}
+
+.progress-bar__fill--complete {
+    @apply text-green-500;
+}
+
+.progress-bar__remove {
+    @apply absolute top-1.5 right-1.5 z-10;
+}
+
+/* Text note module */
+.progress-module--text {
+    @apply relative p-3;
+}
+
+.progress-text__input {
+    @apply w-full h-full resize-none bg-transparent color-txt-main
+        text-sm leading-snug outline-none placeholder:color-txt-sub overflow-hidden;
+}
+
+.progress-text__input--readonly {
+    @apply cursor-default pointer-events-none;
+}
+
+.progress-text__remove {
+    @apply absolute top-1.5 right-1.5 z-10;
+}
+
+/* Drawing note module */
+.progress-module--drawing {
+    @apply relative p-2 overflow-hidden;
+}
+
+.progress-drawing__canvas-wrap {
+    @apply w-full h-full min-h-0 min-w-0 relative rounded-lg overflow-hidden;
+}
+
+.progress-drawing__canvas-wrap canvas {
+    display: block;
+}
+
+.progress-drawing__remove {
+    @apply absolute top-1.5 right-1.5 z-10;
+}
+
+/* Scale-to-fit wrapper */
+.scale-to-fit {
+    @apply flex-1 overflow-hidden relative min-h-0 min-w-0;
+}
+
+.scale-to-fit__inner {
+    @apply origin-top-left;
+    width: max-content;
+    height: max-content;
+}
+
+/* react-grid-layout overrides */
+.react-grid-item.react-draggable-dragging .progress-module {
+    @apply shadow-lg opacity-90;
+}
+
+/* Hide the red placeholder – just have the component itself snap */
+.react-grid-item.react-grid-placeholder {
+    display: none !important;
+}
+
+/* Add-module modal option rows */
+.add-module-option {
+    @apply flex items-center gap-3 p-3 rounded-xl w-full text-left
+        hover:color-bg-grey-5 active:scale-[0.98] transition-all duration-150 cursor-pointer;
+}
+.add-module-option__icon {
+    @apply flex items-center justify-center w-10 h-10 rounded-xl
+        color-bg-grey-5 color-txt-accent shrink-0;
+}
+
+/*================ QUESTION HEATMAP ================*/
+.qheatmap-scroll {
+    @apply pt-2;
+}
+
+.qheatmap-columns {
+    @apply flex;
+}
+
+.qheatmap-col-divider {
+    flex: 0 0 0.35rem;
+    position: relative;
+}
+
+.qheatmap-col-divider::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    transform: translateX(-50%);
+    background-color: var(--grey-10, rgba(0, 0, 0, 0.12));
+}
+
+.qheatmap-col {
+    @apply flex flex-col items-center gap-1;
+}
+
+.qheatmap-col-header {
+    @apply text-[11px] font-bold color-txt-sub text-center whitespace-nowrap;
+}
+
+.qheatmap-year-split {
+    display: flex;
+    flex-direction: row;
+    gap: 0.35rem;
+    width: 100%;
+}
+
+.qheatmap-col--half {
+    flex: 1;
+    min-width: 0;
+}
+
+.qheatmap-col--half .qheatmap-cell {
+    width: 0.875rem;
+}
+
+.qheatmap-boxes {
+    @apply flex flex-col gap-1;
+}
+
+.qheatmap-cell {
+    @apply relative overflow-hidden transition-all duration-300 color-txt-accent;
+    width: 1.75rem;
+    height: 0.35rem;
+    border-radius: 9999px;
+    background-color: var(--grey-10, rgba(0,0,0,0.06));
+}
+
+.qheatmap-cell__fill {
+    @apply absolute inset-0 transition-opacity duration-300;
+    border-radius: 9999px;
+    background-color: currentColor;
+    opacity: var(--heatmap-opacity, 0);
+}
