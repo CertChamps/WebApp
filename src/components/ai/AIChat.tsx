@@ -4,6 +4,7 @@ import { LuSendHorizontal } from "react-icons/lu";
 import { UserContext } from "../../context/UserContext";
 import { useAI } from "./useAI";
 import { ChatMessage, ChatMessageLoading } from "./ChatMessage";
+import type { InjectedExchange } from "./useAI";
 
 type AIChatProps = {
   question?: any;
@@ -11,6 +12,8 @@ type AIChatProps = {
   getDrawingSnapshot?: (() => string | null) | null;
   /** Optional: return current exam paper (first page) as image so the AI can see the paper. */
   getPaperSnapshot?: (() => string | null) | null;
+  /** Optional: externally injected exchange (e.g. from Check My Answer). */
+  injectedExchange?: InjectedExchange | null;
 };
 
 const AI_PLACEHOLDERS = [
@@ -27,7 +30,7 @@ const AI_PLACEHOLDERS = [
   "No question is a stupid question:)",
 ];
 
-export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AIChatProps) {
+export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot, injectedExchange }: AIChatProps) {
   const { user } = useContext(UserContext);
   const [aiPlaceholder] = useState(() => AI_PLACEHOLDERS[Math.floor(Math.random() * AI_PLACEHOLDERS.length)]);
   const {
@@ -42,7 +45,7 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AICha
     messagesEndRef,
     inputRef,
     hasQuestion,
-  } = useAI(question, getDrawingSnapshot, getPaperSnapshot);
+  } = useAI(question, getDrawingSnapshot, getPaperSnapshot, injectedExchange);
 
   const displayName = user?.username?.trim() || "there";
   const emptyMessage = hasQuestion

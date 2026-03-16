@@ -1,8 +1,28 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2 } from "lucide-react";
+import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageSquare } from "lucide-react";
 
 type Point = { x: number; y: number; pressure: number };
 type Stroke = { points: Point[]; tool: "pen" | "eraser" };
+
+export type WhiteboardFeedbackItem = {
+	kind: "tick" | "comment";
+	lineIndex: number;
+	text: string;
+};
+
+export type WhiteboardRelevantRegion = {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+};
+
+export type WhiteboardFeedbackOverlay = {
+	runId: string;
+	items: WhiteboardFeedbackItem[];
+	relevantRegion?: WhiteboardRelevantRegion | null;
+	finalMark?: string;
+};
 
 /** Grid display: off, square (lines), or dots at intersections. */
 type GridMode = "off" | "lines" | "dots";
@@ -95,6 +115,8 @@ function strokeIntersectsEraser(stroke: Stroke, eraserStroke: Stroke, hitRadius:
 
 /** Call with a function that returns the current drawing as PNG data URL, or null. Called on mount, cleared on unmount. */
 export type RegisterDrawingSnapshot = (getSnapshot: (() => string | null) | null) => void;
+/** Call with a function that returns the number of visual line clusters detected on the canvas. Called on mount, cleared on unmount. */
+export type RegisterGetLineCount = (fn: ((region?: WhiteboardRelevantRegion | null) => number) | null) => void;
 
 export type DrawingStroke = Stroke;
 
@@ -102,6 +124,8 @@ type DrawingCanvasProps = {
 	onClose?: () => void;
 	/** Register a getter for the current canvas image (so e.g. AI can include it). */
 	registerDrawingSnapshot?: RegisterDrawingSnapshot;
+	/** Register a getter returning the current number of detected line clusters (so questions.tsx can pass the count to the AI). */
+	registerGetLineCount?: RegisterGetLineCount;
 	/** Pre-populate canvas with previously saved strokes. */
 	initialStrokes?: Stroke[] | null;
 	/** Called (debounced) when strokes change (stroke completed, erased, or cleared). */
@@ -112,13 +136,140 @@ type DrawingCanvasProps = {
 	readOnly?: boolean;
 	/** Initial grid mode. Use "off" for no grid (e.g. in progress dashboard). */
 	defaultGridMode?: GridMode;
+	/** Optional AI grading feedback rendered on top of the whiteboard. */
+	feedbackOverlay?: WhiteboardFeedbackOverlay | null;
 };
 
-export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initialStrokes, onStrokesChange, wrapperClassName, readOnly = false, defaultGridMode = "lines" }: DrawingCanvasProps) {
+function getStrokeBounds(stroke: Stroke): { minX: number; maxX: number; minY: number; maxY: number } | null {
+	if (stroke.tool !== "pen" || stroke.points.length === 0) return null;
+	let minX = stroke.points[0].x;
+	let maxX = stroke.points[0].x;
+	let minY = stroke.points[0].y;
+	let maxY = stroke.points[0].y;
+	for (const p of stroke.points) {
+		if (p.x < minX) minX = p.x;
+		if (p.x > maxX) maxX = p.x;
+		if (p.y < minY) minY = p.y;
+		if (p.y > maxY) maxY = p.y;
+	}
+	return { minX, maxX, minY, maxY };
+}
+
+function percentile75(sorted: number[]): number {
+	if (sorted.length === 0) return 0;
+	if (sorted.length === 1) return sorted[0];
+	const idx = 0.75 * (sorted.length - 1);
+	const lo = Math.floor(idx);
+	const hi = Math.ceil(idx);
+	return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+type WorldRect = { left: number; top: number; right: number; bottom: number };
+
+function canvasRegionToWorldRect(
+	region: WhiteboardRelevantRegion | null | undefined,
+	canvas: HTMLCanvasElement | null,
+	pan: { x: number; y: number },
+	scale: number,
+): WorldRect | null {
+	if (!region || !canvas) return null;
+	const rect = canvas.getBoundingClientRect();
+	if (rect.width <= 0 || rect.height <= 0 || scale === 0) return null;
+	return {
+		left: (region.x - pan.x) / scale,
+		top: (region.y - pan.y) / scale,
+		right: (region.x + region.width - pan.x) / scale,
+		bottom: (region.y + region.height - pan.y) / scale,
+	};
+}
+
+function boundsFallWithinRect(
+	bounds: { minX: number; maxX: number; minY: number; maxY: number } | null,
+	rect: WorldRect | null,
+): boolean {
+	if (!bounds || !rect) return Boolean(bounds);
+	return bounds.minX >= rect.left && bounds.maxX <= rect.right && bounds.minY >= rect.top && bounds.maxY <= rect.bottom;
+}
+
+function getScopedStrokes(
+	strokes: Stroke[],
+	relevantRegion: WhiteboardRelevantRegion | null | undefined,
+	canvas: HTMLCanvasElement | null,
+	pan: { x: number; y: number },
+	scale: number,
+): Stroke[] {
+	const worldRect = canvasRegionToWorldRect(relevantRegion, canvas, pan, scale);
+	if (!worldRect) return strokes;
+	return strokes.filter((stroke) => boundsFallWithinRect(getStrokeBounds(stroke), worldRect));
+}
+
+function buildLineAnchors(
+	strokes: Stroke[],
+): Array<{ y: number; xLeft: number; xRight: number }> {
+	const bounds = strokes.map(getStrokeBounds).filter((b): b is { minX: number; maxX: number; minY: number; maxY: number } => Boolean(b));
+	if (bounds.length === 0) return [];
+
+	const entries = bounds
+		.map((b) => ({
+			y: (b.minY + b.maxY) / 2,
+			xLeft: b.minX,
+			xRight: b.maxX,
+			height: Math.max(8, b.maxY - b.minY),
+		}))
+		.sort((a, b) => a.y - b.y);
+
+	// Collect all xRight values per cluster; use P75 so isolated side-notes don't push ticks far right
+	const clusters: Array<{ y: number; xLeft: number; xRights: number[]; count: number }> = [];
+	for (const entry of entries) {
+		const threshold = Math.max(24, entry.height * 1.15);
+		const cluster = clusters.find((c) => Math.abs(c.y - entry.y) <= threshold);
+		if (!cluster) {
+			clusters.push({ y: entry.y, xLeft: entry.xLeft, xRights: [entry.xRight], count: 1 });
+			continue;
+		}
+		cluster.y = (cluster.y * cluster.count + entry.y) / (cluster.count + 1);
+		cluster.xLeft = Math.min(cluster.xLeft, entry.xLeft);
+		cluster.xRights.push(entry.xRight);
+		cluster.count += 1;
+	}
+
+	return clusters
+		.sort((a, b) => a.y - b.y)
+		.map((c) => ({ y: c.y, xLeft: c.xLeft, xRight: percentile75([...c.xRights].sort((a, b) => a - b)) }));
+}
+
+function getAnnotationLaneX(xRight: number): number {
+	const rightmostCellEdge = Math.ceil((xRight + 1) / GRID_STEP) * GRID_STEP;
+	const lanePadding = Math.max(6, GRID_STEP * 0.2);
+	return rightmostCellEdge + lanePadding;
+}
+
+function getSafeAnnotationLaneX(
+	anchorXRight: number,
+	lineY: number,
+	boundsList: Array<{ minX: number; maxX: number; minY: number; maxY: number }>,
+): number {
+	const bandHalfHeight = Math.max(18, GRID_STEP * 0.45);
+	let rightmost = anchorXRight;
+	for (const b of boundsList) {
+		if (b.maxY < lineY - bandHalfHeight || b.minY > lineY + bandHalfHeight) continue;
+		if (b.maxX > rightmost) rightmost = b.maxX;
+	}
+	return getAnnotationLaneX(rightmost + GRID_STEP * 0.15);
+}
+
+function getFeedbackThemeColor(sampleEl: HTMLDivElement | null): string {
+	if (!sampleEl) return "#1f2937";
+	const styles = getComputedStyle(sampleEl);
+	return styles.color || "#1f2937";
+}
+
+export default function DrawingCanvas({ onClose, registerDrawingSnapshot, registerGetLineCount, initialStrokes, onStrokesChange, wrapperClassName, readOnly = false, defaultGridMode = "lines", feedbackOverlay = null }: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const colorSampleRef = useRef<HTMLDivElement>(null);
 	const gridColorSampleRef = useRef<HTMLDivElement>(null);
+	const accentSampleRef = useRef<HTMLDivElement>(null);
 
 	const [strokes, setStrokes] = useState<Stroke[]>(initialStrokes ?? []);
 	const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
@@ -147,6 +298,10 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const strokesRef = useRef(strokes);
 	strokesRef.current = strokes;
+	const panRef = useRef(pan);
+	panRef.current = pan;
+	const scaleRef = useRef(scale);
+	scaleRef.current = scale;
 	const undoStackRef = useRef(undoStack);
 	undoStackRef.current = undoStack;
 	const redoStackRef = useRef(redoStack);
@@ -182,6 +337,13 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const [gridMode, setGridMode] = useState<GridMode>(defaultGridMode);
 	const [strokeColor, setStrokeColor] = useState("");
 	const [gridColor, setGridColor] = useState("");
+	const [accentColor, setAccentColor] = useState("");
+	const [expandedCommentKey, setExpandedCommentKey] = useState<string | null>(null);
+
+	// Reset expanded comment when new feedback arrives
+	useEffect(() => {
+		setExpandedCommentKey(null);
+	}, [feedbackOverlay?.runId]);
 
 	const isDrawingRef = useRef(false);
 	const lastPointRef = useRef<Point | null>(null);
@@ -208,10 +370,12 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	useLayoutEffect(() => {
 		const strokeEl = colorSampleRef.current;
 		const gridEl = gridColorSampleRef.current;
-		if (!strokeEl || !gridEl) return;
+		const accentEl = accentSampleRef.current;
+		if (!strokeEl || !gridEl || !accentEl) return;
 		const updateColors = () => {
 			if (strokeEl) setStrokeColor(getComputedStyle(strokeEl).color);
 			if (gridEl) setGridColor(getComputedStyle(gridEl).backgroundColor);
+			setAccentColor(getFeedbackThemeColor(accentEl));
 		};
 		updateColors();
 		const observer = new MutationObserver(updateColors);
@@ -251,6 +415,31 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const getPressure = (e: PointerEvent): number => {
 		return e.pressure !== undefined && e.pressure > 0 ? e.pressure : 1;
 	};
+	const gradingRegion = feedbackOverlay?.relevantRegion ?? null;
+	const scopedStrokes = getScopedStrokes(strokes, gradingRegion, canvasRef.current, pan, scale);
+	const lineAnchors = buildLineAnchors(scopedStrokes);
+	const scopedPenStrokeBounds = scopedStrokes
+		.map(getStrokeBounds)
+		.filter((b): b is { minX: number; maxX: number; minY: number; maxY: number } => Boolean(b));
+
+	// Freeze annotation anchors the moment feedback arrives so that subsequent strokes
+	// (notes, corrections) don't shift ticks, comments or the mark circle.
+	const frozenAnnotationAnchorsRef = useRef<ReturnType<typeof buildLineAnchors> | null>(null);
+	const frozenAnnotationBoundsRef = useRef<Array<{ minX: number; maxX: number; minY: number; maxY: number }> | null>(null);
+	const lastAnnotationRunIdRef = useRef<string | null>(null);
+	if (feedbackOverlay) {
+		if (feedbackOverlay.runId !== lastAnnotationRunIdRef.current) {
+			lastAnnotationRunIdRef.current = feedbackOverlay.runId;
+			frozenAnnotationAnchorsRef.current = lineAnchors;
+			frozenAnnotationBoundsRef.current = scopedPenStrokeBounds;
+		}
+	} else {
+		lastAnnotationRunIdRef.current = null;
+		frozenAnnotationAnchorsRef.current = null;
+		frozenAnnotationBoundsRef.current = null;
+	}
+	const annotationAnchors = frozenAnnotationAnchorsRef.current ?? lineAnchors;
+    const annotationBounds = frozenAnnotationBoundsRef.current ?? scopedPenStrokeBounds;
 
 	const draw = useCallback(() => {
 		const canvas = canvasRef.current;
@@ -324,8 +513,64 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 				}
 			}
 		}
+
+		const _annotationAnchors = frozenAnnotationAnchorsRef.current ?? lineAnchors;
+		const _annotationBounds = frozenAnnotationBoundsRef.current ?? scopedPenStrokeBounds;
+		if (feedbackOverlay && _annotationAnchors.length > 0) {
+			ctx.save();
+			ctx.globalCompositeOperation = "source-over";
+			ctx.fillStyle = accentColor || strokeColor || "#1f2937";
+			ctx.textBaseline = "alphabetic";
+
+			// Only draw ticks on the canvas; comments are rendered as HTML overlays
+			const drawnTick = new Set<number>();
+			for (let i = 0; i < feedbackOverlay.items.length; i++) {
+				const item = feedbackOverlay.items[i];
+				if (item.kind !== "tick") continue;
+				const anchorIdx = Math.min(Math.max(item.lineIndex, 0), _annotationAnchors.length - 1);
+				if (drawnTick.has(anchorIdx)) continue;
+				drawnTick.add(anchorIdx);
+				const anchor = _annotationAnchors[anchorIdx];
+				const safeLaneX = getSafeAnnotationLaneX(anchor.xRight, anchor.y, _annotationBounds);
+				ctx.save();
+				ctx.translate(safeLaneX, anchor.y + 6);
+				ctx.rotate(-0.05 + (i % 3) * 0.015);
+				ctx.font = "700 24px \"Comic Sans MS\", \"Bradley Hand\", cursive";
+				ctx.fillText("\u2713", 0, 0);
+				ctx.restore();
+			}
+
+			if (feedbackOverlay.finalMark) {
+				const lastComment = [...feedbackOverlay.items].reverse().find((item) => item.kind === "comment");
+				const markAnchorIdx = lastComment
+					? Math.min(Math.max(lastComment.lineIndex, 0), _annotationAnchors.length - 1)
+					: _annotationAnchors.length - 1;
+				const anchor = _annotationAnchors[markAnchorIdx];
+				const scoreOnly =
+					feedbackOverlay.finalMark.match(/\d+\s*\/\s*\d+/)?.[0].replace(/\s+/g, "") ??
+					feedbackOverlay.finalMark.match(/\d+/)?.[0] ??
+					feedbackOverlay.finalMark;
+				const safeLaneX = getSafeAnnotationLaneX(anchor.xRight, anchor.y, _annotationBounds);
+				ctx.save();
+				// Place mark just below the final comment lane with extra clearance to reduce overlap.
+				ctx.translate(safeLaneX + GRID_STEP * 3.4, anchor.y + GRID_STEP * 1.3);
+				ctx.rotate(-0.03);
+				ctx.font = "700 28px \"Comic Sans MS\", \"Bradley Hand\", cursive";
+				ctx.fillText(scoreOnly, 0, 0);
+				const textWidth = Math.max(36, ctx.measureText(scoreOnly).width);
+				ctx.beginPath();
+				ctx.lineWidth = 2.5;
+				ctx.strokeStyle = accentColor || strokeColor || "#1f2937";
+				ctx.ellipse(textWidth / 2, -12, textWidth / 2 + 14, 22, -0.08, 0, Math.PI * 2);
+				ctx.stroke();
+				ctx.restore();
+			}
+
+			ctx.restore();
+		}
+
 		ctx.restore();
-	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool]);
+	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool, feedbackOverlay, lineAnchors, accentColor, frozenAnnotationAnchorsRef, scopedPenStrokeBounds]);
 
 	useEffect(() => {
 		draw();
@@ -392,11 +637,32 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 		if (!ctx) return null;
 		ctx.scale(dpr, dpr);
 		ctx.clearRect(0, 0, w, h);
+		// Use a solid background so light-theme/dark-theme pen colors remain visible to the AI.
+		ctx.fillStyle = "#ffffff";
+		ctx.fillRect(0, 0, w, h);
 		ctx.save();
 		ctx.translate(pan.x, pan.y);
 		ctx.scale(scale, scale);
-		for (const stroke of strokes) drawStroke(ctx, stroke);
-		if (currentStroke?.tool === "pen") drawStroke(ctx, currentStroke);
+		const drawSnapshotPenStroke = (stroke: Stroke) => {
+			if (stroke.tool !== "pen" || stroke.points.length < 2) return;
+			ctx.globalCompositeOperation = "source-over";
+			ctx.strokeStyle = "#111827";
+			ctx.lineCap = "round";
+			ctx.lineJoin = "round";
+			for (let i = 0; i < stroke.points.length - 1; i++) {
+				const p0 = stroke.points[i];
+				const p1 = stroke.points[i + 1];
+				const width = BASE_PEN_WIDTH * (Math.max(0.3, p0.pressure) + 0.5);
+				ctx.lineWidth = width;
+				ctx.beginPath();
+				ctx.moveTo(p0.x, p0.y);
+				ctx.lineTo(p1.x, p1.y);
+				ctx.stroke();
+			}
+		};
+
+		for (const stroke of strokes) drawSnapshotPenStroke(stroke);
+		if (currentStroke?.tool === "pen") drawSnapshotPenStroke(currentStroke);
 		ctx.restore();
 		return off.toDataURL("image/png");
 	}, [pan, scale, strokes, currentStroke]);
@@ -405,6 +671,16 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 		registerDrawingSnapshot(getSnapshot);
 		return () => registerDrawingSnapshot(null);
 	}, [registerDrawingSnapshot, getSnapshot]);
+
+	useEffect(() => {
+		if (!registerGetLineCount) return;
+		registerGetLineCount((region) =>
+			buildLineAnchors(
+				getScopedStrokes(strokesRef.current, region, canvasRef.current, panRef.current, scaleRef.current),
+			).length,
+		);
+		return () => registerGetLineCount(null);
+	}, [registerGetLineCount]);
 
 	function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke, options?: { preview?: boolean; muted?: boolean }) {
 		const preview = options?.preview === true;
@@ -488,7 +764,9 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 
 			if (pointers.size === 2) {
 				// Start pinch
-				holdStraightenTimerRef.current && clearTimeout(holdStraightenTimerRef.current);
+				if (holdStraightenTimerRef.current) {
+					clearTimeout(holdStraightenTimerRef.current);
+				}
 				holdStraightenTimerRef.current = null;
 				const [a, b] = Array.from(pointers.entries());
 				const dx = a[1].x - b[1].x;
@@ -666,6 +944,27 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const canUndo = undoStack.length > 0;
 	const canRedo = redoStack.length > 0;
 
+	// Compute HTML comment overlays using frozen anchors (world→screen).
+	// Using annotationAnchors (frozen at feedback time) means positions don't shift as the user draws.
+	const commentOverlays = (() => {
+		if (!feedbackOverlay || annotationAnchors.length === 0) return [];
+		const result: Array<{ key: string; screenX: number; screenY: number; text: string }> = [];
+		for (let i = 0; i < feedbackOverlay.items.length; i++) {
+			const item = feedbackOverlay.items[i];
+			if (item.kind !== "comment") continue;
+			const anchorIdx = Math.min(Math.max(item.lineIndex, 0), annotationAnchors.length - 1);
+			const anchor = annotationAnchors[anchorIdx];
+			const safeLaneX = getSafeAnnotationLaneX(anchor.xRight, anchor.y, annotationBounds);
+			result.push({
+				key: `${feedbackOverlay.runId}-${i}`,
+				screenX: safeLaneX * scale + pan.x,
+				screenY: anchor.y * scale + pan.y,
+				text: item.text,
+			});
+		}
+		return result;
+	})();
+
 	return (
 		<div
 			ref={containerRef}
@@ -681,6 +980,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 			{/* Hidden elements to sample theme colors (pen: color-txt-main, grid: color-bg-grey-5) */}
 			<div ref={colorSampleRef} className="color-txt-main absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			<div ref={gridColorSampleRef} className="color-bg-grey-5 absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
+			<div ref={accentSampleRef} className="color-txt-accent absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			{/* Canvas area */}
 			<div
 				className="flex-1 min-h-0 relative z-0 overflow-hidden select-none"
@@ -780,6 +1080,26 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 				</div>
 				)}
 			</div>
+			{/* Expandable comment bubbles — siblings of the canvas-area div so they're NOT clipped
+			     by its overflow-hidden. Positioned absolute relative to the wrapper (same origin). */}
+			{commentOverlays.map((c) => (
+				<div
+					key={c.key}
+					className="absolute z-30 pointer-events-auto"
+					style={{ left: c.screenX + 22, top: c.screenY - 12 }}
+				>
+					<button
+						type="button"
+						className={`whiteboard-comment-chip ${expandedCommentKey === c.key ? "is-expanded" : "is-collapsed"} color-bg color-txt-main border border-solid border-[var(--grey-10)]`}
+						style={{ background: `${accentColor}22` }}
+						onClick={() => setExpandedCommentKey((prev) => (prev === c.key ? null : c.key))}
+						title={c.text}
+					>
+						<MessageSquare size={12} className="shrink-0 whiteboard-comment-chip__icon" />
+						<span className="whiteboard-comment-chip__text">{c.text}</span>
+					</button>
+				</div>
+			))}
 		</div>
 	);
 }

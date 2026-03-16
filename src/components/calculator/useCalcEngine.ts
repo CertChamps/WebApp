@@ -471,18 +471,30 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
   const pressBracket = useCallback(() => {
     if (maybeResetAfterError()) return;
     maybeResetAfterExe(false);
-    const leaf: LeafNode = { type: "leaf", value: "(", display: "(" };
-    insertNode(leaf);
+    if (shiftActive) {
+      const leaf: LeafNode = { type: "leaf", value: "\u03c0", display: "\\pi " };
+      insertNode(leaf);
+      clearShift();
+    } else {
+      const leaf: LeafNode = { type: "leaf", value: "(", display: "(" };
+      insertNode(leaf);
+    }
     commit();
-  }, [maybeResetAfterError, maybeResetAfterExe, insertNode, commit]);
+  }, [shiftActive, clearShift, maybeResetAfterError, maybeResetAfterExe, insertNode, commit]);
 
   const pressCloseBracket = useCallback(() => {
     if (maybeResetAfterError()) return;
     maybeResetAfterExe(false);
-    const leaf: LeafNode = { type: "leaf", value: ")", display: ")" };
-    insertNode(leaf);
+    if (shiftActive) {
+      const leaf: LeafNode = { type: "leaf", value: "e", display: "e" };
+      insertNode(leaf);
+      clearShift();
+    } else {
+      const leaf: LeafNode = { type: "leaf", value: ")", display: ")" };
+      insertNode(leaf);
+    }
     commit();
-  }, [maybeResetAfterError, maybeResetAfterExe, insertNode, commit]);
+  }, [shiftActive, clearShift, maybeResetAfterError, maybeResetAfterExe, insertNode, commit]);
 
   const pressBackspace = useCallback(() => {
     if (maybeResetAfterError()) { commit(); return; }

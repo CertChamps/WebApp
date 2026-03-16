@@ -1,6 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
 export type Message = { role: "user" | "assistant"; content: string };
+export type InjectedExchange = {
+  nonce: string;
+  userMessage: string;
+  assistantMessage: string;
+};
 
 /** Optional: return current drawing as PNG data URL (e.g. from canvas) so the AI can see it. */
 export type GetDrawingSnapshot = () => string | null;
@@ -78,7 +83,12 @@ function buildQuestionContext(question: any): string | undefined {
   return parts.length ? parts.join("\n") : undefined;
 }
 
-export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | null, getPaperSnapshot?: GetPaperSnapshot | null) {
+export function useAI(
+  question?: any,
+  getDrawingSnapshot?: GetDrawingSnapshot | null,
+  getPaperSnapshot?: GetPaperSnapshot | null,
+  injectedExchange?: InjectedExchange | null
+) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streamingContent, setStreamingContent] = useState("");
   const [input, setInput] = useState("");
@@ -103,6 +113,22 @@ export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | 
     setStreamingContent("");
     setError(null);
   }, [questionId]);
+
+  const lastInjectedNonceRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!injectedExchange?.nonce) return;
+    if (lastInjectedNonceRef.current === injectedExchange.nonce) return;
+    lastInjectedNonceRef.current = injectedExchange.nonce;
+    const userText = injectedExchange.userMessage.trim();
+    const assistantText = injectedExchange.assistantMessage.trim();
+    if (!userText && !assistantText) return;
+    setMessages((prev) => {
+      const next = [...prev];
+      if (userText) next.push({ role: "user", content: userText });
+      if (assistantText) next.push({ role: "assistant", content: assistantText });
+      return next;
+    });
+  }, [injectedExchange]);
 
   const sendMessage = useCallback(async () => {
     const text = inputValueRef.current.trim();
