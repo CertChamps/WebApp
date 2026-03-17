@@ -163,13 +163,13 @@ function CalculatorBody({ state, actions, onClose }: { state: CalcState; actions
     pressDigit, pressDecimal, pressOperator, pressBracket,
     pressBackspace, pressAC, pressEXE, pressAns, pressSquare,
     pressPower, pressSqrt, pressTrig, pressLog, pressLn,
-    pressFraction, pressShift, pressSci, pressArrow,
+    pressFraction, pressShift, pressAngleToggle, pressSci, pressSD, pressArrow,
     pressCloseBracket,
   } = actions;
 
   const inputHtml = renderKatex(displayExpr || "\\;");
   const resultHtml = result ? renderKatex(result) : "";
-  const angleLabel = isRadians ? "R" : "D";
+  const angleLabel = isRadians ? "RAD" : "DEG";
 
   return (
     <div className="casio-emu color-shadow" style={{ width: 320, height: 560 }}>
@@ -221,6 +221,9 @@ function CalculatorBody({ state, actions, onClose }: { state: CalcState; actions
             <div className="casio-emu__top-cell casio-emu__top-cell--shift">
               <K v="shift" label="SHIFT" onClick={pressShift} active={shiftActive} />
             </div>
+            <div className="casio-emu__top-cell casio-emu__top-cell--angle">
+              <K v="dark" label={isRadians ? "RAD" : "DEG"} onClick={pressAngleToggle} />
+            </div>
             <div className="casio-emu__top-cell casio-emu__top-cell--bracket-left">
               <K v="dark" label="(" secB="π" onClick={pressBracket} />
             </div>
@@ -228,13 +231,13 @@ function CalculatorBody({ state, actions, onClose }: { state: CalcState; actions
               <K v="dark" label=")" secB="e" onClick={pressCloseBracket} />
             </div>
             <div className="casio-emu__top-cell casio-emu__top-cell--left-a">
-              <K v="dark" label={<>x<sup>2</sup></>} secB={<>x<sup>3</sup></>} onClick={pressSquare} />
+              <K v="dark" label={<>x<sup>2</sup></>} secB={<>x<sup>n</sup></>} onClick={pressSquare} />
             </div>
             <div className="casio-emu__top-cell casio-emu__top-cell--left-b">
               <K v="dark" label={<FracIcon />} cls="casio-emu__btn--symbol" onClick={pressFraction} />
             </div>
             <div className="casio-emu__top-cell casio-emu__top-cell--right-a">
-              <K v="dark" label={<>log<sub style={{fontSize:"0.6em"}}>₁₀</sub></>} secB={<>10<sup>x</sup></>} onClick={pressLog} />
+              <K v="dark" label="log" secB={<>10<sup>x</sup></>} onClick={pressLog} />
             </div>
             <div className="casio-emu__top-cell casio-emu__top-cell--right-b">
               <K v="dark" label="ln" secB={<>e<sup>x</sup></>} onClick={pressLn} />
@@ -254,7 +257,7 @@ function CalculatorBody({ state, actions, onClose }: { state: CalcState; actions
 
         {/* Row 1 — √, x^□, Ans, sin, cos, tan */}
         <KeyRow className="casio-emu__row--func">
-          <K v="dark" label="√" secB="∛" cls="casio-emu__btn--symbol" onClick={pressSqrt} />
+          <K v="dark" label="√" secB="ⁿ√" cls="casio-emu__btn--symbol" onClick={pressSqrt} />
           <K v="dark" label={<>x<sup>□</sup></>} secB={<>x<sup>−1</sup></>} cls="casio-emu__btn--symbol" onClick={pressPower} />
           <K v="dark" label="Ans" onClick={pressAns} />
           <K v="dark" label="sin" secB={<>sin<sup>−1</sup></>} onClick={() => pressTrig("sin")} />
@@ -294,7 +297,7 @@ function CalculatorBody({ state, actions, onClose }: { state: CalcState; actions
           <K v="num" label="0" secO="" onClick={() => pressDigit("0")} />
           <K v="num" label="·" onClick={pressDecimal} />
           <K v="dark" label={<>×10<sup>x</sup></>} onClick={pressSci} />
-          <K v="dark" label="S/D" />
+          <K v="dark" label="S/D" onClick={pressSD} />
           <K v="dark" label="EXE" cls="casio-emu__btn--exe" onClick={pressEXE} />
         </KeyRow>
       </div>

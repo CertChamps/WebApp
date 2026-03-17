@@ -42,6 +42,7 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot, injecte
     error,
     sendMessage,
     handleKeyDown,
+    messagesContainerRef,
     messagesEndRef,
     inputRef,
     hasQuestion,
@@ -53,8 +54,8 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot, injecte
     : "How can I can help? I can explain concepts, hints, or steps. Draw on the canvas and I’ll recognise it. If you have a past paper open, I can see it too.";
 
   return (
-    <div className="pointer-events-auto flex h-full flex-col overflow-hidden">
-      <div className="ai-chat-messages flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-3 space-y-4 min-h-0">
+    <div className="ai-chat-shell pointer-events-auto h-full min-h-0 overflow-hidden">
+      <div ref={messagesContainerRef} className="ai-chat-messages overflow-y-auto overflow-x-hidden px-4 pt-4 pb-3 space-y-4 min-h-0">
         {messages.length === 0 && !loading && (
           <div className="text-center h-[90%] flex flex-col justify-center items-center">
             <h3 className="font-bold color-txt-main mb-2 text-2xl">Hey, {displayName}</h3>
@@ -71,7 +72,7 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot, injecte
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-3 pt-0">
+      <div className="ai-chat-composer color-bg border-t border-grey/15 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] p-3 pt-2">
         <div className="flex items-start rounded-out border border-grey/25 color-bg overflow-hidden focus-within:ring-2 focus-within:ring-inset focus-within:ring-grey/20">
           <textarea
             ref={inputRef}

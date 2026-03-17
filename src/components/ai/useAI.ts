@@ -14,6 +14,13 @@ export type GetPaperSnapshot = () => string | null;
 
 const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
 
+function isIOSLikeDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const userAgent = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+  return /iPad|iPhone|iPod/i.test(userAgent) || (platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
 function romanToInt(input: string): number | null {
   const s = input.trim().toUpperCase();
   if (!s) return null;
@@ -94,6 +101,7 @@ export function useAI(
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const inputValueRef = useRef("");
@@ -103,7 +111,14 @@ export function useAI(
   }, [input]);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const top = container.scrollHeight;
+    container.scrollTo({
+      top,
+      behavior: isIOSLikeDevice() ? "auto" : "smooth",
+    });
   }, []);
   useEffect(() => scrollToBottom(), [messages, streamingContent]);
 
@@ -213,7 +228,9 @@ export function useAI(
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
-      inputRef.current?.focus();
+      if (!isIOSLikeDevice()) {
+        inputRef.current?.focus();
+      }
     }
   }, [messages, question, loading, getDrawingSnapshot, getPaperSnapshot]);
 
@@ -236,6 +253,7 @@ export function useAI(
     error,
     sendMessage,
     handleKeyDown,
+    messagesContainerRef,
     messagesEndRef,
     inputRef,
     hasQuestion: Boolean(question),

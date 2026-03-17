@@ -1,5 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 import { evaluate } from "mathjs";
+import nerdamer from "nerdamer";
+import "nerdamer/Algebra";
+import "nerdamer/Calculus";
+import "nerdamer/Solve";
+import "nerdamer/Extra";
 
 /* ═══════════════════════════════════════════════════════════
    Node-based structured input model for Casio fx-83GT CW
@@ -26,16 +31,18 @@ export interface FractionNode {
   den: CalcNode[];         // denominator slot
 }
 
-/** Square root: one slot (radicand) */
+/** Root: two slots (index and radicand) */
 export interface SqrtNode {
   type: "sqrt";
-  cube: boolean;           // false = √, true = ∛
+  index: CalcNode[];
   radicand: CalcNode[];
+  hideDefaultIndex: boolean;
 }
 
-/** Power/superscript: one slot (exponent) */
+/** Power/superscript: two slots (base and exponent) */
 export interface PowerNode {
   type: "power";
+  base: CalcNode[];
   exponent: CalcNode[];
 }
 
@@ -45,6 +52,13 @@ export interface SciNode {
   exponent: CalcNode[];
 }
 
+/** Logarithm with arbitrary base: log_base(argument) */
+export interface LogNode {
+  type: "log";
+  base: CalcNode[];
+  arg: CalcNode[];
+}
+
 /** Function call: sin, cos, tan, asin, acos, atan, log10, ln, 10^, e^ */
 export interface FnNode {
   type: "fn";
@@ -52,7 +66,7 @@ export interface FnNode {
   arg: CalcNode[];
 }
 
-export type CalcNode = LeafNode | AnsNode | FractionNode | SqrtNode | PowerNode | SciNode | FnNode;
+export type CalcNode = LeafNode | AnsNode | FractionNode | SqrtNode | PowerNode | SciNode | LogNode | FnNode;
 
 /* ─── Cursor ─────────────────────────────────────────────── */
 
@@ -102,25 +116,62 @@ export interface CalcActions {
   pressLn: () => void;
   pressFraction: () => void;
   pressShift: () => void;
+  pressAngleToggle: () => void;
   pressSci: () => void;
   pressNeg: () => void;
+  pressSD: () => void;
   pressArrow: (dir: "up" | "down" | "left" | "right") => void;
 }
+
+type ResultMode = "symbolic" | "decimal";
+
+interface SymbolicEvaluation {
+  text: string;
+  latex: string;
+}
+
+interface RationalApproximation {
+  numerator: number;
+  denominator: number;
+}
+
+interface IntegerRootSimplification {
+  outside: number;
+  inside: number;
+  index: number;
+}
+
+interface DecimalEvaluation {
+  text: string;
+  isComplex: boolean;
+}
+
+const DECIMAL_SIG_FIGS = 10;
 
 /* ═══════════════════════════════════════════════════════════
    Pure helpers (no React)
    ═══════════════════════════════════════════════════════════ */
 
 const PLACEHOLDER = "\\square ";
-const CURSOR_MARK = "\\mid ";
+const CURSOR_MARK = "\\textcolor{#ff00ff}{\\smash{\\rule{0.045em}{1.05em}}}";
+
+function cursorMark(showCursor: boolean): string {
+  return CURSOR_MARK;
+}
+
+function isCursorOnly(inner: string): boolean {
+  const trimmed = inner.trim();
+  return trimmed === CURSOR_MARK.trim();
+}
 
 /** All slot-like child arrays for a node */
 function getSlots(node: CalcNode): CalcNode[][] {
   switch (node.type) {
     case "fraction": return [node.num, node.den];
-    case "sqrt": return [node.radicand];
-    case "power": return [node.exponent];
+    case "sqrt": return [node.index, node.radicand];
+    case "power": return [node.base, node.exponent];
     case "sci": return [node.exponent];
+    case "log": return [node.base, node.arg];
     case "fn": return [node.arg];
     default: return [];
   }
@@ -137,8 +188,8 @@ function nodesToLatex(
   let out = "";
 
   // If cursor is at position 0 in THIS list
-  if (showCursor && cursorList === nodes && cursorIndex === 0) {
-    out += CURSOR_MARK;
+  if (cursorList === nodes && cursorIndex === 0) {
+    out += cursorMark(showCursor);
   }
 
   for (let i = 0; i < nodes.length; i++) {
@@ -146,8 +197,8 @@ function nodesToLatex(
     out += nodeToLatex(n, cursorList, cursorIndex, showCursor);
 
     // Cursor after this node
-    if (showCursor && cursorList === nodes && cursorIndex === i + 1) {
-      out += CURSOR_MARK;
+    if (cursorList === nodes && cursorIndex === i + 1) {
+      out += cursorMark(showCursor);
     }
   }
 
@@ -161,10 +212,10 @@ function slotToLatex(
   showCursor: boolean,
 ): string {
   const inner = nodesToLatex(slot, cursorList, cursorIndex, showCursor);
-  if (inner.trim() === "" || inner.trim() === CURSOR_MARK.trim()) {
+  if (inner.trim() === "" || isCursorOnly(inner)) {
     // Empty slot: show placeholder (unless cursor is there, in which case show cursor only)
-    const hasCursor = showCursor && cursorList === slot;
-    return hasCursor ? CURSOR_MARK : PLACEHOLDER;
+    const hasCursor = cursorList === slot;
+    return hasCursor ? cursorMark(showCursor) : PLACEHOLDER;
   }
   return inner;
 }
@@ -189,18 +240,31 @@ function nodeToLatex(
     }
 
     case "sqrt": {
+      const index = slotToLatex(node.index, cursorList, cursorIndex, showCursor);
       const inner = slotToLatex(node.radicand, cursorList, cursorIndex, showCursor);
-      return node.cube ? `\\sqrt[3]{${inner}}` : `\\sqrt{${inner}}`;
+      const hideIndex = node.hideDefaultIndex
+        && node.index.length === 1
+        && node.index[0].type === "leaf"
+        && node.index[0].value === "2"
+        && cursorList !== node.index;
+      return hideIndex ? `\\sqrt{${inner}}` : `\\sqrt[${index}]{${inner}}`;
     }
 
     case "power": {
+      const base = slotToLatex(node.base, cursorList, cursorIndex, showCursor);
       const inner = slotToLatex(node.exponent, cursorList, cursorIndex, showCursor);
-      return `{}^{${inner}}`;
+      return `{${base}}^{${inner}}`;
     }
 
     case "sci": {
       const inner = slotToLatex(node.exponent, cursorList, cursorIndex, showCursor);
       return `\\times 10^{${inner}}`;
+    }
+
+    case "log": {
+      const base = slotToLatex(node.base, cursorList, cursorIndex, showCursor);
+      const arg = slotToLatex(node.arg, cursorList, cursorIndex, showCursor);
+      return `\\log_{${base}}\\left(${arg}\\right)`;
     }
 
     case "fn": {
@@ -252,18 +316,26 @@ function nodeToExpr(node: CalcNode, ansValue: string): string {
     }
 
     case "sqrt": {
+      const index = nodesToExpr(node.index, ansValue) || "2";
       const inner = nodesToExpr(node.radicand, ansValue) || "0";
-      return node.cube ? `cbrt(${inner})` : `sqrt(${inner})`;
+      return index === "2" ? `sqrt(${inner})` : `nthroot((${inner}),(${index}))`;
     }
 
     case "power": {
+      const base = nodesToExpr(node.base, ansValue) || "0";
       const inner = nodesToExpr(node.exponent, ansValue) || "1";
-      return `^(${inner})`;
+      return `((${base})^(${inner}))`;
     }
 
     case "sci": {
       const inner = nodesToExpr(node.exponent, ansValue) || "0";
       return `*10^(${inner})`;
+    }
+
+    case "log": {
+      const base = nodesToExpr(node.base, ansValue) || "10";
+      const arg = nodesToExpr(node.arg, ansValue) || "0";
+      return `log((${arg}),(${base}))`;
     }
 
     case "fn": {
@@ -281,10 +353,17 @@ function nodeToExpr(node: CalcNode, ansValue: string): string {
 function prepareExpr(raw: string, isRadians: boolean): string {
   let expr = raw;
 
+  // Normalize calculator constants for math.js parsing.
+  expr = expr.replace(/π/g, "pi");
+
   // Implicit multiplication: "2(" → "2*("
   expr = expr.replace(/(\d)\(/g, "$1*(");
   expr = expr.replace(/\)(\d)/g, ")*$1");
   expr = expr.replace(/\)\(/g, ")*(");
+  expr = expr.replace(/(\d)(pi|e)\b/g, "$1*$2");
+  expr = expr.replace(/\b(pi|e)(\d)/g, "$1*$2");
+  expr = expr.replace(/\)(pi|e)\b/g, ")*$1");
+  expr = expr.replace(/\b(pi|e)\(/g, "$1*(");
 
   if (!isRadians) {
     // Inverse trig FIRST
@@ -306,6 +385,212 @@ function prepareExpr(raw: string, isRadians: boolean): string {
   }
 
   return expr;
+}
+
+function prepareDecimalExpr(raw: string, isRadians: boolean): string {
+  return prepareExpr(raw, isRadians).replace(/\bnthroot\(/g, "nthRoot(");
+}
+
+function formatDecimal(value: number): string {
+  if (Number.isNaN(value)) return "undefined";
+  if (!Number.isFinite(value)) return value > 0 ? "∞" : "-∞";
+  return parseFloat(value.toPrecision(DECIMAL_SIG_FIGS)).toString();
+}
+
+function normalizeComplex(re: number, im: number): string {
+  const r = Math.abs(re) < 1e-12 ? 0 : re;
+  const i = Math.abs(im) < 1e-12 ? 0 : im;
+
+  if (i === 0) return formatDecimal(r);
+  if (r === 0) {
+    if (i === 1) return "i";
+    if (i === -1) return "-i";
+    return `${formatDecimal(i)}i`;
+  }
+
+  const sign = i >= 0 ? "+" : "-";
+  const absI = Math.abs(i);
+  const imagPart = absI === 1 ? "i" : `${formatDecimal(absI)}i`;
+  return `${formatDecimal(r)}${sign}${imagPart}`;
+}
+
+function evaluateDecimal(preparedExpr: string): DecimalEvaluation {
+  const out = evaluate(preparedExpr) as unknown;
+
+  if (typeof out === "number") {
+    return { text: formatDecimal(out), isComplex: false };
+  }
+
+  if (out && typeof out === "object" && "re" in out && "im" in out) {
+    const c = out as { re: number; im: number };
+    return { text: normalizeComplex(c.re, c.im), isComplex: Math.abs(c.im) > 1e-12 };
+  }
+
+  const text = String(out);
+  if (/NaN/i.test(text)) return { text: "undefined", isComplex: false };
+  if (/Infinity/i.test(text)) return { text: text.startsWith("-") ? "-∞" : "∞", isComplex: false };
+  return { text, isComplex: false };
+}
+
+function containsInverseTrig(expr: string): boolean {
+  return /\b(?:asin|acos|atan)\(/.test(expr);
+}
+
+function evaluateSymbolic(preparedExpr: string): SymbolicEvaluation | null {
+  try {
+    const expr = nerdamer(preparedExpr);
+    return {
+      text: expr.toString(),
+      latex: expr.toTeX(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function shouldUseDecimalFallback(symbolic: string): boolean {
+  if (!symbolic.trim()) return true;
+  if (/^undefined$/i.test(symbolic.trim())) return true;
+  if (/(sin|cos|tan|asin|acos|atan|log10|log|ln)\(/.test(symbolic)) return true;
+  if (/\be\b/.test(symbolic) && symbolic.trim() !== "e") return true;
+  return false;
+}
+
+function approximateSimpleFraction(value: number, maxDenominator = 64, tolerance = 1e-10): RationalApproximation | null {
+  if (!Number.isFinite(value)) return null;
+
+  const rounded = Math.round(value);
+  if (Math.abs(value - rounded) < tolerance) {
+    return { numerator: rounded, denominator: 1 };
+  }
+
+  for (let denominator = 1; denominator <= maxDenominator; denominator++) {
+    const numerator = Math.round(value * denominator);
+    if (Math.abs(value - numerator / denominator) < tolerance) {
+      const divisor = gcd(Math.abs(numerator), denominator);
+      return {
+        numerator: numerator / divisor,
+        denominator: denominator / divisor,
+      };
+    }
+  }
+
+  return null;
+}
+
+function gcd(a: number, b: number): number {
+  let x = a;
+  let y = b;
+  while (y !== 0) {
+    const next = x % y;
+    x = y;
+    y = next;
+  }
+  return x || 1;
+}
+
+function rationalToLatex({ numerator, denominator }: RationalApproximation): string {
+  if (denominator === 1) return String(numerator);
+  return `\\frac{${numerator}}{${denominator}}`;
+}
+
+function rationalToText({ numerator, denominator }: RationalApproximation): string {
+  if (denominator === 1) return String(numerator);
+  return `${numerator}/${denominator}`;
+}
+
+function simplifyIntegerNthRoot(radicand: number, index: number): IntegerRootSimplification | null {
+  if (!Number.isInteger(radicand) || !Number.isInteger(index) || index <= 1 || radicand === 0) {
+    return null;
+  }
+
+  const isNegative = radicand < 0;
+  if (isNegative && index % 2 === 0) return null;
+
+  let remaining = Math.abs(radicand);
+  const factorCounts = new Map<number, number>();
+
+  for (let factor = 2; factor * factor <= remaining; factor++) {
+    while (remaining % factor === 0) {
+      factorCounts.set(factor, (factorCounts.get(factor) ?? 0) + 1);
+      remaining /= factor;
+    }
+  }
+
+  if (remaining > 1) {
+    factorCounts.set(remaining, (factorCounts.get(remaining) ?? 0) + 1);
+  }
+
+  let outside = 1;
+  let inside = 1;
+
+  for (const [factor, powerCount] of factorCounts) {
+    const extractedPower = Math.floor(powerCount / index);
+    const leftoverPower = powerCount % index;
+    if (extractedPower > 0) {
+      outside *= factor ** extractedPower;
+    }
+    if (leftoverPower > 0) {
+      inside *= factor ** leftoverPower;
+    }
+  }
+
+  if (isNegative) outside *= -1;
+  return { outside, inside, index };
+}
+
+function nthRootToText({ outside, inside, index }: IntegerRootSimplification): string {
+  if (inside === 1) return String(outside);
+  const rootText = index === 2 ? `sqrt(${inside})` : `nthroot(${inside},${index})`;
+  if (outside === 1) return rootText;
+  if (outside === -1) return `-${rootText}`;
+  return `${outside}*${rootText}`;
+}
+
+function nthRootToLatex({ outside, inside, index }: IntegerRootSimplification): string {
+  if (inside === 1) return String(outside);
+  const radical = index === 2 ? `\\sqrt{${inside}}` : `\\sqrt[${index}]{${inside}}`;
+  if (outside === 1) return radical;
+  if (outside === -1) return `-${radical}`;
+  return `${outside} \\cdot ${radical}`;
+}
+
+function simplifyDirectNthRootExpression(expr: string): SymbolicEvaluation | null {
+  const match = expr.match(/^nthroot\(\((-?\d+)\),\((\d+)\)\)$/);
+  if (!match) return null;
+
+  const radicand = Number(match[1]);
+  const index = Number(match[2]);
+  const simplified = simplifyIntegerNthRoot(radicand, index);
+  if (!simplified) return null;
+
+  return {
+    text: nthRootToText(simplified),
+    latex: nthRootToLatex(simplified),
+  };
+}
+
+function normalizeSymbolicEvaluation(
+  rawExpr: string,
+  symbolic: SymbolicEvaluation | null,
+  decimalText: string,
+): SymbolicEvaluation | null {
+  const directNthRoot = simplifyDirectNthRootExpression(rawExpr);
+  if (directNthRoot) return directNthRoot;
+
+  if (!symbolic) return null;
+
+  const decimalValue = Number(decimalText);
+  const looksLikeHugeRational = /^-?\d{7,}\/\d{7,}$/.test(symbolic.text.trim());
+  if (!looksLikeHugeRational) return symbolic;
+
+  const rational = approximateSimpleFraction(decimalValue);
+  if (!rational) return symbolic;
+
+  return {
+    text: rationalToText(rational),
+    latex: rationalToLatex(rational),
+  };
 }
 
 /* ── Cursor navigation helpers ───────────────────────────── */
@@ -346,6 +631,102 @@ function lastSlot(node: CalcNode): CalcNode[] | null {
   return slots.length > 0 ? slots[slots.length - 1] : null;
 }
 
+function isNumericLeaf(node: CalcNode): node is LeafNode {
+  return node.type === "leaf" && /[0-9.]/.test(node.value);
+}
+
+function isOperatorLeaf(node: CalcNode): boolean {
+  return node.type === "leaf" && ["+", "-", "*", "/", "("].includes(node.value);
+}
+
+function findBalancedParenStart(list: CalcNode[], endIndex: number): number | null {
+  let depth = 0;
+  for (let i = endIndex; i >= 0; i--) {
+    const n = list[i];
+    if (n.type !== "leaf") continue;
+    if (n.value === ")") {
+      depth++;
+    } else if (n.value === "(") {
+      depth--;
+      if (depth === 0) return i;
+      if (depth < 0) return null;
+    }
+  }
+  return null;
+}
+
+function extractPromotableToken(list: CalcNode[], cursorIndex: number): { start: number; nodes: CalcNode[] } | null {
+  if (cursorIndex <= 0) return null;
+
+  const left = list[cursorIndex - 1];
+
+  // Trailing numeric literal: consume contiguous number token.
+  if (isNumericLeaf(left)) {
+    let start = cursorIndex - 1;
+    while (start - 1 >= 0 && isNumericLeaf(list[start - 1])) start--;
+    return { start, nodes: list.slice(start, cursorIndex) };
+  }
+
+  // Trailing bracketed expression: consume the balanced (...) block.
+  if (left.type === "leaf" && left.value === ")") {
+    const start = findBalancedParenStart(list, cursorIndex - 1);
+    if (start !== null) {
+      return { start, nodes: list.slice(start, cursorIndex) };
+    }
+    return null;
+  }
+
+  // Operator or open bracket means insert an empty fraction shell.
+  if (isOperatorLeaf(left)) {
+    return null;
+  }
+
+  // Any other nearest token (Ans, function, surd, fraction, constants, etc.).
+  return { start: cursorIndex - 1, nodes: [left] };
+}
+
+function insertStructuredPowerAtCursor(
+  cursor: CursorPos,
+  fixedBase: CalcNode[] | null = null,
+): PowerNode {
+  if (fixedBase) {
+    const node: PowerNode = { type: "power", base: fixedBase, exponent: [] };
+    cursor.list.splice(cursor.index, 0, node);
+    return node;
+  }
+
+  const token = extractPromotableToken(cursor.list, cursor.index);
+  if (token) {
+    const node: PowerNode = { type: "power", base: token.nodes, exponent: [] };
+    cursor.list.splice(token.start, cursor.index - token.start, node);
+    return node;
+  }
+
+  const node: PowerNode = { type: "power", base: [], exponent: [] };
+  cursor.list.splice(cursor.index, 0, node);
+  return node;
+}
+
+function insertStructuredRootAtCursor(
+  cursor: CursorPos,
+  fixedIndex: CalcNode[] | null,
+  promoteRadicand: boolean,
+  hideDefaultIndex: boolean,
+): SqrtNode {
+  const token = promoteRadicand ? extractPromotableToken(cursor.list, cursor.index) : null;
+  const radicand = token ? token.nodes : [];
+  const index = fixedIndex ?? [];
+  const node: SqrtNode = { type: "sqrt", index, radicand, hideDefaultIndex };
+
+  if (token) {
+    cursor.list.splice(token.start, cursor.index - token.start, node);
+  } else {
+    cursor.list.splice(cursor.index, 0, node);
+  }
+
+  return node;
+}
+
 /* ═══════════════════════════════════════════════════════════
    React hook
    ═══════════════════════════════════════════════════════════ */
@@ -357,22 +738,26 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
   const [, forceRender] = useState(0);
 
   const [result, setResult] = useState("");
+  const [symbolicResult, setSymbolicResult] = useState("");
+  const [symbolicAns, setSymbolicAns] = useState("");
+  const [decimalResult, setDecimalResult] = useState("");
+  const [resultMode, setResultMode] = useState<ResultMode>("symbolic");
   const [resultIsError, setResultIsError] = useState(false);
   const [justExecuted, setJustExecuted] = useState(false);
   const [ansValue, setAnsValue] = useState("0");
   const [shiftActive, setShiftActive] = useState(false);
-  const [isRadians] = useState(false);
+  const [isRadians, setIsRadians] = useState(false);
   const [cursorVisible, setCursorVisible] = useState(true);
 
   const ansRef = useRef(ansValue);
   ansRef.current = ansValue;
 
-  // blink cursor timer
+  // Cursor blink is handled with CSS animation on the cursor glyph itself.
   const cursorTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const resetCursorBlink = useCallback(() => {
     setCursorVisible(true);
     if (cursorTimerRef.current) clearInterval(cursorTimerRef.current);
-    cursorTimerRef.current = setInterval(() => setCursorVisible(v => !v), 530);
+    cursorTimerRef.current = undefined;
   }, []);
 
   // Convenience to update after mutations
@@ -388,6 +773,10 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     if (!justExecuted) return false;
     setJustExecuted(false);
     setResult("");
+    setSymbolicResult("");
+    setSymbolicAns("");
+    setDecimalResult("");
+    setResultMode("symbolic");
     setResultIsError(false);
     if (isOperator) {
       // Continue from Ans
@@ -407,6 +796,10 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     rootRef.current.length = 0;
     cursorRef.current = { list: rootRef.current, index: 0 };
     setResult("");
+    setSymbolicResult("");
+    setSymbolicAns("");
+    setDecimalResult("");
+    setResultMode("symbolic");
     setResultIsError(false);
     setJustExecuted(false);
     return true;
@@ -452,6 +845,16 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
   const pressOperator = useCallback((op: string, display: string) => {
     if (maybeResetAfterError()) return;
     maybeResetAfterExe(true);
+
+    // If cursor is in fraction denominator, auto-exit before applying next operator.
+    const parent = findParent(rootRef.current, cursorRef.current.list);
+    if (parent) {
+      const parentNode = parent.parentList[parent.nodeIndex];
+      if (parentNode.type === "fraction" && parent.slotIndex === 1) {
+        cursorRef.current = { list: parent.parentList, index: parent.nodeIndex + 1 };
+      }
+    }
+
     // Replace trailing operator
     const cur = cursorRef.current;
     if (cur.index > 0) {
@@ -502,6 +905,10 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
       rootRef.current.length = 0;
       cursorRef.current = { list: rootRef.current, index: 0 };
       setResult("");
+      setSymbolicResult("");
+      setSymbolicAns("");
+      setDecimalResult("");
+      setResultMode("symbolic");
       setJustExecuted(false);
       commit();
       return;
@@ -536,6 +943,10 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     rootRef.current.length = 0;
     cursorRef.current = { list: rootRef.current, index: 0 };
     setResult("");
+    setSymbolicResult("");
+    setSymbolicAns("");
+    setDecimalResult("");
+    setResultMode("symbolic");
     setResultIsError(false);
     setJustExecuted(false);
     commit();
@@ -546,29 +957,70 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     try {
       const rawExpr = nodesToExpr(rootRef.current, ansRef.current);
       if (!rawExpr.trim()) return;
-      const prepared = prepareExpr(rawExpr, isRadians);
-      const res = evaluate(prepared);
+      const decimalPrepared = prepareDecimalExpr(rawExpr, isRadians);
+      const symbolicPrepared = prepareExpr(rawExpr, isRadians);
+      const decimalEval = evaluateDecimal(decimalPrepared);
+      if (decimalEval.isComplex && containsInverseTrig(rawExpr)) {
+        throw new Error("Math ERROR");
+      }
+      const decimal = decimalEval.text;
+      const symbolic = normalizeSymbolicEvaluation(symbolicPrepared, evaluateSymbolic(symbolicPrepared), decimal);
+      const symbolicText = symbolic?.text ?? "";
+      const symbolicLatex = symbolic?.latex ?? "";
+      const useDecimal = shouldUseDecimalFallback(symbolicText);
 
-      let formatted: string;
-      if (typeof res === "number") {
-        if (!isFinite(res)) throw new Error("Math ERROR");
-        formatted = parseFloat(res.toPrecision(10)).toString();
-      } else {
-        formatted = String(res);
+      let displayValue = decimal;
+      let ansStored = decimal;
+
+      if (!useDecimal && symbolicLatex) {
+        displayValue = symbolicLatex;
+        ansStored = symbolicText;
+      } else if (decimal !== "∞" && decimal !== "-∞" && decimal !== "undefined") {
+        displayValue = `\\approx ${decimal}`;
       }
 
-      setResult(formatted);
+      setSymbolicResult(symbolicLatex);
+      setSymbolicAns(symbolicText);
+      setDecimalResult(decimal);
+      setResultMode("symbolic");
+      setResult(displayValue);
       setResultIsError(false);
-      setAnsValue(formatted);
-      ansRef.current = formatted;
+      setAnsValue(ansStored);
+      ansRef.current = ansStored;
       setJustExecuted(true);
     } catch {
       setResult("Math ERROR");
+      setSymbolicResult("");
+      setSymbolicAns("");
+      setDecimalResult("");
+      setResultMode("symbolic");
       setResultIsError(true);
       setJustExecuted(true);
     }
     commit();
   }, [isRadians, commit]);
+
+  const pressSD = useCallback(() => {
+    if (!symbolicResult && !decimalResult) return;
+
+    if (resultMode === "symbolic") {
+      setResultMode("decimal");
+      setResult(decimalResult || result);
+    } else {
+      setResultMode("symbolic");
+      if (!symbolicResult || shouldUseDecimalFallback(symbolicAns)) {
+        if (decimalResult && decimalResult !== "∞" && decimalResult !== "-∞" && decimalResult !== "undefined") {
+          setResult(`\\approx ${decimalResult}`);
+        } else {
+          setResult(decimalResult || result);
+        }
+      } else {
+        setResult(symbolicResult);
+      }
+    }
+
+    commit();
+  }, [symbolicResult, symbolicAns, decimalResult, resultMode, result, commit]);
 
   const pressAns = useCallback(() => {
     if (maybeResetAfterError()) { /* cleared */ }
@@ -582,20 +1034,14 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     if (maybeResetAfterError()) return;
     maybeResetAfterExe(true);
     if (shiftActive) {
-      // x³: insert power node with "3" already in exponent
-      const digit: LeafNode = { type: "leaf", value: "3", display: "3" };
-      const node: PowerNode = { type: "power", exponent: [digit] };
-      const cur = cursorRef.current;
-      cur.list.splice(cur.index, 0, node);
-      cur.index++;
+      const node = insertStructuredPowerAtCursor(cursorRef.current);
+      cursorRef.current = { list: node.exponent, index: 0 };
       clearShift();
     } else {
-      // x²: insert power node with "2" already in exponent
       const digit: LeafNode = { type: "leaf", value: "2", display: "2" };
-      const node: PowerNode = { type: "power", exponent: [digit] };
-      const cur = cursorRef.current;
-      cur.list.splice(cur.index, 0, node);
-      cur.index++;
+      const node = insertStructuredPowerAtCursor(cursorRef.current);
+      node.exponent.push(digit);
+      cursorRef.current = { list: node.exponent, index: node.exponent.length };
     }
     commit();
   }, [shiftActive, clearShift, maybeResetAfterError, maybeResetAfterExe, commit]);
@@ -604,29 +1050,37 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     if (maybeResetAfterError()) return;
     maybeResetAfterExe(true);
     if (shiftActive) {
-      // x⁻¹: pre-fill exponent
       const minus: LeafNode = { type: "leaf", value: "-", display: "-" };
       const one: LeafNode = { type: "leaf", value: "1", display: "1" };
-      const node: PowerNode = { type: "power", exponent: [minus, one] };
-      const cur = cursorRef.current;
-      cur.list.splice(cur.index, 0, node);
-      cur.index++;
+      const node = insertStructuredPowerAtCursor(cursorRef.current);
+      node.exponent.push(minus, one);
+      cursorRef.current = { list: node.exponent, index: node.exponent.length };
       clearShift();
     } else {
-      const node: PowerNode = { type: "power", exponent: [] };
-      insertStructured(node);
+      const node = insertStructuredPowerAtCursor(cursorRef.current);
+      if (node.base.length > 0) {
+        cursorRef.current = { list: node.exponent, index: 0 };
+      } else {
+        cursorRef.current = { list: node.base, index: 0 };
+      }
     }
     commit();
-  }, [shiftActive, clearShift, maybeResetAfterError, maybeResetAfterExe, insertStructured, commit]);
+  }, [shiftActive, clearShift, maybeResetAfterError, maybeResetAfterExe, commit]);
 
   const pressSqrt = useCallback(() => {
     if (maybeResetAfterError()) return;
     maybeResetAfterExe(false);
-    const node: SqrtNode = { type: "sqrt", cube: shiftActive, radicand: [] };
-    insertStructured(node);
-    if (shiftActive) clearShift();
+    if (shiftActive) {
+      const node = insertStructuredRootAtCursor(cursorRef.current, null, true, false);
+      cursorRef.current = { list: node.index, index: 0 };
+      clearShift();
+    } else {
+      const two: LeafNode = { type: "leaf", value: "2", display: "2" };
+      const node = insertStructuredRootAtCursor(cursorRef.current, [two], false, true);
+      cursorRef.current = { list: node.radicand, index: 0 };
+    }
     commit();
-  }, [shiftActive, clearShift, maybeResetAfterError, maybeResetAfterExe, insertStructured, commit]);
+  }, [shiftActive, clearShift, maybeResetAfterError, maybeResetAfterExe, commit]);
 
   const pressTrig = useCallback((fn: "sin" | "cos" | "tan") => {
     if (maybeResetAfterError()) return;
@@ -642,11 +1096,13 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     if (maybeResetAfterError()) return;
     maybeResetAfterExe(false);
     if (shiftActive) {
-      const node: FnNode = { type: "fn", fn: "10^", arg: [] };
-      insertStructured(node);
+      const one: LeafNode = { type: "leaf", value: "1", display: "1" };
+      const zero: LeafNode = { type: "leaf", value: "0", display: "0" };
+      const node = insertStructuredPowerAtCursor(cursorRef.current, [one, zero]);
+      cursorRef.current = { list: node.exponent, index: 0 };
       clearShift();
     } else {
-      const node: FnNode = { type: "fn", fn: "log10", arg: [] };
+      const node: LogNode = { type: "log", base: [], arg: [] };
       insertStructured(node);
     }
     commit();
@@ -656,8 +1112,9 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     if (maybeResetAfterError()) return;
     maybeResetAfterExe(false);
     if (shiftActive) {
-      const node: FnNode = { type: "fn", fn: "e^", arg: [] };
-      insertStructured(node);
+      const base: LeafNode = { type: "leaf", value: "e", display: "e" };
+      const node = insertStructuredPowerAtCursor(cursorRef.current, [base]);
+      cursorRef.current = { list: node.exponent, index: 0 };
       clearShift();
     } else {
       const node: FnNode = { type: "fn", fn: "ln", arg: [] };
@@ -669,14 +1126,30 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
   const pressFraction = useCallback(() => {
     if (maybeResetAfterError()) return;
     maybeResetAfterExe(false);
-    const node: FractionNode = { type: "fraction", num: [], den: [] };
-    insertStructured(node); // cursor goes into num (first slot)
+
+    const cur = cursorRef.current;
+    const token = extractPromotableToken(cur.list, cur.index);
+
+    if (token) {
+      const node: FractionNode = { type: "fraction", num: token.nodes, den: [] };
+      cur.list.splice(token.start, cur.index - token.start, node);
+      cursorRef.current = { list: node.den, index: 0 };
+    } else {
+      const node: FractionNode = { type: "fraction", num: [], den: [] };
+      insertStructured(node); // cursor goes into numerator for empty/operator trailing cases
+    }
+
     commit();
   }, [maybeResetAfterError, maybeResetAfterExe, insertStructured, commit]);
 
   const pressShift = useCallback(() => {
     setShiftActive(v => !v);
   }, []);
+
+  const pressAngleToggle = useCallback(() => {
+    setIsRadians(v => !v);
+    commit();
+  }, [commit]);
 
   const pressSci = useCallback(() => {
     if (maybeResetAfterError()) return;
@@ -713,10 +1186,17 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
           cur.index--;
         }
       } else {
-        // At start of a slot — move to parent, before the structure node
+        // At start of a slot — move to previous sibling slot if present, else before the parent node
         const parent = findParent(root, cur.list);
         if (parent) {
-          cursorRef.current = { list: parent.parentList, index: parent.nodeIndex };
+          const parentNode = parent.parentList[parent.nodeIndex];
+          const slots = getSlots(parentNode);
+          if (parent.slotIndex > 0) {
+            const targetSlot = slots[parent.slotIndex - 1];
+            cursorRef.current = { list: targetSlot, index: targetSlot.length };
+          } else {
+            cursorRef.current = { list: parent.parentList, index: parent.nodeIndex };
+          }
         }
       }
       commit();
@@ -731,10 +1211,17 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
           cur.index++;
         }
       } else {
-        // At end of a slot — move to parent, after the structure node
+        // At end of a slot — move to next sibling slot if present, else after the parent node
         const parent = findParent(root, cur.list);
         if (parent) {
-          cursorRef.current = { list: parent.parentList, index: parent.nodeIndex + 1 };
+          const parentNode = parent.parentList[parent.nodeIndex];
+          const slots = getSlots(parentNode);
+          if (parent.slotIndex < slots.length - 1) {
+            const targetSlot = slots[parent.slotIndex + 1];
+            cursorRef.current = { list: targetSlot, index: 0 };
+          } else {
+            cursorRef.current = { list: parent.parentList, index: parent.nodeIndex + 1 };
+          }
         }
       }
       commit();
@@ -785,7 +1272,7 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     pressDigit, pressDecimal, pressOperator, pressBracket, pressCloseBracket,
     pressBackspace, pressAC, pressEXE, pressAns, pressSquare,
     pressPower, pressSqrt, pressTrig, pressLog, pressLn,
-    pressFraction, pressShift, pressSci, pressNeg, pressArrow,
+    pressFraction, pressShift, pressAngleToggle, pressSci, pressNeg, pressSD, pressArrow,
   };
 
   return [state, actions];

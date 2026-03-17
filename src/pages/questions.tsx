@@ -539,10 +539,41 @@ export default function Questions() {
     const [viewportWidth, setViewportWidth] = useState(
         typeof window !== "undefined" ? window.innerWidth : 1024
     );
+    const [navbarActionOffsetPx, setNavbarActionOffsetPx] = useState(96);
     useEffect(() => {
         const onResize = () => setViewportWidth(window.innerWidth);
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
+    }, []);
+    useEffect(() => {
+        if (typeof window === "undefined" || typeof document === "undefined") return;
+
+        const navbar = document.getElementById("app-navbar");
+        if (!navbar) return;
+
+        const updateOffset = () => {
+            const rightEdge = Math.max(0, Math.round(navbar.getBoundingClientRect().right));
+            setNavbarActionOffsetPx(rightEdge + 8);
+        };
+
+        updateOffset();
+
+        const resizeObserver =
+            typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateOffset) : null;
+        resizeObserver?.observe(navbar);
+
+        window.addEventListener("resize", updateOffset);
+        navbar.addEventListener("mouseenter", updateOffset);
+        navbar.addEventListener("mouseleave", updateOffset);
+        navbar.addEventListener("transitionend", updateOffset);
+
+        return () => {
+            resizeObserver?.disconnect();
+            window.removeEventListener("resize", updateOffset);
+            navbar.removeEventListener("mouseenter", updateOffset);
+            navbar.removeEventListener("mouseleave", updateOffset);
+            navbar.removeEventListener("transitionend", updateOffset);
+        };
     }, []);
     useEffect(() => {
         const onCloseLogTables = () => setShowLogTables(false);
@@ -1800,6 +1831,60 @@ export default function Questions() {
                             const showPdfLoadingOverlay =
                                 (!viewUsesDocument ? false : !fullPaperPreloaded) || !logTablesPreloaded;
 
+                            const paperActionButtons = (
+                                <>
+                                    {hasPageRegions && (
+                                        <button
+                                            type="button"
+                                            onClick={handleExpandToggle}
+                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                            aria-label={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                            title={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                        >
+                                            {isFullPaperExpanded ? (
+                                                <>
+                                                    <LuMinimize2 size={14} strokeWidth={2} />
+                                                    <span>Question only</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <LuMaximize2 size={14} strokeWidth={2} />
+                                                    <span>Full paper</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+                                    {currentPaperQuestion && (
+                                        <button
+                                            type="button"
+                                            data-tutorial-id="sidebar-logtables"
+                                            onClick={() => {
+                                                setLogTablesQuestionIndex(paperQuestionIndexInFullList >= 0 ? paperQuestionIndexInFullList : 0);
+                                                setShowLogTables(true);
+                                            }}
+                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                            title="Log tables"
+                                            aria-label="Log tables"
+                                        >
+                                            <LuBookOpen size={14} strokeWidth={2} />
+                                            <span>Log tables</span>
+                                        </button>
+                                    )}
+                                    {currentPaperQuestion && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCalculator(true)}
+                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                            title="Calculator"
+                                            aria-label="Calculator"
+                                        >
+                                            <LuCalculator size={14} strokeWidth={2} />
+                                            <span>Calculator</span>
+                                        </button>
+                                    )}
+                                </>
+                            );
+
                             return (
                                 <div className="relative flex-1 min-h-0  flex flex-col overflow-hidden">
                                     {showPdfLoadingOverlay && (
@@ -1816,60 +1901,13 @@ export default function Questions() {
                                         typeof document !== "undefined" &&
                                         createPortal(
                                             <div
-                                                className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-0 pr-4" : "justify-start left-[var(--navbar-width,5.5rem)]"}`}
+                                                className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
                                                 style={{
-                                                    bottom: "env(safe-area-inset-bottom, 0px)",
+                                                    bottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))",
+                                                    left: options.leftHandMode ? undefined : `${navbarActionOffsetPx}px`,
                                                 }}
                                             >
-                                                {hasPageRegions && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleExpandToggle}
-                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
-                                                        aria-label={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
-                                                        title={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
-                                                    >
-                                                        {isFullPaperExpanded ? (
-                                                            <>
-                                                                <LuMinimize2 size={14} strokeWidth={2} />
-                                                                <span>Question only</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <LuMaximize2 size={14} strokeWidth={2} />
-                                                                <span>Full paper</span>
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                )}
-                                                {currentPaperQuestion && (
-                                                    <button
-                                                        type="button"
-                                                        data-tutorial-id="sidebar-logtables"
-                                                        onClick={() => {
-                                                            setLogTablesQuestionIndex(paperQuestionIndexInFullList >= 0 ? paperQuestionIndexInFullList : 0);
-                                                            setShowLogTables(true);
-                                                        }}
-                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
-                                                        title="Log tables"
-                                                        aria-label="Log tables"
-                                                    >
-                                                        <LuBookOpen size={14} strokeWidth={2} />
-                                                        <span>Log tables</span>
-                                                    </button>
-                                                )}
-                                                {currentPaperQuestion && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowCalculator(true)}
-                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
-                                                        title="Calculator"
-                                                        aria-label="Calculator"
-                                                    >
-                                                        <LuCalculator size={14} strokeWidth={2} />
-                                                        <span>Calculator</span>
-                                                    </button>
-                                                )}
+                                                {paperActionButtons}
                                             </div>,
                                             document.body
                                         )}

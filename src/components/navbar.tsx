@@ -52,7 +52,7 @@ export default function Navbar () {
     }, [location.pathname])
 
     return (
-        <div className="container group" >
+        <div id="app-navbar" className="container group" >
 
             {/* ============================= USER CARD ================================ */}
             <div className='user-container'>
