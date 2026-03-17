@@ -14,6 +14,8 @@ type AIChatProps = {
   getPaperSnapshot?: (() => string | null) | null;
   /** Optional: externally injected exchange (e.g. from Check My Answer). */
   injectedExchange?: InjectedExchange | null;
+  /** Optional action for grading flow (full-marks completion CTA). */
+  onMarkCompleteFromGrading?: (() => void) | null;
 };
 
 const AI_PLACEHOLDERS = [
@@ -30,9 +32,10 @@ const AI_PLACEHOLDERS = [
   "No question is a stupid question:)",
 ];
 
-export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot, injectedExchange }: AIChatProps) {
+export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot, injectedExchange, onMarkCompleteFromGrading }: AIChatProps) {
   const { user } = useContext(UserContext);
   const [aiPlaceholder] = useState(() => AI_PLACEHOLDERS[Math.floor(Math.random() * AI_PLACEHOLDERS.length)]);
+  const [completedActionNonce, setCompletedActionNonce] = useState<string | null>(null);
   const {
     messages,
     streamingContent,
@@ -52,6 +55,18 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot, injecte
   const emptyMessage = hasQuestion
     ? "Ask about this question. I can explain concepts, give hints, or walk through steps. If you draw maths or handwriting on the canvas, I can see it too. If you have a past paper open, I can see it as well."
     : "How can I can help? I can explain concepts, hints, or steps. Draw on the canvas and I’ll recognise it. If you have a past paper open, I can see it too.";
+  const showMarkCompleteAction = Boolean(
+    injectedExchange?.action?.type === "markComplete" &&
+      injectedExchange.nonce &&
+      completedActionNonce !== injectedExchange.nonce &&
+      onMarkCompleteFromGrading,
+  );
+
+  const handleMarkComplete = () => {
+    if (!onMarkCompleteFromGrading || !injectedExchange?.nonce) return;
+    onMarkCompleteFromGrading();
+    setCompletedActionNonce(injectedExchange.nonce);
+  };
 
   return (
     <div className="ai-chat-shell pointer-events-auto h-full min-h-0 overflow-hidden">
@@ -69,6 +84,21 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot, injecte
           {loading && <ChatMessageLoading streamingContent={streamingContent} />}
         </AnimatePresence>
         {error && <p className="text-sm text-[var(--color-red)] text-center py-2">{error}</p>}
+        {injectedExchange?.action?.type === "markComplete" && injectedExchange.nonce && (
+          <div className="flex justify-start">
+            {showMarkCompleteAction ? (
+              <button
+                type="button"
+                onClick={handleMarkComplete}
+                className="rounded-lg px-3 py-2 text-xs font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity"
+              >
+                {injectedExchange.action.label}
+              </button>
+            ) : completedActionNonce === injectedExchange.nonce ? (
+              <p className="text-xs color-txt-sub">Marked complete ✓</p>
+            ) : null}
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 

@@ -45,6 +45,8 @@ export type SidebarTileManagerProps = {
   markingSchemeQuestionName?: string;
   /** Optional externally injected chat exchange (e.g. check-answer feedback). */
   aiInjectedExchange?: InjectedExchange | null;
+  /** Optional completion CTA handler from grading flow. */
+  onMarkCompleteFromGrading?: (() => void) | null;
 };
 
 export function SidebarTileManager({
@@ -58,6 +60,7 @@ export function SidebarTileManager({
   markingSchemePageRange,
   markingSchemeQuestionName,
   aiInjectedExchange,
+  onMarkCompleteFromGrading,
 }: SidebarTileManagerProps) {
   const [internalPanel, setInternalPanel] = useState<SidebarPanelId | null>("ai");
   const isControlled = controlledPanel !== undefined;
@@ -145,6 +148,7 @@ export function SidebarTileManager({
                   markingSchemePageRange={markingSchemePageRange}
                   markingSchemeQuestionName={markingSchemeQuestionName}
                   aiInjectedExchange={aiInjectedExchange}
+                  onMarkCompleteFromGrading={onMarkCompleteFromGrading}
                   onClosePanel={() => setOpenPanel(null)}
                 />
               </div>
@@ -176,6 +180,7 @@ function TileContent({
   markingSchemePageRange,
   markingSchemeQuestionName,
   aiInjectedExchange,
+  onMarkCompleteFromGrading,
   onClosePanel: _onClosePanel,
 }: {
   panelId: SidebarPanelId;
@@ -186,6 +191,7 @@ function TileContent({
   markingSchemePageRange?: MarkingSchemePageRange | null;
   markingSchemeQuestionName?: string;
   aiInjectedExchange?: InjectedExchange | null;
+  onMarkCompleteFromGrading?: (() => void) | null;
   onClosePanel?: () => void;
 }) {
   const part = 0;
@@ -199,6 +205,7 @@ function TileContent({
           getDrawingSnapshot={getDrawingSnapshot}
           getPaperSnapshot={getPaperSnapshot}
           injectedExchange={aiInjectedExchange}
+          onMarkCompleteFromGrading={onMarkCompleteFromGrading}
         />
       );
     case "threads": {

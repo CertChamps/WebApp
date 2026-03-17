@@ -5,6 +5,10 @@ export type InjectedExchange = {
   nonce: string;
   userMessage: string;
   assistantMessage: string;
+  action?: {
+    type: "markComplete";
+    label: string;
+  } | null;
 };
 
 /** Optional: return current drawing as PNG data URL (e.g. from canvas) so the AI can see it. */

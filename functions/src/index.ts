@@ -59,7 +59,7 @@ export const chat = functions.https.onRequest({
         return;
     }
 
-    const { messages, context } = req.body;
+    const { messages, context, temperature, top_p } = req.body;
     if (!Array.isArray(messages) || messages.length === 0) {
         res.status(400).json({ error: "messages array is required" });
         return;
@@ -89,6 +89,8 @@ export const chat = functions.https.onRequest({
     });
 
     try {
+        const resolvedTemperature = typeof temperature === "number" ? temperature : 0.7;
+        const resolvedTopP = typeof top_p === "number" ? top_p : 1;
         const response = await fetch(OPENROUTER_URL, {
             method: "POST",
             headers: {
@@ -100,6 +102,8 @@ export const chat = functions.https.onRequest({
                 model: OPENROUTER_MODEL,
                 messages: apiMessages,
                 max_tokens: 1000,
+                temperature: resolvedTemperature,
+                top_p: resolvedTopP,
                 stream: true
             })
         });

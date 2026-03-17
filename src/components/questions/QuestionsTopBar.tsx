@@ -13,6 +13,8 @@ type QuestionsTopBarProps = {
   subjectOptions: { value: string; label: string }[];
   centerContent?: ReactNode;
   rightContent?: ReactNode;
+  leftActionContent?: ReactNode;
+  showQuestionCompleteControl?: boolean;
   questionCompleted?: boolean;
   onToggleQuestionCompleted?: () => void;
   paperProgress?: { completed: number; total: number };
@@ -28,6 +30,8 @@ export default function QuestionsTopBar({
   subjectOptions,
   centerContent,
   rightContent,
+  leftActionContent,
+  showQuestionCompleteControl = true,
   questionCompleted,
   onToggleQuestionCompleted,
   paperProgress,
@@ -62,7 +66,9 @@ export default function QuestionsTopBar({
             <span className="">whiteboard</span>
           </button>
 
-          {mode === "pastpaper" && onToggleQuestionCompleted && (
+          {leftActionContent}
+
+          {mode === "pastpaper" && onToggleQuestionCompleted && showQuestionCompleteControl && (
             <div className="flex items-center gap-1">
               <button
                 type="button"

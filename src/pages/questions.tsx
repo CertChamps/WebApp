@@ -18,11 +18,11 @@ import { getPastPaperTopicScope } from "../data/mathsHigherTopics";
 
 // Components
 import { createPortal } from "react-dom";
-import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck } from "react-icons/lu";
+import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle } from "react-icons/lu";
 import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
 import QSearch from "../components/questions/qSearch";
-import DrawingCanvas, { type RegisterDrawingSnapshot, type RegisterGetLineCount, type WhiteboardFeedbackOverlay, type WhiteboardRelevantRegion } from "../components/questions/DrawingCanvas";
+import DrawingCanvas, { type RegisterDrawingSnapshot, type RegisterGetGradingCapture } from "../components/questions/DrawingCanvas";
 import { useCanvasStorage } from "../hooks/useCanvasStorage";
 import RenderMath from "../components/math/mathdisplay";
 import { AnimatePresence, motion } from "framer-motion";
@@ -39,6 +39,10 @@ import PaperProGate from "../components/PaperProGate";
 import Filter from "../components/filter";
 import { getDocumentCached } from "../utils/pdfDocumentCache";
 import type { InjectedExchange } from "../components/ai/useAI";
+import { runGrading } from "../lib/grading/GradingEngine";
+import type { CanvasAnnotation, CanvasCapturePayload, GradingStatus, Pass1Result } from "../lib/grading/GradingTypes";
+import { buildPartSummary } from "../lib/grading/annotationBuilder";
+import { BlankCanvasError } from "../lib/grading/canvasCapture";
 
 // Style Imports
 import "../styles/questions.css";
@@ -47,8 +51,37 @@ import "../styles/sidebar.css";
 
 const QUESTIONS_MODE_KEY = "questions-page-mode";
 const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
-const WHITEBOARD_REGION_SYSTEM_PROMPT = "You are identifying the region of a student's whiteboard that contains the answer relevant to the question. Ignore side notes, rough work, labels, doodles, sketches, margin annotations, or anything clearly not part of the answer being graded. Return JSON only in the shape {\"x\":number,\"y\":number,\"width\":number,\"height\":number} in canvas coordinates with origin at the top-left of the visible whiteboard canvas. If there is no clearly relevant region, return null.";
-const CHECK_MY_ANSWER_SYSTEM_PROMPT = "You are a teacher grading a student's whiteboard answer for Leaving Cert exam style marking. Rules: (1) If the whiteboard is blank or completely irrelevant, refuse to grade. (2) For text-only answers: if correct say \"That's correct! Good job.\" — if incorrect say \"Not quite, you made some small mistakes here:\" then a concise bullet list of errors, no solutions. (3) For whiteboard answers: the user message tells you the exact number of lines. Output EXACTLY that many lines of feedback, one per canvas line, top to bottom — no more, no fewer. Every relevant graded line MUST include a useful short comment. If a line earns marks, prefix the line with \u2713 and then a specific comment about why that step is good (never output a bare \u2713). If a line loses marks, write a short plain-English comment stating what is wrong on that line (no LaTeX, no solutions, no restating the student's work). (4) Do NOT deduct marks for handwriting neatness, formatting style, wording style, or minor consistency/presentation issues unless they change mathematical correctness or method. Use a single period . only for lines that are clearly irrelevant notes/scribbles and should not be graded. At the end output the total mark as X/Y on its own line.";
+
+function isSavedGradingAnnotations(value: unknown): value is CanvasAnnotation[] {
+    if (!Array.isArray(value)) return false;
+    return value.every((item) => {
+        if (!item || typeof item !== "object") return false;
+        const record = item as Record<string, unknown>;
+        if (record.type === "errorComment") {
+            return typeof record.id === "string" && typeof record.worldX === "number" && typeof record.worldY === "number" && typeof record.text === "string";
+        }
+        if (record.type === "markAnnotation") {
+            return typeof record.worldX === "number" && typeof record.worldY === "number" && typeof record.label === "string";
+        }
+        if (record.type === "handCircle") {
+            return typeof record.worldX === "number" && typeof record.worldY === "number" && typeof record.width === "number" && typeof record.height === "number";
+        }
+        return false;
+    });
+}
+
+function gradingStatusLabel(status: GradingStatus): string {
+    switch (status) {
+        case "capturing":
+        case "reading":
+            return "Reading your workings...";
+        case "marking": return "Marking...";
+        case "rendering": return "Check my answer";
+        case "done": return "Done";
+        case "error": return "Try again";
+        default: return "Check my answer";
+    }
+}
 
 export type QuestionsMode = "certchamps" | "pastpaper";
 
@@ -102,376 +135,47 @@ async function renderPdfPageSnapshot(blob: Blob, pageNumber: number, maxWidth = 
     }
 }
 
-function clampToRange(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, value));
-}
-
-function normaliseRelevantRegion(input: unknown, metrics: { width: number; height: number } | null): WhiteboardRelevantRegion | null {
-    if (!input || typeof input !== "object" || !metrics) return null;
-    const candidate = input as Record<string, unknown>;
-    const x = Number(candidate.x);
-    const y = Number(candidate.y);
-    const width = Number(candidate.width);
-    const height = Number(candidate.height);
-    if ([x, y, width, height].every(Number.isFinite)) {
-        const region = {
-            x: clampToRange(x, 0, metrics.width),
-            y: clampToRange(y, 0, metrics.height),
-            width: clampToRange(width, 0, metrics.width),
-            height: clampToRange(height, 0, metrics.height),
-        };
-        if (region.width < 12 || region.height < 12) return null;
-        if (region.x + region.width > metrics.width) region.width = Math.max(0, metrics.width - region.x);
-        if (region.y + region.height > metrics.height) region.height = Math.max(0, metrics.height - region.y);
-        return region.width >= 12 && region.height >= 12 ? region : null;
-    }
-
-    // Backward compatibility for any older left/top/right/bottom responses.
-    const left = Number(candidate.left);
-    const top = Number(candidate.top);
-    const right = Number(candidate.right);
-    const bottom = Number(candidate.bottom);
-    if (![left, top, right, bottom].every(Number.isFinite)) return null;
-    const useNormalised = left >= 0 && right <= 1 && top >= 0 && bottom <= 1;
-    const region = useNormalised
-        ? {
-            x: left * metrics.width,
-            y: top * metrics.height,
-            width: Math.max(0, (right - left) * metrics.width),
-            height: Math.max(0, (bottom - top) * metrics.height),
-        }
-        : {
-            x: left,
-            y: top,
-            width: Math.max(0, right - left),
-            height: Math.max(0, bottom - top),
-        };
-    return normaliseRelevantRegion(region, metrics);
-}
-
-function parseRelevantRegionResponse(raw: string, metrics: { width: number; height: number } | null): WhiteboardRelevantRegion | null {
-    const trimmed = raw.trim();
-    if (!trimmed || /^null$/i.test(trimmed)) return null;
-
-    const candidates = [trimmed];
-    const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
-    if (fenced) candidates.push(fenced.trim());
-    const objectLiteral = trimmed.match(/\{[\s\S]*\}/)?.[0];
-    if (objectLiteral) candidates.push(objectLiteral);
-
-    for (const candidate of candidates) {
-        try {
-            const parsed = JSON.parse(candidate);
-            const normalised = normaliseRelevantRegion(parsed, metrics);
-            if (normalised) return normalised;
-            if (parsed === null) return null;
-        } catch {
-            // Keep trying other candidate extractions.
-        }
-    }
-
-    return null;
-}
-
-function expandRelevantRegion(region: WhiteboardRelevantRegion, metrics: { width: number; height: number }, padding = 18): WhiteboardRelevantRegion {
-    const x = Math.max(0, region.x - padding);
-    const y = Math.max(0, region.y - padding);
-    const right = Math.min(metrics.width, region.x + region.width + padding);
-    const bottom = Math.min(metrics.height, region.y + region.height + padding);
-    return {
-        x,
-        y,
-        width: Math.max(1, right - x),
-        height: Math.max(1, bottom - y),
-    };
-}
-
-async function cropSnapshotToRelevantRegion(dataUrl: string, region: WhiteboardRelevantRegion | null, metrics: { width: number; height: number } | null): Promise<string> {
-    if (!region || !metrics) return dataUrl;
-
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error("Failed to load whiteboard snapshot for cropping."));
-        img.src = dataUrl;
-    });
-
-    const scaleX = image.width / metrics.width;
-    const scaleY = image.height / metrics.height;
-    const sx = Math.max(0, Math.floor(region.x * scaleX));
-    const sy = Math.max(0, Math.floor(region.y * scaleY));
-    const sw = Math.max(1, Math.ceil(region.width * scaleX));
-    const sh = Math.max(1, Math.ceil(region.height * scaleY));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = sw;
-    canvas.height = sh;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return dataUrl;
-    ctx.drawImage(image, sx, sy, sw, sh, 0, 0, sw, sh);
-    return canvas.toDataURL("image/png");
-}
-
-function renderSnapshotFromStoredStrokes(strokes: any[]): string | null {
-    if (!Array.isArray(strokes) || strokes.length === 0) return null;
-
-    let minX = Number.POSITIVE_INFINITY;
-    let minY = Number.POSITIVE_INFINITY;
-    let maxX = Number.NEGATIVE_INFINITY;
-    let maxY = Number.NEGATIVE_INFINITY;
-
-    for (const stroke of strokes) {
-        if (!stroke || !Array.isArray(stroke.points) || stroke.points.length === 0) continue;
-        for (const point of stroke.points) {
-            const x = Number(point?.x);
-            const y = Number(point?.y);
-            if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
-        }
-    }
-
-    if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) return null;
-
-    const padding = 24;
-    const width = Math.max(1, Math.ceil(maxX - minX + padding * 2));
-    const height = Math.max(1, Math.ceil(maxY - minY + padding * 2));
-    const offsetX = padding - minX;
-    const offsetY = padding - minY;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = "#111827";
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    for (const stroke of strokes) {
-        if (!stroke || stroke.tool !== "pen" || !Array.isArray(stroke.points) || stroke.points.length < 2) continue;
-        for (let i = 0; i < stroke.points.length - 1; i += 1) {
-            const p0 = stroke.points[i];
-            const p1 = stroke.points[i + 1];
-            const x0 = Number(p0?.x);
-            const y0 = Number(p0?.y);
-            const x1 = Number(p1?.x);
-            const y1 = Number(p1?.y);
-            if (![x0, y0, x1, y1].every(Number.isFinite)) continue;
-            const pressure = Number.isFinite(p0?.pressure) ? p0.pressure : 1;
-            ctx.lineWidth = 2.2 * (Math.max(0.3, pressure) + 0.5);
-            ctx.beginPath();
-            ctx.moveTo(x0 + offsetX, y0 + offsetY);
-            ctx.lineTo(x1 + offsetX, y1 + offsetY);
-            ctx.stroke();
-        }
-    }
-
-    return canvas.toDataURL("image/png");
-}
-
-function buildWhiteboardOverlay(raw: string, relevantRegion: WhiteboardRelevantRegion | null = null): WhiteboardFeedbackOverlay {
-    const rows = raw
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
-
-    const items: WhiteboardFeedbackOverlay["items"] = [];
-    let finalMark: string | undefined;
-    let lineIndex = 0;
-
-    for (const row of rows) {
-        const cleaned = row.replace(/^[-*]\s*/, "").trim();
-        if (!cleaned) continue;
-        const lower = cleaned.toLowerCase();
-        if (lower.includes("mark allocation") || /\btotal\b/.test(lower) || /\b\d+\s*\/\s*\d+\b/.test(cleaned)) {
-            finalMark = cleaned;
-            continue;
-        }
-        // A line with ✓ is treated as a tick; any remaining text on the same line is kept as comment.
-        if (/\u2713/.test(cleaned)) {
-            items.push({ kind: "tick", lineIndex, text: "\u2713" });
-            const tickComment = cleaned
-                .replace(/^\u2713\s*/, "")
-                .replace(/\u2713/g, "")
-                .replace(/^comment:\s*/i, "")
-                .replace(/\$\$[\s\S]*?\$\$/g, "")
-                .replace(/\$[^$]*\$/g, "")
-                .replace(/\\[()\[\]]/g, "")
-                .trim();
-            if (tickComment && tickComment !== ".") {
-                items.push({ kind: "comment", lineIndex, text: tickComment });
-            } else {
-                items.push({ kind: "comment", lineIndex, text: "Good step: method is correct here." });
-            }
-            lineIndex += 1;
-            continue;
-        }
-
-        // A lone period (.) means annotation/note — counts as a line but no tick or comment.
-        if (cleaned === ".") {
-            lineIndex += 1;
-            continue;
-        }
-        const commentText = cleaned
-            .replace(/^\u2717\s*/, "")
-            .replace(/^comment:\s*/i, "")
-            .replace(/\u2713/g, "")
-            .replace(/\$\$[\s\S]*?\$\$/g, "")
-            .replace(/\$[^$]*\$/g, "")
-            .replace(/\\[()\[\]]/g, "")
-            .trim();
-        if (!commentText) {
-            items.push({ kind: "comment", lineIndex, text: "Check this line carefully: there is an accuracy issue to fix." });
-            lineIndex += 1;
-            continue;
-        }
-        items.push({ kind: "comment", lineIndex, text: commentText });
-        lineIndex += 1;
-    }
-
-    if (items.length === 0 && !finalMark) {
-        if (raw.includes("That's correct! Good job.")) {
-            items.push({ kind: "tick", lineIndex: 0, text: "\u2713" });
-        } else {
-            items.push({ kind: "comment", lineIndex: 0, text: raw.trim() || "No gradable working found." });
-        }
-    }
-
-    return {
-        runId: `${Date.now()}`,
-        items,
-        relevantRegion,
-        finalMark,
-    };
-}
-
-function buildWhiteboardChatSummary(raw: string, overlay: WhiteboardFeedbackOverlay): string {
-    const rows = raw
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
-
-    const lineSummaries: Array<{ lineIndex: number; isTick: boolean; comment: string }> = [];
-    let lineIndex = 0;
-
-    for (const row of rows) {
-        const cleaned = row.replace(/^[-*]\s*/, "").trim();
-        if (!cleaned) continue;
-
-        const lower = cleaned.toLowerCase();
-        if (lower.includes("mark allocation") || /\btotal\b/.test(lower) || /\b\d+\s*\/\s*\d+\b/.test(cleaned)) {
-            continue;
-        }
-
-        if (cleaned === ".") {
-            lineIndex += 1;
-            continue;
-        }
-
-        const isTick = /\u2713/.test(cleaned);
-        const comment = cleaned
-            .replace(/^\u2713\s*/, "")
-            .replace(/^\u2717\s*/, "")
-            .replace(/^comment:\s*/i, "")
-            .replace(/\u2713/g, "")
-            .replace(/\$\$[\s\S]*?\$\$/g, "")
-            .replace(/\$[^$]*\$/g, "")
-            .replace(/\\[()\[\]]/g, "")
-            .trim();
-
-        lineSummaries.push({ lineIndex, isTick, comment });
-        lineIndex += 1;
-    }
-
-    const gradedLines = lineSummaries.length;
-    const tickLines = lineSummaries.filter((line) => line.isTick).length;
-    const firstIssue = lineSummaries.find((line) => !line.isTick && line.comment && line.comment !== ".");
-    const firstPraise = lineSummaries.find((line) => line.isTick && line.comment && line.comment !== ".");
-
-    const scoreText = overlay.finalMark?.match(/\d+\s*\/\s*\d+/)?.[0]?.replace(/\s+/g, "") ?? overlay.finalMark ?? "";
-    const scoreMatch = scoreText.match(/(\d+)\/(\d+)/);
-    const earned = scoreMatch ? Number(scoreMatch[1]) : NaN;
-    const possible = scoreMatch ? Number(scoreMatch[2]) : NaN;
-    const ratio = Number.isFinite(earned) && Number.isFinite(possible) && possible > 0 ? earned / possible : null;
-
-    if (Number.isFinite(earned) && Number.isFinite(possible) && possible > 0 && earned === possible) {
-        return `Excellent work. Full marks awarded: ${earned}/${possible}.`;
-    }
-
-    const opening = (() => {
-        if (ratio == null) return "Solid effort overall.";
-        if (ratio >= 0.9) return "Excellent work overall.";
-        if (ratio >= 0.75) return "Strong attempt overall.";
-        if (ratio >= 0.55) return "You were quite close overall.";
-        return "Good effort, and there are clear pieces to build on.";
-    })();
-
-    const issueSentence = firstIssue
-        ? `The main slip was on line ${firstIssue.lineIndex + 1}: ${firstIssue.comment}.`
-        : gradedLines > 0
-            ? "I did not spot a major single error; remaining losses are from mathematical accuracy in a few steps."
-            : "I could not detect enough clear working lines to give detailed line-by-line issues.";
-
-    const strengthsSentence = (() => {
-        if (firstPraise) return `Your method was good in parts, especially where you ${firstPraise.comment.toLowerCase()}.`;
-        if (gradedLines > 0) return `You showed valid method on ${tickLines} out of ${gradedLines} graded line${gradedLines === 1 ? "" : "s"}.`;
-        return "Please keep showing each step clearly so I can reward method marks.";
-    })();
-
-    const markSentence = scoreText
-        ? `So I awarded ${scoreText} based on method quality and accuracy across the full working.`
-        : "The final mark was based on method quality and accuracy across the full working.";
-
-    return `${opening} ${issueSentence} ${strengthsSentence} ${markSentence}`.replace(/\s+/g, " ").trim();
-}
-
 export default function Questions() {
-  const { options, setOptions } = useContext(OptionsContext);
-  const { user } = useContext(UserContext);
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+    const { options, setOptions } = useContext(OptionsContext);
+    const { user } = useContext(UserContext);
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
 
-  const urlMode = searchParams.get("mode") as QuestionsMode | null;
-  const urlSubject = searchParams.get("subject");
-  const urlPaperId = searchParams.get("paperId");
-  const urlLevel = searchParams.get("level");
-  const urlIndexInPaper = searchParams.get("indexInPaper");
-  const urlQuestionId = searchParams.get("questionId");
+    const urlMode = searchParams.get("mode") as QuestionsMode | null;
+    const urlSubject = searchParams.get("subject");
+    const urlPaperId = searchParams.get("paperId");
+    const urlLevel = searchParams.get("level");
+    const urlIndexInPaper = searchParams.get("indexInPaper");
+    const urlQuestionId = searchParams.get("questionId");
     const normalizedUrlLevel = normalizePaperLevel(urlLevel);
     const normalizedUrlSubject = (urlSubject ?? "").trim().toLowerCase();
 
-  const initialMode: QuestionsMode =
-    urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
-  const initialPaths = getPathsForMode(initialMode, urlSubject || null);
+    const initialMode: QuestionsMode =
+        urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
+    const initialPaths = getPathsForMode(initialMode, urlSubject || null);
 
-  //==============================================> State <========================================//
+    //==============================================> State <========================================//
     const [filters, setFilters] = useState<Record<string, string[]>>({});
-  const [position, setPosition] = useState(0);
-  const [questions, setQuestions] = useState<any[]>([]);
-  const [showSearch, setShowSearch] = useState(false);
-  const [randomise, setRandomise] = useState(false);
-  const [showPastPaperFilter, setShowPastPaperFilter] = useState(false);
-  const [showFilter, setShowFilter] = useState(false);
-  const [selectedSubTopics, setSelectedSubTopics] = useState<string[]>([]);
+    const [position, setPosition] = useState(0);
+    const [questions, setQuestions] = useState<any[]>([]);
+    const [showSearch, setShowSearch] = useState(false);
+    const [randomise, setRandomise] = useState(false);
+    const [showPastPaperFilter, setShowPastPaperFilter] = useState(false);
+    const [showFilter, setShowFilter] = useState(false);
+    const [selectedSubTopics, setSelectedSubTopics] = useState<string[]>([]);
 
-  const [mode, setMode] = useState<QuestionsMode>(initialMode);
+    const [mode, setMode] = useState<QuestionsMode>(initialMode);
 
-  // Sync mode from URL when navigating (e.g. from Practice Hub with ?mode=pastpaper)
-  useEffect(() => {
-    const m = urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
-    setMode(m);
-  }, [urlMode]);
-  const [subjectFilter, setSubjectFilter] = useState<string | null>(urlSubject || null);
-  const [collectionPaths, setCollectionPaths] = useState<string[]>(initialPaths);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+    useEffect(() => {
+        const m = urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
+        setMode(m);
+    }, [urlMode]);
 
-    const pastPaperFilterRef = useRef<HTMLDivElement>(null);
+    const [subjectFilter, setSubjectFilter] = useState<string | null>(urlSubject || null);
+    const [collectionPaths, setCollectionPaths] = useState<string[]>(initialPaths);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+
+        const pastPaperFilterRef = useRef<HTMLDivElement>(null);
     /** When set, next paperQuestions effect will jump here (used for random across scoped papers). */
     const pendingRandomRef = useRef<{ pos: number } | { questionId: string } | null>(null);
     /** When set, next paperQuestions effect will jump to this index (used when selecting from scoped-paper search). */
@@ -484,19 +188,20 @@ export default function Questions() {
     }, []);
     const getDrawingSnapshot = useCallback(() => getDrawingSnapshotRef.current?.() ?? null, []);
 
-        const getLineCountRef = useRef<((region?: WhiteboardRelevantRegion | null) => number) | null>(null);
-        const registerGetLineCount = useCallback<RegisterGetLineCount>((fn) => {
-            getLineCountRef.current = fn;
+        const getGradingCaptureRef = useRef<((mode?: "default" | "full-ink" | "retry-aggressive") => CanvasCapturePayload | null) | null>(null);
+        const registerGetGradingCapture = useCallback<RegisterGetGradingCapture>((fn) => {
+            getGradingCaptureRef.current = fn;
         }, []);
-        const getLineCount = useCallback((region?: WhiteboardRelevantRegion | null) => getLineCountRef.current?.(region) ?? 0, []);
+        const getGradingCapture = useCallback((mode: "default" | "full-ink" | "retry-aggressive" = "default") => getGradingCaptureRef.current?.(mode) ?? null, []);
 
     // ---- Canvas persistence (state declared here; effects placed after derived vars below) ----
     const { saveCanvas, loadCanvas } = useCanvasStorage();
     const [canvasStrokes, setCanvasStrokes] = useState<any[]>([]);
     const [canvasLoading, setCanvasLoading] = useState(false);
-    const [whiteboardFeedback, setWhiteboardFeedback] = useState<WhiteboardFeedbackOverlay | null>(null);
-    const [checkMyAnswerLoading, setCheckMyAnswerLoading] = useState(false);
+    const [gradingAnnotations, setGradingAnnotations] = useState<CanvasAnnotation[]>([]);
     const [checkMyAnswerStatus, setCheckMyAnswerStatus] = useState<string | null>(null);
+    const [gradingStatus, setGradingStatus] = useState<GradingStatus>("idle");
+    const [pass1Cache, setPass1Cache] = useState<Record<string, Pass1Result>>({});
     const [aiInjectedExchange, setAiInjectedExchange] = useState<InjectedExchange | null>(null);
     //===============================================================================================//
 
@@ -654,20 +359,24 @@ export default function Questions() {
     useEffect(() => {
         if (!activeCanvasQuestionId) {
             setCanvasStrokes([]);
+            setGradingAnnotations([]);
             setCanvasLoading(false);
             return;
         }
         setCanvasLoading(true);
+        setGradingAnnotations([]);
         let cancelled = false;
         loadCanvas(activeCanvasQuestionId)
             .then((loaded) => {
                 if (cancelled) return;
-                setCanvasStrokes(loaded ?? []);
+                setCanvasStrokes(loaded?.strokes ?? []);
+                setGradingAnnotations(isSavedGradingAnnotations(loaded?.feedbackOverlay) ? loaded.feedbackOverlay : []);
                 setCanvasLoading(false);
             })
             .catch(() => {
                 if (cancelled) return;
                 setCanvasStrokes([]);
+                setGradingAnnotations([]);
                 setCanvasLoading(false);
             });
         return () => { cancelled = true; };
@@ -676,22 +385,34 @@ export default function Questions() {
     const handleStrokesChange = useCallback(
         (strokes: any[]) => {
             if (!activeCanvasQuestionId) return;
-            saveCanvas(activeCanvasQuestionId, strokes);
+            const nextAnnotations = strokes.length === 0 ? [] : gradingAnnotations;
+            if (strokes.length === 0 && gradingAnnotations.length > 0) {
+                setGradingAnnotations([]);
+            }
+            saveCanvas(activeCanvasQuestionId, strokes, nextAnnotations);
         },
-        [activeCanvasQuestionId, saveCanvas]
+        [activeCanvasQuestionId, saveCanvas, gradingAnnotations]
     );
 
     useEffect(() => {
-        setWhiteboardFeedback(null);
         setCheckMyAnswerStatus(null);
+        setGradingStatus("idle");
         setAiInjectedExchange(null);
     }, [activeCanvasQuestionId, mode]);
 
-    const streamChatResponse = useCallback(async (messages: Array<{ role: string; content: any }>): Promise<string> => {
+    const streamChatResponse = useCallback(async (
+        messages: Array<{ role: string; content: any }>,
+        options?: { temperature?: number; top_p?: number; context?: string }
+    ): Promise<string> => {
         const res = await fetch(CHAT_API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages }),
+            body: JSON.stringify({
+                messages,
+                context: options?.context,
+                temperature: options?.temperature,
+                top_p: options?.top_p,
+            }),
         });
 
         if (!res.ok) {
@@ -734,30 +455,84 @@ export default function Questions() {
         return fullText.trim();
     }, []);
 
-    const handleCheckMyAnswer = useCallback(async () => {
-        if (checkMyAnswerLoading) return;
-        if (canvasLoading) {
-            setCheckMyAnswerStatus("Your saved whiteboard is still loading. Please try again in a moment.");
+    const canCheckNow = gradingStatus === "idle" || gradingStatus === "done" || gradingStatus === "error";
+
+    const handleToggleQuestionCompleted = useCallback(() => {
+        if (mode === "pastpaper" && selectedPaper && currentPaperQuestion) {
+            toggleQuestion(selectedPaper, currentPaperQuestion.id, paperQuestions.length);
+        }
+    }, [mode, selectedPaper, currentPaperQuestion, paperQuestions.length, toggleQuestion]);
+
+    const injectGradingMessage = useCallback((result: Awaited<ReturnType<typeof runGrading>>) => {
+        if (result.pass2.isFullMarks) {
+            setAiInjectedExchange({
+                nonce: `${Date.now()}`,
+                userMessage: "Check my answer",
+                assistantMessage: `Well done - full marks! You scored ${result.pass2.totalAwarded}/${result.pass2.totalAvailable}.\n\nReady to mark this question as complete?`,
+                action: { type: "markComplete", label: "Mark as complete" },
+            });
             return;
         }
-        setCheckMyAnswerLoading(true);
+
+        const scoreRatio = result.pass2.totalAwarded / result.pass2.totalAvailable;
+        let openingEncouragement = "keep working at it, here is where things went wrong.";
+        if (scoreRatio >= 0.7 && scoreRatio < 1) {
+            openingEncouragement = "nearly there, here is what to work on.";
+        } else if (scoreRatio >= 0.4 && scoreRatio < 0.7) {
+            openingEncouragement = "close, just a couple of things to fix.";
+        }
+
+        const partSummaries = buildPartSummary(result.pass2);
+        const partBreakdown = partSummaries
+            .map((p) => {
+                if (p.marksAwarded === p.marksAvailable) {
+                    return `${p.marksAwarded}/${p.marksAvailable} \u2014 well done.`;
+                }
+                return `${p.marksAwarded}/${p.marksAvailable} \u2014 ${p.summary}`;
+            })
+            .join("\n");
+
+        const message = [
+            `You scored ${result.pass2.totalAwarded}/${result.pass2.totalAvailable} \u2014 ${openingEncouragement}`,
+            "",
+            partBreakdown,
+            "",
+            "I've highlighted exactly where to look on your working.",
+        ].join("\n");
+
+        setAiInjectedExchange({
+            nonce: `${Date.now()}`,
+            userMessage: "Check my answer",
+            assistantMessage: message,
+        });
+    }, []);
+
+    const handleCheckMyAnswer = useCallback(async () => {
+        if (!canCheckNow) return;
+        if (canvasLoading) {
+            setCheckMyAnswerStatus("Something went wrong - try again");
+            setGradingStatus("error");
+            return;
+        }
+        if (!activeCanvasQuestionId) {
+            setCheckMyAnswerStatus("Something went wrong - try again");
+            setGradingStatus("error");
+            return;
+        }
+
         setCheckMyAnswerStatus(null);
-        setWhiteboardFeedback(null);
+        setGradingAnnotations([]);
 
         try {
-                let drawingDataUrl = getDrawingSnapshot();
-                const hasStoredStrokes = Array.isArray(canvasStrokes) && canvasStrokes.length > 0;
-                if (!drawingDataUrl && hasStoredStrokes) {
-                    drawingDataUrl = renderSnapshotFromStoredStrokes(canvasStrokes);
-                }
-                const hasWhiteboard = Boolean(drawingDataUrl) || hasStoredStrokes || getLineCount(null) > 0;
-                if (hasWhiteboard && !drawingDataUrl) {
-                    throw new Error("Your saved whiteboard is still loading. Please try again in a moment.");
-                }
+            const capture = getGradingCapture("default");
+            const fullInkCapture = getGradingCapture("full-ink");
+            if (!capture) {
+                throw new BlankCanvasError();
+            }
 
             const questionText = mode === "pastpaper"
                 ? [
-                    currentPaperQuestion?.questionName ?? "Unknown paper question",
+                    currentPaperQuestion?.questionName ?? "Question",
                     currentPaperQuestion?.tags?.length ? `Tags: ${currentPaperQuestion.tags.join(", ")}` : "",
                   ].filter(Boolean).join("\n")
                 : [
@@ -769,155 +544,67 @@ export default function Questions() {
                         : []),
                   ].filter(Boolean).join("\n\n");
 
-            let relevantRegion: WhiteboardRelevantRegion | null = null;
-            let fullLineCount = 0;
-            let scopedDrawingDataUrl = drawingDataUrl;
-
-            if (hasWhiteboard && drawingDataUrl) {
-                const imageMetrics = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-                    const img = new Image();
-                    img.onload = () => resolve({ width: img.width, height: img.height });
-                    img.onerror = () => reject(new Error("Failed to read whiteboard image metrics."));
-                    img.src = drawingDataUrl;
-                });
-                fullLineCount = getLineCount(null);
-                const regionResponse = await streamChatResponse([
-                    { role: "system", content: WHITEBOARD_REGION_SYSTEM_PROMPT },
-                    {
-                        role: "user",
-                        content: [
-                            {
-                                type: "text",
-                                text: [
-                                    `Question:\n${questionText || "(missing question text)"}`,
-                                    `Canvas size: width=${Math.round(imageMetrics.width)}, height=${Math.round(imageMetrics.height)}.`,
-                                    "Identify the smallest bounding region containing only the student's answer relevant to this question.",
-                                    "Return JSON only as { x, y, width, height } in canvas coordinates. Ignore side notes, doodles, rough sketches, margin labels, stray annotations, or anything clearly not part of the answer.",
-                                ].join("\n\n"),
-                            },
-                            { type: "image_url", image_url: { url: drawingDataUrl } },
-                        ],
-                    },
-                ]);
-                relevantRegion = parseRelevantRegionResponse(regionResponse, imageMetrics);
-                if (relevantRegion && fullLineCount > 0) {
-                    relevantRegion = expandRelevantRegion(relevantRegion, imageMetrics);
-                    const scopedCount = getLineCount(relevantRegion);
-                    // If region selection drops too much content, treat it as bad detection and grade full content.
-                    const minimumExpectedLines = Math.max(1, Math.floor(fullLineCount * 0.7));
-                    if (scopedCount < minimumExpectedLines) relevantRegion = null;
-                }
-                scopedDrawingDataUrl = await cropSnapshotToRelevantRegion(drawingDataUrl, relevantRegion, imageMetrics);
-            }
-
             const markingSchemeImages: string[] = [];
-            let markingSchemeMeta = "";
-
+            let markingSchemeText = "";
             if (mode === "pastpaper") {
-                if (!selectedPaper || !currentPaperQuestion?.markingSchemePageRange) {
-                    throw new Error("Marking scheme page range is missing for this question.");
-                }
+                if (!selectedPaper || !currentPaperQuestion?.markingSchemePageRange) throw new Error("Something went wrong - try again");
                 const msBlob = markingSchemeBlob ?? (await getMarkingSchemeBlob(selectedPaper));
-                if (!msBlob) {
-                    throw new Error("Could not retrieve marking scheme for this paper.");
-                }
+                if (!msBlob) throw new Error("Something went wrong - try again");
                 const start = Math.max(1, Math.min(currentPaperQuestion.markingSchemePageRange.start, currentPaperQuestion.markingSchemePageRange.end));
                 const end = Math.max(start, Math.max(currentPaperQuestion.markingSchemePageRange.start, currentPaperQuestion.markingSchemePageRange.end));
+                markingSchemeText = `Past-paper marking scheme pages ${start}-${end}`;
                 for (let page = start; page <= end && page < start + 4; page += 1) {
                     const shot = await renderPdfPageSnapshot(msBlob, page, 700);
                     if (shot) markingSchemeImages.push(shot);
                 }
-                markingSchemeMeta = `Past-paper marking scheme pages: ${start}-${end}`;
             } else {
                 const rawMs = String(currentQuestion?.properties?.markingScheme ?? "").trim();
                 const digits = rawMs.replace(/\D/g, "");
                 const year = digits.length >= 4 ? digits.slice(0, 2) : msYear;
                 const pageNumber = digits.length >= 4 ? Number(digits.slice(2)) : Number(digits);
-                if (!year || !Number.isFinite(pageNumber) || pageNumber <= 0) {
-                    throw new Error("No marking scheme is linked to this question.");
-                }
+                if (!year || !Number.isFinite(pageNumber) || pageNumber <= 0) throw new Error("Something went wrong - try again");
                 const msRes = await fetch(`/assets/marking_schemes/${year}.pdf`);
-                if (!msRes.ok) {
-                    throw new Error("Failed to retrieve the marking scheme PDF.");
-                }
+                if (!msRes.ok) throw new Error("Something went wrong - try again");
                 const msBlob = await msRes.blob();
                 const shot = await renderPdfPageSnapshot(msBlob, pageNumber, 700);
-                if (!shot) {
-                    throw new Error("Failed to render the marking scheme page.");
-                }
-                markingSchemeImages.push(shot);
-                markingSchemeMeta = `CertChamps marking scheme page: ${year}${String(pageNumber).padStart(2, "0")}`;
+                if (shot) markingSchemeImages.push(shot);
+                markingSchemeText = `CertChamps marking scheme ${year}${String(pageNumber).padStart(2, "0")}`;
             }
 
-            if (markingSchemeImages.length === 0) {
-                throw new Error("Marking scheme could not be attached, so grading was not sent.");
-            }
-
-            const userContent: Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> = [
-                {
-                    type: "text",
-                    text: [
-                        `Question:\n${questionText || "(missing question text)"}`,
-                        `Marking scheme context:\n${markingSchemeMeta}`,
-                        hasWhiteboard
-                            ? (() => {
-                                const n = getLineCount(relevantRegion);
-                                const fullN = fullLineCount > 0 ? fullLineCount : getLineCount(null);
-                                return [
-                                    "Student answer type: whiteboard.",
-                                    "The first attached whiteboard image is the full high-contrast canvas capture (theme-independent) and is the source of truth.",
-                                    "If a second whiteboard image is attached, it is a focused crop to help ignore side notes; use it as a hint, but do not ignore valid working from the full image.",
-                                    `Treat the answer as exactly ${n > 0 ? n : fullN > 0 ? fullN : "an unknown number of"} line${(n > 1 || fullN > 1) ? "s" : ""} of content, counted top to bottom, and output exactly that many feedback lines in order.`
-                                ].join(" ");
-                              })()
-                            : "Student answer type: text-only. No written student response was provided.",
-                    ].join("\n\n"),
-                },
-                ...markingSchemeImages.map((url) => ({ type: "image_url" as const, image_url: { url } })),
-            ];
-
-            if (hasWhiteboard && drawingDataUrl) {
-                userContent.push({ type: "image_url", image_url: { url: drawingDataUrl } });
-            }
-            if (hasWhiteboard && scopedDrawingDataUrl && scopedDrawingDataUrl !== drawingDataUrl) {
-                userContent.push({ type: "image_url", image_url: { url: scopedDrawingDataUrl } });
-            }
-
-            const feedback = await streamChatResponse([
-                { role: "system", content: CHECK_MY_ANSWER_SYSTEM_PROMPT },
-                { role: "user", content: userContent },
-            ]);
-
-            let aiAssistantMessage = feedback || "No feedback returned.";
-            if (hasWhiteboard) {
-                const overlay = buildWhiteboardOverlay(feedback, relevantRegion);
-                setWhiteboardFeedback(overlay);
-                aiAssistantMessage = buildWhiteboardChatSummary(feedback, overlay);
-            }
-
-            setSidebarOpen(true);
-            setSidebarOpenPanel("ai");
-            setAiInjectedExchange({
-                nonce: `${Date.now()}`,
-                userMessage: "Check my answer",
-                assistantMessage: aiAssistantMessage,
+            const result = await runGrading({
+                questionId: activeCanvasQuestionId,
+                questionText,
+                markingSchemeText,
+                markingSchemeImages,
+                capture,
+                fullInkCapture: fullInkCapture ?? undefined,
+                getAggressiveCapture: () => getGradingCapture("retry-aggressive"),
+                streamChatResponse,
+                pass1Cache,
+                setPass1Cache,
+                onStatus: setGradingStatus,
             });
 
-            if (hasWhiteboard) {
-                setCheckMyAnswerStatus("Feedback added to whiteboard and AI chat.");
-            } else {
-                setCheckMyAnswerStatus("Feedback added to AI chat.");
-            }
+            setGradingAnnotations(result.annotations);
+            saveCanvas(activeCanvasQuestionId, canvasStrokes, result.annotations);
+            injectGradingMessage(result);
+            setSidebarOpen(true);
+            setSidebarOpenPanel("ai");
+            setCheckMyAnswerStatus(null);
         } catch (err) {
-            setCheckMyAnswerStatus(err instanceof Error ? err.message : "Failed to check answer");
-        } finally {
-            setCheckMyAnswerLoading(false);
+            setGradingStatus("error");
+            if (err instanceof BlankCanvasError) {
+                setCheckMyAnswerStatus("Your canvas looks empty - write your workings and try again.");
+            } else {
+                setCheckMyAnswerStatus("Something went wrong - try again");
+            }
+            console.error("[grading] failed", err);
         }
     }, [
-        checkMyAnswerLoading,
+        canCheckNow,
         canvasLoading,
-        getDrawingSnapshot,
-        canvasStrokes,
+        activeCanvasQuestionId,
+        getGradingCapture,
         mode,
         currentPaperQuestion,
         currentQuestion,
@@ -926,9 +613,11 @@ export default function Questions() {
         getMarkingSchemeBlob,
         msYear,
         streamChatResponse,
-        setSidebarOpen,
-        setSidebarOpenPanel,
-        getLineCount,
+        pass1Cache,
+        setPass1Cache,
+        saveCanvas,
+        canvasStrokes,
+        injectGradingMessage,
     ]);
 
     // ---- Cross-paper helpers for topic filtering ----
@@ -1424,34 +1113,58 @@ export default function Questions() {
                         registerDrawingSnapshot={registerDrawingSnapshot}
                         initialStrokes={canvasStrokes}
                         onStrokesChange={handleStrokesChange}
-                        registerGetLineCount={registerGetLineCount}
-                        feedbackOverlay={whiteboardFeedback}
+                        registerGetGradingCapture={registerGetGradingCapture}
+                        gradingAnnotations={gradingAnnotations}
                     />
-                    <div
-                        className="absolute z-30 pointer-events-auto bottom-4 left-1/2"
-                        style={{
-                            transform: options.leftHandMode
-                                ? "translateX(calc(-50% + 210px))"
-                                : "translateX(calc(-50% - 210px))",
-                        }}
-                    >
-                        <button
-                            type="button"
-                            aria-label="Check my answer"
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                            onClick={handleCheckMyAnswer}
-                            disabled={checkMyAnswerLoading}
-                            title="Check my answer with AI"
-                        >
-                            <LuCircleCheck size={14} strokeWidth={2} />
-                            <span>{checkMyAnswerLoading ? "Checking..." : "Check my answer"}</span>
-                        </button>
-                        {checkMyAnswerStatus && (
-                            <p className="absolute bottom-full mb-2 max-w-[260px] text-xs color-txt-sub bg-[var(--grey-5)]/85 rounded-md px-2 py-1">
-                                {checkMyAnswerStatus}
-                            </p>
-                        )}
-                    </div>
+                    {mode === "pastpaper" && selectedPaper && currentPaperQuestion && (
+                        <div className="absolute z-30 pointer-events-auto bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    aria-label="Check my answer"
+                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-accent color-txt-accent hover:opacity-85 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                                    onClick={handleCheckMyAnswer}
+                                    disabled={!canCheckNow}
+                                    title="Check my answer with AI"
+                                >
+                                    <LuCircleCheck size={14} strokeWidth={2} />
+                                    <span>{!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check my answer"}</span>
+                                </button>
+                                {checkMyAnswerStatus && (
+                                    <div className="absolute bottom-full mb-2 max-w-[280px] text-xs color-txt-sub bg-[var(--grey-5)]/90 rounded-md px-2 py-1 z-20 flex items-center gap-2">
+                                        <span>{checkMyAnswerStatus}</span>
+                                        {gradingStatus === "error" && (
+                                            <button
+                                                type="button"
+                                                onClick={handleCheckMyAnswer}
+                                                className="text-[11px] font-semibold color-txt-accent hover:opacity-80"
+                                            >
+                                                Retry
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleToggleQuestionCompleted}
+                                className={`questions-top-bar__tick ${isQuestionCompleted(currentPaperQuestion.id) ? "questions-top-bar__tick--done" : ""}`}
+                                aria-label={isQuestionCompleted(currentPaperQuestion.id) ? "Mark question incomplete" : "Mark question complete"}
+                                title={isQuestionCompleted(currentPaperQuestion.id) ? "Mark incomplete" : "Mark complete"}
+                            >
+                                {isQuestionCompleted(currentPaperQuestion.id) ? (
+                                    <LuCircleCheck size={18} strokeWidth={2.2} />
+                                ) : (
+                                    <LuCircle size={18} strokeWidth={1.8} />
+                                )}
+                            </button>
+                            {paperQuestions.length > 0 && (
+                                <span className="questions-top-bar__progress-pill">
+                                    {completedForPaper.size}/{paperQuestions.length}
+                                </span>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1496,6 +1209,7 @@ export default function Questions() {
                     markingSchemePageRange={mode === "pastpaper" ? questionForMarkingScheme?.markingSchemePageRange : undefined}
                     markingSchemeQuestionName={mode === "pastpaper" ? questionForMarkingScheme?.questionName : undefined}
                     aiInjectedExchange={aiInjectedExchange}
+                    onMarkCompleteFromGrading={handleToggleQuestionCompleted}
                 />
             </div>
 
@@ -1634,10 +1348,40 @@ export default function Questions() {
                         subjectFilter={subjectFilter}
                         onSubjectFilterChange={setSubjectFilter}
                         subjectOptions={certChampsSet?.sections?.map((sec) => ({ value: sec, label: formatSectionLabel(sec) })) ?? []}
+                        showQuestionCompleteControl={options.laptopMode}
+                        leftActionContent={
+                            options.laptopMode ? (
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        aria-label="Check my answer"
+                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-accent color-txt-accent hover:opacity-85 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                                        onClick={handleCheckMyAnswer}
+                                        disabled={!canCheckNow}
+                                        title="Check my answer with AI"
+                                    >
+                                        <LuCircleCheck size={14} strokeWidth={2} />
+                                        <span>{!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check my answer"}</span>
+                                    </button>
+                                    {checkMyAnswerStatus && (
+                                        <div className="absolute top-full mt-2 max-w-[280px] text-xs color-txt-sub bg-[var(--grey-5)]/90 rounded-md px-2 py-1 z-20 flex items-center gap-2">
+                                            <span>{checkMyAnswerStatus}</span>
+                                            {gradingStatus === "error" && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCheckMyAnswer}
+                                                    className="text-[11px] font-semibold color-txt-accent hover:opacity-80"
+                                                >
+                                                    Retry
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : null
+                        }
                         questionCompleted={mode === "pastpaper" && currentPaperQuestion ? isQuestionCompleted(currentPaperQuestion.id) : undefined}
-                        onToggleQuestionCompleted={mode === "pastpaper" && selectedPaper && currentPaperQuestion ? () => {
-                            toggleQuestion(selectedPaper, currentPaperQuestion.id, paperQuestions.length);
-                        } : undefined}
+                        onToggleQuestionCompleted={mode === "pastpaper" && selectedPaper && currentPaperQuestion ? handleToggleQuestionCompleted : undefined}
                         paperProgress={mode === "pastpaper" && paperQuestions.length > 0 ? {
                             completed: completedForPaper.size,
                             total: paperQuestions.length,
