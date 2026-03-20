@@ -42,7 +42,12 @@ export default function PdfRegionView({
   const { options } = useContext(OptionsContext);
   const theme = PDF_THEME_COLORS[options.theme] ?? PDF_THEME_COLORS.light;
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const offscreenRef = useRef<{ canvas: HTMLCanvasElement; scale: number; vw: number; vh: number } | null>(null);
+  const [pageRender, setPageRender] = useState<{
+    canvas: HTMLCanvasElement;
+    scale: number;
+    vw: number;
+    vh: number;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
@@ -61,13 +66,13 @@ export default function PdfRegionView({
       setError(null);
       setLoading(false);
       setTimedOut(false);
-      offscreenRef.current = null;
+      setPageRender(null);
       return;
     }
     setError(null);
     setTimedOut(false);
     setLoading(true);
-    offscreenRef.current = null;
+    setPageRender(null);
     let cancelled = false;
     const timeoutId = setTimeout(() => {
       if (!cancelled) setTimedOut(true);
@@ -97,7 +102,9 @@ export default function PdfRegionView({
         await pdfPage.render({ canvasContext: ctx, viewport }).promise;
         if (cancelled) return;
 
-        offscreenRef.current = { canvas: offscreen, scale: scale1, vw: viewport.width, vh: viewport.height };
+        if (!cancelled) {
+          setPageRender({ canvas: offscreen, scale: scale1, vw: viewport.width, vh: viewport.height });
+        }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to render PDF region");
       } finally {
@@ -116,37 +123,78 @@ export default function PdfRegionView({
   // Effect 2: Crop from cached offscreen (cheap, runs when region coords change)
   useEffect(() => {
     const canvas = canvasRef.current;
-    const cached = offscreenRef.current;
+    const cached = pageRender;
     if (!canvas || !cached) return;
     const { canvas: offscreen, scale: s } = cached;
 
-    if (hasRegion) {
-      const sx = x * s;
-      const sy = y * s;
-      const sw = rWidth * s;
-      const sh = rHeight * s;
-      if (sw <= 0 || sh <= 0) return;
+    try {
+      if (hasRegion) {
+        const rawSx = x * s;
+        const rawSy = y * s;
+        const rawSw = rWidth * s;
+        const rawSh = rHeight * s;
+        const minCropPx = 20;
+        const sx = Math.max(0, Math.min(rawSx, Math.max(0, offscreen.width - minCropPx)));
+        const sy = Math.max(0, Math.min(rawSy, Math.max(0, offscreen.height - minCropPx)));
+        const maxSw = Math.max(minCropPx, offscreen.width - sx);
+        const maxSh = Math.max(minCropPx, offscreen.height - sy);
+        const sw = Math.max(minCropPx, Math.min(rawSw, maxSw));
+        const sh = Math.max(minCropPx, Math.min(rawSh, maxSh));
 
-      const aspect = sw / sh;
-      const displayHeight = width / aspect;
-      canvas.width = width;
-      canvas.height = displayHeight;
-      const outCtx = canvas.getContext("2d");
-      if (!outCtx) return;
-      outCtx.drawImage(offscreen, sx, sy, sw, sh, 0, 0, width, displayHeight);
-    } else {
-      const aspect = cached.vh / cached.vw;
-      const displayHeight = width * aspect;
-      canvas.width = width;
-      canvas.height = displayHeight;
-      const outCtx = canvas.getContext("2d");
-      if (!outCtx) return;
-      outCtx.drawImage(offscreen, 0, 0, cached.vw, cached.vh, 0, 0, width, displayHeight);
+        const outCtx = canvas.getContext("2d");
+        if (!outCtx) return;
+
+        // If region math is invalid, render full page as a safe fallback instead of blank.
+        const invalidRegion = !Number.isFinite(sw) || !Number.isFinite(sh) || sw <= 0 || sh <= 0;
+        if (invalidRegion) {
+          const aspect = cached.vh / cached.vw;
+          const displayHeight = Math.max(120, width * aspect);
+          canvas.width = width;
+          canvas.height = displayHeight;
+          outCtx.clearRect(0, 0, canvas.width, canvas.height);
+          outCtx.drawImage(offscreen, 0, 0, cached.vw, cached.vh, 0, 0, width, displayHeight);
+        } else {
+          const aspect = sw / sh;
+          const displayHeight = Math.max(120, width / aspect);
+          canvas.width = width;
+          canvas.height = displayHeight;
+          outCtx.clearRect(0, 0, canvas.width, canvas.height);
+          outCtx.drawImage(offscreen, sx, sy, sw, sh, 0, 0, width, displayHeight);
+        }
+      } else {
+        const aspect = cached.vh / cached.vw;
+        const displayHeight = Math.max(120, width * aspect);
+        canvas.width = width;
+        canvas.height = displayHeight;
+        const outCtx = canvas.getContext("2d");
+        if (!outCtx) return;
+        outCtx.clearRect(0, 0, canvas.width, canvas.height);
+        outCtx.drawImage(offscreen, 0, 0, cached.vw, cached.vh, 0, 0, width, displayHeight);
+      }
+      if (PDF_THEMING_ENABLED && options.theme !== "light") {
+        applyThemeToCanvas(canvas, theme);
+      }
+      setError(null);
+    } catch (e) {
+      try {
+        const aspect = cached.vh / cached.vw;
+        const displayHeight = Math.max(120, width * aspect);
+        canvas.width = width;
+        canvas.height = displayHeight;
+        const outCtx = canvas.getContext("2d");
+        if (outCtx) {
+          outCtx.clearRect(0, 0, canvas.width, canvas.height);
+          outCtx.drawImage(offscreen, 0, 0, cached.vw, cached.vh, 0, 0, width, displayHeight);
+          if (PDF_THEMING_ENABLED && options.theme !== "light") {
+            applyThemeToCanvas(canvas, theme);
+          }
+        }
+      } catch {
+        // ignore fallback draw errors and surface the original draw error below
+      }
+      setError(e instanceof Error ? e.message : "Failed to draw PDF region");
     }
-    if (PDF_THEMING_ENABLED && options.theme !== "light") {
-      applyThemeToCanvas(canvas, theme);
-    }
-  }, [hasRegion, x, y, rWidth, rHeight, width, loading, options.theme, theme.bg, theme.primary, theme.sub]);
+  }, [hasRegion, x, y, rWidth, rHeight, width, pageRender, options.theme, theme.bg, theme.primary, theme.sub]);
 
   if (!file) {
     return (

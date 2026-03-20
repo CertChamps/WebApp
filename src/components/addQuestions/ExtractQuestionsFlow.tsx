@@ -4,6 +4,7 @@ import { useAllPageSnapshots } from "../../hooks/useAllPageSnapshots";
 import PdfRegionView, { type PdfRegion } from "../questions/PdfRegionView";
 import PaperPdfPlaceholder from "../questions/PaperPdfPlaceholder";
 import "../../styles/settings.css";
+import { idbSaveBlob, idbLoadBlob, idbDeleteBlob } from "../../utils/extractionStorage";
 
 const EXTRACT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/extractQuestions";
 const LOG_TABLES_PDF_URL = "/assets/log_tables.pdf";
@@ -86,6 +87,39 @@ function normalizeRawRegion(r: Record<string, unknown>): ExtractedRegion {
   };
 }
 
+// --- Session persistence -------------------------------------------------------
+const SESSION_META_KEY = "extract_session_v1";
+const IDB_PDF_KEY = "extract_pdf";
+const IDB_MS_KEY = "extract_marking_scheme";
+
+type FileMeta = { name: string; type: string; lastModified: number };
+type ExtractionSession = {
+  regions: ExtractedRegion[];
+  paperYear: number | null;
+  includeLogTablesAndMarkingScheme: boolean;
+  pdfMeta: FileMeta | null;
+  markingSchemeMeta: FileMeta | null;
+};
+
+function loadSessionMeta(): ExtractionSession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_META_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as ExtractionSession;
+  } catch {
+    return null;
+  }
+}
+
+function saveSessionMeta(s: ExtractionSession): void {
+  try { localStorage.setItem(SESSION_META_KEY, JSON.stringify(s)); } catch { /* ignore */ }
+}
+
+function clearSessionMeta(): void {
+  try { localStorage.removeItem(SESSION_META_KEY); } catch { /* ignore */ }
+}
+// --- End session persistence ----------------------------------------------------
+
 type PaperMetadata = {
   paperId: string;
   year: number;
@@ -130,6 +164,11 @@ export default function ExtractQuestionsFlow({
   const [_markingSchemeYearLoading, setMarkingSchemeYearLoading] = useState(false);
   const [includeLogTablesAndMarkingScheme, setIncludeLogTablesAndMarkingScheme] = useState(false);
   const initialFileConsumedRef = useRef(false);
+  // Capture initialFile at mount time so the restore effect can check it without deps
+  const initialFileRef = useRef(initialFile);
+  const [sessionRestored, setSessionRestored] = useState(false);
+  const hasAttemptedRestoreRef = useRef(false);
+  const sessionSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (initialFile && !initialFileConsumedRef.current) {
@@ -138,6 +177,11 @@ export default function ExtractQuestionsFlow({
       setExtractError(null);
       setExtractStatus("idle");
       initialFileConsumedRef.current = true;
+      // A new file was explicitly provided — wipe any saved session so it doesn't get restored later
+      clearSessionMeta();
+      idbDeleteBlob(IDB_PDF_KEY).catch(() => {});
+      idbDeleteBlob(IDB_MS_KEY).catch(() => {});
+      setSessionRestored(false);
       onInitialFileConsumed?.();
     }
     return () => {
@@ -186,6 +230,81 @@ export default function ExtractQuestionsFlow({
       });
     return () => { cancelled = true; };
   }, [paperYear]);
+
+  // Restore session on mount (skipped when launched from Upload tab with an explicit file)
+  useEffect(() => {
+    if (hasAttemptedRestoreRef.current) return;
+    hasAttemptedRestoreRef.current = true;
+    if (initialFileRef.current) return; // Upload-tab flow: don't restore over the explicit file
+    const meta = loadSessionMeta();
+    if (!meta) return;
+    // Restore lightweight state synchronously
+    if (meta.regions && meta.regions.length > 0) {
+      setRegions(meta.regions.map((r) => normalizeRawRegion(r as unknown as Record<string, unknown>)));
+      setSelectedIndex(0);
+    }
+    if (meta.paperYear != null) setPaperYear(meta.paperYear);
+    setIncludeLogTablesAndMarkingScheme(meta.includeLogTablesAndMarkingScheme ?? false);
+    // Restore PDF blobs from IndexedDB asynchronously
+    (async () => {
+      try {
+        const [pdfBlob, msBlob] = await Promise.all([
+          meta.pdfMeta ? idbLoadBlob(IDB_PDF_KEY) : Promise.resolve(null),
+          meta.markingSchemeMeta ? idbLoadBlob(IDB_MS_KEY) : Promise.resolve(null),
+        ]);
+        if (pdfBlob && meta.pdfMeta) {
+          setPdfFile(new File([pdfBlob], meta.pdfMeta.name, {
+            type: meta.pdfMeta.type || "application/pdf",
+            lastModified: meta.pdfMeta.lastModified,
+          }));
+          setSessionRestored(true);
+        }
+        if (msBlob && meta.markingSchemeMeta) {
+          setMarkingSchemeFile(new File([msBlob], meta.markingSchemeMeta.name, {
+            type: meta.markingSchemeMeta.type || "application/pdf",
+            lastModified: meta.markingSchemeMeta.lastModified,
+          }));
+        }
+      } catch {
+        // IDB read failed — regions already restored from localStorage above
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally runs once on mount only
+
+  // Auto-save session metadata (regions + settings + file names) to localStorage, debounced 800 ms
+  useEffect(() => {
+    if (sessionSaveTimerRef.current) clearTimeout(sessionSaveTimerRef.current);
+    sessionSaveTimerRef.current = setTimeout(() => {
+      sessionSaveTimerRef.current = null;
+      saveSessionMeta({
+        regions,
+        paperYear,
+        includeLogTablesAndMarkingScheme,
+        pdfMeta: pdfFile
+          ? { name: pdfFile.name, type: pdfFile.type || "application/pdf", lastModified: pdfFile.lastModified }
+          : null,
+        markingSchemeMeta: markingSchemeFile
+          ? { name: markingSchemeFile.name, type: markingSchemeFile.type || "application/pdf", lastModified: markingSchemeFile.lastModified }
+          : null,
+      });
+    }, 800);
+    return () => {
+      if (sessionSaveTimerRef.current) { clearTimeout(sessionSaveTimerRef.current); sessionSaveTimerRef.current = null; }
+    };
+  }, [regions, paperYear, includeLogTablesAndMarkingScheme, pdfFile, markingSchemeFile]);
+
+  // Auto-save PDF binary to IndexedDB whenever it changes
+  useEffect(() => {
+    if (!pdfFile) return;
+    idbSaveBlob(IDB_PDF_KEY, pdfFile).catch(() => {});
+  }, [pdfFile]);
+
+  // Auto-save marking scheme binary to IndexedDB whenever it changes
+  useEffect(() => {
+    if (!markingSchemeFile) { idbDeleteBlob(IDB_MS_KEY).catch(() => {}); return; }
+    idbSaveBlob(IDB_MS_KEY, markingSchemeFile).catch(() => {});
+  }, [markingSchemeFile]);
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [extractStatus, setExtractStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -904,6 +1023,18 @@ export default function ExtractQuestionsFlow({
     if (fixerMode && regions.length === 0) setFixerMode(false);
   }, [fixerMode, regions.length, fixerRegionIdx]);
 
+  const handleClearSession = () => {
+    clearSessionMeta();
+    idbDeleteBlob(IDB_PDF_KEY).catch(() => {});
+    idbDeleteBlob(IDB_MS_KEY).catch(() => {});
+    setPdfFile(null);
+    setMarkingSchemeFile(null);
+    setRegions([]);
+    setExtractStatus("idle");
+    setExtractError(null);
+    setSessionRestored(false);
+  };
+
   if (fixerMode && pdfBlob && fixerPageRegion && fixerRegion) {
     const totalSegments = regions.reduce((sum, r) => sum + (r.pageRegions?.length ?? 0), 0);
     let currentSegment = 0;
@@ -957,7 +1088,12 @@ export default function ExtractQuestionsFlow({
         <div className="flex-1 min-h-0 flex gap-4">
           <div className="flex-1 flex flex-col items-center justify-center min-h-0">
             <div className="w-full max-w-2xl relative">
-              <PdfRegionView key={fixerReloadKey} file={pdfBlob} region={displayRegion} width={600} />
+              <PdfRegionView
+                key={`${fixerReloadKey}-${fixerRegionIdx}-${fixerPageRegionIdx}`}
+                file={pdfBlob}
+                region={displayRegion}
+                width={600}
+              />
               <button
                 type="button"
                 onClick={() => setFixerReloadKey((k) => k + 1)}
@@ -998,6 +1134,30 @@ export default function ExtractQuestionsFlow({
 
   return (
     <div className={`flex flex-col w-full ${regions.length > 0 ? "h-[calc(100vh-12rem)] overflow-hidden" : ""}`}>
+      {sessionRestored && (
+        <div className="flex items-center gap-3 mb-3 px-4 py-2.5 rounded-xl text-sm color-bg-grey-5 border border-[var(--grey-10)]">
+          <span className="color-txt-accent font-medium">↩ Session restored</span>
+          {pdfFile && (
+            <span className="color-txt-sub text-xs truncate max-w-[220px]">{pdfFile.name}</span>
+          )}
+          <div className="ml-auto flex gap-2">
+            <button
+              type="button"
+              onClick={() => setSessionRestored(false)}
+              className="px-3 py-1 rounded-lg text-xs color-bg-grey-10 color-txt-sub hover:color-bg-grey-5"
+            >
+              Dismiss
+            </button>
+            <button
+              type="button"
+              onClick={handleClearSession}
+              className="px-3 py-1 rounded-lg text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30"
+            >
+              Clear &amp; start fresh
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header: PDF upload + Extract */}
       <div className="flex flex-wrap items-end gap-4 mb-4">
         <div>
@@ -1262,7 +1422,7 @@ export default function ExtractQuestionsFlow({
             <div className="flex-1 overflow-y-auto scrollbar-minimal">
               {regions.map((r, i) => (
                 <div
-                  key={r.id}
+                  key={`${r.id}-${i}`}
                   className={`flex items-center gap-1 border-b border-[var(--grey-10)] ${
                     selectedIndex === i ? "color-bg-grey-10" : ""
                   }`}
@@ -1306,7 +1466,7 @@ export default function ExtractQuestionsFlow({
                   <h3 className="color-txt-main font-semibold">Preview</h3>
                   <div className="flex flex-col gap-2 color-bg-grey-5 rounded-2xl p-2">
                     {selected.pageRegions.map((pr, i) => (
-                      <div key={i} className="relative">
+                      <div key={`${selectedIndex}-${i}-${pr.page}`} className="relative">
                         {selected.pageRegions.length > 1 && (
                           <span className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded text-xs color-bg-grey-10 color-txt-sub">
                             Page {pr.page}
@@ -1316,6 +1476,7 @@ export default function ExtractQuestionsFlow({
                           file={pdfBlob}
                           region={pr as PdfRegion}
                           width={500}
+                          className="min-h-[90px]"
                         />
                       </div>
                     ))}
@@ -1523,7 +1684,7 @@ export default function ExtractQuestionsFlow({
                 </button>
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto">
-                <PaperPdfPlaceholder file={pdfBlob} pageWidth={280} />
+                <PaperPdfPlaceholder file={pdfBlob} pageWidth={280} resolutionScale={2} />
               </div>
             </div>
           )}
@@ -1581,6 +1742,7 @@ export default function ExtractQuestionsFlow({
                 <PaperPdfPlaceholder
                   file={logTablesBlob}
                   pageWidth={280}
+                  resolutionScale={2}
                   onCurrentPageChange={setLogTablesCurrentPage}
                   onNumPages={setLogTablesNumPages}
                   scrollToPage={logTablesScrollToPage ?? undefined}
@@ -1643,6 +1805,7 @@ export default function ExtractQuestionsFlow({
                 <PaperPdfPlaceholder
                   file={markingSchemeBlob}
                   pageWidth={280}
+                  resolutionScale={2}
                   onCurrentPageChange={setMarkingSchemeCurrentPage}
                   onNumPages={setMarkingSchemeNumPages}
                   scrollToPage={markingSchemeScrollToPage ?? undefined}

@@ -19,11 +19,11 @@ import { useQuestionSessionLog, type QuestionMeta } from "../hooks/useQuestionSe
 
 // Components
 import { createPortal } from "react-dom";
-import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch } from "react-icons/lu";
+import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle } from "react-icons/lu";
 import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
 import QSearch from "../components/questions/qSearch";
-import DrawingCanvas, { type RegisterDrawingSnapshot } from "../components/questions/DrawingCanvas";
+import DrawingCanvas, { type RegisterDrawingSnapshot, type RegisterGetGradingCapture } from "../components/questions/DrawingCanvas";
 import { useCanvasStorage } from "../hooks/useCanvasStorage";
 import RenderMath from "../components/math/mathdisplay";
 import { AnimatePresence, motion } from "framer-motion";
@@ -38,6 +38,12 @@ import { TimerFloatingWidget } from "../components/TimerFloatingWidget";
 import PastPaperFilterPanel from "../components/questions/PastPaperFilterPanel";
 import PaperProGate from "../components/PaperProGate";
 import Filter from "../components/filter";
+import { getDocumentCached } from "../utils/pdfDocumentCache";
+import type { InjectedExchange } from "../components/ai/useAI";
+import { runGrading } from "../lib/grading/GradingEngine";
+import type { CanvasAnnotation, CanvasCapturePayload, GradingStatus, Pass1Result } from "../lib/grading/GradingTypes";
+import { buildPartSummary } from "../lib/grading/annotationBuilder";
+import { BlankCanvasError } from "../lib/grading/canvasCapture";
 
 // Style Imports
 import "../styles/questions.css";
@@ -45,6 +51,38 @@ import "../styles/navbar.css";
 import "../styles/sidebar.css";
 
 const QUESTIONS_MODE_KEY = "questions-page-mode";
+const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
+
+function isSavedGradingAnnotations(value: unknown): value is CanvasAnnotation[] {
+    if (!Array.isArray(value)) return false;
+    return value.every((item) => {
+        if (!item || typeof item !== "object") return false;
+        const record = item as Record<string, unknown>;
+        if (record.type === "errorComment") {
+            return typeof record.id === "string" && typeof record.worldX === "number" && typeof record.worldY === "number" && typeof record.text === "string";
+        }
+        if (record.type === "markAnnotation") {
+            return typeof record.worldX === "number" && typeof record.worldY === "number" && typeof record.label === "string";
+        }
+        if (record.type === "handCircle") {
+            return typeof record.worldX === "number" && typeof record.worldY === "number" && typeof record.width === "number" && typeof record.height === "number";
+        }
+        return false;
+    });
+}
+
+function gradingStatusLabel(status: GradingStatus): string {
+    switch (status) {
+        case "capturing":
+        case "reading":
+            return "Reading your workings...";
+        case "marking": return "Marking...";
+        case "rendering": return "Check my answer";
+        case "done": return "Done";
+        case "error": return "Try again";
+        default: return "Check my answer";
+    }
+}
 
 export type QuestionsMode = "certchamps" | "pastpaper";
 
@@ -64,7 +102,7 @@ function getStoredMode(): QuestionsMode {
   try {
     const s = localStorage.getItem(QUESTIONS_MODE_KEY);
     if (s === "certchamps" || s === "pastpaper") return s;
-  } catch (_) {}
+    } catch {}
   return "certchamps";
 }
 
@@ -78,47 +116,67 @@ function formatTags(tags: string[] | string | undefined): string {
   return list.filter(Boolean).map((t) => `#${t}`).join(", ");
 }
 
-export default function Questions() {
-  const { options, setOptions } = useContext(OptionsContext);
-  const { user } = useContext(UserContext);
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+async function renderPdfPageSnapshot(blob: Blob, pageNumber: number, maxWidth = 700): Promise<string | null> {
+    try {
+        const doc = await getDocumentCached(blob);
+        const page = await doc.getPage(Math.max(1, Math.min(doc.numPages, Math.floor(pageNumber))));
+        const viewport = page.getViewport({ scale: 1 });
+        const width = Math.min(viewport.width, maxWidth);
+        const scale = width / viewport.width;
+        const scaledViewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = scaledViewport.width;
+        canvas.height = scaledViewport.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+        await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+        return canvas.toDataURL("image/jpeg", 0.85);
+    } catch {
+        return null;
+    }
+}
 
-  const urlMode = searchParams.get("mode") as QuestionsMode | null;
-  const urlSubject = searchParams.get("subject");
-  const urlPaperId = searchParams.get("paperId");
-  const urlLevel = searchParams.get("level");
-  const urlIndexInPaper = searchParams.get("indexInPaper");
-  const urlQuestionId = searchParams.get("questionId");
+export default function Questions() {
+    const { options, setOptions } = useContext(OptionsContext);
+    const { user } = useContext(UserContext);
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const urlMode = searchParams.get("mode") as QuestionsMode | null;
+    const urlSubject = searchParams.get("subject");
+    const urlPaperId = searchParams.get("paperId");
+    const urlLevel = searchParams.get("level");
+    const urlIndexInPaper = searchParams.get("indexInPaper");
+    const urlQuestionId = searchParams.get("questionId");
     const normalizedUrlLevel = normalizePaperLevel(urlLevel);
     const normalizedUrlSubject = (urlSubject ?? "").trim().toLowerCase();
 
-  const initialMode: QuestionsMode =
-    urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
-  const initialPaths = getPathsForMode(initialMode, urlSubject || null);
+    const initialMode: QuestionsMode =
+        urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
+    const initialPaths = getPathsForMode(initialMode, urlSubject || null);
 
-  //==============================================> State <========================================//
+    //==============================================> State <========================================//
     const [filters, setFilters] = useState<Record<string, string[]>>({});
-  const [position, setPosition] = useState(0);
-  const [questions, setQuestions] = useState<any[]>([]);
-  const [showSearch, setShowSearch] = useState(false);
-  const [randomise, setRandomise] = useState(false);
-  const [showPastPaperFilter, setShowPastPaperFilter] = useState(false);
-  const [showFilter, setShowFilter] = useState(false);
-  const [selectedSubTopics, setSelectedSubTopics] = useState<string[]>([]);
+    const [position, setPosition] = useState(0);
+    const [questions, setQuestions] = useState<any[]>([]);
+    const [showSearch, setShowSearch] = useState(false);
+    const [randomise, setRandomise] = useState(false);
+    const [showPastPaperFilter, setShowPastPaperFilter] = useState(false);
+    const [showFilter, setShowFilter] = useState(false);
+    const [selectedSubTopics, setSelectedSubTopics] = useState<string[]>([]);
 
-  const [mode, setMode] = useState<QuestionsMode>(initialMode);
+    const [mode, setMode] = useState<QuestionsMode>(initialMode);
 
-  // Sync mode from URL when navigating (e.g. from Practice Hub with ?mode=pastpaper)
-  useEffect(() => {
-    const m = urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
-    setMode(m);
-  }, [urlMode]);
-  const [subjectFilter, setSubjectFilter] = useState<string | null>(urlSubject || null);
-  const [collectionPaths, setCollectionPaths] = useState<string[]>(initialPaths);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+    useEffect(() => {
+        const m = urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
+        setMode(m);
+    }, [urlMode]);
 
-    const pastPaperFilterRef = useRef<HTMLDivElement>(null);
+    const [subjectFilter, setSubjectFilter] = useState<string | null>(urlSubject || null);
+    const [collectionPaths, setCollectionPaths] = useState<string[]>(initialPaths);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+
+        const pastPaperFilterRef = useRef<HTMLDivElement>(null);
     /** When set, next paperQuestions effect will jump here (used for random across scoped papers). */
     const pendingRandomRef = useRef<{ pos: number } | { questionId: string } | null>(null);
     /** When set, next paperQuestions effect will jump to this index (used when selecting from scoped-paper search). */
@@ -131,10 +189,21 @@ export default function Questions() {
     }, []);
     const getDrawingSnapshot = useCallback(() => getDrawingSnapshotRef.current?.() ?? null, []);
 
+        const getGradingCaptureRef = useRef<((mode?: "default" | "full-ink" | "retry-aggressive") => CanvasCapturePayload | null) | null>(null);
+        const registerGetGradingCapture = useCallback<RegisterGetGradingCapture>((fn) => {
+            getGradingCaptureRef.current = fn;
+        }, []);
+        const getGradingCapture = useCallback((mode: "default" | "full-ink" | "retry-aggressive" = "default") => getGradingCaptureRef.current?.(mode) ?? null, []);
+
     // ---- Canvas persistence (state declared here; effects placed after derived vars below) ----
     const { saveCanvas, loadCanvas } = useCanvasStorage();
     const [canvasStrokes, setCanvasStrokes] = useState<any[]>([]);
     const [canvasLoading, setCanvasLoading] = useState(false);
+    const [gradingAnnotations, setGradingAnnotations] = useState<CanvasAnnotation[]>([]);
+    const [checkMyAnswerStatus, setCheckMyAnswerStatus] = useState<string | null>(null);
+    const [gradingStatus, setGradingStatus] = useState<GradingStatus>("idle");
+    const [pass1Cache, setPass1Cache] = useState<Record<string, Pass1Result>>({});
+    const [aiInjectedExchange, setAiInjectedExchange] = useState<InjectedExchange | null>(null);
     //===============================================================================================//
 
     //==============================================> Hooks <========================================//
@@ -176,10 +245,41 @@ export default function Questions() {
     const [viewportWidth, setViewportWidth] = useState(
         typeof window !== "undefined" ? window.innerWidth : 1024
     );
+    const [navbarActionOffsetPx, setNavbarActionOffsetPx] = useState(96);
     useEffect(() => {
         const onResize = () => setViewportWidth(window.innerWidth);
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
+    }, []);
+    useEffect(() => {
+        if (typeof window === "undefined" || typeof document === "undefined") return;
+
+        const navbar = document.getElementById("app-navbar");
+        if (!navbar) return;
+
+        const updateOffset = () => {
+            const rightEdge = Math.max(0, Math.round(navbar.getBoundingClientRect().right));
+            setNavbarActionOffsetPx(rightEdge + 8);
+        };
+
+        updateOffset();
+
+        const resizeObserver =
+            typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateOffset) : null;
+        resizeObserver?.observe(navbar);
+
+        window.addEventListener("resize", updateOffset);
+        navbar.addEventListener("mouseenter", updateOffset);
+        navbar.addEventListener("mouseleave", updateOffset);
+        navbar.addEventListener("transitionend", updateOffset);
+
+        return () => {
+            resizeObserver?.disconnect();
+            window.removeEventListener("resize", updateOffset);
+            navbar.removeEventListener("mouseenter", updateOffset);
+            navbar.removeEventListener("mouseleave", updateOffset);
+            navbar.removeEventListener("transitionend", updateOffset);
+        };
     }, []);
     useEffect(() => {
         const onCloseLogTables = () => setShowLogTables(false);
@@ -278,20 +378,24 @@ export default function Questions() {
     useEffect(() => {
         if (!activeCanvasQuestionId) {
             setCanvasStrokes([]);
+            setGradingAnnotations([]);
             setCanvasLoading(false);
             return;
         }
         setCanvasLoading(true);
+        setGradingAnnotations([]);
         let cancelled = false;
         loadCanvas(activeCanvasQuestionId)
             .then((loaded) => {
                 if (cancelled) return;
-                setCanvasStrokes(loaded ?? []);
+                setCanvasStrokes(loaded?.strokes ?? []);
+                setGradingAnnotations(isSavedGradingAnnotations(loaded?.feedbackOverlay) ? loaded.feedbackOverlay : []);
                 setCanvasLoading(false);
             })
             .catch(() => {
                 if (cancelled) return;
                 setCanvasStrokes([]);
+                setGradingAnnotations([]);
                 setCanvasLoading(false);
             });
         return () => { cancelled = true; };
@@ -300,10 +404,240 @@ export default function Questions() {
     const handleStrokesChange = useCallback(
         (strokes: any[]) => {
             if (!activeCanvasQuestionId) return;
-            saveCanvas(activeCanvasQuestionId, strokes);
+            const nextAnnotations = strokes.length === 0 ? [] : gradingAnnotations;
+            if (strokes.length === 0 && gradingAnnotations.length > 0) {
+                setGradingAnnotations([]);
+            }
+            saveCanvas(activeCanvasQuestionId, strokes, nextAnnotations);
         },
-        [activeCanvasQuestionId, saveCanvas]
+        [activeCanvasQuestionId, saveCanvas, gradingAnnotations]
     );
+
+    useEffect(() => {
+        setCheckMyAnswerStatus(null);
+        setGradingStatus("idle");
+        setAiInjectedExchange(null);
+    }, [activeCanvasQuestionId, mode]);
+
+    const streamChatResponse = useCallback(async (
+        messages: Array<{ role: string; content: any }>,
+        options?: { temperature?: number; top_p?: number; context?: string }
+    ): Promise<string> => {
+        const res = await fetch(CHAT_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                messages,
+                context: options?.context,
+                temperature: options?.temperature,
+                top_p: options?.top_p,
+            }),
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || errData.details || "Failed to check answer");
+        }
+
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("No response body");
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let fullText = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
+            for (const line of lines) {
+                if (!line.startsWith("data: ")) continue;
+                const payload = line.slice(6);
+                if (payload === "[DONE]") continue;
+                try {
+                    const parsed = JSON.parse(payload) as {
+                        choices?: Array<{ delta?: { content?: string } }>;
+                        error?: { message?: string };
+                    };
+                    if (parsed.error?.message) throw new Error(parsed.error.message);
+                    const token = parsed.choices?.[0]?.delta?.content;
+                    if (token) fullText += token;
+                } catch (err) {
+                    if (err instanceof SyntaxError) continue;
+                    throw err;
+                }
+            }
+        }
+
+        return fullText.trim();
+    }, []);
+
+    const canCheckNow = gradingStatus === "idle" || gradingStatus === "done" || gradingStatus === "error";
+
+    const handleToggleQuestionCompleted = useCallback(() => {
+        if (mode === "pastpaper" && selectedPaper && currentPaperQuestion) {
+            toggleQuestion(selectedPaper, currentPaperQuestion.id, paperQuestions.length);
+        }
+    }, [mode, selectedPaper, currentPaperQuestion, paperQuestions.length, toggleQuestion]);
+
+    const injectGradingMessage = useCallback((result: Awaited<ReturnType<typeof runGrading>>) => {
+        if (result.pass2.isFullMarks) {
+            setAiInjectedExchange({
+                nonce: `${Date.now()}`,
+                userMessage: "Check my answer",
+                assistantMessage: `Well done - full marks! You scored ${result.pass2.totalAwarded}/${result.pass2.totalAvailable}.\n\nReady to mark this question as complete?`,
+                action: { type: "markComplete", label: "Mark as complete" },
+            });
+            return;
+        }
+
+        const scoreRatio = result.pass2.totalAwarded / result.pass2.totalAvailable;
+        let openingEncouragement = "keep working at it, here is where things went wrong.";
+        if (scoreRatio >= 0.7 && scoreRatio < 1) {
+            openingEncouragement = "nearly there, here is what to work on.";
+        } else if (scoreRatio >= 0.4 && scoreRatio < 0.7) {
+            openingEncouragement = "close, just a couple of things to fix.";
+        }
+
+        const partSummaries = buildPartSummary(result.pass2);
+        const partBreakdown = partSummaries
+            .map((p) => {
+                if (p.marksAwarded === p.marksAvailable) {
+                    return `${p.marksAwarded}/${p.marksAvailable} \u2014 well done.`;
+                }
+                return `${p.marksAwarded}/${p.marksAvailable} \u2014 ${p.summary}`;
+            })
+            .join("\n");
+
+        const message = [
+            `You scored ${result.pass2.totalAwarded}/${result.pass2.totalAvailable} \u2014 ${openingEncouragement}`,
+            "",
+            partBreakdown,
+            "",
+            "I've highlighted exactly where to look on your working.",
+        ].join("\n");
+
+        setAiInjectedExchange({
+            nonce: `${Date.now()}`,
+            userMessage: "Check my answer",
+            assistantMessage: message,
+        });
+    }, []);
+
+    const handleCheckMyAnswer = useCallback(async () => {
+        if (!canCheckNow) return;
+        if (canvasLoading) {
+            setCheckMyAnswerStatus("Something went wrong - try again");
+            setGradingStatus("error");
+            return;
+        }
+        if (!activeCanvasQuestionId) {
+            setCheckMyAnswerStatus("Something went wrong - try again");
+            setGradingStatus("error");
+            return;
+        }
+
+        setCheckMyAnswerStatus(null);
+        setGradingAnnotations([]);
+
+        try {
+            const capture = getGradingCapture("default");
+            const fullInkCapture = getGradingCapture("full-ink");
+            if (!capture) {
+                throw new BlankCanvasError();
+            }
+
+            const questionText = mode === "pastpaper"
+                ? [
+                    currentPaperQuestion?.questionName ?? "Question",
+                    currentPaperQuestion?.tags?.length ? `Tags: ${currentPaperQuestion.tags.join(", ")}` : "",
+                  ].filter(Boolean).join("\n")
+                : [
+                    String(currentQuestion?.properties?.name ?? "Question"),
+                    ...(Array.isArray(currentQuestion?.content)
+                        ? currentQuestion.content
+                              .map((p: any, i: number) => (p?.question ? `Part ${i + 1}: ${String(p.question)}` : ""))
+                              .filter(Boolean)
+                        : []),
+                  ].filter(Boolean).join("\n\n");
+
+            const markingSchemeImages: string[] = [];
+            let markingSchemeText = "";
+            if (mode === "pastpaper") {
+                if (!selectedPaper || !currentPaperQuestion?.markingSchemePageRange) throw new Error("Something went wrong - try again");
+                const msBlob = markingSchemeBlob ?? (await getMarkingSchemeBlob(selectedPaper));
+                if (!msBlob) throw new Error("Something went wrong - try again");
+                const start = Math.max(1, Math.min(currentPaperQuestion.markingSchemePageRange.start, currentPaperQuestion.markingSchemePageRange.end));
+                const end = Math.max(start, Math.max(currentPaperQuestion.markingSchemePageRange.start, currentPaperQuestion.markingSchemePageRange.end));
+                markingSchemeText = `Past-paper marking scheme pages ${start}-${end}`;
+                for (let page = start; page <= end && page < start + 4; page += 1) {
+                    const shot = await renderPdfPageSnapshot(msBlob, page, 700);
+                    if (shot) markingSchemeImages.push(shot);
+                }
+            } else {
+                const rawMs = String(currentQuestion?.properties?.markingScheme ?? "").trim();
+                const digits = rawMs.replace(/\D/g, "");
+                const year = digits.length >= 4 ? digits.slice(0, 2) : msYear;
+                const pageNumber = digits.length >= 4 ? Number(digits.slice(2)) : Number(digits);
+                if (!year || !Number.isFinite(pageNumber) || pageNumber <= 0) throw new Error("Something went wrong - try again");
+                const msRes = await fetch(`/assets/marking_schemes/${year}.pdf`);
+                if (!msRes.ok) throw new Error("Something went wrong - try again");
+                const msBlob = await msRes.blob();
+                const shot = await renderPdfPageSnapshot(msBlob, pageNumber, 700);
+                if (shot) markingSchemeImages.push(shot);
+                markingSchemeText = `CertChamps marking scheme ${year}${String(pageNumber).padStart(2, "0")}`;
+            }
+
+            const result = await runGrading({
+                questionId: activeCanvasQuestionId,
+                questionText,
+                markingSchemeText,
+                markingSchemeImages,
+                capture,
+                fullInkCapture: fullInkCapture ?? undefined,
+                getAggressiveCapture: () => getGradingCapture("retry-aggressive"),
+                streamChatResponse,
+                pass1Cache,
+                setPass1Cache,
+                onStatus: setGradingStatus,
+            });
+
+            setGradingAnnotations(result.annotations);
+            saveCanvas(activeCanvasQuestionId, canvasStrokes, result.annotations);
+            injectGradingMessage(result);
+            setSidebarOpen(true);
+            setSidebarOpenPanel("ai");
+            setCheckMyAnswerStatus(null);
+        } catch (err) {
+            setGradingStatus("error");
+            if (err instanceof BlankCanvasError) {
+                setCheckMyAnswerStatus("Your canvas looks empty - write your workings and try again.");
+            } else {
+                setCheckMyAnswerStatus("Something went wrong - try again");
+            }
+            console.error("[grading] failed", err);
+        }
+    }, [
+        canCheckNow,
+        canvasLoading,
+        activeCanvasQuestionId,
+        getGradingCapture,
+        mode,
+        currentPaperQuestion,
+        currentQuestion,
+        selectedPaper,
+        markingSchemeBlob,
+        getMarkingSchemeBlob,
+        msYear,
+        streamChatResponse,
+        pass1Cache,
+        setPass1Cache,
+        saveCanvas,
+        canvasStrokes,
+        injectGradingMessage,
+    ]);
 
     // ---- Cross-paper helpers for topic filtering ----
 
@@ -356,7 +690,7 @@ export default function Questions() {
         setCollectionPaths(paths);
         try {
             localStorage.setItem(QUESTIONS_MODE_KEY, mode);
-        } catch (_) {}
+        } catch {}
     }, [mode, subjectFilter]);
 
     const isInitialPathsRef = useRef(true);
@@ -798,7 +1132,58 @@ export default function Questions() {
                         registerDrawingSnapshot={registerDrawingSnapshot}
                         initialStrokes={canvasStrokes}
                         onStrokesChange={handleStrokesChange}
+                        registerGetGradingCapture={registerGetGradingCapture}
+                        gradingAnnotations={gradingAnnotations}
                     />
+                    {mode === "pastpaper" && selectedPaper && currentPaperQuestion && (
+                        <div className="absolute z-30 pointer-events-auto bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    aria-label="Check my answer"
+                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-accent color-txt-accent hover:opacity-85 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                                    onClick={handleCheckMyAnswer}
+                                    disabled={!canCheckNow}
+                                    title="Check my answer with AI"
+                                >
+                                    <LuCircleCheck size={14} strokeWidth={2} />
+                                    <span>{!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check my answer"}</span>
+                                </button>
+                                {checkMyAnswerStatus && (
+                                    <div className="absolute bottom-full mb-2 max-w-[280px] text-xs color-txt-sub bg-[var(--grey-5)]/90 rounded-md px-2 py-1 z-20 flex items-center gap-2">
+                                        <span>{checkMyAnswerStatus}</span>
+                                        {gradingStatus === "error" && (
+                                            <button
+                                                type="button"
+                                                onClick={handleCheckMyAnswer}
+                                                className="text-[11px] font-semibold color-txt-accent hover:opacity-80"
+                                            >
+                                                Retry
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleToggleQuestionCompleted}
+                                className={`questions-top-bar__tick ${isQuestionCompleted(currentPaperQuestion.id) ? "questions-top-bar__tick--done" : ""}`}
+                                aria-label={isQuestionCompleted(currentPaperQuestion.id) ? "Mark question incomplete" : "Mark question complete"}
+                                title={isQuestionCompleted(currentPaperQuestion.id) ? "Mark incomplete" : "Mark complete"}
+                            >
+                                {isQuestionCompleted(currentPaperQuestion.id) ? (
+                                    <LuCircleCheck size={18} strokeWidth={2.2} />
+                                ) : (
+                                    <LuCircle size={18} strokeWidth={1.8} />
+                                )}
+                            </button>
+                            {paperQuestions.length > 0 && (
+                                <span className="questions-top-bar__progress-pill">
+                                    {completedForPaper.size}/{paperQuestions.length}
+                                </span>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -842,6 +1227,8 @@ export default function Questions() {
                     markingSchemeBlob={mode === "pastpaper" ? markingSchemeBlob : undefined}
                     markingSchemePageRange={mode === "pastpaper" ? questionForMarkingScheme?.markingSchemePageRange : undefined}
                     markingSchemeQuestionName={mode === "pastpaper" ? questionForMarkingScheme?.questionName : undefined}
+                    aiInjectedExchange={aiInjectedExchange}
+                    onMarkCompleteFromGrading={handleToggleQuestionCompleted}
                 />
             </div>
 
@@ -980,10 +1367,40 @@ export default function Questions() {
                         subjectFilter={subjectFilter}
                         onSubjectFilterChange={setSubjectFilter}
                         subjectOptions={certChampsSet?.sections?.map((sec) => ({ value: sec, label: formatSectionLabel(sec) })) ?? []}
+                        showQuestionCompleteControl={options.laptopMode}
+                        leftActionContent={
+                            options.laptopMode ? (
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        aria-label="Check my answer"
+                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-accent color-txt-accent hover:opacity-85 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                                        onClick={handleCheckMyAnswer}
+                                        disabled={!canCheckNow}
+                                        title="Check my answer with AI"
+                                    >
+                                        <LuCircleCheck size={14} strokeWidth={2} />
+                                        <span>{!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check my answer"}</span>
+                                    </button>
+                                    {checkMyAnswerStatus && (
+                                        <div className="absolute top-full mt-2 max-w-[280px] text-xs color-txt-sub bg-[var(--grey-5)]/90 rounded-md px-2 py-1 z-20 flex items-center gap-2">
+                                            <span>{checkMyAnswerStatus}</span>
+                                            {gradingStatus === "error" && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCheckMyAnswer}
+                                                    className="text-[11px] font-semibold color-txt-accent hover:opacity-80"
+                                                >
+                                                    Retry
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : null
+                        }
                         questionCompleted={mode === "pastpaper" && currentPaperQuestion ? isQuestionCompleted(currentPaperQuestion.id) : undefined}
-                        onToggleQuestionCompleted={mode === "pastpaper" && selectedPaper && currentPaperQuestion ? () => {
-                            toggleQuestion(selectedPaper, currentPaperQuestion.id, paperQuestions.length);
-                        } : undefined}
+                        onToggleQuestionCompleted={mode === "pastpaper" && selectedPaper && currentPaperQuestion ? handleToggleQuestionCompleted : undefined}
                         paperProgress={mode === "pastpaper" && paperQuestions.length > 0 ? {
                             completed: completedForPaper.size,
                             total: paperQuestions.length,
@@ -1177,6 +1594,60 @@ export default function Questions() {
                             const showPdfLoadingOverlay =
                                 (!viewUsesDocument ? false : !fullPaperPreloaded) || !logTablesPreloaded;
 
+                            const paperActionButtons = (
+                                <>
+                                    {hasPageRegions && (
+                                        <button
+                                            type="button"
+                                            onClick={handleExpandToggle}
+                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                            aria-label={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                            title={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                        >
+                                            {isFullPaperExpanded ? (
+                                                <>
+                                                    <LuMinimize2 size={14} strokeWidth={2} />
+                                                    <span>Question only</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <LuMaximize2 size={14} strokeWidth={2} />
+                                                    <span>Full paper</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+                                    {currentPaperQuestion && (
+                                        <button
+                                            type="button"
+                                            data-tutorial-id="sidebar-logtables"
+                                            onClick={() => {
+                                                setLogTablesQuestionIndex(paperQuestionIndexInFullList >= 0 ? paperQuestionIndexInFullList : 0);
+                                                setShowLogTables(true);
+                                            }}
+                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                            title="Log tables"
+                                            aria-label="Log tables"
+                                        >
+                                            <LuBookOpen size={14} strokeWidth={2} />
+                                            <span>Log tables</span>
+                                        </button>
+                                    )}
+                                    {currentPaperQuestion && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCalculator(true)}
+                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                            title="Calculator"
+                                            aria-label="Calculator"
+                                        >
+                                            <LuCalculator size={14} strokeWidth={2} />
+                                            <span>Calculator</span>
+                                        </button>
+                                    )}
+                                </>
+                            );
+
                             return (
                                 <div className="relative flex-1 min-h-0  flex flex-col overflow-hidden">
                                     {showPdfLoadingOverlay && (
@@ -1193,60 +1664,13 @@ export default function Questions() {
                                         typeof document !== "undefined" &&
                                         createPortal(
                                             <div
-                                                className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-0 pr-4" : "justify-start left-[var(--navbar-width,5.5rem)]"}`}
+                                                className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
                                                 style={{
-                                                    bottom: "env(safe-area-inset-bottom, 0px)",
+                                                    bottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))",
+                                                    left: options.leftHandMode ? undefined : `${navbarActionOffsetPx}px`,
                                                 }}
                                             >
-                                                {hasPageRegions && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleExpandToggle}
-                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
-                                                        aria-label={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
-                                                        title={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
-                                                    >
-                                                        {isFullPaperExpanded ? (
-                                                            <>
-                                                                <LuMinimize2 size={14} strokeWidth={2} />
-                                                                <span>Question only</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <LuMaximize2 size={14} strokeWidth={2} />
-                                                                <span>Full paper</span>
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                )}
-                                                {currentPaperQuestion && (
-                                                    <button
-                                                        type="button"
-                                                        data-tutorial-id="sidebar-logtables"
-                                                        onClick={() => {
-                                                            setLogTablesQuestionIndex(paperQuestionIndexInFullList >= 0 ? paperQuestionIndexInFullList : 0);
-                                                            setShowLogTables(true);
-                                                        }}
-                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
-                                                        title="Log tables"
-                                                        aria-label="Log tables"
-                                                    >
-                                                        <LuBookOpen size={14} strokeWidth={2} />
-                                                        <span>Log tables</span>
-                                                    </button>
-                                                )}
-                                                {currentPaperQuestion && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowCalculator(true)}
-                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
-                                                        title="Calculator"
-                                                        aria-label="Calculator"
-                                                    >
-                                                        <LuCalculator size={14} strokeWidth={2} />
-                                                        <span>Calculator</span>
-                                                    </button>
-                                                )}
+                                                {paperActionButtons}
                                             </div>,
                                             document.body
                                         )}

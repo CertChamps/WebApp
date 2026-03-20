@@ -4,6 +4,7 @@ import { LuSendHorizontal } from "react-icons/lu";
 import { UserContext } from "../../context/UserContext";
 import { useAI } from "./useAI";
 import { ChatMessage, ChatMessageLoading } from "./ChatMessage";
+import type { InjectedExchange } from "./useAI";
 
 type AIChatProps = {
   question?: any;
@@ -11,6 +12,10 @@ type AIChatProps = {
   getDrawingSnapshot?: (() => string | null) | null;
   /** Optional: return current exam paper (first page) as image so the AI can see the paper. */
   getPaperSnapshot?: (() => string | null) | null;
+  /** Optional: externally injected exchange (e.g. from Check My Answer). */
+  injectedExchange?: InjectedExchange | null;
+  /** Optional action for grading flow (full-marks completion CTA). */
+  onMarkCompleteFromGrading?: (() => void) | null;
 };
 
 const AI_PLACEHOLDERS = [
@@ -27,9 +32,10 @@ const AI_PLACEHOLDERS = [
   "No question is a stupid question:)",
 ];
 
-export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AIChatProps) {
+export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot, injectedExchange, onMarkCompleteFromGrading }: AIChatProps) {
   const { user } = useContext(UserContext);
   const [aiPlaceholder] = useState(() => AI_PLACEHOLDERS[Math.floor(Math.random() * AI_PLACEHOLDERS.length)]);
+  const [completedActionNonce, setCompletedActionNonce] = useState<string | null>(null);
   const {
     messages,
     streamingContent,
@@ -39,19 +45,32 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AICha
     error,
     sendMessage,
     handleKeyDown,
+    messagesContainerRef,
     messagesEndRef,
     inputRef,
     hasQuestion,
-  } = useAI(question, getDrawingSnapshot, getPaperSnapshot);
+  } = useAI(question, getDrawingSnapshot, getPaperSnapshot, injectedExchange);
 
   const displayName = user?.username?.trim() || "there";
   const emptyMessage = hasQuestion
     ? "Ask about this question. I can explain concepts, give hints, or walk through steps. If you draw maths or handwriting on the canvas, I can see it too. If you have a past paper open, I can see it as well."
     : "How can I can help? I can explain concepts, hints, or steps. Draw on the canvas and I’ll recognise it. If you have a past paper open, I can see it too.";
+  const showMarkCompleteAction = Boolean(
+    injectedExchange?.action?.type === "markComplete" &&
+      injectedExchange.nonce &&
+      completedActionNonce !== injectedExchange.nonce &&
+      onMarkCompleteFromGrading,
+  );
+
+  const handleMarkComplete = () => {
+    if (!onMarkCompleteFromGrading || !injectedExchange?.nonce) return;
+    onMarkCompleteFromGrading();
+    setCompletedActionNonce(injectedExchange.nonce);
+  };
 
   return (
-    <div className="pointer-events-auto flex h-full flex-col overflow-hidden">
-      <div className="ai-chat-messages flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-3 space-y-4 min-h-0">
+    <div className="ai-chat-shell pointer-events-auto h-full min-h-0 overflow-hidden">
+      <div ref={messagesContainerRef} className="ai-chat-messages overflow-y-auto overflow-x-hidden px-4 pt-4 pb-3 space-y-4 min-h-0">
         {messages.length === 0 && !loading && (
           <div className="text-center h-[90%] flex flex-col justify-center items-center">
             <h3 className="font-bold color-txt-main mb-2 text-2xl">Hey, {displayName}</h3>
@@ -65,10 +84,25 @@ export function AIChat({ question, getDrawingSnapshot, getPaperSnapshot }: AICha
           {loading && <ChatMessageLoading streamingContent={streamingContent} />}
         </AnimatePresence>
         {error && <p className="text-sm text-[var(--color-red)] text-center py-2">{error}</p>}
+        {injectedExchange?.action?.type === "markComplete" && injectedExchange.nonce && (
+          <div className="flex justify-start">
+            {showMarkCompleteAction ? (
+              <button
+                type="button"
+                onClick={handleMarkComplete}
+                className="rounded-lg px-3 py-2 text-xs font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity"
+              >
+                {injectedExchange.action.label}
+              </button>
+            ) : completedActionNonce === injectedExchange.nonce ? (
+              <p className="text-xs color-txt-sub">Marked complete ✓</p>
+            ) : null}
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-3 pt-0">
+      <div className="ai-chat-composer color-bg border-t border-grey/15 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] p-3 pt-2">
         <div className="flex items-start rounded-out border border-grey/25 color-bg overflow-hidden focus-within:ring-2 focus-within:ring-inset focus-within:ring-grey/20">
           <textarea
             ref={inputRef}

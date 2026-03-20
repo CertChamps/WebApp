@@ -89,6 +89,11 @@ type PaperPdfPlaceholderProps = {
   scrollContainerRef?: MutableRefObject<HTMLDivElement | null>;
   /** Optional overlay nodes positioned by top (px); used for full-paper question region bars. */
   overlayNodes?: Array<{ topPx: number; content: ReactNode }>;
+  /**
+   * Resolution multiplier passed to PdfThemeWrapper. 2 = render at 2× then CSS-scale back down
+   * for sharper text. Layout dimensions (spacing, page height) are unaffected.
+   */
+  resolutionScale?: number;
 };
 
 export default function PaperPdfPlaceholder({
@@ -102,6 +107,7 @@ export default function PaperPdfPlaceholder({
   onDocumentLoadSuccess,
   scrollContainerRef: externalScrollRef,
   overlayNodes,
+  resolutionScale = 1,
 }: PaperPdfPlaceholderProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -264,6 +270,7 @@ export default function PaperPdfPlaceholder({
                     <PdfThemeWrapper
                       pageNumber={pageNum}
                       width={pageWidth}
+                      resolutionScale={resolutionScale}
                     />
                   ) : null}
                 </div>

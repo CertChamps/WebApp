@@ -2,11 +2,31 @@
   scrollbar-gutter: stable;
 }
 
+/* Keep AI composer pinned while only messages scroll. */
+.ai-chat-shell {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+
 /* AI chat messages – prioritise vertical scroll on iPad; allow sidebar drag when horizontal */
 .ai-chat-messages {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  padding-bottom: 6.5rem;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   overscroll-behavior-y: contain;
+}
+
+.ai-chat-composer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  flex-shrink: 0;
 }
 
 /* Stack gap between two window tiles */

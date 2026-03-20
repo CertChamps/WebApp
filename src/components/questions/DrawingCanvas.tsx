@@ -1,8 +1,31 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2 } from "lucide-react";
+import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle } from "lucide-react";
+import type { CanvasAnnotation, CanvasCapturePayload } from "../../lib/grading/GradingTypes";
+import { buildCapturePayload } from "../../lib/grading/canvasCapture";
+import RenderMath from "../math/mathdisplay";
 
 type Point = { x: number; y: number; pressure: number };
 type Stroke = { points: Point[]; tool: "pen" | "eraser" };
+
+export type WhiteboardFeedbackItem = {
+	kind: "comment";
+	lineIndex: number;
+	text: string;
+};
+
+export type WhiteboardRelevantRegion = {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+};
+
+export type WhiteboardFeedbackOverlay = {
+	runId: string;
+	items: WhiteboardFeedbackItem[];
+	relevantRegion?: WhiteboardRelevantRegion | null;
+	finalMark?: string;
+};
 
 /** Grid display: off, square (lines), or dots at intersections. */
 type GridMode = "off" | "lines" | "dots";
@@ -18,6 +41,104 @@ const STROKE_ERASER_HIT_RADIUS = ERASER_WIDTH / 2 + 3;
 const ERASE_TARGET_STROKE_COLOR = "rgba(128, 128, 128, 0.7)";
 /** Hold still for this long (ms) to snap stroke to straight line */
 const HOLD_TO_STRAIGHTEN_MS = 600;
+
+function seededUnit(seed: number): number {
+	const x = Math.sin(seed * 12.9898) * 43758.5453;
+	return x - Math.floor(x);
+}
+
+type BadgeLayout = {
+	id: string;
+	partId: string;
+	text: string;
+	worldX: number;
+	worldY: number;
+	radiusWorld: number;
+	workingsRegionWorld: Extract<CanvasAnnotation, { type: "errorComment" }>['workingsRegionWorld'];
+	errorBoxWorld: Extract<CanvasAnnotation, { type: "errorComment" }>['errorBoxWorld'];
+};
+
+function drawMarkAnnotation(
+	ctx: CanvasRenderingContext2D,
+	annotation: Extract<CanvasAnnotation, { type: "markAnnotation" }>,
+	fontReady: boolean,
+) {
+	// Early return if font is not ready yet (canvas will retry on next draw loop)
+	if (!fontReady) return;
+
+	const seed = seededUnit(annotation.worldX);
+	const angle = (-8 + seed * 16) * (Math.PI / 180);
+	const fontSize = 72;
+	const fontFamily = '"Caveat", "Patrick Hand", "Architects Daughter", cursive';
+	ctx.save();
+	ctx.translate(annotation.worldX, annotation.worldY);
+	ctx.rotate(angle);
+	ctx.fillStyle = "#C0392B";
+	ctx.font = `bold ${fontSize}px ${fontFamily}`;
+	ctx.textBaseline = "middle";
+	ctx.fillText(annotation.label, 0, 0);
+
+	const textWidth = Math.max(1, ctx.measureText(annotation.label).width);
+	const rx = textWidth / 2 + 28;
+	const ry = fontSize / 2 + 22;
+	const jitterX = rx * 0.12;
+	const jitterY = ry * 0.12;
+	const cx = textWidth / 2;
+	const cy = 0;
+	const k = 0.5522847498;
+	const ox = rx * k;
+	const oy = ry * k;
+	const j = (index: number, axis: "x" | "y") => {
+		const base = seededUnit(annotation.worldX + annotation.worldY + index * 17 + (axis === "x" ? 1 : 9));
+		const span = axis === "x" ? jitterX : jitterY;
+		return (base - 0.5) * span * 2;
+	};
+
+	const startX = cx;
+	const startY = cy - ry;
+	ctx.beginPath();
+	ctx.moveTo(startX, startY);
+	ctx.bezierCurveTo(
+		cx + ox + j(1, "x"),
+		cy - ry + j(1, "y"),
+		cx + rx + j(2, "x"),
+		cy - oy + j(2, "y"),
+		cx + rx,
+		cy,
+	);
+	ctx.bezierCurveTo(
+		cx + rx + j(3, "x"),
+		cy + oy + j(3, "y"),
+		cx + ox + j(4, "x"),
+		cy + ry + j(4, "y"),
+		cx,
+		cy + ry,
+	);
+	ctx.bezierCurveTo(
+		cx - ox + j(5, "x"),
+		cy + ry + j(5, "y"),
+		cx - rx + j(6, "x"),
+		cy + oy + j(6, "y"),
+		cx - rx,
+		cy,
+	);
+	ctx.bezierCurveTo(
+		cx - rx + j(7, "x"),
+		cy - oy + j(7, "y"),
+		cx - ox + j(8, "x"),
+		cy - ry + j(8, "y"),
+		startX,
+		startY,
+	);
+	const overshoot = 6 + seededUnit(annotation.worldX + 999) * 4;
+	ctx.lineTo(startX + overshoot, startY + seededUnit(annotation.worldY + 123) * 3 - 1.5);
+	ctx.strokeStyle = "#C0392B";
+	ctx.lineWidth = 2.5;
+	ctx.lineCap = "round";
+	ctx.lineJoin = "round";
+	ctx.stroke();
+	ctx.restore();
+}
 
 function distanceSquaredPointToSegment(point: Point, start: Point, end: Point): number {
 	const dx = end.x - start.x;
@@ -95,6 +216,10 @@ function strokeIntersectsEraser(stroke: Stroke, eraserStroke: Stroke, hitRadius:
 
 /** Call with a function that returns the current drawing as PNG data URL, or null. Called on mount, cleared on unmount. */
 export type RegisterDrawingSnapshot = (getSnapshot: (() => string | null) | null) => void;
+/** Call with a function that returns the number of visual line clusters detected on the canvas. Called on mount, cleared on unmount. */
+export type RegisterGetLineCount = (fn: ((region?: WhiteboardRelevantRegion | null) => number) | null) => void;
+/** Call with a function that returns a fixed-size grading capture plus world bounds. Called on mount, cleared on unmount. */
+export type RegisterGetGradingCapture = (fn: (((mode?: "default" | "full-ink" | "retry-aggressive") => CanvasCapturePayload | null) | null)) => void;
 
 export type DrawingStroke = Stroke;
 
@@ -102,6 +227,10 @@ type DrawingCanvasProps = {
 	onClose?: () => void;
 	/** Register a getter for the current canvas image (so e.g. AI can include it). */
 	registerDrawingSnapshot?: RegisterDrawingSnapshot;
+	/** Register a getter returning the current number of detected line clusters (so questions.tsx can pass the count to the AI). */
+	registerGetLineCount?: RegisterGetLineCount;
+	/** Register a getter for deterministic grading capture with world-space bounds. */
+	registerGetGradingCapture?: RegisterGetGradingCapture;
 	/** Pre-populate canvas with previously saved strokes. */
 	initialStrokes?: Stroke[] | null;
 	/** Called (debounced) when strokes change (stroke completed, erased, or cleared). */
@@ -112,13 +241,114 @@ type DrawingCanvasProps = {
 	readOnly?: boolean;
 	/** Initial grid mode. Use "off" for no grid (e.g. in progress dashboard). */
 	defaultGridMode?: GridMode;
+	/** World-space grading annotations rendered in the canvas loop. */
+	gradingAnnotations?: CanvasAnnotation[] | null;
 };
 
-export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initialStrokes, onStrokesChange, wrapperClassName, readOnly = false, defaultGridMode = "lines" }: DrawingCanvasProps) {
+function getStrokeBounds(stroke: Stroke): { minX: number; maxX: number; minY: number; maxY: number } | null {
+	if (stroke.tool !== "pen" || stroke.points.length === 0) return null;
+	let minX = stroke.points[0].x;
+	let maxX = stroke.points[0].x;
+	let minY = stroke.points[0].y;
+	let maxY = stroke.points[0].y;
+	for (const p of stroke.points) {
+		if (p.x < minX) minX = p.x;
+		if (p.x > maxX) maxX = p.x;
+		if (p.y < minY) minY = p.y;
+		if (p.y > maxY) maxY = p.y;
+	}
+	return { minX, maxX, minY, maxY };
+}
+
+function percentile75(sorted: number[]): number {
+	if (sorted.length === 0) return 0;
+	if (sorted.length === 1) return sorted[0];
+	const idx = 0.75 * (sorted.length - 1);
+	const lo = Math.floor(idx);
+	const hi = Math.ceil(idx);
+	return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+type WorldRect = { left: number; top: number; right: number; bottom: number };
+
+function canvasRegionToWorldRect(
+	region: WhiteboardRelevantRegion | null | undefined,
+	canvas: HTMLCanvasElement | null,
+	pan: { x: number; y: number },
+	scale: number,
+): WorldRect | null {
+	if (!region || !canvas) return null;
+	const rect = canvas.getBoundingClientRect();
+	if (rect.width <= 0 || rect.height <= 0 || scale === 0) return null;
+	return {
+		left: (region.x - pan.x) / scale,
+		top: (region.y - pan.y) / scale,
+		right: (region.x + region.width - pan.x) / scale,
+		bottom: (region.y + region.height - pan.y) / scale,
+	};
+}
+
+function boundsFallWithinRect(
+	bounds: { minX: number; maxX: number; minY: number; maxY: number } | null,
+	rect: WorldRect | null,
+): boolean {
+	if (!bounds || !rect) return Boolean(bounds);
+	return bounds.minX >= rect.left && bounds.maxX <= rect.right && bounds.minY >= rect.top && bounds.maxY <= rect.bottom;
+}
+
+function getScopedStrokes(
+	strokes: Stroke[],
+	relevantRegion: WhiteboardRelevantRegion | null | undefined,
+	canvas: HTMLCanvasElement | null,
+	pan: { x: number; y: number },
+	scale: number,
+): Stroke[] {
+	const worldRect = canvasRegionToWorldRect(relevantRegion, canvas, pan, scale);
+	if (!worldRect) return strokes;
+	return strokes.filter((stroke) => boundsFallWithinRect(getStrokeBounds(stroke), worldRect));
+}
+
+function buildLineAnchors(
+	strokes: Stroke[],
+): Array<{ y: number; xLeft: number; xRight: number }> {
+	const bounds = strokes.map(getStrokeBounds).filter((b): b is { minX: number; maxX: number; minY: number; maxY: number } => Boolean(b));
+	if (bounds.length === 0) return [];
+
+	const entries = bounds
+		.map((b) => ({
+			y: (b.minY + b.maxY) / 2,
+			xLeft: b.minX,
+			xRight: b.maxX,
+			height: Math.max(8, b.maxY - b.minY),
+		}))
+		.sort((a, b) => a.y - b.y);
+
+	// Collect all xRight values per cluster; use P75 so isolated side-notes don't push ticks far right
+	const clusters: Array<{ y: number; xLeft: number; xRights: number[]; count: number }> = [];
+	for (const entry of entries) {
+		const threshold = Math.max(24, entry.height * 1.15);
+		const cluster = clusters.find((c) => Math.abs(c.y - entry.y) <= threshold);
+		if (!cluster) {
+			clusters.push({ y: entry.y, xLeft: entry.xLeft, xRights: [entry.xRight], count: 1 });
+			continue;
+		}
+		cluster.y = (cluster.y * cluster.count + entry.y) / (cluster.count + 1);
+		cluster.xLeft = Math.min(cluster.xLeft, entry.xLeft);
+		cluster.xRights.push(entry.xRight);
+		cluster.count += 1;
+	}
+
+	return clusters
+		.sort((a, b) => a.y - b.y)
+		.map((c) => ({ y: c.y, xLeft: c.xLeft, xRight: percentile75([...c.xRights].sort((a, b) => a - b)) }));
+}
+
+export default function DrawingCanvas({ onClose, registerDrawingSnapshot, registerGetLineCount, registerGetGradingCapture, initialStrokes, onStrokesChange, wrapperClassName, readOnly = false, defaultGridMode = "lines", gradingAnnotations = null }: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const colorSampleRef = useRef<HTMLDivElement>(null);
 	const gridColorSampleRef = useRef<HTMLDivElement>(null);
+	const accentColorSampleRef = useRef<HTMLDivElement>(null);
 
 	const [strokes, setStrokes] = useState<Stroke[]>(initialStrokes ?? []);
 	const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
@@ -126,6 +356,34 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
 	const [pan, setPan] = useState({ x: 0, y: 0 });
 	const [scale, setScale] = useState(1);
+	const [expandedCommentId, setExpandedCommentId] = useState<string | null>(null);
+	const [fontReady, setFontReady] = useState(false);
+	const badgeLayoutsRef = useRef<BadgeLayout[]>([]);
+
+	// Load handwriting font for mark annotations
+	useEffect(() => {
+		const loadFont = async () => {
+			try {
+				await document.fonts.ready;
+				// Attempt to load Caveat from Google Fonts
+				const fontUrl = "https://fonts.gstatic.com/s/caveat/v17/WnznHAc5bAfYB2QRah7pcpNvOx-pjfJ9eIWpZA.woff2";
+				const font = new FontFace("Caveat", `url(${fontUrl})`);
+				await font.load();
+				document.fonts.add(font);
+				setFontReady(true);
+			} catch {
+				// If external load fails, check if font is available in document.fonts
+				try {
+					await document.fonts.load('16px "Caveat"');
+					setFontReady(true);
+				} catch {
+					// Font unavailable, canvas will silently fall back to serif
+					setFontReady(true);
+				}
+			}
+		};
+		loadFont();
+	}, []);
 
 	// Sync strokes when initialStrokes changes (question navigation)
 	const prevInitialRef = useRef(initialStrokes);
@@ -147,6 +405,10 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const strokesRef = useRef(strokes);
 	strokesRef.current = strokes;
+	const panRef = useRef(pan);
+	panRef.current = pan;
+	const scaleRef = useRef(scale);
+	scaleRef.current = scale;
 	const undoStackRef = useRef(undoStack);
 	undoStackRef.current = undoStack;
 	const redoStackRef = useRef(redoStack);
@@ -182,6 +444,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const [gridMode, setGridMode] = useState<GridMode>(defaultGridMode);
 	const [strokeColor, setStrokeColor] = useState("");
 	const [gridColor, setGridColor] = useState("");
+	const [accentColor, setAccentColor] = useState("");
 
 	const isDrawingRef = useRef(false);
 	const lastPointRef = useRef<Point | null>(null);
@@ -208,15 +471,21 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	useLayoutEffect(() => {
 		const strokeEl = colorSampleRef.current;
 		const gridEl = gridColorSampleRef.current;
-		if (!strokeEl || !gridEl) return;
+		const accentEl = accentColorSampleRef.current;
+		if (!strokeEl || !gridEl || !accentEl) return;
 		const updateColors = () => {
 			if (strokeEl) setStrokeColor(getComputedStyle(strokeEl).color);
 			if (gridEl) setGridColor(getComputedStyle(gridEl).backgroundColor);
+			if (accentEl) setAccentColor(getComputedStyle(accentEl).color);
 		};
 		updateColors();
 		const observer = new MutationObserver(updateColors);
 		observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 		return () => observer.disconnect();
+	}, []);
+
+	const requestToggleComment = useCallback((id: string) => {
+		setExpandedCommentId((current) => (current === id ? null : id));
 	}, []);
 
 	// Native touch listeners with passive: false so preventDefault works on iOS (Apple Pencil)
@@ -251,6 +520,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const getPressure = (e: PointerEvent): number => {
 		return e.pressure !== undefined && e.pressure > 0 ? e.pressure : 1;
 	};
+	const lineAnchors = buildLineAnchors(strokes);
 
 	const draw = useCallback(() => {
 		const canvas = canvasRef.current;
@@ -324,12 +594,88 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 				}
 			}
 		}
+
+		if (gradingAnnotations && gradingAnnotations.length > 0) {
+			const correctionColor = accentColor || strokeColor || "#D95F3B";
+
+			for (const annotation of gradingAnnotations) {
+				if (annotation.type !== "errorBox") continue;
+				ctx.save();
+				ctx.fillStyle = correctionColor;
+				ctx.globalAlpha = 0;
+				const boxPad = 10 / scale;
+				ctx.beginPath();
+				ctx.roundRect(
+					annotation.worldX - boxPad,
+					annotation.worldY - boxPad,
+					annotation.worldWidth + boxPad * 2,
+					annotation.worldHeight + boxPad * 2,
+					6 / scale,
+				);
+				ctx.fill();
+				ctx.restore();
+			}
+
+			const badgesByPart = new Map<string, BadgeLayout[]>();
+			for (const annotation of gradingAnnotations) {
+				if (annotation.type !== "errorComment") continue;
+				const partId = annotation.partId || "unknown";
+				const radiusWorld = 14 / scale;
+				const boxPadWorld = 10 / scale;
+				const anchoredX = annotation.errorBoxWorld
+					? annotation.errorBoxWorld.right + boxPadWorld + 4 / scale
+					: annotation.worldX;
+				const arr = badgesByPart.get(partId) ?? [];
+				arr.push({
+					id: annotation.id,
+					partId,
+					text: annotation.text,
+					worldX: anchoredX,
+					worldY: annotation.worldY,
+					radiusWorld,
+					workingsRegionWorld: annotation.workingsRegionWorld,
+					errorBoxWorld: annotation.errorBoxWorld,
+				});
+				badgesByPart.set(partId, arr);
+			}
+
+			const badgeLayouts: BadgeLayout[] = [];
+			for (const [, badges] of badgesByPart) {
+				badges.sort((a, b) => a.worldY - b.worldY);
+				const minDistWorld = 36 / scale;
+				for (let i = 0; i < badges.length; i += 1) {
+					if (i === 0) continue;
+					const prev = badges[i - 1];
+					const curr = badges[i];
+					if (curr.worldY - prev.worldY < minDistWorld) {
+						curr.worldY = prev.worldY + minDistWorld;
+					}
+				}
+				badgeLayouts.push(...badges);
+			}
+
+			badgeLayoutsRef.current = badgeLayouts;
+
+			for (const annotation of gradingAnnotations) {
+				if (annotation.type === "markAnnotation") {
+					drawMarkAnnotation(ctx, annotation, fontReady);
+				}
+			}
+		}
+
 		ctx.restore();
-	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool]);
+	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool, lineAnchors, gradingAnnotations, accentColor, fontReady]);
 
 	useEffect(() => {
 		draw();
 	}, [draw]);
+
+	useEffect(() => {
+		if (!expandedCommentId) return;
+		if (!gradingAnnotations?.some((annotation) => annotation.type === "errorComment" && annotation.id === expandedCommentId)) {
+			setExpandedCommentId(null);
+		}
+	}, [gradingAnnotations, expandedCommentId]);
 
 	// Keep ref in sync for timer callback
 	useEffect(() => {
@@ -392,19 +738,75 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 		if (!ctx) return null;
 		ctx.scale(dpr, dpr);
 		ctx.clearRect(0, 0, w, h);
+		// Use a solid background so light-theme/dark-theme pen colors remain visible to the AI.
+		ctx.fillStyle = "#ffffff";
+		ctx.fillRect(0, 0, w, h);
 		ctx.save();
 		ctx.translate(pan.x, pan.y);
 		ctx.scale(scale, scale);
-		for (const stroke of strokes) drawStroke(ctx, stroke);
-		if (currentStroke?.tool === "pen") drawStroke(ctx, currentStroke);
+		const drawSnapshotPenStroke = (stroke: Stroke) => {
+			if (stroke.tool !== "pen" || stroke.points.length < 2) return;
+			ctx.globalCompositeOperation = "source-over";
+			ctx.strokeStyle = "#111827";
+			ctx.lineCap = "round";
+			ctx.lineJoin = "round";
+			for (let i = 0; i < stroke.points.length - 1; i++) {
+				const p0 = stroke.points[i];
+				const p1 = stroke.points[i + 1];
+				const width = BASE_PEN_WIDTH * (Math.max(0.3, p0.pressure) + 0.5);
+				ctx.lineWidth = width;
+				ctx.beginPath();
+				ctx.moveTo(p0.x, p0.y);
+				ctx.lineTo(p1.x, p1.y);
+				ctx.stroke();
+			}
+		};
+
+		for (const stroke of strokes) drawSnapshotPenStroke(stroke);
+		if (currentStroke?.tool === "pen") drawSnapshotPenStroke(currentStroke);
 		ctx.restore();
 		return off.toDataURL("image/png");
 	}, [pan, scale, strokes, currentStroke]);
+	const getGradingCapture = useCallback((mode: "default" | "full-ink" | "retry-aggressive" = "default"): CanvasCapturePayload | null => {
+		const renderStrokes = [...strokes, ...(currentStroke ? [currentStroke] : [])];
+		if (!renderStrokes.some((stroke) => stroke.tool === "pen" && stroke.points.length > 1)) return null;
+		const canvas = canvasRef.current;
+		if (!canvas) return null;
+		const rect = canvas.getBoundingClientRect();
+		if (rect.width <= 0 || rect.height <= 0 || scale === 0) return null;
+		return buildCapturePayload({
+			strokes: renderStrokes,
+			viewportWidth: rect.width,
+			viewportHeight: rect.height,
+			offsetX: pan.x,
+			offsetY: pan.y,
+			scale,
+			devicePixelRatio: window.devicePixelRatio || 1,
+			forceFullInkBounds: mode === "full-ink" || mode === "retry-aggressive",
+			expandPaddingRatio: mode === "retry-aggressive" ? 0.25 : undefined,
+			jpegQuality: mode === "retry-aggressive" ? 0.97 : undefined,
+		});
+	}, [strokes, currentStroke, pan, scale]);
 	useEffect(() => {
 		if (!registerDrawingSnapshot) return;
 		registerDrawingSnapshot(getSnapshot);
 		return () => registerDrawingSnapshot(null);
 	}, [registerDrawingSnapshot, getSnapshot]);
+	useEffect(() => {
+		if (!registerGetGradingCapture) return;
+		registerGetGradingCapture(getGradingCapture);
+		return () => registerGetGradingCapture(null);
+	}, [registerGetGradingCapture, getGradingCapture]);
+
+	useEffect(() => {
+		if (!registerGetLineCount) return;
+		registerGetLineCount((region) =>
+			buildLineAnchors(
+				getScopedStrokes(strokesRef.current, region, canvasRef.current, panRef.current, scaleRef.current),
+			).length,
+		);
+		return () => registerGetLineCount(null);
+	}, [registerGetLineCount]);
 
 	function drawStroke(ctx: CanvasRenderingContext2D, stroke: Stroke, options?: { preview?: boolean; muted?: boolean }) {
 		const preview = options?.preview === true;
@@ -475,11 +877,13 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const handlePointerDown = useCallback(
 		(e: React.PointerEvent) => {
 			e.preventDefault();
-			if (readOnly) return;
 			const canvas = canvasRef.current;
 			if (!canvas) return;
-			canvas.setPointerCapture(e.pointerId);
+
 			const rect = canvas.getBoundingClientRect();
+
+			if (readOnly) return;
+			canvas.setPointerCapture(e.pointerId);
 			const world = screenToWorld(e.clientX, e.clientY);
 			world.pressure = getPressure(e.nativeEvent);
 
@@ -488,7 +892,9 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 
 			if (pointers.size === 2) {
 				// Start pinch
-				holdStraightenTimerRef.current && clearTimeout(holdStraightenTimerRef.current);
+				if (holdStraightenTimerRef.current) {
+					clearTimeout(holdStraightenTimerRef.current);
+				}
 				holdStraightenTimerRef.current = null;
 				const [a, b] = Array.from(pointers.entries());
 				const dx = a[1].x - b[1].x;
@@ -665,6 +1071,33 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 	const isEmbedded = onClose == null;
 	const canUndo = undoStack.length > 0;
 	const canRedo = redoStack.length > 0;
+	const overlayBubbles = badgeLayoutsRef.current.map((badge) => {
+		const expanded = expandedCommentId === badge.id;
+		
+		// Compute single anchor point at error box top-right
+		let anchorScreenX: number;
+		let anchorScreenY: number;
+		
+		if (badge.errorBoxWorld) {
+			// Anchor: error box right edge + 12px (screen space), error box top edge
+			const anchorWorldX = badge.errorBoxWorld.right + 12 / scale;
+			const anchorWorldY = badge.errorBoxWorld.top;
+			anchorScreenX = anchorWorldX * scale + pan.x + 12;
+			anchorScreenY = anchorWorldY * scale + pan.y;
+		} else {
+			// Fallback to badge world position
+			anchorScreenX = badge.worldX * scale + pan.x;
+			anchorScreenY = badge.worldY * scale + pan.y;
+		}
+		
+		// Tail transition: centered when collapsed, at top when expanded
+		const tailTop = expanded ? "14px" : "50%";
+		const tailTransformY = expanded ? "translateY(0)" : "translateY(-50%)";
+		
+		return { badge, anchorScreenX, anchorScreenY, expanded, tailTop, tailTransformY };
+	});
+
+
 
 	return (
 		<div
@@ -681,6 +1114,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 			{/* Hidden elements to sample theme colors (pen: color-txt-main, grid: color-bg-grey-5) */}
 			<div ref={colorSampleRef} className="color-txt-main absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			<div ref={gridColorSampleRef} className="color-bg-grey-5 absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
+			<div ref={accentColorSampleRef} className="color-txt-accent absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			{/* Canvas area */}
 			<div
 				className="flex-1 min-h-0 relative z-0 overflow-hidden select-none"
@@ -780,6 +1214,52 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, initia
 				</div>
 				)}
 			</div>
+{overlayBubbles.map(({ badge, anchorScreenX, anchorScreenY, expanded, tailTop, tailTransformY }) => (
+			<div
+				key={badge.id}
+				className="absolute pointer-events-auto"
+				style={{
+					left: anchorScreenX,
+					top: anchorScreenY,
+					zIndex: expanded ? 40 : 30,
+					transformOrigin: "top left",
+				}}
+			>
+				{/* Tail pointer */}
+				<div
+					className="absolute transition-[top,transform] duration-280 ease-out"
+					style={{
+						left: "-6px",
+						top: tailTop,
+						transform: tailTransformY,
+						width: 0,
+						height: 0,
+						borderLeft: "6px solid transparent",
+						borderTop: "6px solid var(--color-txt-accent)",
+						borderBottom: "6px solid transparent",
+					}}
+				/>
+				{/* Bubble container */}
+				<div
+					className={`relative overflow-hidden rounded-lg color-bg color-txt-accent border transition-[max-height,width] duration-280 ease-out cursor-pointer ${expanded ? "w-[240px] max-h-[200px]" : "w-[118px] max-h-7"}`}
+					style={{
+						borderColor: "var(--color-txt-accent)",
+					}}
+					onClick={() => requestToggleComment(badge.id)}
+					>
+						<div className="flex items-center justify-between px-3 h-7">
+							<div className="flex items-center gap-1">
+								<MessageCircle size={11} />
+								<span className="text-[9px] opacity-80">Feedback</span>
+							</div>
+						</div>
+						<div className="px-3 py-2 text-[11px] leading-relaxed max-h-[168px] overflow-y-auto">
+							<RenderMath text={badge.text} className="[&>div]:text-[11px]" />
+						</div>
+					</div>
+				</div>
+			))}
+
 		</div>
 	);
 }

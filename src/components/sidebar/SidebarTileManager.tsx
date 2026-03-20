@@ -2,6 +2,7 @@ import { useState, useCallback, useContext } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose, LuClipboardList } from "react-icons/lu";
 import { AIChat } from "../ai";
+import type { InjectedExchange } from "../ai/useAI";
 import QThread from "../questions/q_thread";
 import Timer from "../timer";
 import PastPaperMarkingScheme from "../questions/PastPaperMarkingScheme";
@@ -42,6 +43,10 @@ export type SidebarTileManagerProps = {
   markingSchemeBlob?: Blob | null;
   markingSchemePageRange?: MarkingSchemePageRange | null;
   markingSchemeQuestionName?: string;
+  /** Optional externally injected chat exchange (e.g. check-answer feedback). */
+  aiInjectedExchange?: InjectedExchange | null;
+  /** Optional completion CTA handler from grading flow. */
+  onMarkCompleteFromGrading?: (() => void) | null;
 };
 
 export function SidebarTileManager({
@@ -54,6 +59,8 @@ export function SidebarTileManager({
   markingSchemeBlob,
   markingSchemePageRange,
   markingSchemeQuestionName,
+  aiInjectedExchange,
+  onMarkCompleteFromGrading,
 }: SidebarTileManagerProps) {
   const [internalPanel, setInternalPanel] = useState<SidebarPanelId | null>("ai");
   const isControlled = controlledPanel !== undefined;
@@ -140,6 +147,8 @@ export function SidebarTileManager({
                   markingSchemeBlob={markingSchemeBlob}
                   markingSchemePageRange={markingSchemePageRange}
                   markingSchemeQuestionName={markingSchemeQuestionName}
+                  aiInjectedExchange={aiInjectedExchange}
+                  onMarkCompleteFromGrading={onMarkCompleteFromGrading}
                   onClosePanel={() => setOpenPanel(null)}
                 />
               </div>
@@ -170,6 +179,8 @@ function TileContent({
   markingSchemeBlob,
   markingSchemePageRange,
   markingSchemeQuestionName,
+  aiInjectedExchange,
+  onMarkCompleteFromGrading,
   onClosePanel: _onClosePanel,
 }: {
   panelId: SidebarPanelId;
@@ -179,6 +190,8 @@ function TileContent({
   markingSchemeBlob?: Blob | null;
   markingSchemePageRange?: MarkingSchemePageRange | null;
   markingSchemeQuestionName?: string;
+  aiInjectedExchange?: InjectedExchange | null;
+  onMarkCompleteFromGrading?: (() => void) | null;
   onClosePanel?: () => void;
 }) {
   const part = 0;
@@ -186,7 +199,15 @@ function TileContent({
 
   switch (panelId) {
     case "ai":
-      return <AIChat question={question} getDrawingSnapshot={getDrawingSnapshot} getPaperSnapshot={getPaperSnapshot} />;
+      return (
+        <AIChat
+          question={question}
+          getDrawingSnapshot={getDrawingSnapshot}
+          getPaperSnapshot={getPaperSnapshot}
+          injectedExchange={aiInjectedExchange}
+          onMarkCompleteFromGrading={onMarkCompleteFromGrading}
+        />
+      );
     case "threads": {
       const isPaperThread = !!question?._paperThread;
       return <ThreadsPanel questionId={questionId} part={part} isPaperThread={isPaperThread} question={question} />;

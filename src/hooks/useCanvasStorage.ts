@@ -7,6 +7,11 @@ import { UserContext } from "../context/UserContext";
 type Point = { x: number; y: number; pressure: number };
 type Stroke = { points: Point[]; tool: "pen" | "eraser" };
 
+export type SavedCanvasData = {
+	strokes: Stroke[];
+	feedbackOverlay: unknown | null;
+};
+
 /**
  * Hook to save/load drawing canvas strokes per question to Firebase.
  * - Strokes stored as JSON in Firebase Storage (avoids Firestore 1MB doc limit).
@@ -17,7 +22,7 @@ export function useCanvasStorage() {
 	const savingRef = useRef<Map<string, AbortController>>(new Map());
 
 	const saveCanvas = useCallback(
-		async (questionId: string, strokes: Stroke[]) => {
+		async (questionId: string, strokes: Stroke[], feedbackOverlay: unknown | null = null) => {
 			if (!user?.uid || !questionId) return;
 
 			// Cancel any in-flight save for this question
@@ -28,7 +33,8 @@ export function useCanvasStorage() {
 
 			try {
 				const path = `question-data/${user.uid}/${questionId}.json`;
-				const json = JSON.stringify(strokes);
+				const payload: SavedCanvasData = { strokes, feedbackOverlay };
+				const json = JSON.stringify(payload);
 				const blob = new Blob([json], { type: "application/json" });
 				const storageRef = ref(storage, path);
 
@@ -58,7 +64,7 @@ export function useCanvasStorage() {
 	);
 
 	const loadCanvas = useCallback(
-		async (questionId: string): Promise<Stroke[] | null> => {
+		async (questionId: string): Promise<SavedCanvasData | null> => {
 			if (!user?.uid || !questionId) return null;
 			try {
 				const path = `question-data/${user.uid}/${questionId}.json`;
@@ -68,7 +74,13 @@ export function useCanvasStorage() {
 				const res = await fetch(url);
 				if (!res.ok) return null;
 				const parsed = await res.json();
-				if (Array.isArray(parsed)) return parsed as Stroke[];
+				if (Array.isArray(parsed)) return { strokes: parsed as Stroke[], feedbackOverlay: null };
+				if (parsed && typeof parsed === "object") {
+					const obj = parsed as { strokes?: unknown; feedbackOverlay?: unknown };
+					if (Array.isArray(obj.strokes)) {
+						return { strokes: obj.strokes as Stroke[], feedbackOverlay: obj.feedbackOverlay ?? null };
+					}
+				}
 				return null;
 			} catch (err: any) {
 				// storage/object-not-found is expected for questions without saved drawings

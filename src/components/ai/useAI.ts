@@ -1,6 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
 export type Message = { role: "user" | "assistant"; content: string };
+export type InjectedExchange = {
+  nonce: string;
+  userMessage: string;
+  assistantMessage: string;
+  action?: {
+    type: "markComplete";
+    label: string;
+  } | null;
+};
 
 /** Optional: return current drawing as PNG data URL (e.g. from canvas) so the AI can see it. */
 export type GetDrawingSnapshot = () => string | null;
@@ -8,6 +17,13 @@ export type GetDrawingSnapshot = () => string | null;
 export type GetPaperSnapshot = () => string | null;
 
 const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
+
+function isIOSLikeDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const userAgent = navigator.userAgent || "";
+  const platform = navigator.platform || "";
+  return /iPad|iPhone|iPod/i.test(userAgent) || (platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
 
 function romanToInt(input: string): number | null {
   const s = input.trim().toUpperCase();
@@ -78,12 +94,18 @@ function buildQuestionContext(question: any): string | undefined {
   return parts.length ? parts.join("\n") : undefined;
 }
 
-export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | null, getPaperSnapshot?: GetPaperSnapshot | null) {
+export function useAI(
+  question?: any,
+  getDrawingSnapshot?: GetDrawingSnapshot | null,
+  getPaperSnapshot?: GetPaperSnapshot | null,
+  injectedExchange?: InjectedExchange | null
+) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streamingContent, setStreamingContent] = useState("");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const inputValueRef = useRef("");
@@ -93,7 +115,14 @@ export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | 
   }, [input]);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const top = container.scrollHeight;
+    container.scrollTo({
+      top,
+      behavior: isIOSLikeDevice() ? "auto" : "smooth",
+    });
   }, []);
   useEffect(() => scrollToBottom(), [messages, streamingContent]);
 
@@ -103,6 +132,22 @@ export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | 
     setStreamingContent("");
     setError(null);
   }, [questionId]);
+
+  const lastInjectedNonceRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!injectedExchange?.nonce) return;
+    if (lastInjectedNonceRef.current === injectedExchange.nonce) return;
+    lastInjectedNonceRef.current = injectedExchange.nonce;
+    const userText = injectedExchange.userMessage.trim();
+    const assistantText = injectedExchange.assistantMessage.trim();
+    if (!userText && !assistantText) return;
+    setMessages((prev) => {
+      const next = [...prev];
+      if (userText) next.push({ role: "user", content: userText });
+      if (assistantText) next.push({ role: "assistant", content: assistantText });
+      return next;
+    });
+  }, [injectedExchange]);
 
   const sendMessage = useCallback(async () => {
     const text = inputValueRef.current.trim();
@@ -187,7 +232,9 @@ export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | 
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
-      inputRef.current?.focus();
+      if (!isIOSLikeDevice()) {
+        inputRef.current?.focus();
+      }
     }
   }, [messages, question, loading, getDrawingSnapshot, getPaperSnapshot]);
 
@@ -210,6 +257,7 @@ export function useAI(question?: any, getDrawingSnapshot?: GetDrawingSnapshot | 
     error,
     sendMessage,
     handleKeyDown,
+    messagesContainerRef,
     messagesEndRef,
     inputRef,
     hasQuestion: Boolean(question),
