@@ -4,6 +4,7 @@ import { useAllPaperProgress } from "../../hooks/usePaperProgress";
 import OverallStatsBanner from "../../components/progress/OverallStatsBanner";
 import TopicBarChart from "../../components/progress/TopicBarChart";
 import SubjectHeatmap from "../../components/progress/SubjectHeatmap";
+import QuestionLogTable from "../../components/progress/QuestionLogTable";
 import "../../styles/progress.css";
 
 function formatSubject(s: string): string {
@@ -60,6 +61,10 @@ export default function SubjectProgressPage() {
               subject={decodeURIComponent(subject)}
               level={decodeURIComponent(level)}
               entries={progressEntries}
+            />
+            <QuestionLogTable
+              subject={decodeURIComponent(subject)}
+              level={decodeURIComponent(level)}
             />
           </>
         )}

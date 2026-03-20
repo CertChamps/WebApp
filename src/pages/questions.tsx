@@ -15,6 +15,7 @@ import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
 import { usePaperProgress } from "../hooks/usePaperProgress";
 import useFilters from "../hooks/useFilters";
 import { getPastPaperTopicScope } from "../data/mathsHigherTopics";
+import { useQuestionSessionLog, type QuestionMeta } from "../hooks/useQuestionSessionLog";
 
 // Components
 import { createPortal } from "react-dom";
@@ -254,6 +255,24 @@ export default function Questions() {
         }
         return null;
     }, [mode, selectedPaper, currentPaperQuestion, currentQuestion]);
+
+    const questionLogMeta = useMemo((): QuestionMeta | null => {
+        if (mode === "pastpaper" && selectedPaper && currentPaperQuestion) {
+            return {
+                questionId: currentPaperQuestion.id,
+                questionName: currentPaperQuestion.questionName,
+                paperId: selectedPaper.id,
+                paperLabel: selectedPaper.label,
+                subject: selectedPaper.subject ?? "unknown",
+                level: selectedPaper.level ?? "unknown",
+                topics: currentPaperQuestion.tags ?? [],
+                completed: isQuestionCompleted(currentPaperQuestion.id),
+            };
+        }
+        return null;
+    }, [mode, selectedPaper, currentPaperQuestion, isQuestionCompleted]);
+
+    useQuestionSessionLog(user?.uid, questionLogMeta);
 
     // Load saved strokes whenever the active question changes
     useEffect(() => {

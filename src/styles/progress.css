@@ -560,6 +560,45 @@
     white-space: nowrap;
 }
 
+/*================ QUESTION LOG TABLE ================*/
+.question-log-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.question-log-table__header th {
+    @apply text-[11px] font-bold color-txt-sub pb-2 px-3 text-center whitespace-nowrap;
+}
+
+.question-log-table__row td {
+    @apply text-xs color-txt-main px-3 py-2.5 text-center;
+}
+
+.question-log-table__row--alt td {
+    background-color: var(--grey-10, rgba(128,128,128,0.12));
+}
+
+.question-log-table__row--alt td:first-child {
+    border-radius: 0.5rem 0 0 0.5rem;
+}
+
+.question-log-table__row--alt td:last-child {
+    border-radius: 0 0.5rem 0.5rem 0;
+}
+
+.question-log-table__load-more {
+    @apply w-full mt-4 py-2.5 rounded-xl text-xs font-bold color-txt-sub transition-colors cursor-pointer;
+    background-color: var(--grey-10, rgba(128,128,128,0.12));
+}
+
+.question-log-table__load-more:hover {
+    background-color: var(--grey-20, rgba(128,128,128,0.2));
+}
+
+.question-log-table__load-more:disabled {
+    @apply opacity-50 cursor-default;
+}
+
 /*================ MODULAR PROGRESS DASHBOARD ================*/
 .progress-dashboard {
     @apply flex-1 min-w-0 min-h-0 w-full flex flex-col overflow-y-auto;

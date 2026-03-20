@@ -157,12 +157,40 @@ const Progress = () => {
 
   return (
     <div className={`progress-dashboard${isDragging ? " progress-dashboard--dragging" : ""}`}>
+      <div className="progress-by-subject p-6 md:p-10 pb-0 flex flex-col gap-4 shrink-0">
+        <div className="flex items-baseline gap-4 min-w-0">
+          <h2 className="text-3xl font-black color-txt-main shrink-0">Progress by Subject</h2>
+          <span className="text-sm color-txt-sub italic truncate">&ldquo;{quote[0]}&rdquo; ~ {quote[1]}</span>
+        </div>
+        {subjectLevelsLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="rounded-2xl color-bg-grey-5 p-4 animate-pulse flex items-center justify-between gap-4"
+              >
+                <div className="h-4 w-24 rounded color-bg-grey-10" />
+                <div className="w-12 h-12 rounded-full color-bg-grey-10" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {subjectLevels.map(({ subject, level }) => (
+              <SubjectProgressCard
+                key={`${subject}-${level}`}
+                subject={subject}
+                level={level}
+                entries={progressEntries}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="p-6 md:p-10 pb-0 flex flex-col gap-6 shrink-0">
         <div className="progress-dashboard__header">
-          <div className="flex items-baseline gap-4 min-w-0">
-            <h1 className="text-3xl font-black color-txt-main shrink-0">Canvas</h1>
-            <span className="text-sm color-txt-sub italic truncate">&ldquo;{quote[0]}&rdquo; ~ {quote[1]}</span>
-          </div>
+          <h1 className="text-3xl font-black color-txt-main shrink-0">Canvas</h1>
           <div className="flex items-center gap-2">
           {editing && (
             <button
@@ -302,34 +330,6 @@ const Progress = () => {
           )}
         </div>
       )}
-      </div>
-
-      <div className="progress-by-subject p-6 md:p-10 pt-8 flex flex-col gap-4 shrink-0">
-        <h2 className="text-3xl font-black color-txt-main">Progress by Subject</h2>
-        {subjectLevelsLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                className="rounded-2xl color-bg-grey-5 p-4 animate-pulse flex items-center justify-between gap-4"
-              >
-                <div className="h-4 w-24 rounded color-bg-grey-10" />
-                <div className="w-12 h-12 rounded-full color-bg-grey-10" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {subjectLevels.map(({ subject, level }) => (
-              <SubjectProgressCard
-                key={`${subject}-${level}`}
-                subject={subject}
-                level={level}
-                entries={progressEntries}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
       {showAddModal && (
