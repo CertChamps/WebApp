@@ -13,6 +13,13 @@ function isTouchDevice(): boolean {
   return navigator.maxTouchPoints > 0 || "ontouchstart" in window;
 }
 
+function isInteractiveDragTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return !!target.closest(
+    'textarea, input, select, button, a, [contenteditable="true"], [data-no-sidebar-drag], .no-sidebar-drag'
+  );
+}
+
 export interface CollapsibleSidebarProps extends SidebarTileManagerProps {
   /** Class name for the wrapper. */
   className?: string;
@@ -99,9 +106,15 @@ export const CollapsibleSidebar: FC<CollapsibleSidebarProps> = function Collapsi
         animate={{ x: isOpen ? 0 : panelClosedX }}
         transition={SIDEBAR_TRANSITION}
         drag={touchEnabled && isOpen ? "x" : false}
+        dragMomentum={false}
         dragDirectionLock
         dragConstraints={isLeft ? { left: -200, right: 0 } : { left: 0, right: 200 }}
-        dragElastic={isLeft ? { left: 0.35, right: 0 } : { left: 0, right: 0.35 }}
+        dragElastic={0}
+        onPointerDownCapture={(e) => {
+          if (isInteractiveDragTarget(e.target)) {
+            e.stopPropagation();
+          }
+        }}
         onDragEnd={handleDragEnd}
       >
         <div className="min-w-0 flex-1 overflow-hidden">

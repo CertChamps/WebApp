@@ -644,7 +644,7 @@ export default function PracticeHub() {
           ) : subjectFilter == null ? (
             <div className="h-full min-h-[360px] w-full flex items-center justify-center px-4">
               <div className="max-w-xl text-center">
-                <p className="txt-heading-colour text-2xl font-bold mb-2">yo wsg</p>
+                <p className="txt-heading-colour text-2xl font-bold mb-2">Choose a subject</p>
                 <p className="txt-sub color-txt-sub mb-5">
                   Pick a subject to get started and we will line up the right papers for you.
                 </p>

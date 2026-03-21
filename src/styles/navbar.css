@@ -92,14 +92,14 @@
 
 .nav-settings {
   @apply flex items-center rounded-out hover:color-bg my-1 
-  cursor-pointer mt-auto 
+  cursor-pointer
   group-hover:px-2 group-hover:justify-start w-full
   transition-all duration-250;
 }
 
 .nav-settings-selected {
   @apply flex items-center rounded-out color-bg-accent my-1
-  group-hover:px-2 group-hover:justify-start w-full mt-auto
+  group-hover:px-2 group-hover:justify-start w-full
   transition-all duration-250;
 }
 

@@ -12,9 +12,10 @@ import { UserContext } from "../context/UserContext";
 // Tutorial
 import { useTutorialContext } from "../context/TutorialContext";
 import { TutorialTriggerButton } from "../components/tutorial/Tutorial";
+import { OPEN_RELEASE_NOTES_EVENT } from "../components/prompts/release_notes_prompt";
 
 // Styles & Icons
-import { LuLogOut, LuRotateCcw, LuUserCog } from "react-icons/lu";
+import { LuChevronRight, LuLogOut, LuNotebookText, LuRotateCcw, LuUserCog } from "react-icons/lu";
 import '../styles/settings.css'
 
 export default function Settings() {
@@ -161,7 +162,17 @@ export default function Settings() {
         </div>
 
         <div className="mx-6 my-4 max-w-md">
-            <TutorialTriggerButton onClick={triggerTutorial} />
+            <div className="flex flex-col md:flex-row gap-3 md:items-center">
+                <TutorialTriggerButton onClick={triggerTutorial} />
+                <button
+                    className="tutorial-trigger-btn color-bg-accent"
+                    onClick={() => window.dispatchEvent(new CustomEvent(OPEN_RELEASE_NOTES_EVENT))}
+                >
+                    <LuNotebookText size={20} className="color-txt-accent" />
+                    <span className="txt-bold color-txt-accent">View Release Notes</span>
+                    <LuChevronRight size={18} className="color-txt-accent" />
+                </button>
+            </div>
             
             {/* Admin option to reset tutorial */}
             {user?.isAdmin && (

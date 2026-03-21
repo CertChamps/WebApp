@@ -54,6 +54,7 @@ export default function useAuthentication(props?: authprops) {
       emailVerified,
       isAdmin: isAdminUid(uid),
       isPro: false,
+      releaseNotesSeenVersions: [],
     };
 
     // 1. Set Context
@@ -115,6 +116,9 @@ const userSetup = async (uid: string, username: string, email: string) => {
         isAdmin: userData.isAdmin === true || isAdminUid(userDoc.id),
         isPro: userData.isPro === true,
         subscriptionPeriodEnd: typeof userData.subscriptionPeriodEnd === "number" ? userData.subscriptionPeriodEnd : undefined,
+        releaseNotesSeenVersions: Array.isArray(userData.releaseNotesSeenVersions)
+          ? userData.releaseNotesSeenVersions
+          : [],
       });
 
       console.log("2. Context Set. Verified:", isEmailVerified);

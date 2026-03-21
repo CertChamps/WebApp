@@ -39,6 +39,12 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Keep setup order deterministic: username/avatar setup must complete first.
+      if (!user?.username || user.username.trim().length < 1) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const localTutorialStatus = localStorage.getItem(`tutorial_completed_${user.uid}`);
         
@@ -80,7 +86,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     };
 
     checkTutorialStatus();
-  }, [user?.uid, user?.emailVerified]);
+  }, [user?.uid, user?.emailVerified, user?.username]);
 
   const completeTutorial = useCallback(async () => {
     if (!user?.uid) return;

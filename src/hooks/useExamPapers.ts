@@ -399,7 +399,10 @@ export function useExamPapers(
     []
   );
 
-  const firstFreePaper = papers.find((p) => isPaperFree(p)) ?? null;
+  const firstFreePaper =
+    papers.find((p) => isPaperFree(p) && getPaperNumber(p.id, p.label) === 1) ??
+    papers.find((p) => isPaperFree(p)) ??
+    null;
 
   return {
     papers,

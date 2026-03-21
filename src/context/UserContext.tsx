@@ -23,6 +23,7 @@ export type UserContextType = {
     emailVerified: boolean,
     isPro?: boolean,
     subscriptionPeriodEnd?: number,
+    releaseNotesSeenVersions?: string[],
     },
     setUser: React.Dispatch<React.SetStateAction<any>>
 }
@@ -49,6 +50,7 @@ export const UserContext = createContext<UserContextType>({
     emailVerified: false,
     isPro: false,
     subscriptionPeriodEnd: undefined,
+    releaseNotesSeenVersions: [],
     },
     setUser: () => {}
 })
