@@ -4,6 +4,7 @@ import { OptionsContext } from "./context/OptionsContext";
 import { TutorialProvider } from "./context/TutorialContext";
 import AppRouter from "./Router";
 import UsernamePrompt from "./components/prompts/username_prompt";
+import ReleaseNotesPrompt from "./components/prompts/release_notes_prompt";
 //import CustomCursor from "./components/CustomCursor"
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
               {/* <CustomCursor /> */}
               <AppRouter />
               <UsernamePrompt />
+              <ReleaseNotesPrompt />
             </div>
           </div>
         </TutorialProvider>

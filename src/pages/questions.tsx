@@ -1189,7 +1189,7 @@ export default function Questions() {
 
             {/* Sidebar: left or right depending on left-hand mode */}
             <div
-                className={`absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-auto transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${options.leftHandMode ? "left-0" : "right-0"} ${sidebarOpen ? "w-[35%]" : "w-12"}`}
+                className={`absolute bottom-0 top-11 z-10 overflow-hidden pointer-events-auto transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${options.leftHandMode ? "left-0" : "right-0"} ${sidebarOpen ? "w-[35%]" : "w-12"}`}
             >
                 <CollapsibleSidebar
                     side={options.leftHandMode ? "left" : "right"}

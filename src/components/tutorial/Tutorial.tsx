@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -13,6 +13,7 @@ import {
   LuTimer
 } from 'react-icons/lu';
 import '../../styles/tutorial.css';
+import { normalizePaperLevel, useExamPapers } from '../../hooks/useExamPapers';
 
 // Tutorial step definitions
 export type TutorialStep = {
@@ -133,11 +134,31 @@ type TutorialProps = {
 export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { papers } = useExamPapers(null, { loadAllWhenNull: true });
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isWaitingForAction, setIsWaitingForAction] = useState(false);
   const observerRef = useRef<MutationObserver | null>(null);
   const clickListenerRef = useRef<(() => void) | null>(null);
+
+  const tutorialPaper = useMemo(() => {
+    const getPaperNumber = (id: string, label?: string): number | null => {
+      const raw = `${label ?? ''} ${id ?? ''}`.toLowerCase();
+      if (/\bpaper\s*1\b|paper-1|1-paper/.test(raw)) return 1;
+      if (/\bpaper\s*2\b|paper-2|2-paper/.test(raw)) return 2;
+      return null;
+    };
+
+    return (
+      papers.find(
+        (paper) =>
+          paper.year === 2024 &&
+          getPaperNumber(paper.id, paper.label) === 1 &&
+          (paper.subject ?? '').trim().toLowerCase() === 'maths' &&
+          normalizePaperLevel(paper.level) === 'higher'
+      ) ?? null
+    );
+  }, [papers]);
 
   const step = tutorialSteps[currentStep];
   const isLastStep = currentStep === tutorialSteps.length - 1;
@@ -175,12 +196,21 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
     if (isOpen) {
       setCurrentStep(0);
       setIsWaitingForAction(false);
-      // Navigate to practice session so sidebar with AI is visible
-      if (!location.pathname.includes('practice/session')) {
-        navigate('/practice/session');
-      }
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const targetPath = tutorialPaper
+      ? `/practice/session?mode=pastpaper&subject=maths&level=higher&paperId=${encodeURIComponent(tutorialPaper.id)}`
+      : '/practice/session?mode=pastpaper&subject=maths&level=higher';
+    const currentPath = `${location.pathname}${location.search}`;
+
+    if (currentPath !== targetPath) {
+      navigate(targetPath, { replace: true });
+    }
+  }, [isOpen, tutorialPaper, location.pathname, location.search, navigate]);
 
   // Set waiting state when step changes
   useEffect(() => {

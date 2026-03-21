@@ -15,6 +15,7 @@ import DeckViewer from "./pages/deckViewer";
 import Decks from "./pages/decks";
 import MyDecks from "./pages/myDecks";
 import AddQuestions from "./pages/addQuestions";
+import AdminCanvasViewer from "./pages/adminCanvasViewer";
 import ProfileViewer from "./pages/profileViewer";
 import { ProtectedRoute } from "./components/protectedRoute";
 import Progress from "./pages/progress/progress_main";
@@ -174,6 +175,17 @@ const router = createHashRouter([
         <>
           <Navbar />
           <AddQuestions />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/canvas-viewer",
+    element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <AdminCanvasViewer />
         </>
       </ProtectedRoute>
     ),

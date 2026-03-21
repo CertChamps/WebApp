@@ -27,6 +27,7 @@ export default function Navbar () {
         if (path.startsWith('/feedback')) return 'feedback'
         if (path.startsWith('/user/settings')) return 'user/settings'
         if (path.startsWith('/admin/add-questions')) return 'admin/add-questions'
+        if (path.startsWith('/admin/canvas-viewer')) return 'admin/canvas-viewer'
         if (path.startsWith('/games')) return 'games'
         if (path.startsWith('/practice')) return 'practice'
         if (path.startsWith('/post')) return 'social/social'
@@ -134,25 +135,36 @@ export default function Navbar () {
                 <p className={page == 'feedback' ? 'nav-txt-selected' : 'nav-txt'}>Feedback</p>
             </div>
 
-            {/* ============================= ADD QUESTIONS (ADMIN ONLY) ================================ */}
-            {isAdmin && (
-                <div className={page == 'admin/add-questions' ? 'nav-settings-selected' : 'nav-settings'} onClick={() => {pageNaviagte('admin/add-questions')}}> 
-                    <LuFilePlus strokeWidth={strokewidth} size={iconSize} 
-                        className={page == 'admin/add-questions' ? 'nav-icon-selected' : 'nav-icon'}
-                        fill={page == 'admin/add-questions' ? 'currentColor' : 'none'} />  
-                    <p className={page == 'admin/add-questions' ? 'nav-txt-selected' : 'nav-txt'} >Add Q's</p>
+            <div className="mt-auto w-full">
+                {/* ============================= ADD QUESTIONS (ADMIN ONLY) ================================ */}
+                {isAdmin && (
+                    <div className={page == 'admin/add-questions' ? 'nav-bottom-selected' : 'nav-bottom'} onClick={() => {pageNaviagte('admin/add-questions')}}> 
+                        <LuFilePlus strokeWidth={strokewidth} size={iconSize} 
+                            className={page == 'admin/add-questions' ? 'nav-icon-selected' : 'nav-icon'}
+                            fill={page == 'admin/add-questions' ? 'currentColor' : 'none'} />  
+                        <p className={page == 'admin/add-questions' ? 'nav-txt-selected' : 'nav-txt'} >Add Q's</p>
+                    </div>
+                )}
+
+                {isAdmin && (
+                    <div className={page == 'admin/canvas-viewer' ? 'nav-bottom-selected' : 'nav-bottom'} onClick={() => {pageNaviagte('admin/canvas-viewer')}}> 
+                        <LuUsers strokeWidth={strokewidth} size={iconSize} 
+                            className={page == 'admin/canvas-viewer' ? 'nav-icon-selected' : 'nav-icon'}
+                            fill={page == 'admin/canvas-viewer' ? 'currentColor' : 'none'} />  
+                        <p className={page == 'admin/canvas-viewer' ? 'nav-txt-selected' : 'nav-txt'} >Users</p>
+                    </div>
+                )}
+                
+                <div 
+                    data-tutorial-id="nav-settings"
+                    className={page == 'user/settings' ? 'nav-bottom-selected' : 'nav-bottom'} 
+                    onClick={() => {pageNaviagte('user/settings')}}
+                > 
+                    <LuSettings strokeWidth={strokewidth} size={iconSize} 
+                        className={page == 'user/settings' ? 'nav-icon-selected' : 'nav-icon'}
+                        fill={page == 'user/settings' ? 'currentColor' : 'none'} />  
+                    <p className={page == 'user/settings' ? 'nav-txt-selected' : 'nav-txt'} >Settings</p>
                 </div>
-            )}
-            
-            <div 
-                data-tutorial-id="nav-settings"
-                className={page == 'user/settings' ? (isAdmin ? 'nav-bottom-selected' : 'nav-settings-selected') : (isAdmin ? 'nav-bottom' : 'nav-settings')} 
-                onClick={() => {pageNaviagte('user/settings')}}
-            > 
-                <LuSettings strokeWidth={strokewidth} size={iconSize} 
-                    className={page == 'user/settings' ? 'nav-icon-selected' : 'nav-icon'}
-                    fill={page == 'user/settings' ? 'currentColor' : 'none'} />  
-                <p className={page == 'user/settings' ? 'nav-txt-selected' : 'nav-txt'} >Settings</p>
             </div>
         </div>
     )
