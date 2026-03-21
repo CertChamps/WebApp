@@ -1367,7 +1367,7 @@ export default function Questions() {
                         subjectFilter={subjectFilter}
                         onSubjectFilterChange={setSubjectFilter}
                         subjectOptions={certChampsSet?.sections?.map((sec) => ({ value: sec, label: formatSectionLabel(sec) })) ?? []}
-                        showQuestionCompleteControl={options.laptopMode}
+                        showQuestionCompleteControl={true}
                         leftActionContent={
                             options.laptopMode ? (
                                 <div className="relative">
