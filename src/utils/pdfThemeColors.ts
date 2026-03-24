@@ -20,7 +20,7 @@ export const PDF_THEME_COLORS: Record<string, PdfThemeColors> = {
   icebergDark: { bg: "#161821", primary: "#84a0c6", sub: "#595e76" },
   nordLight: { bg: "#ECEFF4", primary: "#8FBCBB", sub: "#6A7791" },
   nordDark: { bg: "#242933", primary: "#88c0d0", sub: "#d8dee9" },
-  modernInk: { bg: "#ffffff", primary: "#ff360d", sub: "#b7b7b7" },
+  modernInk: { bg: "#ffffff", primary: "#000000", sub: "#b7b7b7" },
   magicGirl: { bg: "#291f33", primary: "#a982c4", sub: "#86679c" },
   lavendar: { bg: "#EBE1EF", primary: "#8A5BD6", sub: "#A28DB8" },
   airplane: { bg: "#E0F7FA", primary: "#004D40", sub: "#26A69A" },

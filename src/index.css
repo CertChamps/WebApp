@@ -90,10 +90,10 @@ html, body {
   --color-shadowPrimary: #eeeeee;
   --color-shadowSub: #444444;
 
-  /* Modern Ink */
+  /* Modern Ink — primary = ink (body text), accent = red highlights */
   --color-modernInkBG: #ffffff;
-  --color-modernInkAccent: #000000;
-  --color-modernInkPrimary: #ff360d;
+  --color-modernInkAccent: #ff360d;
+  --color-modernInkPrimary: #000000;
   --color-modernInkSub: #b7b7b7;
 
   /* Gruvbox Dark */
