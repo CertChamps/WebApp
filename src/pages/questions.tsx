@@ -199,7 +199,7 @@ function TopicSwitcher({ topics, value, onChange }: { topics: ImageTopic[]; valu
                             aria-label="Search topics"
                         />
                     </div>
-                    <div className="flex-1 min-h-0 overflow-y-auto">
+                    <div className="flex-1 min-h-0 overflow-y-auto scrollbar-minimal">
                         {filtered.length === 0 ? (
                             <div className="px-3 py-3 text-sm color-txt-sub">No topics match</div>
                         ) : (

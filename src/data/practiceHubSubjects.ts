@@ -19,7 +19,6 @@ function slug(label: string): string {
 
 const LABELS = [
   "Accounting",
-  "Agricultural Economics",
   "Agricultural Science",
   "Ancient Greek",
   "Applied Mathematics",
@@ -30,6 +29,7 @@ const LABELS = [
   "Business",
   "Chemistry",
   "Classical Studies",
+  "Computer Science",
   "Construction Studies",
   "Croatian",
   "Czech",
@@ -47,7 +47,7 @@ const LABELS = [
   "Hebrew Studies",
   "History (early modern)",
   "History (later modern)",
-  "Home Economics S and S",
+  "Home Economics",
   "Hungarian",
   "Irish",
   "Italian",
@@ -57,9 +57,11 @@ const LABELS = [
   "Link Modules",
   "Lithuanian",
   "Maltese",
+  "Mandarin Chinese",
   "Mathematics",
   "Modern Greek",
   "Music",
+  "Physical Education",
   "Physics",
   "Physics and Chemistry",
   "Polish",
@@ -73,6 +75,7 @@ const LABELS = [
   "Spanish",
   "Swedish",
   "Technology",
+  "Ukrainian",
 ] as const;
 
 export const PRACTICE_HUB_SUBJECTS: SubjectOption[] = LABELS.map((label) => ({
@@ -121,19 +124,7 @@ export function subjectMatchesPaper(subjectId: string | null, paperSubject: stri
  */
 const SLUG_TO_STORAGE_FOLDER: Record<string, string> = {
   "applied-mathematics": "applied-maths",
-  "agricultural-economics": "agricultural-economics",
-  "design-communication-graphics": "design-communication-graphics",
-  "home-economics-s-and-s": "home-economics",
-  "history-early-modern": "history",
-  "history-later-modern": "history",
-  "physics-and-chemistry": "physics-and-chemistry",
-  "politics-and-society": "politics-and-society",
-  "religious-education": "religious-education",
-  "classical-studies": "classical-studies",
-  "construction-studies": "construction-studies",
-  "hebrew-studies": "hebrew-studies",
-  "link-modules": "link-modules",
-  "modern-greek": "modern-greek",
+  "design-communication-graphics": "design-and-communication-graphics",
 };
 
 /** Convert a UI subject slug to the corresponding Firebase Storage folder name. */

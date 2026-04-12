@@ -179,7 +179,8 @@
   cursor: pointer;
   transition: background 0.15s, color 0.15s, opacity 0.15s;
   text-align: left;
-  @apply color-txt-main color-bg txt-bold border-2 color-shadow;
+  color: var(--theme-txt-main);
+  @apply color-bg txt-bold border-2 color-shadow;
 }
 
 .practice-hub__subject-trigger:hover {
@@ -194,7 +195,7 @@
 .practice-hub__subject-trigger-label {
   flex: 1;
   min-width: 0;
-  @apply color-txt-main;
+  color: var(--theme-txt-main, inherit);
 }
 
 .practice-hub__subject-arrow {

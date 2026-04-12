@@ -15,9 +15,10 @@ type Props = {
   subjects?: SubjectOption[] | null;
   id?: string;
   "aria-label"?: string;
+  onFavouritesChange?: (ids: string[]) => void;
 };
 
-export default function SubjectDropdown({ value, onChange, subjects, id = "ph-subject", "aria-label": ariaLabel }: Props) {
+export default function SubjectDropdown({ value, onChange, subjects, id = "ph-subject", "aria-label": ariaLabel, onFavouritesChange }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [favourites, setFavourites] = useState<string[]>(() => getFavouriteSubjectIds());
@@ -49,7 +50,7 @@ export default function SubjectDropdown({ value, onChange, subjects, id = "ph-su
   }, [search, options]);
 
   const selectedLabel = useMemo(
-    () => options.find((s) => s.id === value)?.label ?? (allowAllSubjects ? "All subjects" : "Select subject"),
+    () => options.find((s) => s.id === value)?.label ?? (allowAllSubjects ? "Choose a subject" : "Select subject"),
     [value, options, allowAllSubjects]
   );
 
@@ -64,8 +65,12 @@ export default function SubjectDropdown({ value, onChange, subjects, id = "ph-su
 
   const handleFavourite = useCallback((e: React.MouseEvent, subjectId: string) => {
     e.stopPropagation();
-    setFavourites((prev) => toggleFavourite(subjectId, prev));
-  }, []);
+    setFavourites((prev) => {
+      const next = toggleFavourite(subjectId, prev);
+      onFavouritesChange?.(next);
+      return next;
+    });
+  }, [onFavouritesChange]);
 
   const favouriteSubjects = useMemo(
     () => options.filter((s) => favourites.includes(s.id)),
@@ -134,18 +139,18 @@ export default function SubjectDropdown({ value, onChange, subjects, id = "ph-su
 
             <div className="practice-hub__subject-group">
               <div className="practice-hub__subject-group-label">
-                {search.trim() ? "Results" : allowAllSubjects ? "All subjects" : "Subjects"}
+                {search.trim() ? "Results" : "All subjects"}
               </div>
               <div className="practice-hub__subject-list">
-                {!search.trim() && allowAllSubjects && (
+                {!search.trim() && allowAllSubjects && value !== null && (
                   <button
                     type="button"
                     role="option"
-                    aria-selected={value === null}
+                    aria-selected={false}
                     className="practice-hub__subject-option"
                     onClick={() => handleSelect(null)}
                   >
-                    <span className="truncate">All subjects</span>
+                    <span className="truncate">Back to home</span>
                   </button>
                 )}
                 {filtered.length === 0 ? (
