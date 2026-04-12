@@ -42,7 +42,7 @@ export function useSessionTracking(uid: string | undefined, subject?: string | u
         subject: sessionSubject,
       }).catch((err) => console.warn("Failed to write session:", err));
 
-      const updates: Record<string, unknown> = {
+      const updates: Record<string, ReturnType<typeof increment>> = {
         totalStudySeconds: increment(durationSeconds),
       };
       if (sessionSubject) {
