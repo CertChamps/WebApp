@@ -1,8 +1,22 @@
 [
   {
-    "origin": ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "http://192.168.1.32:5173", "https://certchamps-a7527.web.app", "https://certchamps-a7527.firebaseapp.com", "https://app.certchamps.ie"],
-    "method": ["GET", "HEAD", "PUT", "POST"],
-    "responseHeader": ["Content-Type", "Content-Length"],
-    "maxAgeSeconds": 3600
+    "origin": [
+      "https://app.certchamps.ie",
+      "capacitor://localhost",
+      "http://localhost",
+      "https://localhost",
+      "https://certchamps-a7527.web.app",
+      "https://certchamps-a7527.firebaseapp.com"
+    ],
+    "method": ["GET", "HEAD", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "Content-Range",
+      "Accept-Ranges",
+      "Authorization",
+      "Range"
+    ],
+    "maxAgeSeconds": 7200
   }
 ]
