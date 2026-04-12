@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle } from "lucide-react";
+import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music } from "lucide-react";
 import type { CanvasAnnotation, CanvasCapturePayload } from "../../lib/grading/GradingTypes";
 import { buildCapturePayload } from "../../lib/grading/canvasCapture";
 import RenderMath from "../math/mathdisplay";
@@ -27,13 +27,20 @@ export type WhiteboardFeedbackOverlay = {
 	finalMark?: string;
 };
 
-/** Grid display: off, square (lines), or dots at intersections. */
-type GridMode = "off" | "lines" | "dots";
+/** Grid display: off, square (lines), dots at intersections, or music staves. */
+type GridMode = "off" | "lines" | "dots" | "music";
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 10;
 const GRID_STEP = 40;
 const GRID_DOT_RADIUS = 1.5;
+const MUSIC_LINE_GAP = 16;
+const MUSIC_STAFF_LINES = 5;
+const MUSIC_STAFF_HEIGHT = (MUSIC_STAFF_LINES - 1) * MUSIC_LINE_GAP;
+const MUSIC_STAVE_REPEAT = MUSIC_STAFF_HEIGHT * 3;
+
+const STAVE_LINE_LABELS = ["L5", "L4", "L3", "L2", "L1"];
+const STAVE_SPACE_LABELS = ["S4", "S3", "S2", "S1"];
 const ERASER_WIDTH = 24;
 const ERASER_PREVIEW_WIDTH = 3;
 const BASE_PEN_WIDTH = 2;
@@ -220,8 +227,84 @@ export type RegisterDrawingSnapshot = (getSnapshot: (() => string | null) | null
 export type RegisterGetLineCount = (fn: ((region?: WhiteboardRelevantRegion | null) => number) | null) => void;
 /** Call with a function that returns a fixed-size grading capture plus world bounds. Called on mount, cleared on unmount. */
 export type RegisterGetGradingCapture = (fn: (((mode?: "default" | "full-ink" | "retry-aggressive") => CanvasCapturePayload | null) | null)) => void;
+/** Call with a function that returns a stave analysis string (note positions), or null. */
+export type RegisterGetStaveAnalysis = (fn: (() => string | null) | null) => void;
 
 export type DrawingStroke = Stroke;
+
+/**
+ * Analyse pen strokes against the music stave grid to detect note positions.
+ * Returns a human-readable summary like "Notes (left to right): L3, S2, L5"
+ */
+function analyseStavePositions(allStrokes: Stroke[]): string | null {
+	const penStrokes = allStrokes.filter((s) => s.tool === "pen" && s.points.length >= 2);
+	if (penStrokes.length === 0) return null;
+
+	type NoteHit = { x: number; position: string };
+	const hits: NoteHit[] = [];
+
+	for (const stroke of penStrokes) {
+		const bounds = getStrokeBounds(stroke);
+		if (!bounds) continue;
+
+		const height = bounds.maxY - bounds.minY;
+		const centerX = (bounds.minX + bounds.maxX) / 2;
+
+		let noteY: number;
+		if (height < MUSIC_LINE_GAP * 1.5) {
+			noteY = (bounds.minY + bounds.maxY) / 2;
+		} else {
+			const topLine = Math.round(bounds.minY / MUSIC_LINE_GAP) * MUSIC_LINE_GAP;
+			const botLine = Math.round(bounds.maxY / MUSIC_LINE_GAP) * MUSIC_LINE_GAP;
+			const topDist = Math.abs(bounds.minY - topLine);
+			const botDist = Math.abs(bounds.maxY - botLine);
+			noteY = topDist < botDist ? bounds.minY : bounds.maxY;
+		}
+
+		const staveIndex = Math.round(noteY / MUSIC_STAVE_REPEAT);
+		const staveTop = staveIndex * MUSIC_STAVE_REPEAT;
+		const offset = noteY - staveTop;
+		const halfGap = MUSIC_LINE_GAP / 2;
+
+		const slot = Math.round(offset / halfGap);
+		const clampedSlot = Math.max(0, Math.min(slot, MUSIC_STAFF_LINES * 2 - 2));
+
+		let label: string;
+		if (clampedSlot % 2 === 0) {
+			const lineIdx = clampedSlot / 2;
+			label = STAVE_LINE_LABELS[lineIdx] ?? `L?`;
+		} else {
+			const spaceIdx = (clampedSlot - 1) / 2;
+			label = STAVE_SPACE_LABELS[spaceIdx] ?? `S?`;
+		}
+
+		if (slot < 0) label = `above-${label}`;
+		else if (slot > MUSIC_STAFF_LINES * 2 - 2) label = `below-${label}`;
+
+		hits.push({ x: centerX, position: label });
+	}
+
+	if (hits.length === 0) return null;
+
+	const grouped: NoteHit[][] = [];
+	const sorted = [...hits].sort((a, b) => a.x - b.x);
+	for (const hit of sorted) {
+		const last = grouped[grouped.length - 1];
+		if (last && Math.abs(hit.x - last[last.length - 1].x) < MUSIC_LINE_GAP * 1.5) {
+			last.push(hit);
+		} else {
+			grouped.push([hit]);
+		}
+	}
+
+	const notes = grouped.map((group) => {
+		const positions = group.map((h) => h.position);
+		const unique = [...new Set(positions)];
+		return unique.length === 1 ? unique[0] : unique.join("/");
+	});
+
+	return "Notes detected on stave (left to right): " + notes.join(", ");
+}
 
 type DrawingCanvasProps = {
 	onClose?: () => void;
@@ -231,6 +314,8 @@ type DrawingCanvasProps = {
 	registerGetLineCount?: RegisterGetLineCount;
 	/** Register a getter for deterministic grading capture with world-space bounds. */
 	registerGetGradingCapture?: RegisterGetGradingCapture;
+	/** Register a getter for music stave analysis (note positions as text). */
+	registerGetStaveAnalysis?: RegisterGetStaveAnalysis;
 	/** Pre-populate canvas with previously saved strokes. */
 	initialStrokes?: Stroke[] | null;
 	/** Called (debounced) when strokes change (stroke completed, erased, or cleared). */
@@ -343,7 +428,7 @@ function buildLineAnchors(
 		.map((c) => ({ y: c.y, xLeft: c.xLeft, xRight: percentile75([...c.xRights].sort((a, b) => a - b)) }));
 }
 
-export default function DrawingCanvas({ onClose, registerDrawingSnapshot, registerGetLineCount, registerGetGradingCapture, initialStrokes, onStrokesChange, wrapperClassName, readOnly = false, defaultGridMode = "lines", gradingAnnotations = null }: DrawingCanvasProps) {
+export default function DrawingCanvas({ onClose, registerDrawingSnapshot, registerGetLineCount, registerGetGradingCapture, registerGetStaveAnalysis, initialStrokes, onStrokesChange, wrapperClassName, readOnly = false, defaultGridMode = "lines", gradingAnnotations = null }: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const colorSampleRef = useRef<HTMLDivElement>(null);
@@ -560,39 +645,59 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			drawStroke(ctx, currentStroke, { preview: true });
 		}
 
-		// Grid on top (not erasable) - lines or dots
+		// Grid on top (not erasable) - lines, dots, or music staves
 		if (gridMode !== "off" && gridColor) {
 			const left = -pan.x / scale;
 			const top = -pan.y / scale;
 			const right = left + w / scale;
 			const bottom = top + h / scale;
-			const startX = Math.floor(left / GRID_STEP) * GRID_STEP;
-			const endX = Math.ceil(right / GRID_STEP) * GRID_STEP;
-			const startY = Math.floor(top / GRID_STEP) * GRID_STEP;
-			const endY = Math.ceil(bottom / GRID_STEP) * GRID_STEP;
-			if (gridMode === "lines") {
+			ctx.globalAlpha = 0.7;
+
+			if (gridMode === "music") {
 				ctx.strokeStyle = gridColor;
-				ctx.lineWidth = 1 / scale;
+				ctx.lineWidth = 1.2 / scale;
+				const startStave = Math.floor(top / MUSIC_STAVE_REPEAT);
+				const endStave = Math.ceil(bottom / MUSIC_STAVE_REPEAT);
 				ctx.beginPath();
-				for (let x = startX; x <= endX; x += GRID_STEP) {
-					ctx.moveTo(x, top);
-					ctx.lineTo(x, bottom);
-				}
-				for (let y = startY; y <= endY; y += GRID_STEP) {
-					ctx.moveTo(left, y);
-					ctx.lineTo(right, y);
+				for (let s = startStave; s <= endStave; s++) {
+					const staveTop = s * MUSIC_STAVE_REPEAT;
+					for (let i = 0; i < MUSIC_STAFF_LINES; i++) {
+						const y = staveTop + i * MUSIC_LINE_GAP;
+						ctx.moveTo(left, y);
+						ctx.lineTo(right, y);
+					}
 				}
 				ctx.stroke();
 			} else {
-				ctx.fillStyle = gridColor;
-				for (let x = startX; x <= endX; x += GRID_STEP) {
+				const startX = Math.floor(left / GRID_STEP) * GRID_STEP;
+				const endX = Math.ceil(right / GRID_STEP) * GRID_STEP;
+				const startY = Math.floor(top / GRID_STEP) * GRID_STEP;
+				const endY = Math.ceil(bottom / GRID_STEP) * GRID_STEP;
+				if (gridMode === "lines") {
+					ctx.strokeStyle = gridColor;
+					ctx.lineWidth = 1 / scale;
+					ctx.beginPath();
+					for (let x = startX; x <= endX; x += GRID_STEP) {
+						ctx.moveTo(x, top);
+						ctx.lineTo(x, bottom);
+					}
 					for (let y = startY; y <= endY; y += GRID_STEP) {
-						ctx.beginPath();
-						ctx.arc(x, y, GRID_DOT_RADIUS / scale, 0, Math.PI * 2);
-						ctx.fill();
+						ctx.moveTo(left, y);
+						ctx.lineTo(right, y);
+					}
+					ctx.stroke();
+				} else {
+					ctx.fillStyle = gridColor;
+					for (let x = startX; x <= endX; x += GRID_STEP) {
+						for (let y = startY; y <= endY; y += GRID_STEP) {
+							ctx.beginPath();
+							ctx.arc(x, y, GRID_DOT_RADIUS / scale, 0, Math.PI * 2);
+							ctx.fill();
+						}
 					}
 				}
 			}
+			ctx.globalAlpha = 1;
 		}
 
 		if (gradingAnnotations && gradingAnnotations.length > 0) {
@@ -722,7 +827,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		}
 	}, []);
 
-	// Expose current drawing as PNG for AI/vision (strokes only, no grid)
+	// Expose current drawing as PNG for AI/vision (includes music staves when active)
 	const getSnapshot = useCallback(() => {
 		if (strokes.length === 0 && !currentStroke) return null;
 		const canvas = canvasRef.current;
@@ -738,12 +843,62 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		if (!ctx) return null;
 		ctx.scale(dpr, dpr);
 		ctx.clearRect(0, 0, w, h);
-		// Use a solid background so light-theme/dark-theme pen colors remain visible to the AI.
 		ctx.fillStyle = "#ffffff";
 		ctx.fillRect(0, 0, w, h);
 		ctx.save();
 		ctx.translate(pan.x, pan.y);
 		ctx.scale(scale, scale);
+
+		if (gridMode === "music") {
+			const left = -pan.x / scale;
+			const top = -pan.y / scale;
+			const right = left + w / scale;
+			const bottom = top + h / scale;
+			const startStave = Math.floor(top / MUSIC_STAVE_REPEAT);
+			const endStave = Math.ceil(bottom / MUSIC_STAVE_REPEAT);
+
+			ctx.strokeStyle = "#555555";
+			ctx.lineWidth = 1.8 / scale;
+			ctx.beginPath();
+			for (let s = startStave; s <= endStave; s++) {
+				const staveTop = s * MUSIC_STAVE_REPEAT;
+				for (let i = 0; i < MUSIC_STAFF_LINES; i++) {
+					const y = staveTop + i * MUSIC_LINE_GAP;
+					ctx.moveTo(left, y);
+					ctx.lineTo(right, y);
+				}
+			}
+			ctx.stroke();
+
+			ctx.strokeStyle = "#555555";
+			ctx.lineWidth = 2.5 / scale;
+			ctx.beginPath();
+			for (let s = startStave; s <= endStave; s++) {
+				const staveTop = s * MUSIC_STAVE_REPEAT;
+				const bx = left + 4 / scale;
+				ctx.moveTo(bx, staveTop);
+				ctx.lineTo(bx, staveTop + MUSIC_STAFF_HEIGHT);
+			}
+			ctx.stroke();
+
+			const fontSize = Math.max(9, 11 / scale);
+			ctx.font = `bold ${fontSize}px sans-serif`;
+			ctx.textBaseline = "middle";
+			ctx.fillStyle = "#333333";
+			const labelX = left + 10 / scale;
+			for (let s = startStave; s <= endStave; s++) {
+				const staveTop = s * MUSIC_STAVE_REPEAT;
+				for (let i = 0; i < MUSIC_STAFF_LINES; i++) {
+					const y = staveTop + i * MUSIC_LINE_GAP;
+					ctx.fillText(STAVE_LINE_LABELS[i], labelX, y);
+				}
+				for (let i = 0; i < MUSIC_STAFF_LINES - 1; i++) {
+					const y = staveTop + i * MUSIC_LINE_GAP + MUSIC_LINE_GAP / 2;
+					ctx.fillText(STAVE_SPACE_LABELS[i], labelX, y);
+				}
+			}
+		}
+
 		const drawSnapshotPenStroke = (stroke: Stroke) => {
 			if (stroke.tool !== "pen" || stroke.points.length < 2) return;
 			ctx.globalCompositeOperation = "source-over";
@@ -766,7 +921,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		if (currentStroke?.tool === "pen") drawSnapshotPenStroke(currentStroke);
 		ctx.restore();
 		return off.toDataURL("image/png");
-	}, [pan, scale, strokes, currentStroke]);
+	}, [pan, scale, strokes, currentStroke, gridMode]);
 	const getGradingCapture = useCallback((mode: "default" | "full-ink" | "retry-aggressive" = "default"): CanvasCapturePayload | null => {
 		const renderStrokes = [...strokes, ...(currentStroke ? [currentStroke] : [])];
 		if (!renderStrokes.some((stroke) => stroke.tool === "pen" && stroke.points.length > 1)) return null;
@@ -797,6 +952,17 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		registerGetGradingCapture(getGradingCapture);
 		return () => registerGetGradingCapture(null);
 	}, [registerGetGradingCapture, getGradingCapture]);
+
+	const getStaveAnalysis = useCallback((): string | null => {
+		if (gridMode !== "music") return null;
+		const allStrokes = [...strokes, ...(currentStroke ? [currentStroke] : [])];
+		return analyseStavePositions(allStrokes);
+	}, [gridMode, strokes, currentStroke]);
+	useEffect(() => {
+		if (!registerGetStaveAnalysis) return;
+		registerGetStaveAnalysis(getStaveAnalysis);
+		return () => registerGetStaveAnalysis(null);
+	}, [registerGetStaveAnalysis, getStaveAnalysis]);
 
 	useEffect(() => {
 		if (!registerGetLineCount) return;
@@ -1113,7 +1279,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		>
 			{/* Hidden elements to sample theme colors (pen: color-txt-main, grid: color-bg-grey-5) */}
 			<div ref={colorSampleRef} className="color-txt-main absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
-			<div ref={gridColorSampleRef} className="color-bg-grey-5 absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
+			<div ref={gridColorSampleRef} className="color-bg-grey-10 absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			<div ref={accentColorSampleRef} className="color-txt-accent absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			{/* Canvas area */}
 			<div
@@ -1187,11 +1353,14 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				</button>
 				<button
 					type="button"
-					onClick={() => setGridMode((m) => (m === "off" ? "lines" : m === "lines" ? "dots" : "off"))}
+					onClick={() => setGridMode((m) => {
+						const modes: GridMode[] = ["off", "lines", "dots", "music"];
+						return modes[(modes.indexOf(m) + 1) % modes.length];
+					})}
 					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${gridMode !== "off" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
-					title={gridMode === "off" ? "Grid (off)" : gridMode === "lines" ? "Grid: square" : "Grid: dots"}
+					title={gridMode === "off" ? "Grid (off)" : gridMode === "lines" ? "Grid: square" : gridMode === "dots" ? "Grid: dots" : "Grid: music staves"}
 				>
-					{gridMode === "dots" ? <CircleDot size={18} strokeWidth={2} /> : <Grid3X3 size={18} strokeWidth={2} />}
+					{gridMode === "dots" ? <CircleDot size={18} strokeWidth={2} /> : gridMode === "music" ? <Music size={18} strokeWidth={2} /> : <Grid3X3 size={18} strokeWidth={2} />}
 				</button>
 				<button
 					type="button"

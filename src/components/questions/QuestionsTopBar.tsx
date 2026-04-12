@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { LuArrowLeft, LuPenTool, LuCircleCheck, LuCircle } from "react-icons/lu";
 
-type QuestionsMode = "certchamps" | "pastpaper";
+type QuestionsMode = "certchamps" | "pastpaper" | "imagequestions";
 
 type QuestionsTopBarProps = {
   onBack: () => void;

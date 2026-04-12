@@ -12,9 +12,10 @@ import {
 import { UserContext } from "../context/UserContext";
 import PaperProGate from "../components/PaperProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
+import { useImageTopics, type ImageTopic } from "../hooks/useImageQuestions";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2 } from "react-icons/lu";
-import { subjectMatchesPaper, getSubjectLabel } from "../data/practiceHubSubjects";
+import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage } from "react-icons/lu";
+import { subjectMatchesPaper, getSubjectLabel, getStorageFolderName } from "../data/practiceHubSubjects";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
@@ -93,6 +94,27 @@ export default function PracticeHub() {
   const [, setPendingSubTopicFilter] = useState<string[]>([]);
   const topicsContainerRef = useRef<HTMLDivElement>(null);
 
+  const storageFolderName = useMemo(
+    () => (subjectFilter ? getStorageFolderName(subjectFilter) : null),
+    [subjectFilter]
+  );
+
+  const isImageMode = subjectFilter != null && !papersLoading && papers.length === 0;
+
+  const imageLevelFilter = levelFilter === "all" ? null : levelFilter;
+  const {
+    topics: imageTopics,
+    levels: imageLevels,
+    loading: imageTopicsLoading,
+    error: imageTopicsError,
+  } = useImageTopics(isImageMode ? storageFolderName : null, imageLevelFilter);
+
+  const [selectedImageTopic, setSelectedImageTopic] = useState<ImageTopic | null>(null);
+
+  useEffect(() => {
+    setSelectedImageTopic(null);
+  }, [subjectFilter, levelFilter]);
+
   const resetAllFilters = useCallback(() => {
     setSubjectFilter(null);
     setPaperFilter("all");
@@ -102,6 +124,7 @@ export default function PracticeHub() {
     setPendingTopicFilter([]);
     setPendingSubTopicFilter([]);
     setTopicsOpen(false);
+    setSelectedImageTopic(null);
   }, []);
 
   const openSubjectPicker = useCallback(() => {
@@ -279,6 +302,14 @@ export default function PracticeHub() {
     const normalizedLevel = normalizePaperLevel(selectedPaper.level);
     navigate(`/practice/session?mode=pastpaper&paperId=${selectedPaper.id}&level=${normalizedLevel}&subject=${selectedPaper.subject ?? ""}`);
   }, [selectedPaper, user?.isPro, navigate]);
+
+  const goToImageSession = useCallback(() => {
+    if (!selectedImageTopic || !storageFolderName) return;
+    const level = imageLevelFilter ?? (imageLevels[0] || "higher");
+    navigate(
+      `/practice/session?mode=imagequestions&subject=${encodeURIComponent(storageFolderName)}&level=${encodeURIComponent(level)}&topic=${encodeURIComponent(selectedImageTopic.name)}`
+    );
+  }, [selectedImageTopic, storageFolderName, imageLevelFilter, imageLevels, navigate]);
 
   // Build global search index when user opens search (lazy)
   useEffect(() => {
@@ -463,7 +494,6 @@ export default function PracticeHub() {
             <SubjectDropdown
               value={subjectFilter}
               onChange={setSubjectFilter}
-              subjects={subjectIdsLoading ? null : subjectOptions}
               id="ph-subject"
             />
           </div>
@@ -528,16 +558,20 @@ export default function PracticeHub() {
           </div>
         </section>
 
-        {/* Filter section – left blank for you to add your own controls */}
+        {/* Filter section */}
         <section className="flex items-center justify-start gap-2 practice-hub__filter-section pb-2 w-full flex-shrink-0 mb-2" aria-label="Filters">
-            <h2 className="txt-heading-colour text-xl font-bold mr-3">State Exam Papers</h2>
+            <h2 className="txt-heading-colour text-xl font-bold mr-3">
+              {isImageMode ? "Practice Questions" : "State Exam Papers"}
+            </h2>
 
-            <YearClockPicker
-              value={yearFilter}
-              onChange={setYearFilter}
-              id="ph-year"
-              aria-label="Filter by year"
-            />
+            {!isImageMode && (
+              <YearClockPicker
+                value={yearFilter}
+                onChange={setYearFilter}
+                id="ph-year"
+                aria-label="Filter by year"
+              />
+            )}
 
             {/* Level dropdown: HL→higher, OL→ordinary, FD→foundation, all→level */}
             <div ref={levelContainerRef} className="practice-hub__level-wrap relative">
@@ -565,7 +599,12 @@ export default function PracticeHub() {
                   role="listbox"
                   aria-label="Level"
                 >
-                  {LEVEL_OPTIONS.map((opt) => (
+                  {(isImageMode
+                    ? LEVEL_OPTIONS.filter(
+                        (opt) => opt.value === "all" || imageLevels.includes(opt.value)
+                      )
+                    : LEVEL_OPTIONS
+                  ).map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
@@ -591,33 +630,29 @@ export default function PracticeHub() {
               )}
             </div>
 
-            <div className="flex items-center justify-center color-txt-sub font-bold py-1 px-3 rounded-in ">
-              <p className="mr-1 font-normal">Paper</p>
-              <button
-                type="button"
-                className={`cursor-pointer transition-all duration-200 rounded-full w-6 h-6 flex items-center justify-center border-0  ${paperFilter === "1" ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-bg-grey-5"}`}
-                onClick={() => setPaperFilter(paperFilter === "1" ? "all" : "1")}
-                aria-pressed={paperFilter === "1"}
-                aria-label="Paper 1 only"
-              >
-                1
-              </button>
-              <button
-                type="button"
-                className={`cursor-pointer transition-all duration-200 rounded-full w-6 h-6 flex items-center justify-center border-0 ${paperFilter === "2" ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-bg-grey-5"}`}
-                onClick={() => setPaperFilter(paperFilter === "2" ? "all" : "2")}
-                aria-pressed={paperFilter === "2"}
-                aria-label="Paper 2 only"
-              >
-                2
-              </button>
-            </div>
-
-            {/* Topics filter temporarily disabled.
-            <div ref={topicsContainerRef} className="practice-hub__topics-wrap relative ml-auto">
-              ...
-            </div>
-            */}
+            {!isImageMode && (
+              <div className="flex items-center justify-center color-txt-sub font-bold py-1 px-3 rounded-in ">
+                <p className="mr-1 font-normal">Paper</p>
+                <button
+                  type="button"
+                  className={`cursor-pointer transition-all duration-200 rounded-full w-6 h-6 flex items-center justify-center border-0  ${paperFilter === "1" ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-bg-grey-5"}`}
+                  onClick={() => setPaperFilter(paperFilter === "1" ? "all" : "1")}
+                  aria-pressed={paperFilter === "1"}
+                  aria-label="Paper 1 only"
+                >
+                  1
+                </button>
+                <button
+                  type="button"
+                  className={`cursor-pointer transition-all duration-200 rounded-full w-6 h-6 flex items-center justify-center border-0 ${paperFilter === "2" ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-bg-grey-5"}`}
+                  onClick={() => setPaperFilter(paperFilter === "2" ? "all" : "2")}
+                  aria-pressed={paperFilter === "2"}
+                  aria-label="Paper 2 only"
+                >
+                  2
+                </button>
+              </div>
+            )}
 
             <button
               type="button"
@@ -629,9 +664,9 @@ export default function PracticeHub() {
             </button>
         </section>
 
-        {/* Results: deck-grid + paper cards (deck styling) – fills remaining height */}
+        {/* Results: deck-grid + paper/topic cards – fills remaining height */}
         <div className="flex-1 w-full min-h-0 overflow-y-auto overflow-x-auto scrollbar-minimal">
-          {papersLoading ? (
+          {papersLoading || (isImageMode && imageTopicsLoading) ? (
             <div className="deck-grid">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="deck flex flex-col">
@@ -659,6 +694,26 @@ export default function PracticeHub() {
                 </div>
               </div>
             </div>
+          ) : isImageMode ? (
+            imageTopicsError ? (
+              <p className="txt-sub color-txt-sub py-4 ml-4">
+                No questions available for this subject yet.
+              </p>
+            ) : imageTopics.length === 0 ? (
+              <p className="txt-sub color-txt-sub py-4 ml-4">
+                No topics found for the selected level.
+              </p>
+            ) : (
+              <div className="deck-grid">
+                {imageTopics.map((topic) => (
+                  <TopicCard
+                    key={topic.path}
+                    topic={topic}
+                    onSelect={() => setSelectedImageTopic(topic)}
+                  />
+                ))}
+              </div>
+            )
           ) : filteredPapers.length === 0 ? (
             <p className="txt-sub color-txt-sub py-4 ml-4">
               No papers match the selected filters.
@@ -685,7 +740,7 @@ export default function PracticeHub() {
         </div>
       </div>
 
-      {/* Slide-in preview e */}
+      {/* Slide-in preview panels */}
       <AnimatePresence>
         {selectedPaper && (
           <>
@@ -803,6 +858,88 @@ export default function PracticeHub() {
                   <LuChevronRight size={20} />
                 </button>
               </div>
+            </motion.aside>
+          </>
+        )}
+        {selectedImageTopic && (
+          <>
+            <motion.div
+              className="practice-hub__backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+              onClick={() => setSelectedImageTopic(null)}
+              aria-hidden
+            />
+            <motion.aside
+              className="practice-hub__panel color-bg"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{
+                type: "tween",
+                duration: 0.35,
+                ease: [0.32, 0.72, 0, 1],
+              }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ph-topic-panel-title"
+            >
+                <div className="absolute top-1 right-1">
+                  <button
+                      type="button"
+                      onClick={() => setSelectedImageTopic(null)}
+                      className="practice-hub__panel-close"
+                      aria-label="Close"
+                    >
+                      <LuX size={24} />
+                  </button>
+                </div>
+
+                <div className="practice-hub__panel-preview">
+                  <div className="practice-hub__preview-wrap">
+                    {selectedImageTopic.thumbnailUrl ? (
+                      <div className="practice-hub__preview-box rounded-in overflow-hidden border border-[var(--color-grey)]/20">
+                        <img
+                          src={selectedImageTopic.thumbnailUrl}
+                          alt={selectedImageTopic.displayName}
+                          className="practice-hub__preview-img"
+                        />
+                      </div>
+                    ) : (
+                      <div className="practice-hub__preview-box color-bg-grey-5 rounded-in flex items-center justify-center color-txt-sub text-sm">
+                        No preview
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="practice-hub__panel-inner">
+                  <header className="practice-hub__panel-header">
+                    <h2 id="ph-topic-panel-title" className="practice-hub__panel-title txt-heading-colour">
+                      {selectedImageTopic.displayName}
+                    </h2>
+                  </header>
+
+                  <p className="practice-hub__panel-meta color-txt-sub text-sm">
+                    <span>{selectedImageTopic.questionCount} question{selectedImageTopic.questionCount !== 1 ? "s" : ""}</span>
+                    <span className="practice-hub__panel-meta-sep" aria-hidden> · </span>
+                    <span>{formatLevel(imageLevelFilter ?? imageLevels[0])}</span>
+                  </p>
+
+                  <div className="practice-hub__panel-actions-spacer" aria-hidden />
+                </div>
+                <div className="practice-hub__panel-actions color-bg">
+                  <button
+                    type="button"
+                    onClick={goToImageSession}
+                    className="blue-btn w-full flex items-center justify-center gap-2 py-3"
+                  >
+                    Let&apos;s go
+                    <LuChevronRight size={20} />
+                  </button>
+                </div>
             </motion.aside>
           </>
         )}
@@ -924,6 +1061,55 @@ function PaperCard({
           )}
         </div>
       )}
+      </div>
+    </div>
+  );
+}
+
+/** Topic card for image-based subjects */
+function TopicCard({
+  topic,
+  onSelect,
+}: {
+  topic: ImageTopic;
+  onSelect: () => void;
+}) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      className="deck paper-card flex flex-col"
+    >
+      <div className="color-border" />
+      <div className="image overflow-hidden">
+        {topic.thumbnailUrl ? (
+          <img src={topic.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center color-txt-sub text-xs">
+            <LuImage size={32} className="color-txt-sub opacity-40" />
+          </div>
+        )}
+      </div>
+      <div className="bg-overlay" />
+      <div className="practice-hub__paper-card-body">
+        <div className="flex w-full z-50 mt-21 px-2.5 items-center pt-0.5">
+          <LuImage size={18} className="color-txt-accent shrink-0" aria-hidden />
+          <div className="flex flex-col ml-2 min-w-0 flex-1">
+            <span className="txt-heading-colour truncate">{topic.displayName}</span>
+          </div>
+          <div className="ml-auto flex flex-col items-end justify-end shrink-0">
+            <span className="txt color-txt-sub">
+              {topic.questionCount} question{topic.questionCount !== 1 ? "s" : ""}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

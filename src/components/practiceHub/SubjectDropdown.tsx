@@ -104,55 +104,11 @@ export default function SubjectDropdown({ value, onChange, subjects, id = "ph-su
             />
           </div>
 
-          {favouriteSubjects.length > 0 && (
-            <div className="practice-hub__subject-group">
-              <div className="practice-hub__subject-group-label">Favourites</div>
-              {favouriteSubjects.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  role="option"
-                  aria-selected={value === s.id}
-                  className="practice-hub__subject-option"
-                  onClick={() => handleSelect(s)}
-                >
-                  <span className="truncate">{s.label}</span>
-                  <button
-                    type="button"
-                    className="practice-hub__subject-fav practice-hub__subject-fav--on"
-                    onClick={(e) => handleFavourite(e, s.id)}
-                    aria-label={`Unfavourite ${s.label}`}
-                    title="Remove from favourites"
-                  >
-                    <LuStar size={14} fill="currentColor" />
-                  </button>
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="practice-hub__subject-group">
-            <div className="practice-hub__subject-group-label">
-              {search.trim() ? "Results" : allowAllSubjects ? "All subjects" : "Subjects"}
-            </div>
-            <div className="practice-hub__subject-list">
-              {!search.trim() && allowAllSubjects && (
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={value === null}
-                  className="practice-hub__subject-option"
-                  onClick={() => handleSelect(null)}
-                >
-                  <span className="truncate">All subjects</span>
-                </button>
-              )}
-              {filtered.length === 0 ? (
-                <div className="practice-hub__subject-empty color-txt-sub text-sm py-2">
-                  No subjects match
-                </div>
-              ) : (
-                filtered.map((s) => (
+          <div className="practice-hub__subject-scroll">
+            {favouriteSubjects.length > 0 && (
+              <div className="practice-hub__subject-group">
+                <div className="practice-hub__subject-group-label">Favourites</div>
+                {favouriteSubjects.map((s) => (
                   <button
                     key={s.id}
                     type="button"
@@ -164,16 +120,62 @@ export default function SubjectDropdown({ value, onChange, subjects, id = "ph-su
                     <span className="truncate">{s.label}</span>
                     <button
                       type="button"
-                      className={`practice-hub__subject-fav ${favourites.includes(s.id) ? "practice-hub__subject-fav--on" : ""}`}
+                      className="practice-hub__subject-fav practice-hub__subject-fav--on"
                       onClick={(e) => handleFavourite(e, s.id)}
-                      aria-label={favourites.includes(s.id) ? `Unfavourite ${s.label}` : `Favourite ${s.label}`}
-                      title={favourites.includes(s.id) ? "Remove from favourites" : "Add to favourites"}
+                      aria-label={`Unfavourite ${s.label}`}
+                      title="Remove from favourites"
                     >
-                      <LuStar size={14} />
+                      <LuStar size={14} fill="currentColor" />
                     </button>
                   </button>
-                ))
-              )}
+                ))}
+              </div>
+            )}
+
+            <div className="practice-hub__subject-group">
+              <div className="practice-hub__subject-group-label">
+                {search.trim() ? "Results" : allowAllSubjects ? "All subjects" : "Subjects"}
+              </div>
+              <div className="practice-hub__subject-list">
+                {!search.trim() && allowAllSubjects && (
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={value === null}
+                    className="practice-hub__subject-option"
+                    onClick={() => handleSelect(null)}
+                  >
+                    <span className="truncate">All subjects</span>
+                  </button>
+                )}
+                {filtered.length === 0 ? (
+                  <div className="practice-hub__subject-empty color-txt-sub text-sm py-2">
+                    No subjects match
+                  </div>
+                ) : (
+                  filtered.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      role="option"
+                      aria-selected={value === s.id}
+                      className="practice-hub__subject-option"
+                      onClick={() => handleSelect(s)}
+                    >
+                      <span className="truncate">{s.label}</span>
+                      <button
+                        type="button"
+                        className={`practice-hub__subject-fav ${favourites.includes(s.id) ? "practice-hub__subject-fav--on" : ""}`}
+                        onClick={(e) => handleFavourite(e, s.id)}
+                        aria-label={favourites.includes(s.id) ? `Unfavourite ${s.label}` : `Favourite ${s.label}`}
+                        title={favourites.includes(s.id) ? "Remove from favourites" : "Add to favourites"}
+                      >
+                        <LuStar size={14} />
+                      </button>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
