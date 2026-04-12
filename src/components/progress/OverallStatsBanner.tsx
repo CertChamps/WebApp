@@ -46,10 +46,10 @@ export default function OverallStatsBanner({ entries, subject, level }: Props) {
     );
   }, [entries, subject, level]);
 
-  const { totalCorrect, totalQuestions, pct } = useMemo(() => {
+  const { totalCorrect, pct } = useMemo(() => {
     const correct = filtered.reduce((s, e) => s + e.completedQuestions.length, 0);
     const total = filtered.reduce((s, e) => s + e.totalQuestions, 0);
-    return { totalCorrect: correct, totalQuestions: total, pct: total > 0 ? correct / total : 0 };
+    return { totalCorrect: correct, pct: total > 0 ? correct / total : 0 };
   }, [filtered]);
 
   const gaugeRadius = 60;

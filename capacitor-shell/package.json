@@ -1,0 +1,29 @@
+{
+  "name": "capacitor-shell",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "sync": "npx cap sync",
+    "sync:android": "npx cap sync android",
+    "sync:ios": "npx cap sync ios",
+    "android:open": "npx cap open android",
+    "ios:open": "npx cap open ios",
+    "android:debug": "cd android && gradlew.bat assembleDebug",
+    "assets:generate": "npx @capacitor/assets generate --android --ios"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/ios": "^8.3.0"
+  }
+}

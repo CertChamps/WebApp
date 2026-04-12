@@ -13,8 +13,8 @@ export default function ScaleToFit({ children, className, contentKey }: Props) {
   const innerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const scaleRef = useRef(1);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-  const rafRef = useRef<number>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rafRef = useRef<number | null>(null);
 
   const recalc = useCallback(() => {
     const outer = outerRef.current;
@@ -38,12 +38,12 @@ export default function ScaleToFit({ children, className, contentKey }: Props) {
       }
     };
 
-    cancelAnimationFrame(rafRef.current);
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(measure);
   }, []);
 
   const debouncedRecalc = useCallback(() => {
-    clearTimeout(debounceRef.current);
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(recalc, DEBOUNCE_MS);
   }, [recalc]);
 
@@ -55,8 +55,8 @@ export default function ScaleToFit({ children, className, contentKey }: Props) {
     debouncedRecalc();
     return () => {
       ro.disconnect();
-      clearTimeout(debounceRef.current);
-      cancelAnimationFrame(rafRef.current);
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [debouncedRecalc]);
 

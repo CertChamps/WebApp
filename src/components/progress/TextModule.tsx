@@ -11,7 +11,7 @@ type Props = {
 
 export default function TextModule({ config, onRemove, onTextChange, editing }: Props) {
   const [value, setValue] = useState(config.text ?? "");
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setValue(config.text ?? "");
@@ -20,13 +20,15 @@ export default function TextModule({ config, onRemove, onTextChange, editing }: 
   const handleChange = useCallback(
     (next: string) => {
       setValue(next);
-      clearTimeout(debounceRef.current);
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => onTextChange(next), 500);
     },
     [onTextChange]
   );
 
-  useEffect(() => () => clearTimeout(debounceRef.current), []);
+  useEffect(() => () => {
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+  }, []);
 
   return (
     <div className="progress-module progress-module--text">
@@ -45,7 +47,10 @@ export default function TextModule({ config, onRemove, onTextChange, editing }: 
         className={`progress-text__input ${!editing ? "progress-text__input--readonly" : ""}`}
         value={value}
         onChange={(e) => handleChange(e.target.value)}
-        onBlur={() => { clearTimeout(debounceRef.current); onTextChange(value); }}
+        onBlur={() => {
+          if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+          onTextChange(value);
+        }}
         placeholder="Type a note…"
         spellCheck={false}
         readOnly={!editing}

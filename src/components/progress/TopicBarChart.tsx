@@ -161,7 +161,7 @@ export default function TopicBarChart({ subject, level, entries }: Props) {
           <span className="text-[10px] color-txt-sub tabular-nums">0</span>
         </div>
         <div className="topic-bar-chart__bars">
-          {topicStats.map((stat, i) => {
+          {topicStats.map((stat) => {
             const pct = maxCompleted > 0 ? (stat.completed / maxCompleted) * 100 : 0;
             const isHighest = hasAnyCompleted && stat.completed === maxCompleted;
             return (

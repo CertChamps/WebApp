@@ -156,7 +156,7 @@ const PLACEHOLDER = "\\square ";
 const CURSOR_MARK = "\\textcolor{#ff00ff}{\\smash{\\rule{0.045em}{1.05em}}}";
 
 function cursorMark(showCursor: boolean): string {
-  return CURSOR_MARK;
+  return showCursor ? CURSOR_MARK : "";
 }
 
 function isCursorOnly(inner: string): boolean {
@@ -639,6 +639,10 @@ function isOperatorLeaf(node: CalcNode): boolean {
   return node.type === "leaf" && ["+", "-", "*", "/", "("].includes(node.value);
 }
 
+function isLeafWithValue(node: CalcNode, value: string): node is LeafNode {
+  return node.type === "leaf" && node.value === value;
+}
+
 function findBalancedParenStart(list: CalcNode[], endIndex: number): number | null {
   let depth = 0;
   for (let i = endIndex; i >= 0; i--) {
@@ -668,7 +672,7 @@ function extractPromotableToken(list: CalcNode[], cursorIndex: number): { start:
   }
 
   // Trailing bracketed expression: consume the balanced (...) block.
-  if (left.type === "leaf" && left.value === ")") {
+  if (isLeafWithValue(left, ")")) {
     const start = findBalancedParenStart(list, cursorIndex - 1);
     if (start !== null) {
       return { start, nodes: list.slice(start, cursorIndex) };
