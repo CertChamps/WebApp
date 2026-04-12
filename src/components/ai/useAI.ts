@@ -13,6 +13,8 @@ export type InjectedExchange = {
 
 /** Optional: return current drawing as PNG data URL (e.g. from canvas) so the AI can see it. */
 export type GetDrawingSnapshot = () => string | null;
+/** Optional: return music stave analysis (detected note positions as text). */
+export type GetStaveAnalysis = () => string | null;
 /** Optional: return current exam paper (first page) as image data URL so the AI can see the paper. */
 export type GetPaperSnapshot = () => string | null;
 
@@ -68,7 +70,16 @@ function parsePartIndexFromName(name: string | undefined): number | null {
   return null;
 }
 
-function buildQuestionContext(question: any): string | undefined {
+const STAVE_CONTEXT = `The user's canvas shows a music stave. The snapshot image has position labels on the left of each stave group:
+Lines (bottom to top): L1, L2, L3, L4, L5
+Spaces (bottom to top): S1, S2, S3, S4
+
+Treble clef mapping: L1=E4, S1=F4, L2=G4, S2=A4, L3=B4, S3=C5, L4=D5, S4=E5, L5=F5
+Bass clef mapping: L1=G2, S1=A2, L2=B2, S2=C3, L3=D3, S3=E3, L4=F3, S4=G3, L5=A3
+
+Determine the clef from the question context. Use the position labels visible on the stave image AND the programmatic note detection below to identify note pitches accurately.`;
+
+function buildQuestionContext(question: any, staveAnalysis?: string | null): string | undefined {
   const name = question?.properties?.name ?? question?.questionName;
   const tags = question?.properties?.tags ?? question?.tags;
   const rawContent = Array.isArray(question?.content) ? question.content : [];
@@ -88,8 +99,14 @@ function buildQuestionContext(question: any): string | undefined {
     .map((c: any, i: number) => (c?.question ? `Part ${i + 1}: ${c.question}` : null))
     .filter(Boolean);
   if (questionTexts.length) parts.push(`\n${questionTexts.join("\n\n")}`);
-  if (!questionTexts.length && name) {
+  if (Array.isArray(question?.imageUrls) && question.imageUrls.length > 0) {
+    parts.push("An image of this question is attached. Use the image to understand the full question content.");
+  } else if (!questionTexts.length && name) {
     parts.push("Use only the named question/part above as context. Do not answer other parts unless asked.");
+  }
+  if (staveAnalysis) {
+    parts.push(STAVE_CONTEXT);
+    parts.push(staveAnalysis);
   }
   return parts.length ? parts.join("\n") : undefined;
 }
@@ -97,6 +114,7 @@ function buildQuestionContext(question: any): string | undefined {
 export function useAI(
   question?: any,
   getDrawingSnapshot?: GetDrawingSnapshot | null,
+  getStaveAnalysis?: GetStaveAnalysis | null,
   getPaperSnapshot?: GetPaperSnapshot | null,
   injectedExchange?: InjectedExchange | null
 ) {
@@ -161,13 +179,15 @@ export function useAI(
 
     try {
       const drawingDataUrl = getDrawingSnapshot?.() ?? null;
+      const staveAnalysis = getStaveAnalysis?.() ?? null;
       const paperDataUrl = getPaperSnapshot?.() ?? null;
+      const questionImageUrls: string[] = Array.isArray(question?.imageUrls) ? question.imageUrls : [];
       const apiMessages = [...messages, userMessage].map((m) => ({
         role: m.role,
         content: m.content,
       }));
       const lastUserContent = apiMessages[apiMessages.length - 1].content;
-      const imageUrls = [drawingDataUrl, paperDataUrl].filter((url): url is string => Boolean(url));
+      const imageUrls = [...questionImageUrls, drawingDataUrl, paperDataUrl].filter((url): url is string => Boolean(url));
       if (imageUrls.length > 0 && lastUserContent !== undefined) {
         apiMessages[apiMessages.length - 1] = {
           role: "user",
@@ -177,7 +197,7 @@ export function useAI(
           ],
         } as any;
       }
-      const context = buildQuestionContext(question);
+      const context = buildQuestionContext(question, staveAnalysis);
       const res = await fetch(CHAT_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -236,7 +256,7 @@ export function useAI(
         inputRef.current?.focus();
       }
     }
-  }, [messages, question, loading, getDrawingSnapshot, getPaperSnapshot]);
+  }, [messages, question, loading, getDrawingSnapshot, getStaveAnalysis, getPaperSnapshot]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

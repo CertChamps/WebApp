@@ -37,12 +37,16 @@ export type SidebarTileManagerProps = {
   onCollapse?: () => void;
   /** Optional: return current drawing as PNG data URL so AI can see handwriting/maths. */
   getDrawingSnapshot?: (() => string | null) | null;
+  /** Optional: return music stave analysis (detected note positions as text). */
+  getStaveAnalysis?: (() => string | null) | null;
   /** Optional: return current exam paper (first page) as image data URL so AI can see the paper. */
   getPaperSnapshot?: (() => string | null) | null;
   /** Optional: past paper marking scheme — when provided, marking scheme tab is shown. */
   markingSchemeBlob?: Blob | null;
   markingSchemePageRange?: MarkingSchemePageRange | null;
   markingSchemeQuestionName?: string;
+  /** When true, always show the marking scheme tab even without a blob (shows placeholder). */
+  forceShowMarkingSchemeTab?: boolean;
   /** Optional externally injected chat exchange (e.g. check-answer feedback). */
   aiInjectedExchange?: InjectedExchange | null;
   /** Optional completion CTA handler from grading flow. */
@@ -55,10 +59,12 @@ export function SidebarTileManager({
   onOpenPanelChange,
   onCollapse,
   getDrawingSnapshot,
+  getStaveAnalysis,
   getPaperSnapshot,
   markingSchemeBlob,
   markingSchemePageRange,
   markingSchemeQuestionName,
+  forceShowMarkingSchemeTab,
   aiInjectedExchange,
   onMarkCompleteFromGrading,
 }: SidebarTileManagerProps) {
@@ -66,7 +72,7 @@ export function SidebarTileManager({
   const isControlled = controlledPanel !== undefined;
   const openPanelId = isControlled ? controlledPanel : internalPanel;
 
-  const showMarkingScheme = !!(markingSchemeBlob && markingSchemePageRange);
+  const showMarkingScheme = !!(markingSchemeBlob && markingSchemePageRange) || !!forceShowMarkingSchemeTab;
   const visiblePanels = PANELS.filter((p) => p.id !== "markingscheme" || showMarkingScheme);
 
   const setOpenPanel = useCallback(
@@ -143,6 +149,7 @@ export function SidebarTileManager({
                   panelId={openPanelId}
                   question={question}
                   getDrawingSnapshot={getDrawingSnapshot}
+                  getStaveAnalysis={getStaveAnalysis}
                   getPaperSnapshot={getPaperSnapshot}
                   markingSchemeBlob={markingSchemeBlob}
                   markingSchemePageRange={markingSchemePageRange}
@@ -175,6 +182,7 @@ function TileContent({
   panelId,
   question,
   getDrawingSnapshot,
+  getStaveAnalysis,
   getPaperSnapshot,
   markingSchemeBlob,
   markingSchemePageRange,
@@ -186,6 +194,7 @@ function TileContent({
   panelId: SidebarPanelId;
   question?: any;
   getDrawingSnapshot?: (() => string | null) | null;
+  getStaveAnalysis?: (() => string | null) | null;
   getPaperSnapshot?: (() => string | null) | null;
   markingSchemeBlob?: Blob | null;
   markingSchemePageRange?: MarkingSchemePageRange | null;
@@ -203,6 +212,7 @@ function TileContent({
         <AIChat
           question={question}
           getDrawingSnapshot={getDrawingSnapshot}
+          getStaveAnalysis={getStaveAnalysis}
           getPaperSnapshot={getPaperSnapshot}
           injectedExchange={aiInjectedExchange}
           onMarkCompleteFromGrading={onMarkCompleteFromGrading}
@@ -236,8 +246,10 @@ function TileContent({
           </div>
         </div>
       ) : (
-        <div className="flex h-full items-center justify-center p-4 text-sm color-txt-sub">
-          No marking scheme available for this question.
+        <div className="flex h-full flex-col items-center justify-center p-4 text-center color-txt-sub">
+          <LuClipboardList size={32} strokeWidth={1.5} className="mb-3 opacity-40" />
+          <p className="text-sm font-medium">Coming soon</p>
+          <p className="text-xs mt-1 opacity-70">Marking schemes will be available here.</p>
         </div>
       );
     default:

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getBlob, ref } from "firebase/storage";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { storage, db } from "../../firebase";
+import { getFirestoreSubjectIds } from "../data/practiceHubSubjects";
 
 export function normalizePaperLevel(level: string | undefined | null): string {
   const raw = String(level ?? "").trim().toLowerCase();
@@ -149,7 +150,9 @@ export function useExamPapers(
 
     async function load() {
       try {
-        const idsToLoad = shouldLoadAll ? subjectIds : [subjectId!];
+        const idsToLoad = shouldLoadAll
+          ? subjectIds
+          : getFirestoreSubjectIds(subjectId!);
 
         const allPapers: ExamPaper[] = [];
 

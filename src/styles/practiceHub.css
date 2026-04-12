@@ -220,7 +220,7 @@
   right: 0;
   top: 100%;
   margin-top: 0.25rem;
-  max-height: 320px;
+  max-height: 420px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -260,6 +260,11 @@
 
 .practice-hub__subject-group {
   flex-shrink: 0;
+}
+
+.practice-hub__subject-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 

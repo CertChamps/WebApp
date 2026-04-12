@@ -16,6 +16,12 @@ import { usePaperProgress } from "../hooks/usePaperProgress";
 import useFilters from "../hooks/useFilters";
 import { getPastPaperTopicScope } from "../data/mathsHigherTopics";
 import { useQuestionSessionLog, type QuestionMeta } from "../hooks/useQuestionSessionLog";
+import {
+  useImageQuestionsForTopic,
+  useAllTopicsForSubjectLevel,
+  type GroupedImageQuestion,
+  type ImageTopic,
+} from "../hooks/useImageQuestions";
 
 // Components
 import { createPortal } from "react-dom";
@@ -23,7 +29,7 @@ import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculato
 import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
 import QSearch from "../components/questions/qSearch";
-import DrawingCanvas, { type RegisterDrawingSnapshot, type RegisterGetGradingCapture } from "../components/questions/DrawingCanvas";
+import DrawingCanvas, { type RegisterDrawingSnapshot, type RegisterGetGradingCapture, type RegisterGetStaveAnalysis } from "../components/questions/DrawingCanvas";
 import { useCanvasStorage } from "../hooks/useCanvasStorage";
 import RenderMath from "../components/math/mathdisplay";
 import { AnimatePresence, motion } from "framer-motion";
@@ -84,24 +90,25 @@ function gradingStatusLabel(status: GradingStatus): string {
     }
 }
 
-export type QuestionsMode = "certchamps" | "pastpaper";
+export type QuestionsMode = "certchamps" | "pastpaper" | "imagequestions";
 
-const MODE_TO_PATHS: Record<QuestionsMode, string[]> = {
+const MODE_TO_PATHS: Record<string, string[]> = {
   certchamps: ["questions/certchamps"],
   pastpaper: ["questions/exam-papers"],
+  imagequestions: [],
 };
 
 function getPathsForMode(mode: QuestionsMode, subject?: string | null): string[] {
   if (mode === "certchamps" && subject) {
     return [`questions/certchamps/${subject}`];
   }
-  return MODE_TO_PATHS[mode];
+  return MODE_TO_PATHS[mode] ?? [];
 }
 
 function getStoredMode(): QuestionsMode {
   try {
     const s = localStorage.getItem(QUESTIONS_MODE_KEY);
-    if (s === "certchamps" || s === "pastpaper") return s;
+    if (s === "certchamps" || s === "pastpaper" || s === "imagequestions") return s;
     } catch {}
   return "certchamps";
 }
@@ -136,6 +143,95 @@ async function renderPdfPageSnapshot(blob: Blob, pageNumber: number, maxWidth = 
     }
 }
 
+function TopicSwitcher({ topics, value, onChange }: { topics: ImageTopic[]; value: string | null; onChange: (topic: string) => void }) {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+        if (open) {
+            document.addEventListener("mousedown", handleClickOutside);
+            return () => document.removeEventListener("mousedown", handleClickOutside);
+        }
+    }, [open]);
+
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return topics;
+        return topics.filter((t) => t.displayName.toLowerCase().includes(q));
+    }, [search, topics]);
+
+    const selectedLabel = topics.find((t) => t.name === value)?.displayName ?? "Select topic";
+
+    return (
+        <div ref={containerRef} className="relative pointer-events-auto" data-state={open ? "open" : "closed"}>
+            <button
+                type="button"
+                className="flex items-center gap-1.5 color-bg-grey-5 color-txt-sub font-bold py-0.5 px-3 rounded-out border-0 cursor-pointer text-sm max-w-[200px]"
+                onClick={() => { setOpen((o) => !o); setSearch(""); }}
+                aria-expanded={open}
+                aria-haspopup="listbox"
+                aria-label="Switch topic"
+            >
+                <span className="truncate">{selectedLabel}</span>
+                <LuChevronDown size={14} className={`shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} aria-hidden />
+            </button>
+            {open && (
+                <div
+                    className="absolute right-0 top-full mt-1 w-[280px] max-h-[360px] overflow-hidden flex flex-col rounded-lg z-50 color-bg border-2 color-shadow"
+                    style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}
+                    role="listbox"
+                >
+                    <div className="flex items-center gap-2 px-3 py-2 shrink-0 border-b color-shadow">
+                        <LuSearch size={16} className="shrink-0 color-txt-sub" aria-hidden />
+                        <input
+                            type="text"
+                            className="flex-1 min-w-0 py-0.5 text-sm border-none bg-transparent color-txt-main outline-none"
+                            placeholder="Search topics…"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            autoFocus
+                            aria-label="Search topics"
+                        />
+                    </div>
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                        {filtered.length === 0 ? (
+                            <div className="px-3 py-3 text-sm color-txt-sub">No topics match</div>
+                        ) : (
+                            filtered.map((t) => (
+                                <button
+                                    key={t.name}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={t.name === value}
+                                    className={`flex items-center gap-2 w-full px-3 py-2 text-sm text-left border-none cursor-pointer transition-colors duration-150 ${
+                                        t.name === value
+                                            ? "color-bg-accent color-txt-accent font-bold"
+                                            : "bg-transparent color-txt-main hover:color-bg-grey-10"
+                                    }`}
+                                    onClick={() => {
+                                        onChange(t.name);
+                                        setOpen(false);
+                                        setSearch("");
+                                    }}
+                                >
+                                    <span className="truncate flex-1 min-w-0">{t.displayName}</span>
+                                    <span className="shrink-0 text-xs color-txt-sub">{t.questionCount}</span>
+                                </button>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function Questions() {
     const { options, setOptions } = useContext(OptionsContext);
     const { user } = useContext(UserContext);
@@ -146,13 +242,14 @@ export default function Questions() {
     const urlSubject = searchParams.get("subject");
     const urlPaperId = searchParams.get("paperId");
     const urlLevel = searchParams.get("level");
+    const urlTopic = searchParams.get("topic");
     const urlIndexInPaper = searchParams.get("indexInPaper");
     const urlQuestionId = searchParams.get("questionId");
     const normalizedUrlLevel = normalizePaperLevel(urlLevel);
     const normalizedUrlSubject = (urlSubject ?? "").trim().toLowerCase();
 
     const initialMode: QuestionsMode =
-        urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
+        urlMode === "certchamps" || urlMode === "pastpaper" || urlMode === "imagequestions" ? urlMode : getStoredMode();
     const initialPaths = getPathsForMode(initialMode, urlSubject || null);
 
     //==============================================> State <========================================//
@@ -168,7 +265,7 @@ export default function Questions() {
     const [mode, setMode] = useState<QuestionsMode>(initialMode);
 
     useEffect(() => {
-        const m = urlMode === "certchamps" || urlMode === "pastpaper" ? urlMode : getStoredMode();
+        const m = urlMode === "certchamps" || urlMode === "pastpaper" || urlMode === "imagequestions" ? urlMode : getStoredMode();
         setMode(m);
     }, [urlMode]);
 
@@ -194,6 +291,12 @@ export default function Questions() {
             getGradingCaptureRef.current = fn;
         }, []);
         const getGradingCapture = useCallback((mode: "default" | "full-ink" | "retry-aggressive" = "default") => getGradingCaptureRef.current?.(mode) ?? null, []);
+
+    const getStaveAnalysisRef = useRef<(() => string | null) | null>(null);
+    const registerGetStaveAnalysis = useCallback<RegisterGetStaveAnalysis>((fn) => {
+        getStaveAnalysisRef.current = fn;
+    }, []);
+    const getStaveAnalysis = useCallback(() => getStaveAnalysisRef.current?.() ?? null, []);
 
     // ---- Canvas persistence (state declared here; effects placed after derived vars below) ----
     const { saveCanvas, loadCanvas } = useCanvasStorage();
@@ -224,6 +327,28 @@ export default function Questions() {
     const { availableSets } = useFilters();
     const { completedForPaper, loadPaperProgress, toggleQuestion, isQuestionCompleted } = usePaperProgress();
     const certChampsSet = availableSets.find((s) => s.id === "certchamps");
+
+    // Image questions mode state
+    const [imageQuestionTopic, setImageQuestionTopic] = useState<string | null>(urlTopic || null);
+    const {
+        grouped: imageGroupedList,
+        loading: imageQuestionsLoading,
+    } = useImageQuestionsForTopic(
+        mode === "imagequestions" ? normalizedUrlSubject || null : null,
+        mode === "imagequestions" ? normalizedUrlLevel || null : null,
+        mode === "imagequestions" ? imageQuestionTopic : null
+    );
+    const {
+        topics: imageAllTopics,
+        loading: imageAllTopicsLoading,
+    } = useAllTopicsForSubjectLevel(
+        mode === "imagequestions" ? normalizedUrlSubject || null : null,
+        mode === "imagequestions" ? normalizedUrlLevel || null : null
+    );
+    const [imageQuestionPosition, setImageQuestionPosition] = useState(0);
+    const currentGroupedQuestion: GroupedImageQuestion | undefined = imageGroupedList[imageQuestionPosition];
+    const [showComingSoonToast, setShowComingSoonToast] = useState(false);
+
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
     const [paperBlob, setPaperBlob] = useState<Blob | null>(null);
     const [paperLoadError, setPaperLoadError] = useState<string | null>(null);
@@ -350,11 +475,14 @@ export default function Questions() {
         if (mode === "pastpaper" && selectedPaper && currentPaperQuestion) {
             return `${selectedPaper.id}_${currentPaperQuestion.id}`;
         }
+        if (mode === "imagequestions" && currentGroupedQuestion) {
+            return `img_${normalizedUrlSubject}_${normalizedUrlLevel}_${imageQuestionTopic}_${currentGroupedQuestion.key}`;
+        }
         if (mode === "certchamps" && currentQuestion?.id) {
             return currentQuestion.id as string;
         }
         return null;
-    }, [mode, selectedPaper, currentPaperQuestion, currentQuestion]);
+    }, [mode, selectedPaper, currentPaperQuestion, currentGroupedQuestion, currentQuestion, normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic]);
 
     const questionLogMeta = useMemo((): QuestionMeta | null => {
         if (mode === "pastpaper" && selectedPaper && currentPaperQuestion) {
@@ -1040,6 +1168,17 @@ export default function Questions() {
                 },
                 { replace: true }
             );
+        } else if (mode === "imagequestions") {
+            if (!currentGroupedQuestion) return;
+            setSearchParams(
+                {
+                    mode: "imagequestions",
+                    subject: normalizedUrlSubject,
+                    level: normalizedUrlLevel,
+                    topic: imageQuestionTopic ?? "",
+                },
+                { replace: true }
+            );
         } else {
             if (!currentQuestion?.id) return;
             const params: Record<string, string> = {
@@ -1050,7 +1189,7 @@ export default function Questions() {
             setSearchParams(params, { replace: true });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mode, selectedPaper?.storagePath, currentPaperQuestion?.id, currentQuestion?.id, subjectFilter]);
+    }, [mode, selectedPaper?.storagePath, currentPaperQuestion?.id, currentQuestion?.id, subjectFilter, currentGroupedQuestion?.key, imageQuestionTopic]);
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -1130,6 +1269,7 @@ export default function Questions() {
                     <DrawingCanvas
                         key={activeCanvasQuestionId ?? "no-question"}
                         registerDrawingSnapshot={registerDrawingSnapshot}
+                        registerGetStaveAnalysis={registerGetStaveAnalysis}
                         initialStrokes={canvasStrokes}
                         onStrokesChange={handleStrokesChange}
                         registerGetGradingCapture={registerGetGradingCapture}
@@ -1189,7 +1329,7 @@ export default function Questions() {
 
             {/* Sidebar: left or right depending on left-hand mode */}
             <div
-                className={`absolute bottom-0 top-11 z-10 overflow-hidden pointer-events-auto transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${options.leftHandMode ? "left-0" : "right-0"} ${sidebarOpen ? "w-[35%]" : "w-12"}`}
+                className={`absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-auto transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${options.leftHandMode ? "left-0" : "right-0"} ${sidebarOpen ? "w-[35%]" : "w-12"}`}
             >
                 <CollapsibleSidebar
                     side={options.leftHandMode ? "left" : "right"}
@@ -1211,15 +1351,25 @@ export default function Questions() {
                                 pageRegions: currentPaperQuestion.pageRegions,
                             }
                             : undefined)
-                        : currentQuestion}
+                        : mode === "imagequestions"
+                            ? (currentGroupedQuestion
+                                ? {
+                                    id: activeCanvasQuestionId ?? currentGroupedQuestion.key,
+                                    properties: { name: currentGroupedQuestion.displayName },
+                                    imageUrls: currentGroupedQuestion.images.map((img) => img.downloadUrl),
+                                  }
+                                : undefined)
+                            : currentQuestion}
                     getDrawingSnapshot={getDrawingSnapshot}
+                    getStaveAnalysis={getStaveAnalysis}
                     getPaperSnapshot={getPaperSnapshot}
                     open={sidebarOpen}
                     onOpenChange={(open) => {
                         setSidebarOpen(open);
                         if (!open) setMarkingSchemeQuestionIndex(null);
                     }}
-                    openPanel={mode === "pastpaper" ? (sidebarOpenPanel ?? undefined) : undefined}
+                    openPanel={(mode === "pastpaper" || mode === "imagequestions") ? (sidebarOpenPanel ?? undefined) : undefined}
+                    forceShowMarkingSchemeTab={mode === "imagequestions"}
                     onOpenPanelChange={(panel) => {
                         setSidebarOpenPanel(panel ?? null);
                         if (panel !== "markingscheme") setMarkingSchemeQuestionIndex(null);
@@ -1249,14 +1399,27 @@ export default function Questions() {
                                 : selectedSubTopics.length > 0
                                     ? "Searching for matching paper…"
                                     : selectedPaper?.label ?? "Select a paper"
-                    : undefined;
+                    : mode === "imagequestions"
+                        ? imageQuestionsLoading
+                            ? "Loading…"
+                            : currentGroupedQuestion?.displayName ?? "Select a topic"
+                        : undefined;
                 const centerLabel = overrideTitle ?? currentQuestion?.properties?.name ?? "...";
                 const overrideTags = mode === "pastpaper" ? (currentPaperQuestion?.tags ?? []) : undefined;
-                const tagsDisplay = overrideTags != null
+                const imageTagsDisplay = mode === "imagequestions" && imageQuestionTopic
+                    ? `${imageQuestionPosition + 1} / ${imageGroupedList.length}`
+                    : undefined;
+                const tagsDisplay = imageTagsDisplay ?? (overrideTags != null
                     ? formatTags(overrideTags)
-                    : formatTags(currentQuestion?.properties?.tags);
+                    : formatTags(currentQuestion?.properties?.tags));
 
-                const onPrev = mode === "pastpaper"
+                const onPrev = mode === "imagequestions"
+                    ? () => {
+                        if (imageQuestionPosition > 0) {
+                            setImageQuestionPosition((p) => p - 1);
+                        }
+                    }
+                    : mode === "pastpaper"
                     ? async () => {
                         if (filteredPaperQuestions.length > 0 && paperQuestionPosition > 1) {
                             setPaperQuestionPosition((p) => p - 1);
@@ -1280,7 +1443,19 @@ export default function Questions() {
                     }
                     : previousQuestion;
 
-                const onNext = mode === "pastpaper"
+                const onNext = mode === "imagequestions"
+                    ? () => {
+                        if (randomise && imageGroupedList.length > 1) {
+                            let next = imageQuestionPosition;
+                            while (next === imageQuestionPosition) {
+                                next = Math.floor(Math.random() * imageGroupedList.length);
+                            }
+                            setImageQuestionPosition(next);
+                        } else if (imageQuestionPosition < imageGroupedList.length - 1) {
+                            setImageQuestionPosition((p) => p + 1);
+                        }
+                    }
+                    : mode === "pastpaper"
                     ? async () => {
                         if (randomise) {
                             // Random: build a pool of scoped papers that have matching questions
@@ -1457,7 +1632,16 @@ export default function Questions() {
                                     <TbDice5 size={20} strokeWidth={1.8} />
                                     <span>randomize</span>
                                 </button>
-                                {mode === "pastpaper" ? (
+                                {mode === "imagequestions" ? (
+                                    <TopicSwitcher
+                                        topics={imageAllTopics}
+                                        value={imageQuestionTopic}
+                                        onChange={(t) => {
+                                            setImageQuestionTopic(t);
+                                            setImageQuestionPosition(0);
+                                        }}
+                                    />
+                                ) : mode === "pastpaper" ? (
                                     <div ref={pastPaperFilterRef} className="practice-hub__topics-wrap relative">
                                         <button
                                             type="button"
@@ -1481,7 +1665,6 @@ export default function Questions() {
                                                 setShowPastPaperFilter(false);
 
                                                 if (subTopics.length === 0) {
-                                                    // Clearing filter — stay on current paper
                                                     setPaperQuestionPosition(1);
                                                     if (paperQuestions.length > 0) {
                                                         const first = paperQuestions[0];
@@ -1490,19 +1673,16 @@ export default function Questions() {
                                                     return;
                                                 }
 
-                                                // Check if current paper has matching questions
                                                 const tagSet = new Set(subTopics.map((s) => normTag(s)));
                                                 const localFiltered = paperQuestions.filter((q) =>
                                                     q.tags?.some((tag) => tagSet.has(normTag(String(tag))))
                                                 );
 
                                                 if (localFiltered.length > 0) {
-                                                    // Current paper has matches — jump to first match
                                                     setPaperQuestionPosition(1);
                                                     const first = localFiltered[0];
                                                     setScrollToPage(first?.pageRegions?.[0]?.page ?? first?.pageRange?.[0] ?? null);
                                                 } else {
-                                                    // Current paper has NO matches — search scoped papers (newest first)
                                                     const result = await findPaperWithTopics(subTopics, 0, "forward");
                                                     if (result) {
                                                         pendingRandomRef.current = { questionId: result.filtered[0].id };
@@ -1523,31 +1703,162 @@ export default function Questions() {
                                         <span>filter</span>
                                     </button>
                                 )}
-                                <button
-                                    type="button"
-                                    aria-label="Search questions"
-                                    className="question-selector-button pointer-events-auto"
-                                    onClick={() => setShowSearch(true)}
-                                >
-                                    <LuSearch size={18} strokeWidth={2} />
-                                    <span>search</span>
-                                </button>
+                                {mode !== "imagequestions" && (
+                                    <button
+                                        type="button"
+                                        aria-label="Search questions"
+                                        className="question-selector-button pointer-events-auto"
+                                        onClick={() => setShowSearch(true)}
+                                    >
+                                        <LuSearch size={18} strokeWidth={2} />
+                                        <span>search</span>
+                                    </button>
+                                )}
                             </div>
                         }
                     />
                 );
             })()}
 
-            {/* Foreground: content block then PDF underneath. In laptop+past paper, paper fills from top. */}
-            <div className={`relative flex min-h-0 flex-1 w-full ${options.laptopMode && mode === "pastpaper" ? "flex-col" : "flex-col gap-4 items-start"}`}>
+            {/* Foreground: content block then PDF/image underneath */}
+            <div className={`relative flex min-h-0 flex-1 w-full ${options.laptopMode && (mode === "pastpaper" || mode === "imagequestions") ? "flex-col" : "flex-col gap-4 items-start"}`}>
                 {/* Math preview for certchamps mode */}
-                {mode !== "pastpaper" && (
+                {mode === "certchamps" && (
                     <div className={`questions-top-left shrink-0 flex flex-col gap-2 max-w-sm w-[35%] min-w-xs pointer-events-auto ${
                         options.leftHandMode ? "pt-4 pr-4 self-end" : "pt-4 pl-4"
                     }`}>
                         <RenderMath text={currentQuestion?.content?.[0]?.question ?? "ughhhh no question"} className="questions-math-preview font-bold text-sm txt" />
                     </div>
                 )}
+
+                {/* Image viewer for imagequestions mode */}
+                {mode === "imagequestions" && (() => {
+                    const snippetWidth = options.laptopMode
+                        ? Math.min(800, viewportWidth - 200)
+                        : Math.min(400, viewportWidth * 0.35);
+
+                    const renderImageContent = () => {
+                        if (imageQuestionsLoading) {
+                            return (
+                                <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
+                                    <p className="color-txt-sub text-sm">Loading questions...</p>
+                                    <div className="mt-2 h-8 w-8 animate-spin rounded-full border-2 border-[var(--grey-10)] border-t-[var(--grey-5)]" />
+                                </div>
+                            );
+                        }
+                        if (imageGroupedList.length === 0) {
+                            return (
+                                <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
+                                    <p className="color-txt-sub text-sm">No questions found for this topic.</p>
+                                </div>
+                            );
+                        }
+                        if (!currentGroupedQuestion) {
+                            return (
+                                <div className="flex h-full min-h-[200px] flex-col items-center justify-center px-4 text-center">
+                                    <p className="color-txt-sub text-sm">Select a question.</p>
+                                </div>
+                            );
+                        }
+
+                        const imageActionButtons = (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowComingSoonToast(true);
+                                        setTimeout(() => setShowComingSoonToast(false), 2000);
+                                    }}
+                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub opacity-60 cursor-pointer transition-all"
+                                    title="Full paper view coming soon"
+                                    aria-label="Full paper (coming soon)"
+                                >
+                                    <LuMaximize2 size={14} strokeWidth={2} />
+                                    <span>Full paper</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCalculator(true)}
+                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                    title="Calculator"
+                                    aria-label="Calculator"
+                                >
+                                    <LuCalculator size={14} strokeWidth={2} />
+                                    <span>Calculator</span>
+                                </button>
+                            </>
+                        );
+
+                        return (
+                            <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
+                                {showComingSoonToast && (
+                                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-lg color-bg-grey-5 color-txt-sub text-sm font-medium shadow-lg">
+                                        Coming soon
+                                    </div>
+                                )}
+                                {typeof document !== "undefined" &&
+                                    createPortal(
+                                        <div
+                                            className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
+                                            style={{
+                                                bottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))",
+                                                left: options.leftHandMode ? undefined : `${navbarActionOffsetPx}px`,
+                                            }}
+                                        >
+                                            {imageActionButtons}
+                                        </div>,
+                                        document.body
+                                    )}
+                                <div className="flex-1 min-h-0 relative pt-4 pb-14">
+                                    <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-minimal h-full py-2 items-center">
+                                        <div className="flex flex-col items-center w-full" style={{ maxWidth: snippetWidth }}>
+                                            {currentGroupedQuestion.images.map((img, idx) => (
+                                                <img
+                                                    key={img.storagePath}
+                                                    src={img.downloadUrl}
+                                                    alt={idx === 0 ? currentGroupedQuestion.displayName : `${currentGroupedQuestion.displayName} part ${idx + 1}`}
+                                                    className="w-full h-auto"
+                                                    style={{ objectFit: "contain", display: "block" }}
+                                                    draggable={false}
+                                                />
+                                            ))}
+                                        </div>
+                                        <div className="pt-4 flex justify-center w-full" style={{ maxWidth: snippetWidth }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setSidebarOpen(true);
+                                                    setSidebarOpenPanel("markingscheme");
+                                                }}
+                                                className="w-full py-4 px-6 rounded-2xl text-base font-medium color-bg-grey-5 color-txt-sub hover:color-bg-grey-10 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+                                                aria-label="Reveal marking scheme"
+                                            >
+                                                <LuClipboardList size={20} strokeWidth={2} />
+                                                Reveal marking scheme
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    };
+
+                    return options.laptopMode ? (
+                        <div className="absolute inset-0 flex w-full min-h-0 justify-center items-start pointer-events-auto">
+                            <div className="practice-paper-fly-in flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden pointer-events-auto max-w-[920px]">
+                                <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden pt-2 px-2 pb-0">
+                                    {renderImageContent()}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className={`flex flex-1 min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-auto ${options.leftHandMode ? "ml-auto" : ""}`}>
+                            <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden p-2">
+                                {renderImageContent()}
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {/* PDF panel: viewer when past paper mode; snippet (pageRegions) or full paper with expand/collapse. */}
                 {mode === "pastpaper" && (

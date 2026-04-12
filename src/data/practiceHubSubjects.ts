@@ -115,6 +115,49 @@ export function subjectMatchesPaper(subjectId: string | null, paperSubject: stri
   return normalized === subjectId;
 }
 
+/**
+ * Map UI subject slugs to Firebase Storage folder names under temp_images/leaving-cert/.
+ * Only needed when the slug() output doesn't match the actual folder name in Storage.
+ */
+const SLUG_TO_STORAGE_FOLDER: Record<string, string> = {
+  "applied-mathematics": "applied-maths",
+  "agricultural-economics": "agricultural-economics",
+  "design-communication-graphics": "design-communication-graphics",
+  "home-economics-s-and-s": "home-economics",
+  "history-early-modern": "history",
+  "history-later-modern": "history",
+  "physics-and-chemistry": "physics-and-chemistry",
+  "politics-and-society": "politics-and-society",
+  "religious-education": "religious-education",
+  "classical-studies": "classical-studies",
+  "construction-studies": "construction-studies",
+  "hebrew-studies": "hebrew-studies",
+  "link-modules": "link-modules",
+  "modern-greek": "modern-greek",
+};
+
+/** Convert a UI subject slug to the corresponding Firebase Storage folder name. */
+export function getStorageFolderName(subjectSlug: string): string {
+  return SLUG_TO_STORAGE_FOLDER[subjectSlug] ?? subjectSlug;
+}
+
+/**
+ * Map UI subject slugs to Firestore document IDs under questions/leavingcert/subjects/.
+ * Only entries where the slug differs from the Firestore doc ID are needed.
+ */
+const SLUG_TO_FIRESTORE_IDS: Record<string, string[]> = {
+  mathematics: ["maths"],
+  "applied-mathematics": ["applied-maths"],
+};
+
+/**
+ * Given a UI subject slug, return all Firestore subject doc IDs to query for papers.
+ * Most slugs map 1:1, but some (like "mathematics" → "maths") need translation.
+ */
+export function getFirestoreSubjectIds(subjectSlug: string): string[] {
+  return SLUG_TO_FIRESTORE_IDS[subjectSlug] ?? [subjectSlug];
+}
+
 const FAVOURITES_KEY = "practice-hub-subject-favourites";
 
 export function getFavouriteSubjectIds(): string[] {
