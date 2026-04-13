@@ -35,6 +35,10 @@ export default function App() {
     if (!Capacitor.isNativePlatform()) return;
 
     document.documentElement.classList.add("capacitor-native");
+    const isIosNative = Capacitor.getPlatform() === "ios";
+    if (isIosNative) {
+      document.documentElement.classList.add("capacitor-ios-edge-to-edge");
+    }
 
     const viewportMeta = document.querySelector('meta[name="viewport"]');
     const previousViewport = viewportMeta?.getAttribute("content") ?? "";
@@ -63,6 +67,9 @@ export default function App() {
 
     return () => {
       document.documentElement.classList.remove("capacitor-native");
+      if (isIosNative) {
+        document.documentElement.classList.remove("capacitor-ios-edge-to-edge");
+      }
       if (viewportMeta) {
         viewportMeta.setAttribute("content", previousViewport);
       }
@@ -79,7 +86,7 @@ export default function App() {
         <TutorialProvider>
           {/* // ================ DIV THEME WRAPPER ===================== // */}
           <div id="themed-root" data-theme={options.theme}>
-            <div className="color-bg h-screen w-screen flex flex-row">
+            <div className="app-viewport color-bg flex flex-row overflow-hidden">
               {/* <CustomCursor /> */}
               <AppRouter />
               <UsernamePrompt />

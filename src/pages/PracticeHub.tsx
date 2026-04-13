@@ -15,7 +15,7 @@ import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { useImageTopics, type ImageTopic } from "../hooks/useImageQuestions";
 import { motion, AnimatePresence } from "framer-motion";
 import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage } from "react-icons/lu";
-import { subjectMatchesPaper, getSubjectLabel, getStorageFolderName } from "../data/practiceHubSubjects";
+import { subjectMatchesPaper, getStorageFolderName } from "../data/practiceHubSubjects";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
@@ -69,7 +69,7 @@ export default function PracticeHub() {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
-  const { papers, loading: papersLoading, subjectIds, subjectIdsLoading, getPaperBlob, getPaperQuestions, firstFreePaper } =
+  const { papers, loading: papersLoading, getPaperBlob, getPaperQuestions, firstFreePaper } =
     useExamPapers(subjectFilter);
   const [showPaperGateModal, setShowPaperGateModal] = useState(false);
   const [paperFilter, setPaperFilter] = useState<PaperFilter>("all");
@@ -173,11 +173,6 @@ export default function PracticeHub() {
     setPanelTagsExpanded(false);
     setTagsVisibleWhenCollapsed(1);
   }, [selectedPaperKey]);
-
-  const subjectOptions = useMemo(
-    () => subjectIds.map((id) => ({ id, label: getSubjectLabel(id) })),
-    [subjectIds]
-  );
 
   const filteredByMeta = useMemo(() => {
     return papers.filter((p) => {
@@ -486,7 +481,7 @@ export default function PracticeHub() {
   );
 
   return (
-    <div className="practice-hub w-full min-h-full h-full flex flex-col overflow-x-hidden px-10 pb-3 scrollbar-minimal pt-[env(safe-area-inset-top,0px)]">
+    <div className="practice-hub w-full min-h-full h-full flex flex-col overflow-x-hidden px-10 pb-3 scrollbar-minimal">
       <div className="practice-hub__inner flex flex-col flex-1 w-full min-h-0">
         {/* Top bar: subject (oval) left, search right */}
         <section className="topBar flex flex-shrink-0 items-center justify-between w-full mb-1">

@@ -340,7 +340,6 @@ export default function Questions() {
     );
     const {
         topics: imageAllTopics,
-        loading: imageAllTopicsLoading,
     } = useAllTopicsForSubjectLevel(
         mode === "imagequestions" ? normalizedUrlSubject || null : null,
         mode === "imagequestions" ? normalizedUrlLevel || null : null
@@ -1801,7 +1800,7 @@ export default function Questions() {
                                         <div
                                             className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
                                             style={{
-                                                bottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))",
+                                                bottom: "max(0.5rem, var(--safe-area-bottom, env(safe-area-inset-bottom, 0px)))",
                                                 left: options.leftHandMode ? undefined : `${navbarActionOffsetPx}px`,
                                             }}
                                         >
@@ -1977,7 +1976,7 @@ export default function Questions() {
                                             <div
                                                 className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
                                                 style={{
-                                                    bottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))",
+                                                        bottom: "max(0.5rem, var(--safe-area-bottom, env(safe-area-inset-bottom, 0px)))",
                                                     left: options.leftHandMode ? undefined : `${navbarActionOffsetPx}px`,
                                                 }}
                                             >
