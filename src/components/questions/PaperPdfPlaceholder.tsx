@@ -239,7 +239,7 @@ export default function PaperPdfPlaceholder({
         </div>
       )}
       <PdfErrorBoundary fallback={pdfFallback}>
-        <div className="relative">
+        <div className="relative overflow-hidden rounded-xl">
           <Document
             file={file}
             onLoadSuccess={({ numPages: n }) => {

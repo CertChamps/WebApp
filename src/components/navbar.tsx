@@ -11,7 +11,7 @@ import { TbCards } from 'react-icons/tb';
 export default function Navbar () {
 
     // Icon Properties
-    const iconSize = 32
+    const iconSize = 18
     const strokewidth = 2
 
     // Context and State and Hooks

@@ -172,11 +172,12 @@ function TopicSwitcher({ topics, value, onChange }: { topics: ImageTopic[]; valu
         <div ref={containerRef} className="relative pointer-events-auto" data-state={open ? "open" : "closed"}>
             <button
                 type="button"
-                className="flex items-center gap-1.5 color-bg-grey-5 color-txt-sub font-bold py-0.5 px-3 rounded-out border-0 cursor-pointer text-sm max-w-[200px]"
+                className={`questions-top-bar__topic-button max-w-[200px] ${open || value ? "questions-top-bar__topic-button--active" : ""}`}
                 onClick={() => { setOpen((o) => !o); setSearch(""); }}
                 aria-expanded={open}
                 aria-haspopup="listbox"
                 aria-label="Switch topic"
+                aria-pressed={open || !!value}
             >
                 <span className="truncate">{selectedLabel}</span>
                 <LuChevronDown size={14} className={`shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} aria-hidden />
@@ -1280,7 +1281,7 @@ export default function Questions() {
                                 <button
                                     type="button"
                                     aria-label="Check my answer"
-                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-accent color-txt-accent hover:opacity-85 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                                    className="questions-action-button questions-action-button--active disabled:opacity-60 disabled:cursor-not-allowed"
                                     onClick={handleCheckMyAnswer}
                                     disabled={!canCheckNow}
                                     title="Check my answer with AI"
@@ -1541,44 +1542,6 @@ export default function Questions() {
                         subjectFilter={subjectFilter}
                         onSubjectFilterChange={setSubjectFilter}
                         subjectOptions={certChampsSet?.sections?.map((sec) => ({ value: sec, label: formatSectionLabel(sec) })) ?? []}
-                        showQuestionCompleteControl={true}
-                        leftActionContent={
-                            options.laptopMode ? (
-                                <div className="relative">
-                                    <button
-                                        type="button"
-                                        aria-label="Check my answer"
-                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-accent color-txt-accent hover:opacity-85 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                                        onClick={handleCheckMyAnswer}
-                                        disabled={!canCheckNow}
-                                        title="Check my answer with AI"
-                                    >
-                                        <LuCircleCheck size={14} strokeWidth={2} />
-                                        <span>{!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check my answer"}</span>
-                                    </button>
-                                    {checkMyAnswerStatus && (
-                                        <div className="absolute top-full mt-2 max-w-[280px] text-xs color-txt-sub bg-[var(--grey-5)]/90 rounded-md px-2 py-1 z-20 flex items-center gap-2">
-                                            <span>{checkMyAnswerStatus}</span>
-                                            {gradingStatus === "error" && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleCheckMyAnswer}
-                                                    className="text-[11px] font-semibold color-txt-accent hover:opacity-80"
-                                                >
-                                                    Retry
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            ) : null
-                        }
-                        questionCompleted={mode === "pastpaper" && currentPaperQuestion ? isQuestionCompleted(currentPaperQuestion.id) : undefined}
-                        onToggleQuestionCompleted={mode === "pastpaper" && selectedPaper && currentPaperQuestion ? handleToggleQuestionCompleted : undefined}
-                        paperProgress={mode === "pastpaper" && paperQuestions.length > 0 ? {
-                            completed: completedForPaper.size,
-                            total: paperQuestions.length,
-                        } : undefined}
                         centerContent={!hideTitleAndArrows ? (
                             <div className="flex items-center gap-1">
                                 <button
@@ -1627,6 +1590,7 @@ export default function Questions() {
                                     aria-label={randomise ? "Random question (on)" : "Random question (off)"}
                                     className={`question-selector-button pointer-events-auto ${randomise ? "question-selector-button-active" : ""}`}
                                     onClick={() => setRandomise(!randomise)}
+                                    aria-pressed={randomise}
                                 >
                                     <TbDice5 size={20} strokeWidth={1.8} />
                                     <span>randomize</span>
@@ -1644,14 +1608,19 @@ export default function Questions() {
                                     <div ref={pastPaperFilterRef} className="practice-hub__topics-wrap relative">
                                         <button
                                             type="button"
-                                            className="flex color-txt-sub font-bold py-0.5 px-2 items-center justify-center rounded-out color-bg-grey-5 gap-1 mx-2 cursor-pointer border-0 pointer-events-auto"
+                                            className={`questions-top-bar__topic-button mx-2 ${showPastPaperFilter || selectedSubTopics.length > 0 ? "questions-top-bar__topic-button--active" : ""}`}
                                             onClick={() => setShowPastPaperFilter((o) => !o)}
                                             aria-expanded={showPastPaperFilter}
                                             aria-haspopup="dialog"
                                             aria-label="Filter questions by topic"
+                                            aria-pressed={showPastPaperFilter || selectedSubTopics.length > 0}
                                         >
                                             <span>Topics</span>
-                                            <LuChevronDown size={16} className="color-txt-sub" aria-hidden />
+                                            <LuChevronDown
+                                                size={16}
+                                                className={`${showPastPaperFilter || selectedSubTopics.length > 0 ? "color-txt-accent" : "color-txt-sub"}`}
+                                                aria-hidden
+                                            />
                                         </button>
                                         <PastPaperFilterPanel
                                             asDropdown
@@ -1697,6 +1666,7 @@ export default function Questions() {
                                         aria-label="Filter questions by topic"
                                         className={`question-selector-button pointer-events-auto ${Object.values(filters).some(v => v.length > 0) ? "question-selector-button-active" : ""}`}
                                         onClick={() => setShowFilter(true)}
+                                        aria-pressed={Object.values(filters).some(v => v.length > 0)}
                                     >
                                         <LuFilter size={18} strokeWidth={2} />
                                         <span>filter</span>
@@ -1706,8 +1676,9 @@ export default function Questions() {
                                     <button
                                         type="button"
                                         aria-label="Search questions"
-                                        className="question-selector-button pointer-events-auto"
+                                        className={`question-selector-button pointer-events-auto ${showSearch ? "question-selector-button-active" : ""}`}
                                         onClick={() => setShowSearch(true)}
+                                        aria-pressed={showSearch}
                                     >
                                         <LuSearch size={18} strokeWidth={2} />
                                         <span>search</span>
@@ -1768,7 +1739,7 @@ export default function Questions() {
                                         setShowComingSoonToast(true);
                                         setTimeout(() => setShowComingSoonToast(false), 2000);
                                     }}
-                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub opacity-60 cursor-pointer transition-all"
+                                    className="questions-action-button opacity-60"
                                     title="Full paper view coming soon"
                                     aria-label="Full paper (coming soon)"
                                 >
@@ -1778,7 +1749,7 @@ export default function Questions() {
                                 <button
                                     type="button"
                                     onClick={() => setShowCalculator(true)}
-                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                    className="questions-action-button"
                                     title="Calculator"
                                     aria-label="Calculator"
                                 >
@@ -1808,8 +1779,8 @@ export default function Questions() {
                                         </div>,
                                         document.body
                                     )}
-                                <div className="flex-1 min-h-0 relative pt-4 pb-14">
-                                    <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-minimal h-full py-2 items-center">
+                                <div className="flex-1 min-h-0 relative pt-4 pb-24">
+                                    <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-minimal h-full py-2 pb-10 items-center">
                                         <div className="flex flex-col items-center w-full" style={{ maxWidth: snippetWidth }}>
                                             {currentGroupedQuestion.images.map((img, idx) => (
                                                 <img
@@ -1829,7 +1800,7 @@ export default function Questions() {
                                                     setSidebarOpen(true);
                                                     setSidebarOpenPanel("markingscheme");
                                                 }}
-                                                className="w-full py-4 px-6 rounded-2xl text-base font-medium color-bg-grey-5 color-txt-sub hover:color-bg-grey-10 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+                                                className="questions-action-button w-full py-4! px-0!  rounded-2xl text-base gap-2"
                                                 aria-label="Reveal marking scheme"
                                             >
                                                 <LuClipboardList size={20} strokeWidth={2} />
@@ -1910,7 +1881,7 @@ export default function Questions() {
                                         <button
                                             type="button"
                                             onClick={handleExpandToggle}
-                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                            className="questions-action-button"
                                             aria-label={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
                                             title={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
                                         >
@@ -1935,7 +1906,7 @@ export default function Questions() {
                                                 setLogTablesQuestionIndex(paperQuestionIndexInFullList >= 0 ? paperQuestionIndexInFullList : 0);
                                                 setShowLogTables(true);
                                             }}
-                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                            className="questions-action-button"
                                             title="Log tables"
                                             aria-label="Log tables"
                                         >
@@ -1947,7 +1918,7 @@ export default function Questions() {
                                         <button
                                             type="button"
                                             onClick={() => setShowCalculator(true)}
-                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium color-bg-grey-5 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer"
+                                            className="questions-action-button"
                                             title="Calculator"
                                             aria-label="Calculator"
                                         >
@@ -1984,7 +1955,7 @@ export default function Questions() {
                                             </div>,
                                             document.body
                                         )}
-                                    <div className="flex-1 min-h-0 relative pt-4 pb-14">
+                                    <div className="flex-1 min-h-0 relative pt-4 pb-24">
                                         {hasPageRegions ? (
                                             <>
                                                 <motion.div
@@ -1997,7 +1968,7 @@ export default function Questions() {
                                                     }}
                                                     transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
                                                 >
-                                                    <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto scrollbar-minimal py-2 pr-2 items-center">
+                                                    <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto scrollbar-minimal py-2 pb-10 pr-2 items-center">
                                                         <CroppedPdfRegions
                                                             file={paperBlob}
                                                             regions={currentPaperQuestion!.pageRegions!.map((r) => ({
@@ -2018,7 +1989,7 @@ export default function Questions() {
                                                                         setSidebarOpen(true);
                                                                         setSidebarOpenPanel("markingscheme");
                                                                     }}
-                                                                    className="w-full py-4 px-6 rounded-2xl text-base font-medium color-bg-grey-5 color-txt-main hover:color-bg-grey-10 transition-all duration-200 cursor-pointer  flex items-center justify-center gap-2"
+                                                                    className="questions-action-button w-full py-6 px-8 rounded-2xl text-base gap-2"
                                                                     aria-label="Reveal marking scheme"
                                                                 >
                                                                     <LuClipboardList size={20} strokeWidth={2} />

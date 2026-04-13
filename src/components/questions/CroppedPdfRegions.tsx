@@ -47,14 +47,21 @@ function CroppedPdfRegions({
         const topPx = region.y * scale;
         const widthPx = region.width * scale;
         const heightPx = region.height * scale;
+        const hasMultipleRegions = regions.length > 1;
+        const isFirstRegion = i === 0;
+        const isLastRegion = i === regions.length - 1;
 
         return (
           <div
             key={`${region.page}-${region.y}-${i}`}
-            className="overflow-hidden rounded-xl color-shadow"
+            className="overflow-hidden color-shadow"
             style={{
               width: widthPx,
               height: heightPx,
+              borderTopLeftRadius: !hasMultipleRegions || isFirstRegion ? 12 : 0,
+              borderTopRightRadius: !hasMultipleRegions || isFirstRegion ? 12 : 0,
+              borderBottomLeftRadius: !hasMultipleRegions || isLastRegion ? 12 : 0,
+              borderBottomRightRadius: !hasMultipleRegions || isLastRegion ? 12 : 0,
             }}
           >
             <div

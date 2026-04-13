@@ -16,13 +16,51 @@
 .questions-top-bar__right {
   @apply flex items-center gap-2 justify-self-end min-w-0;
 }
-.questions-top-bar__btn {
-  @apply inline-flex items-center gap-1.5 rounded-out px-3 py-1.5 text-sm font-medium
-    color-txt-sub border border-transparent
-    hover:color-bg-grey-5 active:scale-[0.98] transition-all duration-200 cursor-pointer;
+.questions-top-bar__btn,
+.question-selector-button,
+.questions-top-bar__topic-button,
+.questions-top-bar__whiteboard,
+.questions-action-button {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm! font-medium! cursor-pointer select-none;
+  @apply color-bg border color-shadow color-txt-sub;
+  transform: translateZ(0);
+  /* -webkit-backdrop-filter: blur(8px) saturate(180%);
+  backdrop-filter: blur(8px) saturate(180%); */
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease ,
+    background-color 180ms ease,
+    color 180ms ease;
+  will-change: transform, opacity;
 }
-.questions-top-bar__btn:focus-visible {
+.questions-top-bar__btn:hover,
+.question-selector-button:hover,
+.questions-top-bar__topic-button:hover,
+.questions-top-bar__whiteboard:hover,
+.questions-action-button:hover {
+  @apply opacity-95;
+}
+.questions-top-bar__btn:active,
+.question-selector-button:active,
+.questions-top-bar__topic-button:active,
+.questions-top-bar__whiteboard:active,
+.questions-action-button:active {
+  transform: scale(0.965);
+  opacity: 0.9;
+}
+.questions-top-bar__btn:focus-visible,
+.question-selector-button:focus-visible,
+.questions-top-bar__topic-button:focus-visible,
+.questions-top-bar__whiteboard:focus-visible,
+.questions-action-button:focus-visible {
   @apply outline-none ring-2 ring-offset-2 ring-blue/40;
+}
+.questions-top-bar__btn--active,
+.question-selector-button-active,
+.questions-top-bar__topic-button--active,
+.questions-top-bar__whiteboard--active,
+.questions-action-button--active {
+  @apply color-bg-accent color-txt-accent;
 }
 .questions-top-bar__dropdown {
   @apply min-w-[140px] rounded-out pl-3 pr-9 py-1.5 text-sm font-medium
@@ -73,13 +111,12 @@
   cursor-pointer hover:opacity-85 duration-250 
 }
 
-.question-selector-button {
-    @apply color-txt-sub flex items-center justify-center gap-2 rounded-out px-3! py-1.5! text-sm font-semibold transition-all hover:color-bg-grey-5 cursor-pointer
+.question-selector-button-active {
+  @apply color-bg-accent color-txt-accent;
 }
 
-.question-selector-button-active {
-  @apply color-bg-accent color-txt-accent 
-}
+/* Shared action buttons in question/paper panes */
+/* .questions-action-button intentionally shares the exact same rules as top-bar buttons above */
 
 /* Questions search modal (utility-themed) */
 .q-search-overlay {

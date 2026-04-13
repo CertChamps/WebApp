@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { LuArrowLeft, LuPenTool, LuCircleCheck, LuCircle } from "react-icons/lu";
+import { LuArrowLeft, LuPenTool } from "react-icons/lu";
 
 type QuestionsMode = "certchamps" | "pastpaper" | "imagequestions";
 
@@ -14,10 +14,6 @@ type QuestionsTopBarProps = {
   centerContent?: ReactNode;
   rightContent?: ReactNode;
   leftActionContent?: ReactNode;
-  showQuestionCompleteControl?: boolean;
-  questionCompleted?: boolean;
-  onToggleQuestionCompleted?: () => void;
-  paperProgress?: { completed: number; total: number };
 };
 
 export default function QuestionsTopBar({
@@ -31,10 +27,6 @@ export default function QuestionsTopBar({
   centerContent,
   rightContent,
   leftActionContent,
-  showQuestionCompleteControl = true,
-  questionCompleted,
-  onToggleQuestionCompleted,
-  paperProgress,
 }: QuestionsTopBarProps) {
   const whiteboardOn = !laptopMode;
 
@@ -50,46 +42,23 @@ export default function QuestionsTopBar({
             aria-label="Back to Practice Hub"
           >
             <LuArrowLeft size={18} strokeWidth={2} className="shrink-0" />
-            <span className="txt-bold color-txt-sub">Hub</span>
+            <span className="color-txt-sub">Hub</span>
           </button>
 
           <button
             type="button"
             onClick={onLaptopModeChange}
-            className={`flex justify-center items-center px-2 py-1 rounded-in cursor-pointer  gap-1 transition-all duration-200
-              ${whiteboardOn ? "color-bg-accent! color-txt-accent!" : "color-bg-grey-10! color-txt-sub!"}`}
+            className={`questions-top-bar__whiteboard ${whiteboardOn ? "questions-top-bar__whiteboard--active" : ""}`}
             title={whiteboardOn ? "Whiteboard on (Tablet Mode)" : "Whiteboard off (Laptop Mode)"}
             aria-label={whiteboardOn ? "Turn whiteboard off and switch to laptop mode" : "Turn whiteboard on and switch to tablet mode"}
+            aria-pressed={whiteboardOn}
             data-tutorial-id="laptop-tablet-toggle"
           >
             <LuPenTool size={20} strokeWidth={2} className="shrink-0" />
-            <span className="">whiteboard</span>
+            <span>Whiteboard</span>
           </button>
 
           {leftActionContent}
-
-          {mode === "pastpaper" && onToggleQuestionCompleted && showQuestionCompleteControl && (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={onToggleQuestionCompleted}
-                className={`questions-top-bar__tick ${questionCompleted ? "questions-top-bar__tick--done" : ""}`}
-                aria-label={questionCompleted ? "Mark question incomplete" : "Mark question complete"}
-                title={questionCompleted ? "Mark incomplete" : "Mark complete"}
-              >
-                {questionCompleted ? (
-                  <LuCircleCheck size={18} strokeWidth={2.2} />
-                ) : (
-                  <LuCircle size={18} strokeWidth={1.8} />
-                )}
-              </button>
-              {paperProgress && paperProgress.total > 0 && (
-                <span className="questions-top-bar__progress-pill">
-                  {paperProgress.completed}/{paperProgress.total}
-                </span>
-              )}
-            </div>
-          )}
 
           {mode === "certchamps" && subjectOptions.length > 0 && (
             <>

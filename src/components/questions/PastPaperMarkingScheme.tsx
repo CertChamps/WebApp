@@ -111,12 +111,23 @@ export default function PastPaperMarkingScheme({
             Array.from({ length: pageCount }, (_, i) => {
               const pageNum = startPage + i;
               if (pageNum > numPages) return null;
+              const isFirstVisible = i === 0;
+              const isLastVisible = i === pageCount - 1 || pageNum === numPages;
+              const hasMultipleVisible = pageCount > 1;
               return (
                 <div
                   key={`ms_page_${pageNum}`}
                   className="flex flex-col items-center my-4"
                 >
-                  <div className="color-shadow rounded-lg overflow-hidden color-bg-grey-5/50">
+                  <div
+                    className="color-shadow overflow-hidden color-bg-grey-5/50"
+                    style={{
+                      borderTopLeftRadius: !hasMultipleVisible || isFirstVisible ? 10 : 0,
+                      borderTopRightRadius: !hasMultipleVisible || isFirstVisible ? 10 : 0,
+                      borderBottomLeftRadius: !hasMultipleVisible || isLastVisible ? 10 : 0,
+                      borderBottomRightRadius: !hasMultipleVisible || isLastVisible ? 10 : 0,
+                    }}
+                  >
                     <PdfThemeWrapper
                       pageNumber={pageNum}
                       width={effectiveWidth}
