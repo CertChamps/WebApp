@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { ref, listAll, getDownloadURL } from "firebase/storage";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ref, listAll, getDownloadURL, getMetadata } from "firebase/storage";
 import { storage } from "../../firebase";
 
 const STORAGE_BASE = "temp_images/leaving-cert";
@@ -31,11 +31,45 @@ const CACHE_TTL = 5 * 60 * 1000;
 const levelCache = new Map<string, CacheEntry<string[]>>();
 const topicCache = new Map<string, CacheEntry<ImageTopic[]>>();
 const questionCache = new Map<string, CacheEntry<ImageQuestion[]>>();
+const resolvedFolderCache = new Map<string, string>();
+let parentFolderList: string[] | null = null;
 
 function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
   const entry = cache.get(key);
   if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
   return null;
+}
+
+const normaliseForMatch = (s: string) => s.replace(/[-_]/g, "").toLowerCase();
+
+async function resolveStorageFolder(subject: string): Promise<string> {
+  const cached = resolvedFolderCache.get(subject);
+  if (cached) return cached;
+
+  const directRef = ref(storage, `${STORAGE_BASE}/${subject}`);
+  const directResult = await listAll(directRef);
+  if (directResult.prefixes.length > 0 || directResult.items.length > 0) {
+    resolvedFolderCache.set(subject, subject);
+    return subject;
+  }
+
+  if (!parentFolderList) {
+    const parentRef = ref(storage, STORAGE_BASE);
+    const parentResult = await listAll(parentRef);
+    parentFolderList = parentResult.prefixes.map((p) => p.name);
+  }
+
+  const norm = normaliseForMatch(subject);
+  const match =
+    parentFolderList.find((f) => normaliseForMatch(f) === norm) ??
+    parentFolderList.find((f) => {
+      const nf = normaliseForMatch(f);
+      return nf.includes(norm) || norm.includes(nf);
+    });
+
+  const resolved = match ?? subject;
+  resolvedFolderCache.set(subject, resolved);
+  return resolved;
 }
 
 function stripExtension(filename: string): string {
@@ -143,7 +177,8 @@ export async function listLevelsForSubject(subject: string): Promise<string[]> {
   const cached = getCached(levelCache, key);
   if (cached) return cached;
 
-  const folderRef = ref(storage, `${STORAGE_BASE}/${subject}`);
+  const resolved = await resolveStorageFolder(subject);
+  const folderRef = ref(storage, `${STORAGE_BASE}/${resolved}`);
   const result = await listAll(folderRef);
   const levels = result.prefixes.map((p) => p.name);
   levelCache.set(key, { data: levels, ts: Date.now() });
@@ -158,7 +193,8 @@ export async function listTopicsForSubjectLevel(
   const cached = getCached(topicCache, key);
   if (cached) return cached;
 
-  const folderRef = ref(storage, `${STORAGE_BASE}/${subject}/${level}`);
+  const resolved = await resolveStorageFolder(subject);
+  const folderRef = ref(storage, `${STORAGE_BASE}/${resolved}/${level}`);
   const result = await listAll(folderRef);
 
   const topics: ImageTopic[] = await Promise.all(
@@ -184,7 +220,24 @@ export async function listTopicsForSubjectLevel(
       let thumbnailUrl: string | null = null;
       if (topicResult.items.length > 0) {
         try {
-          thumbnailUrl = await getDownloadURL(topicResult.items[0]);
+          const candidates = topicResult.items;
+          const sampleSize = Math.min(candidates.length, 6);
+          const step = Math.max(1, Math.floor(candidates.length / sampleSize));
+          const sampled = Array.from({ length: sampleSize }, (_, i) =>
+            candidates[Math.min(i * step, candidates.length - 1)]
+          );
+          const metas = await Promise.all(
+            sampled.map(async (item) => {
+              try {
+                const m = await getMetadata(item);
+                return { item, size: m.size ?? 0 };
+              } catch {
+                return { item, size: 0 };
+              }
+            })
+          );
+          const best = metas.reduce((a, b) => (b.size > a.size ? b : a));
+          thumbnailUrl = await getDownloadURL(best.item);
         } catch {
           thumbnailUrl = null;
         }
@@ -213,7 +266,8 @@ export async function listQuestionsForTopic(
   const cached = getCached(questionCache, key);
   if (cached) return cached;
 
-  const folderRef = ref(storage, `${STORAGE_BASE}/${subject}/${level}/${topic}`);
+  const resolved = await resolveStorageFolder(subject);
+  const folderRef = ref(storage, `${STORAGE_BASE}/${resolved}/${level}/${topic}`);
   const result = await listAll(folderRef);
 
   const questions: ImageQuestion[] = await Promise.all(

@@ -14,8 +14,9 @@ import PaperProGate from "../components/PaperProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { useImageTopics, type ImageTopic } from "../hooks/useImageQuestions";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage } from "react-icons/lu";
-import { subjectMatchesPaper, getStorageFolderName } from "../data/practiceHubSubjects";
+import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart } from "react-icons/lu";
+import type { IconType } from "react-icons";
+import { subjectMatchesPaper, getSubjectLabel, getStorageFolderName, getFavouriteSubjectIds, PRACTICE_HUB_SUBJECTS } from "../data/practiceHubSubjects";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
@@ -65,6 +66,41 @@ const LEVEL_ORDER: LevelFilter[] = ["all", "higher", "ordinary", "foundation"];
 const LEVEL_DRAG_THRESHOLD_PX = 8;
 const LEVEL_DRAG_STEP_PX = 20;
 
+const SUBJECT_ICONS: Record<string, IconType> = {
+  accounting: LuCalculator,
+  "agricultural-science": LuSprout,
+  "ancient-greek": LuLandmark,
+  "applied-mathematics": LuBraces,
+  art: LuPalette,
+  biology: LuDna,
+  business: LuBriefcase,
+  chemistry: LuFlaskConical,
+  "classical-studies": LuScroll,
+  "computer-science": LuCode,
+  "construction-studies": LuHammer,
+  "design-communication-graphics": LuRuler,
+  economics: LuTrendingUp,
+  engineering: LuWrench,
+  english: LuBookOpen,
+  geography: LuGlobe,
+  "history-early-modern": LuLandmark,
+  "history-later-modern": LuLandmark,
+  "home-economics": LuChefHat,
+  "link-modules": LuLink,
+  mathematics: LuCalculator,
+  music: LuMusic,
+  "physical-education": LuDumbbell,
+  physics: LuAtom,
+  "physics-and-chemistry": LuFlaskConical,
+  "politics-and-society": LuScale,
+  "religious-education": LuHeart,
+  technology: LuCpu,
+};
+
+function getSubjectIcon(subjectId: string): IconType {
+  return SUBJECT_ICONS[subjectId] ?? LuLanguages;
+}
+
 export default function PracticeHub() {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
@@ -88,6 +124,13 @@ export default function PracticeHub() {
   const [globalSearchIndex, setGlobalSearchIndex] = useState<Fuse<GlobalSearchEntry> | null>(null);
   const [globalSearchLoading, setGlobalSearchLoading] = useState(false);
   const globalSearchContainerRef = useRef<HTMLDivElement>(null);
+
+  const [hubFavourites, setHubFavourites] = useState<string[]>(() => getFavouriteSubjectIds());
+  const onFavouritesChange = useCallback((ids: string[]) => setHubFavourites(ids), []);
+  const favouriteSubjects = useMemo(
+    () => PRACTICE_HUB_SUBJECTS.filter((s) => hubFavourites.includes(s.id)),
+    [hubFavourites]
+  );
 
   const [topicsOpen, setTopicsOpen] = useState(false);
   const [, setPendingTopicFilter] = useState<string[]>([]);
@@ -490,6 +533,7 @@ export default function PracticeHub() {
               value={subjectFilter}
               onChange={setSubjectFilter}
               id="ph-subject"
+              onFavouritesChange={onFavouritesChange}
             />
           </div>
           <div ref={globalSearchContainerRef} className="flex items-center txtbox color-bg w-1/4 max-w-80 rounded-out min-w-0 relative ml-auto">
@@ -553,7 +597,8 @@ export default function PracticeHub() {
           </div>
         </section>
 
-        {/* Filter section */}
+        {/* Filter section – only visible when a subject is selected */}
+        {subjectFilter != null && (
         <section className="flex items-center justify-start gap-2 practice-hub__filter-section pb-2 w-full flex-shrink-0 mb-2" aria-label="Filters">
             <h2 className="txt-heading-colour text-xl font-bold mr-3">
               {isImageMode ? "Practice Questions" : "State Exam Papers"}
@@ -658,11 +703,20 @@ export default function PracticeHub() {
               <LuTrash2 size={18} aria-hidden />
             </button>
         </section>
+        )}
 
         {/* Results: deck-grid + paper/topic cards – fills remaining height */}
         <div className="flex-1 w-full min-h-0 overflow-y-auto overflow-x-auto scrollbar-minimal">
+          <AnimatePresence mode="wait">
           {papersLoading || (isImageMode && imageTopicsLoading) ? (
-            <div className="deck-grid">
+            <motion.div
+              key="skeleton"
+              className="deck-grid"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="deck flex flex-col">
                   <div className="color-border" />
@@ -670,55 +724,135 @@ export default function PracticeHub() {
                   <div className="flex w-full z-50 mt-21 px-3 py-2 items-center color-bg-grey-5 animate-pulse rounded-b-2xl h-14" />
                 </div>
               ))}
-            </div>
+            </motion.div>
           ) : subjectFilter == null ? (
-            <div className="h-full min-h-[360px] w-full flex items-center justify-center px-4">
-              <div className="max-w-xl text-center">
-                <p className="txt-heading-colour text-2xl font-bold mb-2">Choose a subject</p>
-                <p className="txt-sub color-txt-sub mb-5">
-                  Pick a subject to get started and we will line up the right papers for you.
-                </p>
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    className="blue-btn px-5 py-2.5"
-                    onClick={openSubjectPicker}
-                  >
-                    Choose a subject
-                  </button>
+            favouriteSubjects.length > 0 ? (
+              <motion.div
+                key="fav-grid"
+                className="w-full"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <h2 className="txt-heading-colour text-xl font-bold mb-3">Your Subjects</h2>
+                <div className="deck-grid">
+                  {favouriteSubjects.map((s, i) => (
+                    <motion.div
+                      key={s.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
+                    >
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSubjectFilter(s.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSubjectFilter(s.id);
+                          }
+                        }}
+                        className="deck paper-card flex flex-col"
+                      >
+                        <div className="color-border" />
+                        <SubjectIconImage subjectId={s.id} />
+                        <div className="bg-overlay" />
+                        <div className="practice-hub__paper-card-body">
+                          <div className="flex w-full z-50 mt-21 px-2.5 items-center pt-0.5">
+                            <div className="flex flex-col ml-1 min-w-0 flex-1">
+                              <span className="txt-heading-colour truncate">{s.label}</span>
+                            </div>
+                            <LuChevronRight size={18} className="color-txt-sub shrink-0" aria-hidden />
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="empty"
+                className="h-full min-h-[360px] w-full flex items-center justify-center px-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <div className="max-w-xl text-center">
+                  <LuStar size={40} className="color-txt-sub opacity-40 mx-auto mb-3" />
+                  <p className="txt-heading-colour text-2xl font-bold mb-2">No favourite subjects yet</p>
+                  <p className="txt-sub color-txt-sub mb-5">
+                    Star your favourite subjects and they'll appear here for quick access.
+                  </p>
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      className="blue-btn px-5 py-2.5"
+                      onClick={openSubjectPicker}
+                    >
+                      Choose a subject
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )
           ) : isImageMode ? (
             imageTopicsError ? (
-              <p className="txt-sub color-txt-sub py-4 ml-4">
+              <motion.p key="error" className="txt-sub color-txt-sub py-4 ml-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
                 No questions available for this subject yet.
-              </p>
+              </motion.p>
             ) : imageTopics.length === 0 ? (
-              <p className="txt-sub color-txt-sub py-4 ml-4">
+              <motion.p key="no-topics" className="txt-sub color-txt-sub py-4 ml-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
                 No topics found for the selected level.
-              </p>
+              </motion.p>
             ) : (
-              <div className="deck-grid">
-                {imageTopics.map((topic) => (
-                  <TopicCard
+              <motion.div
+                key={`topics-${subjectFilter}`}
+                className="deck-grid"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                {imageTopics.map((topic, i) => (
+                  <motion.div
                     key={topic.path}
-                    topic={topic}
-                    onSelect={() => setSelectedImageTopic(topic)}
-                  />
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
+                  >
+                    <TopicCard
+                      topic={topic}
+                      onSelect={() => setSelectedImageTopic(topic)}
+                    />
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             )
           ) : filteredPapers.length === 0 ? (
-            <p className="txt-sub color-txt-sub py-4 ml-4">
+            <motion.p key="no-papers" className="txt-sub color-txt-sub py-4 ml-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
               No papers match the selected filters.
-            </p>
+            </motion.p>
           ) : (
-            <>
-              <div className="deck-grid">
-                {filteredPapers.map((paper) => (
+            <motion.div
+              key={`papers-${subjectFilter}`}
+              className="deck-grid"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              {filteredPapers.map((paper, i) => (
+                <motion.div
+                  key={getExamPaperKey(paper)}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
+                >
                   <PaperCard
-                    key={getExamPaperKey(paper)}
                     paper={paper}
                     getPaperBlob={getPaperBlob}
                     questionCount={paperQuestionCountMap[getExamPaperKey(paper)]}
@@ -728,10 +862,11 @@ export default function PracticeHub() {
                       setPanelAnimationDone(false);
                     }}
                   />
-                ))}
-              </div>
-            </>
+                </motion.div>
+              ))}
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -1083,9 +1218,9 @@ function TopicCard({
       className="deck paper-card flex flex-col"
     >
       <div className="color-border" />
-      <div className="image overflow-hidden">
+      <div className="image overflow-hidden flex items-center justify-center">
         {topic.thumbnailUrl ? (
-          <img src={topic.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+          <img src={topic.thumbnailUrl} alt="" className="w-full h-full object-contain" />
         ) : (
           <div className="w-full h-full flex items-center justify-center color-txt-sub text-xs">
             <LuImage size={32} className="color-txt-sub opacity-40" />
@@ -1106,6 +1241,16 @@ function TopicCard({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Icon thumbnail for favourite subject cards on the landing page */
+function SubjectIconImage({ subjectId }: { subjectId: string }) {
+  const Icon = getSubjectIcon(subjectId);
+  return (
+    <div className="image overflow-hidden flex items-center justify-center color-bg-grey-5">
+      <Icon size={36} className="color-txt-accent opacity-60" />
     </div>
   );
 }
