@@ -230,7 +230,7 @@ export default function PaperPdfPlaceholder({
   return (
     <div
       ref={scrollContainerRef}
-      className="h-full w-full min-h-0 overflow-y-auto overflow-x-hidden scrollbar-minimal"
+      className="h-full w-full min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide"
       style={{ touchAction: "pan-y" }}
     >
       {loadError && (

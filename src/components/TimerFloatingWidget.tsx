@@ -4,9 +4,11 @@ import { useTimer } from "../context/TimerContext";
 type TimerFloatingWidgetProps = {
   /** When true, position on the left (for left-hand layout). */
   leftHandMode?: boolean;
+  /** Optional click handler (e.g. open timer panel in sidebar). */
+  onClick?: () => void;
 };
 
-export function TimerFloatingWidget({ leftHandMode = false }: TimerFloatingWidgetProps) {
+export function TimerFloatingWidget({ leftHandMode = false, onClick }: TimerFloatingWidgetProps) {
   const { state, formatTime } = useTimer();
 
   if (!state.running) return null;
@@ -36,10 +38,13 @@ export function TimerFloatingWidget({ leftHandMode = false }: TimerFloatingWidge
         : LuTimer;
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={onClick}
       className={`fixed bottom-3 z-10 flex flex-col gap-0.5 w-[220px] rounded-xl color-bg p-2 ${leftHandMode ? "left-20" : "right-3"}`}
       aria-live="polite"
       aria-label={`Timer: ${modeLabel}, ${formatTime(state.time)}`}
+      title={onClick ? "Open timer panel" : undefined}
     >
       <div className="flex items-center  justify-center gap-2 min-w-0">
         <div className="flex h-7 px-0.5 shrink-0 items-center justify-center rounded-md color-txt-main">
@@ -60,6 +65,6 @@ export function TimerFloatingWidget({ leftHandMode = false }: TimerFloatingWidge
           />
         </div>
       )}
-    </div>
+    </button>
   );
 }

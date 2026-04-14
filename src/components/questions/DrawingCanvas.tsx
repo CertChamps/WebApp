@@ -1,11 +1,29 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2 } from "lucide-react";
 import type { CanvasAnnotation, CanvasCapturePayload } from "../../lib/grading/GradingTypes";
 import { buildCapturePayload } from "../../lib/grading/canvasCapture";
 import RenderMath from "../math/mathdisplay";
 
 type Point = { x: number; y: number; pressure: number };
-type Stroke = { points: Point[]; tool: "pen" | "eraser" };
+type Stroke = { points: Point[]; tool: "pen" | "eraser"; colorIndex?: number; color?: string };
+type ToolMode = "pen" | "eraser" | "lasso";
+type SelectionBounds = { minX: number; minY: number; maxX: number; maxY: number };
+type TransformMode = "move" | "scale" | "rotate";
+type TransformSession = {
+	mode: TransformMode;
+	startPointer: Point;
+	baseStrokes: Stroke[];
+	selectedIndexes: number[];
+	center: { x: number; y: number };
+	baseBounds: SelectionBounds;
+	baseDistance?: number;
+	startAngle?: number;
+	previewDx: number;
+	previewDy: number;
+	previewScale: number;
+	previewRotation: number;
+};
 
 export type WhiteboardFeedbackItem = {
 	kind: "comment";
@@ -48,6 +66,10 @@ const STROKE_ERASER_HIT_RADIUS = ERASER_WIDTH / 2 + 3;
 const ERASE_TARGET_STROKE_COLOR = "rgba(128, 128, 128, 0.7)";
 /** Hold still for this long (ms) to snap stroke to straight line */
 const HOLD_TO_STRAIGHTEN_MS = 600;
+const LASSO_MIN_POINTS = 3;
+const SELECTION_HANDLE_RADIUS_PX = 8;
+const SELECTION_HIT_PADDING_PX = 10;
+const MIN_SELECTION_SCALE = 0.08;
 
 function seededUnit(seed: number): number {
 	const x = Math.sin(seed * 12.9898) * 43758.5453;
@@ -221,6 +243,175 @@ function strokeIntersectsEraser(stroke: Stroke, eraserStroke: Stroke, hitRadius:
 	return false;
 }
 
+function pointInPolygon(point: Point, polygon: Point[]): boolean {
+	let inside = false;
+	for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+		const xi = polygon[i].x;
+		const yi = polygon[i].y;
+		const xj = polygon[j].x;
+		const yj = polygon[j].y;
+		const intersect =
+			(yi > point.y) !== (yj > point.y) &&
+			point.x < ((xj - xi) * (point.y - yi)) / (yj - yi + Number.EPSILON) + xi;
+		if (intersect) inside = !inside;
+	}
+	return inside;
+}
+
+function strokeIntersectsPolygon(stroke: Stroke, polygon: Point[]): boolean {
+	if (stroke.tool !== "pen" || stroke.points.length === 0 || polygon.length < 3) return false;
+	if (stroke.points.some((point) => pointInPolygon(point, polygon))) return true;
+	for (let i = 0; i < stroke.points.length - 1; i += 1) {
+		const a1 = stroke.points[i];
+		const a2 = stroke.points[i + 1];
+		for (let j = 0; j < polygon.length; j += 1) {
+			const b1 = polygon[j];
+			const b2 = polygon[(j + 1) % polygon.length];
+			if (segmentsIntersect(a1, a2, b1, b2)) return true;
+		}
+	}
+	return false;
+}
+
+function getSelectionBounds(strokes: Stroke[], selectedIndexes: number[]): SelectionBounds | null {
+	let minX = Infinity;
+	let minY = Infinity;
+	let maxX = -Infinity;
+	let maxY = -Infinity;
+	let hasPoint = false;
+	for (const index of selectedIndexes) {
+		const stroke = strokes[index];
+		if (!stroke || stroke.tool !== "pen") continue;
+		for (const point of stroke.points) {
+			hasPoint = true;
+			if (point.x < minX) minX = point.x;
+			if (point.y < minY) minY = point.y;
+			if (point.x > maxX) maxX = point.x;
+			if (point.y > maxY) maxY = point.y;
+		}
+	}
+	return hasPoint ? { minX, minY, maxX, maxY } : null;
+}
+
+function transformPoint(point: Point, center: { x: number; y: number }, dx: number, dy: number, scaleFactor: number, rotation: number): Point {
+	const localX = point.x - center.x;
+	const localY = point.y - center.y;
+	const scaledX = localX * scaleFactor;
+	const scaledY = localY * scaleFactor;
+	const cos = Math.cos(rotation);
+	const sin = Math.sin(rotation);
+	const rotatedX = scaledX * cos - scaledY * sin;
+	const rotatedY = scaledX * sin + scaledY * cos;
+	return {
+		x: center.x + rotatedX + dx,
+		y: center.y + rotatedY + dy,
+		pressure: point.pressure,
+	};
+}
+
+function transformSelectedStrokes(
+	sourceStrokes: Stroke[],
+	selectedIndexes: number[],
+	center: { x: number; y: number },
+	options: { dx?: number; dy?: number; scaleFactor?: number; rotation?: number }
+): Stroke[] {
+	const dx = options.dx ?? 0;
+	const dy = options.dy ?? 0;
+	const scaleFactor = options.scaleFactor ?? 1;
+	const rotation = options.rotation ?? 0;
+	const selectedSet = new Set(selectedIndexes);
+	return sourceStrokes.map((stroke, index) => {
+		if (!selectedSet.has(index) || stroke.tool !== "pen") return stroke;
+		return {
+			...stroke,
+			points: stroke.points.map((point) => transformPoint(point, center, dx, dy, scaleFactor, rotation)),
+		};
+	});
+}
+
+function eraseStrokesAtPoint(source: Stroke[], point: Point): Stroke[] {
+	const radius = STROKE_ERASER_HIT_RADIUS;
+	const radiusSq = radius * radius;
+	let changed = false;
+	const next: Stroke[] = [];
+	for (const stroke of source) {
+		if (stroke.tool !== "pen" || stroke.points.length === 0) {
+			next.push(stroke);
+			continue;
+		}
+		const keptSegments: Point[][] = [];
+		let currentSegment: Point[] = [];
+		for (const p of stroke.points) {
+			const dx = p.x - point.x;
+			const dy = p.y - point.y;
+			const keep = dx * dx + dy * dy > radiusSq;
+			if (keep) {
+				currentSegment.push(p);
+			} else {
+				changed = true;
+				if (currentSegment.length >= 2) keptSegments.push(currentSegment);
+				currentSegment = [];
+			}
+		}
+		if (currentSegment.length >= 2) keptSegments.push(currentSegment);
+		if (keptSegments.length === 0) {
+			if (!changed) next.push(stroke);
+			continue;
+		}
+		if (keptSegments.length === 1 && keptSegments[0].length === stroke.points.length) {
+			next.push(stroke);
+			continue;
+		}
+		changed = true;
+		for (const points of keptSegments) {
+			next.push({ ...stroke, points });
+		}
+	}
+	return changed ? next : source;
+}
+
+function normalizeStrokeColors(source: Stroke[] | null | undefined): Stroke[] {
+	if (!source || source.length === 0) return [];
+	return source.map((stroke) => {
+		if (stroke.tool !== "pen") return stroke;
+		if (typeof stroke.colorIndex === "number") return stroke;
+		return { ...stroke, colorIndex: 0 };
+	});
+}
+
+function strokesEqual(a: Stroke[] | null | undefined, b: Stroke[] | null | undefined): boolean {
+	if (!a && !b) return true;
+	if (!a || !b) return false;
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i += 1) {
+		const sa = a[i];
+		const sb = b[i];
+		if (!sa || !sb) return false;
+		if (sa.tool !== sb.tool) return false;
+		if ((sa.colorIndex ?? 0) !== (sb.colorIndex ?? 0)) return false;
+		if (sa.points.length !== sb.points.length) return false;
+		for (let j = 0; j < sa.points.length; j += 1) {
+			const pa = sa.points[j];
+			const pb = sb.points[j];
+			if (!pa || !pb) return false;
+			if (pa.x !== pb.x || pa.y !== pb.y || pa.pressure !== pb.pressure) return false;
+		}
+	}
+	return true;
+}
+
+function applyVisualTransform(point: { x: number; y: number }, session: TransformSession): { x: number; y: number } {
+	const transformed = transformPoint(
+		{ x: point.x, y: point.y, pressure: 1 },
+		session.center,
+		session.previewDx,
+		session.previewDy,
+		session.previewScale,
+		session.previewRotation
+	);
+	return { x: transformed.x, y: transformed.y };
+}
+
 /** Call with a function that returns the current drawing as PNG data URL, or null. Called on mount, cleared on unmount. */
 export type RegisterDrawingSnapshot = (getSnapshot: (() => string | null) | null) => void;
 /** Call with a function that returns the number of visual line clusters detected on the canvas. Called on mount, cleared on unmount. */
@@ -320,6 +511,8 @@ type DrawingCanvasProps = {
 	initialStrokes?: Stroke[] | null;
 	/** Called (debounced) when strokes change (stroke completed, erased, or cleared). */
 	onStrokesChange?: (strokes: Stroke[]) => void;
+	/** Called immediately when user starts an edit interaction (draw/erase/undo/redo/clear). */
+	onEditInteraction?: () => void;
 	/** Optional class for the wrapper (e.g. color-bg-grey-5 for embedded grey background). */
 	wrapperClassName?: string;
 	/** When true, hide toolbar and prevent drawing/pan/zoom (view-only mode). */
@@ -428,14 +621,22 @@ function buildLineAnchors(
 		.map((c) => ({ y: c.y, xLeft: c.xLeft, xRight: percentile75([...c.xRights].sort((a, b) => a - b)) }));
 }
 
-export default function DrawingCanvas({ onClose, registerDrawingSnapshot, registerGetLineCount, registerGetGradingCapture, registerGetStaveAnalysis, initialStrokes, onStrokesChange, wrapperClassName, readOnly = false, defaultGridMode = "lines", gradingAnnotations = null }: DrawingCanvasProps) {
+export default function DrawingCanvas({ onClose, registerDrawingSnapshot, registerGetLineCount, registerGetGradingCapture, registerGetStaveAnalysis, initialStrokes, onStrokesChange, onEditInteraction, wrapperClassName, readOnly = false, defaultGridMode = "lines", gradingAnnotations = null }: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const penButtonRef = useRef<HTMLButtonElement>(null);
+	const eraserButtonRef = useRef<HTMLButtonElement>(null);
+	const penPopoverRef = useRef<HTMLDivElement>(null);
+	const eraserPopoverRef = useRef<HTMLDivElement>(null);
+	const popupBgSampleRef = useRef<HTMLDivElement>(null);
 	const colorSampleRef = useRef<HTMLDivElement>(null);
 	const gridColorSampleRef = useRef<HTMLDivElement>(null);
 	const accentColorSampleRef = useRef<HTMLDivElement>(null);
+	const accentBgSampleRef = useRef<HTMLDivElement>(null);
+	const mutedBgSampleRef = useRef<HTMLDivElement>(null);
+	const secondaryColorSampleRef = useRef<HTMLDivElement>(null);
 
-	const [strokes, setStrokes] = useState<Stroke[]>(initialStrokes ?? []);
+	const [strokes, setStrokes] = useState<Stroke[]>(normalizeStrokeColors(initialStrokes));
 	const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
 	const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
 	const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
@@ -475,12 +676,17 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	useEffect(() => {
 		if (prevInitialRef.current !== initialStrokes) {
 			prevInitialRef.current = initialStrokes;
-			setStrokes(initialStrokes ?? []);
+			const normalizedIncoming = normalizeStrokeColors(initialStrokes);
+			if (strokesEqual(normalizedIncoming, strokesRef.current)) return;
+			setStrokes(normalizedIncoming);
 			setUndoStack([]);
 			setRedoStack([]);
 			setCurrentStroke(null);
 			setPan({ x: 0, y: 0 });
 			setScale(1);
+			setLassoPath(null);
+			setSelectedStrokeIndexes([]);
+			setTransformSession(null);
 		}
 	}, [initialStrokes]);
 
@@ -525,11 +731,23 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			}
 		};
 	}, []);
-	const [tool, setTool] = useState<"pen" | "eraser">("pen");
+	const [tool, setTool] = useState<ToolMode>("pen");
 	const [gridMode, setGridMode] = useState<GridMode>(defaultGridMode);
 	const [strokeColor, setStrokeColor] = useState("");
+	const [secondaryStrokeColor, setSecondaryStrokeColor] = useState("");
 	const [gridColor, setGridColor] = useState("");
 	const [accentColor, setAccentColor] = useState("");
+	const [accentBgColor, setAccentBgColor] = useState("");
+	const [mutedBgColor, setMutedBgColor] = useState("");
+	const [popupBgColor, setPopupBgColor] = useState("");
+	const [activePenColorIndex, setActivePenColorIndex] = useState(0);
+	const [isPenPopoverOpen, setIsPenPopoverOpen] = useState(false);
+	const [isEraserPopoverOpen, setIsEraserPopoverOpen] = useState(false);
+	const [eraserMode, setEraserMode] = useState<"point" | "stroke">("stroke");
+	const [lassoPath, setLassoPath] = useState<Point[] | null>(null);
+	const [selectedStrokeIndexes, setSelectedStrokeIndexes] = useState<number[]>([]);
+	const [transformSession, setTransformSession] = useState<TransformSession | null>(null);
+	const penPalette = [strokeColor, secondaryStrokeColor, accentColor].filter(Boolean);
 
 	const isDrawingRef = useRef(false);
 	const lastPointRef = useRef<Point | null>(null);
@@ -538,6 +756,12 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	const pointerIdsRef = useRef<Map<number, { x: number; y: number }>>(new Map());
 	const holdStraightenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const currentStrokeRef = useRef<Stroke | null>(null);
+	const pointEraseBaseRef = useRef<Stroke[] | null>(null);
+	const pointEraseChangedRef = useRef(false);
+	const selectedStrokeIndexesRef = useRef<number[]>([]);
+	selectedStrokeIndexesRef.current = selectedStrokeIndexes;
+	const transformSessionRef = useRef<TransformSession | null>(null);
+	transformSessionRef.current = transformSession;
 
 	const commitStrokeChange = useCallback((updater: (previous: Stroke[]) => Stroke[]) => {
 		setStrokes((previous) => {
@@ -555,13 +779,26 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	// Read theme colors from DOM (follows data-theme) - pen: color-txt-main, grid: color-bg-grey-5
 	useLayoutEffect(() => {
 		const strokeEl = colorSampleRef.current;
+		const secondaryEl = secondaryColorSampleRef.current;
 		const gridEl = gridColorSampleRef.current;
 		const accentEl = accentColorSampleRef.current;
-		if (!strokeEl || !gridEl || !accentEl) return;
+		const accentBgEl = accentBgSampleRef.current;
+		const mutedBgEl = mutedBgSampleRef.current;
+		const popupBgEl = popupBgSampleRef.current;
+		if (!strokeEl || !secondaryEl || !gridEl || !accentEl || !accentBgEl || !mutedBgEl || !popupBgEl) return;
 		const updateColors = () => {
-			if (strokeEl) setStrokeColor(getComputedStyle(strokeEl).color);
-			if (gridEl) setGridColor(getComputedStyle(gridEl).backgroundColor);
-			if (accentEl) setAccentColor(getComputedStyle(accentEl).color);
+			const primary = getComputedStyle(strokeEl).color;
+			const secondary = getComputedStyle(secondaryEl).color;
+			const accent = getComputedStyle(accentEl).color;
+			setStrokeColor(primary);
+			setSecondaryStrokeColor(secondary);
+			setAccentColor(accent);
+			setAccentBgColor(getComputedStyle(accentBgEl).backgroundColor);
+			setMutedBgColor(getComputedStyle(mutedBgEl).backgroundColor);
+			setGridColor(getComputedStyle(gridEl).backgroundColor);
+			const containerBg = containerRef.current ? getComputedStyle(containerRef.current).backgroundColor : "";
+			const sampledBg = getComputedStyle(popupBgEl).backgroundColor;
+			setPopupBgColor(containerBg && containerBg !== "rgba(0, 0, 0, 0)" ? containerBg : sampledBg);
 		};
 		updateColors();
 		const observer = new MutationObserver(updateColors);
@@ -613,7 +850,8 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		if (!canvas || !ctx) return;
 
 		const targetedStrokeIndexes = new Set<number>();
-		if (tool === "eraser" && currentStroke) {
+		const selectedIndexSet = new Set(selectedStrokeIndexes);
+		if (tool === "eraser" && eraserMode === "stroke" && currentStroke) {
 			for (let index = 0; index < strokes.length; index++) {
 				const stroke = strokes[index];
 				if (stroke.tool === "pen" && strokeIntersectsEraser(stroke, currentStroke, STROKE_ERASER_HIT_RADIUS)) {
@@ -643,6 +881,71 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		}
 		if (currentStroke) {
 			drawStroke(ctx, currentStroke, { preview: true });
+		}
+		if (lassoPath && lassoPath.length > 1) {
+			ctx.save();
+			ctx.globalCompositeOperation = "source-over";
+			ctx.strokeStyle = accentColor || strokeColor || "#2563EB";
+			ctx.setLineDash([10 / scale, 8 / scale]);
+			ctx.lineWidth = 1.5 / scale;
+			ctx.beginPath();
+			ctx.moveTo(lassoPath[0].x, lassoPath[0].y);
+			for (let i = 1; i < lassoPath.length; i += 1) ctx.lineTo(lassoPath[i].x, lassoPath[i].y);
+			ctx.stroke();
+			ctx.restore();
+		}
+
+		const selectionBounds = getSelectionBounds(strokes, selectedStrokeIndexes);
+		if (selectionBounds && selectedStrokeIndexes.length > 0) {
+			const handleRadius = SELECTION_HANDLE_RADIUS_PX / scale;
+			const activeSession = transformSession;
+			const baseBounds = activeSession?.baseBounds ?? selectionBounds;
+			const rawHandlePoints = [
+				{ x: baseBounds.minX, y: baseBounds.minY },
+				{ x: baseBounds.maxX, y: baseBounds.minY },
+				{ x: baseBounds.maxX, y: baseBounds.maxY },
+				{ x: baseBounds.minX, y: baseBounds.maxY },
+			];
+			const handlePoints = activeSession ? rawHandlePoints.map((point) => applyVisualTransform(point, activeSession)) : rawHandlePoints;
+			ctx.save();
+			ctx.strokeStyle = accentColor || strokeColor || "#2563EB";
+			ctx.fillStyle = accentColor || strokeColor || "#2563EB";
+			ctx.lineWidth = 1.5 / scale;
+			ctx.setLineDash([6 / scale, 4 / scale]);
+			ctx.beginPath();
+			ctx.moveTo(handlePoints[0].x, handlePoints[0].y);
+			for (let i = 1; i < handlePoints.length; i += 1) ctx.lineTo(handlePoints[i].x, handlePoints[i].y);
+			ctx.closePath();
+			ctx.stroke();
+			ctx.setLineDash([]);
+			for (const point of handlePoints) {
+				ctx.beginPath();
+				ctx.arc(point.x, point.y, handleRadius, 0, Math.PI * 2);
+				ctx.fillStyle = "#ffffff";
+				ctx.fill();
+				ctx.strokeStyle = accentColor || strokeColor || "#2563EB";
+				ctx.stroke();
+			}
+			for (let index = 0; index < strokes.length; index += 1) {
+				if (!selectedIndexSet.has(index)) continue;
+				const stroke = strokes[index];
+				if (stroke.tool !== "pen" || stroke.points.length < 2) continue;
+				ctx.strokeStyle = accentColor || strokeColor || "#2563EB";
+				ctx.globalAlpha = 0.28;
+				ctx.lineCap = "round";
+				ctx.lineJoin = "round";
+				for (let i = 0; i < stroke.points.length - 1; i += 1) {
+					const p0 = stroke.points[i];
+					const p1 = stroke.points[i + 1];
+					ctx.lineWidth = BASE_PEN_WIDTH * (Math.max(0.3, p0.pressure) + 0.5) + 1.3 / scale;
+					ctx.beginPath();
+					ctx.moveTo(p0.x, p0.y);
+					ctx.lineTo(p1.x, p1.y);
+					ctx.stroke();
+				}
+			}
+			ctx.globalAlpha = 1;
+			ctx.restore();
 		}
 
 		// Grid on top (not erasable) - lines, dots, or music staves
@@ -766,14 +1069,44 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					drawMarkAnnotation(ctx, annotation, fontReady);
 				}
 			}
+		} else {
+			// Ensure feedback bubbles disappear immediately when grading annotations are cleared.
+			badgeLayoutsRef.current = [];
 		}
 
 		ctx.restore();
-	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool, lineAnchors, gradingAnnotations, accentColor, fontReady]);
+	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool, lineAnchors, gradingAnnotations, accentColor, fontReady, lassoPath, selectedStrokeIndexes, transformSession, eraserMode, penPalette, activePenColorIndex]);
 
 	useEffect(() => {
 		draw();
 	}, [draw]);
+
+	useEffect(() => {
+		setSelectedStrokeIndexes((previous) => {
+			const next = previous.filter((index) => {
+				const stroke = strokes[index];
+				return Boolean(stroke && stroke.tool === "pen");
+			});
+			return next.length === previous.length ? previous : next;
+		});
+	}, [strokes]);
+
+	useEffect(() => {
+		if (!isPenPopoverOpen && !isEraserPopoverOpen) return;
+		const onPointerDown = (event: PointerEvent) => {
+			const target = event.target as Node | null;
+			if (!target) return;
+			const inPenButton = penButtonRef.current?.contains(target);
+			const inEraserButton = eraserButtonRef.current?.contains(target);
+			const inPenPopover = penPopoverRef.current?.contains(target);
+			const inEraserPopover = eraserPopoverRef.current?.contains(target);
+			if (inPenButton || inEraserButton || inPenPopover || inEraserPopover) return;
+			setIsPenPopoverOpen(false);
+			setIsEraserPopoverOpen(false);
+		};
+		document.addEventListener("pointerdown", onPointerDown, true);
+		return () => document.removeEventListener("pointerdown", onPointerDown, true);
+	}, [isPenPopoverOpen, isEraserPopoverOpen]);
 
 	useEffect(() => {
 		if (!expandedCommentId) return;
@@ -902,7 +1235,11 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		const drawSnapshotPenStroke = (stroke: Stroke) => {
 			if (stroke.tool !== "pen" || stroke.points.length < 2) return;
 			ctx.globalCompositeOperation = "source-over";
-			ctx.strokeStyle = "#111827";
+			const paletteColor =
+				typeof stroke.colorIndex === "number"
+					? penPalette[Math.max(0, Math.min(penPalette.length - 1, stroke.colorIndex))]
+					: penPalette[0];
+			ctx.strokeStyle = paletteColor || penPalette[activePenColorIndex] || "#111827";
 			ctx.lineCap = "round";
 			ctx.lineJoin = "round";
 			for (let i = 0; i < stroke.points.length - 1; i++) {
@@ -921,7 +1258,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		if (currentStroke?.tool === "pen") drawSnapshotPenStroke(currentStroke);
 		ctx.restore();
 		return off.toDataURL("image/png");
-	}, [pan, scale, strokes, currentStroke, gridMode]);
+	}, [pan, scale, strokes, currentStroke, gridMode, penPalette, activePenColorIndex]);
 	const getGradingCapture = useCallback((mode: "default" | "full-ink" | "retry-aggressive" = "default"): CanvasCapturePayload | null => {
 		const renderStrokes = [...strokes, ...(currentStroke ? [currentStroke] : [])];
 		if (!renderStrokes.some((stroke) => stroke.tool === "pen" && stroke.points.length > 1)) return null;
@@ -1020,11 +1357,15 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			}
 			ctx.stroke();
 			ctx.globalCompositeOperation = "source-over";
-		} else if (strokeColor) {
+		} else {
 			ctx.globalCompositeOperation = "source-over";
 			ctx.setLineDash([]);
 			ctx.globalAlpha = muted ? 0.5 : 1;
-			ctx.strokeStyle = muted ? ERASE_TARGET_STROKE_COLOR : strokeColor;
+			const paletteColor =
+				typeof stroke.colorIndex === "number"
+					? penPalette[Math.max(0, Math.min(penPalette.length - 1, stroke.colorIndex))]
+					: penPalette[0];
+			ctx.strokeStyle = muted ? ERASE_TARGET_STROKE_COLOR : paletteColor || penPalette[activePenColorIndex] || penPalette[0] || strokeColor || "#111827";
 			ctx.lineCap = "round";
 			ctx.lineJoin = "round";
 			for (let i = 0; i < stroke.points.length - 1; i++) {
@@ -1040,9 +1381,114 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		}
 	}
 
+	const startTransformSession = useCallback(
+		(mode: TransformMode, startPointer: Point) => {
+			const selectedIndexes = selectedStrokeIndexesRef.current;
+			if (selectedIndexes.length === 0) return;
+			const bounds = getSelectionBounds(strokesRef.current, selectedIndexes);
+			if (!bounds) return;
+			const center = { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
+			const baseDistance = Math.hypot(startPointer.x - center.x, startPointer.y - center.y);
+			const startAngle = Math.atan2(startPointer.y - center.y, startPointer.x - center.x);
+			setTransformSession({
+				mode,
+				startPointer,
+				baseStrokes: strokesRef.current,
+				selectedIndexes,
+				center,
+				baseBounds: bounds,
+				baseDistance,
+				startAngle,
+				previewDx: 0,
+				previewDy: 0,
+				previewScale: 1,
+				previewRotation: 0,
+			});
+		},
+		[]
+	);
+
+	const resolveSelectionHit = useCallback(
+		(pointer: Point): TransformMode | null => {
+			const bounds = getSelectionBounds(strokesRef.current, selectedStrokeIndexesRef.current);
+			if (!bounds) return null;
+			const handleRadius = SELECTION_HANDLE_RADIUS_PX / scaleRef.current;
+			const hitPadding = SELECTION_HIT_PADDING_PX / scaleRef.current;
+			const handlePoints = [
+				{ x: bounds.minX, y: bounds.minY },
+				{ x: bounds.maxX, y: bounds.minY },
+				{ x: bounds.maxX, y: bounds.maxY },
+				{ x: bounds.minX, y: bounds.maxY },
+			];
+			for (const point of handlePoints) {
+				if (Math.hypot(pointer.x - point.x, pointer.y - point.y) <= handleRadius + hitPadding) return "scale";
+			}
+			const insideBounds =
+				pointer.x >= bounds.minX - hitPadding &&
+				pointer.x <= bounds.maxX + hitPadding &&
+				pointer.y >= bounds.minY - hitPadding &&
+				pointer.y <= bounds.maxY + hitPadding;
+			return insideBounds ? "move" : null;
+		},
+		[]
+	);
+
+	const applyTransformFromSession = useCallback((pointer: Point) => {
+		const session = transformSessionRef.current;
+		if (!session) return;
+		let previewDx = 0;
+		let previewDy = 0;
+		let previewScale = 1;
+		let previewRotation = 0;
+		let nextStrokes = session.baseStrokes;
+		if (session.mode === "move") {
+			previewDx = pointer.x - session.startPointer.x;
+			previewDy = pointer.y - session.startPointer.y;
+			nextStrokes = transformSelectedStrokes(session.baseStrokes, session.selectedIndexes, session.center, { dx: previewDx, dy: previewDy });
+		} else if (session.mode === "scale") {
+			const currentDistance = Math.hypot(pointer.x - session.center.x, pointer.y - session.center.y);
+			const baseDistance = Math.max(1e-4, session.baseDistance ?? 1);
+			previewScale = Math.max(MIN_SELECTION_SCALE, currentDistance / baseDistance);
+			nextStrokes = transformSelectedStrokes(session.baseStrokes, session.selectedIndexes, session.center, { scaleFactor: previewScale });
+		} else if (session.mode === "rotate") {
+			const currentAngle = Math.atan2(pointer.y - session.center.y, pointer.x - session.center.x);
+			previewRotation = currentAngle - (session.startAngle ?? 0);
+			nextStrokes = transformSelectedStrokes(session.baseStrokes, session.selectedIndexes, session.center, { rotation: previewRotation });
+		}
+		setStrokes(nextStrokes);
+		setTransformSession((current) =>
+			current
+				? {
+						...current,
+						previewDx,
+						previewDy,
+						previewScale,
+						previewRotation,
+					}
+				: current
+		);
+	}, []);
+
+	const commitTransformSession = useCallback(() => {
+		const session = transformSessionRef.current;
+		if (!session) return;
+		const before = session.baseStrokes;
+		const after = strokesRef.current;
+		const changed =
+			before.length !== after.length ||
+			before.some((stroke, index) => stroke !== after[index]);
+		if (changed) {
+			setUndoStack((history) => [...history, before]);
+			setRedoStack([]);
+		}
+		setTransformSession(null);
+	}, []);
+
 	const handlePointerDown = useCallback(
 		(e: React.PointerEvent) => {
 			e.preventDefault();
+			setIsPenPopoverOpen(false);
+			setIsEraserPopoverOpen(false);
 			const canvas = canvasRef.current;
 			if (!canvas) return;
 
@@ -1079,18 +1525,44 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				const isPen = e.pointerType === "pen";
 				const isMouse = e.pointerType === "mouse";
 				const isTouch = e.pointerType === "touch";
+				if (tool === "lasso" && (isPen || isMouse || isTouch)) {
+					onEditInteraction?.();
+					const hitMode = resolveSelectionHit(world);
+					if (hitMode && selectedStrokeIndexesRef.current.length > 0) {
+						startTransformSession(hitMode, world);
+					} else {
+						setTransformSession(null);
+						setSelectedStrokeIndexes([]);
+						setLassoPath([world]);
+						isDrawingRef.current = true;
+					}
+					return;
+				}
+
 				const shouldDraw = (isPen || isMouse || isTouch) && (tool === "pen" || tool === "eraser");
 				if (shouldDraw) {
+					onEditInteraction?.();
 					isDrawingRef.current = true;
-					const newStroke: Stroke = { points: [world], tool };
-					setCurrentStroke(newStroke);
+					if (tool === "eraser" && eraserMode === "point") {
+						pointEraseBaseRef.current = strokesRef.current;
+						pointEraseChangedRef.current = false;
+						setStrokes((previous) => {
+							const next = eraseStrokesAtPoint(previous, world);
+							if (next !== previous) pointEraseChangedRef.current = true;
+							return next;
+						});
+						setCurrentStroke(null);
+					} else {
+						const newStroke: Stroke = { points: [world], tool, colorIndex: tool === "pen" ? activePenColorIndex : undefined };
+						setCurrentStroke(newStroke);
+					}
 					lastPointRef.current = world;
 				} else {
 					panStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
 				}
 			}
 		},
-		[pan, scale, screenToWorld, tool, readOnly]
+		[pan, scale, screenToWorld, tool, readOnly, onEditInteraction, resolveSelectionHit, startTransformSession, eraserMode, activePenColorIndex]
 	);
 
 	const handlePointerMove = useCallback(
@@ -1136,6 +1608,28 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				return;
 			}
 
+			if (transformSessionRef.current) {
+				const world = screenToWorld(e.clientX, e.clientY);
+				applyTransformFromSession(world);
+				return;
+			}
+
+			if (tool === "lasso" && isDrawingRef.current && lassoPath) {
+				const world = screenToWorld(e.clientX, e.clientY);
+				setLassoPath((prev) => (prev ? [...prev, world] : [world]));
+				return;
+			}
+
+			if (tool === "eraser" && eraserMode === "point" && isDrawingRef.current) {
+				const world = screenToWorld(e.clientX, e.clientY);
+				setStrokes((previous) => {
+					const next = eraseStrokesAtPoint(previous, world);
+					if (next !== previous) pointEraseChangedRef.current = true;
+					return next;
+				});
+				return;
+			}
+
 			if (isDrawingRef.current && currentStroke) {
 				const world = screenToWorld(e.clientX, e.clientY);
 				world.pressure = getPressure(e.nativeEvent);
@@ -1146,7 +1640,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				if (currentStroke.tool === "pen") scheduleHoldStraighten();
 			}
 		},
-		[currentStroke, screenToWorld, scheduleHoldStraighten, readOnly]
+		[currentStroke, screenToWorld, scheduleHoldStraighten, readOnly, tool, lassoPath, applyTransformFromSession, eraserMode]
 	);
 
 	const handlePointerUp = useCallback(
@@ -1160,14 +1654,40 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				pinchStartRef.current = null;
 				panStartRef.current = null;
 				cancelHoldStraighten();
+				if (transformSessionRef.current) {
+					commitTransformSession();
+				}
+				if (tool === "eraser" && eraserMode === "point" && pointEraseBaseRef.current) {
+					if (pointEraseChangedRef.current) {
+						setUndoStack((history) => [...history, pointEraseBaseRef.current as Stroke[]]);
+						setRedoStack([]);
+					}
+					pointEraseBaseRef.current = null;
+					pointEraseChangedRef.current = false;
+				}
+				if (tool === "lasso" && isDrawingRef.current && lassoPath) {
+					if (lassoPath.length >= LASSO_MIN_POINTS) {
+						const selected = strokesRef.current
+							.map((stroke, index) => ({ stroke, index }))
+							.filter(({ stroke }) => stroke.tool === "pen")
+							.filter(({ stroke }) => strokeIntersectsPolygon(stroke, lassoPath))
+							.map(({ index }) => index);
+						setSelectedStrokeIndexes(selected);
+					}
+					setLassoPath(null);
+				}
 				if (isDrawingRef.current && currentStroke && currentStroke.points.length > 0) {
 					if (currentStroke.tool === "eraser") {
-						commitStrokeChange((previous) => {
-							const next = previous.filter(
-								(stroke) => stroke.tool !== "pen" || !strokeIntersectsEraser(stroke, currentStroke, STROKE_ERASER_HIT_RADIUS)
-							);
-							return next.length === previous.length ? previous : next;
-						});
+						if (eraserMode === "stroke") {
+							commitStrokeChange((previous) => {
+								const next = previous.filter(
+									(stroke) => stroke.tool !== "pen" || !strokeIntersectsEraser(stroke, currentStroke, STROKE_ERASER_HIT_RADIUS)
+								);
+								return next.length === previous.length ? previous : next;
+							});
+						} else {
+							commitStrokeChange((previous) => [...previous, currentStroke]);
+						}
 					} else {
 						commitStrokeChange((previous) => [...previous, currentStroke]);
 					}
@@ -1176,7 +1696,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				isDrawingRef.current = false;
 			}
 		},
-		[currentStroke, cancelHoldStraighten, commitStrokeChange]
+		[currentStroke, cancelHoldStraighten, commitStrokeChange, tool, lassoPath, commitTransformSession, eraserMode]
 	);
 
 	const handleWheel = useCallback(
@@ -1200,17 +1720,25 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	);
 
 	const clearCanvas = useCallback(() => {
+		onEditInteraction?.();
 		commitStrokeChange((previous) => (previous.length > 0 ? [] : previous));
 		setCurrentStroke(null);
+		setLassoPath(null);
+		setSelectedStrokeIndexes([]);
+		setTransformSession(null);
 		// Immediately notify parent of clear (bypass debounce)
 		onStrokesChangeRef.current?.([]);
-	}, [commitStrokeChange]);
+	}, [commitStrokeChange, onEditInteraction]);
 
 	const undo = useCallback(() => {
 		if (undoStackRef.current.length === 0) return;
+		onEditInteraction?.();
 		cancelHoldStraighten();
 		setCurrentStroke(null);
 		isDrawingRef.current = false;
+		setLassoPath(null);
+		setTransformSession(null);
+		setSelectedStrokeIndexes([]);
 		setUndoStack((history) => {
 			if (history.length === 0) return history;
 			const previous = history[history.length - 1];
@@ -1218,13 +1746,17 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			setStrokes(previous);
 			return history.slice(0, -1);
 		});
-	}, [cancelHoldStraighten]);
+	}, [cancelHoldStraighten, onEditInteraction]);
 
 	const redo = useCallback(() => {
 		if (redoStackRef.current.length === 0) return;
+		onEditInteraction?.();
 		cancelHoldStraighten();
 		setCurrentStroke(null);
 		isDrawingRef.current = false;
+		setLassoPath(null);
+		setTransformSession(null);
+		setSelectedStrokeIndexes([]);
 		setRedoStack((future) => {
 			if (future.length === 0) return future;
 			const next = future[future.length - 1];
@@ -1232,11 +1764,13 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			setStrokes(next);
 			return future.slice(0, -1);
 		});
-	}, [cancelHoldStraighten]);
+	}, [cancelHoldStraighten, onEditInteraction]);
 
 	const isEmbedded = onClose == null;
 	const canUndo = undoStack.length > 0;
 	const canRedo = redoStack.length > 0;
+	const penButtonRect = penButtonRef.current?.getBoundingClientRect() ?? null;
+	const eraserButtonRect = eraserButtonRef.current?.getBoundingClientRect() ?? null;
 	const overlayBubbles = badgeLayoutsRef.current.map((badge) => {
 		const expanded = expandedCommentId === badge.id;
 		
@@ -1279,8 +1813,12 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		>
 			{/* Hidden elements to sample theme colors (pen: color-txt-main, grid: color-bg-grey-5) */}
 			<div ref={colorSampleRef} className="color-txt-main absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
+			<div ref={secondaryColorSampleRef} className="color-txt-sub absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
+			<div ref={popupBgSampleRef} className="color-bg absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			<div ref={gridColorSampleRef} className="color-bg-grey-10 absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			<div ref={accentColorSampleRef} className="color-txt-accent absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
+			<div ref={accentBgSampleRef} className="color-bg-accent absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
+			<div ref={mutedBgSampleRef} className="color-bg-grey-5 absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			{/* Canvas area */}
 			<div
 				className="flex-1 min-h-0 relative z-0 overflow-hidden select-none"
@@ -1300,7 +1838,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					onContextMenu={(e) => e.preventDefault()}
 					style={{
 						touchAction: "none",
-						cursor: tool === "eraser" ? "cell" : "crosshair",
+						cursor: tool === "eraser" ? "cell" : tool === "lasso" ? "default" : "crosshair",
 						WebkitUserSelect: "none",
 						userSelect: "none",
 						WebkitTouchCallout: "none",
@@ -1310,7 +1848,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				{/* Floating bar - mostly transparent with blur (hidden in readOnly) */}
 				{!readOnly && (
 				<div
-					className="drawing-canvas-toolbar absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center justify-center gap-1 py-1.5 px-2 rounded-[var(--radius-out)] color-shadow"
+					className="drawing-canvas-toolbar absolute bottom-4 left-1/2 -translate-x-1/2 z-[2000] flex items-center justify-center gap-1 py-1.5 px-2 rounded-[var(--radius-out)] color-shadow"
 					style={{
 						background: "rgba(128, 128, 128, 0.05)",
 						backdropFilter: "blur(6px)",
@@ -1335,21 +1873,55 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				>
 					<Redo2 size={18} strokeWidth={2} />
 				</button>
+				<div className="relative">
+					<button
+						ref={penButtonRef}
+						type="button"
+						onClick={() => {
+							if (tool === "pen") {
+								setIsPenPopoverOpen((open) => !open);
+							} else {
+								setTool("pen");
+								setIsPenPopoverOpen(false);
+							}
+							setIsEraserPopoverOpen(false);
+						}}
+						className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${tool === "pen" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
+						title="Pen"
+					>
+						<Pencil size={18} strokeWidth={2} />
+					</button>
+				</div>
+				<div className="relative">
+					<button
+						ref={eraserButtonRef}
+						type="button"
+						onClick={() => {
+							if (tool === "eraser") {
+								setIsEraserPopoverOpen((open) => !open);
+							} else {
+								setTool("eraser");
+								setIsEraserPopoverOpen(false);
+							}
+							setIsPenPopoverOpen(false);
+						}}
+						className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${tool === "eraser" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
+						title="Eraser"
+					>
+						<Eraser size={18} strokeWidth={2} />
+					</button>
+				</div>
 				<button
 					type="button"
-					onClick={() => setTool("pen")}
-					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${tool === "pen" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
-					title="Pen"
+					onClick={() => {
+						setTool("lasso");
+						setIsPenPopoverOpen(false);
+						setIsEraserPopoverOpen(false);
+					}}
+					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${tool === "lasso" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
+					title="Lasso select"
 				>
-					<Pencil size={18} strokeWidth={2} />
-				</button>
-				<button
-					type="button"
-					onClick={() => setTool("eraser")}
-					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${tool === "eraser" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
-					title="Eraser"
-				>
-					<Eraser size={18} strokeWidth={2} />
+					<MousePointer2 size={18} strokeWidth={2} />
 				</button>
 				<button
 					type="button"
@@ -1381,6 +1953,77 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					</button>
 				)}
 				</div>
+				)}
+				{penButtonRect && createPortal(
+					<div
+						ref={penPopoverRef}
+						className={`fixed flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-in)] color-bg transition-all duration-180 ease-out ${isPenPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
+						style={{
+							left: penButtonRect.left + penButtonRect.width / 2,
+							top: penButtonRect.top - 10,
+							transform: "translate(-50%, -100%)",
+							backgroundColor: popupBgColor || undefined,
+							color: strokeColor || undefined,
+							zIndex: 2147483646,
+						}}
+					>
+						{penPalette.map((color, index) => (
+							<button
+								key={`${color}-${index}`}
+								type="button"
+								onClick={() => {
+									setActivePenColorIndex(index);
+								}}
+								className={`w-4 h-4 rounded-full transition-all ${activePenColorIndex === index ? "scale-110" : ""}`}
+								style={{ backgroundColor: color }}
+								aria-label="Set pen color"
+								title="Set pen color"
+							/>
+						))}
+					</div>,
+					document.body
+				)}
+				{eraserButtonRect && createPortal(
+					<div
+						ref={eraserPopoverRef}
+						className={`fixed flex items-center gap-1 px-2 py-1 rounded-[var(--radius-in)] color-bg color-shadow transition-all duration-180 ease-out ${isEraserPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
+						style={{
+							left: eraserButtonRect.left + eraserButtonRect.width / 2,
+							top: eraserButtonRect.top - 10,
+							transform: "translate(-50%, -100%)",
+							backgroundColor: popupBgColor || undefined,
+							color: strokeColor || undefined,
+							zIndex: 2147483646,
+						}}
+					>
+						<button
+							type="button"
+							onClick={() => {
+								setEraserMode("point");
+							}}
+							className="px-2 py-0.5 rounded text-xs"
+							style={{
+								backgroundColor: eraserMode === "point" ? accentBgColor || undefined : mutedBgColor || undefined,
+								color: eraserMode === "point" ? accentColor || strokeColor || undefined : strokeColor || undefined,
+							}}
+						>
+							Point
+						</button>
+						<button
+							type="button"
+							onClick={() => {
+								setEraserMode("stroke");
+							}}
+							className="px-2 py-0.5 rounded text-xs"
+							style={{
+								backgroundColor: eraserMode === "stroke" ? accentBgColor || undefined : mutedBgColor || undefined,
+								color: eraserMode === "stroke" ? accentColor || strokeColor || undefined : strokeColor || undefined,
+							}}
+						>
+							Stroke
+						</button>
+					</div>,
+					document.body
 				)}
 			</div>
 {overlayBubbles.map(({ badge, anchorScreenX, anchorScreenY, expanded, tailTop, tailTransformY }) => (

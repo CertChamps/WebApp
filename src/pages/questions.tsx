@@ -39,7 +39,7 @@ import CroppedPdfRegions from "../components/questions/CroppedPdfRegions";
 import FloatingLogTables from "../components/FloatingLogTables";
 import FloatingCalculator from "../components/calculator/FloatingCalculator";
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
-import { TimerProvider } from "../context/TimerContext";
+import { TimerProvider, useTimerOptional } from "../context/TimerContext";
 import { TimerFloatingWidget } from "../components/TimerFloatingWidget";
 import PastPaperFilterPanel from "../components/questions/PastPaperFilterPanel";
 import PaperProGate from "../components/PaperProGate";
@@ -57,6 +57,7 @@ import "../styles/navbar.css";
 import "../styles/sidebar.css";
 
 const QUESTIONS_MODE_KEY = "questions-page-mode";
+const QUESTIONS_RESUME_SEARCH_KEY = "questions-page-resume-search";
 const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
 
 function isSavedGradingAnnotations(value: unknown): value is CanvasAnnotation[] {
@@ -200,7 +201,7 @@ function TopicSwitcher({ topics, value, onChange }: { topics: ImageTopic[]; valu
                             aria-label="Search topics"
                         />
                     </div>
-                    <div className="flex-1 min-h-0 overflow-y-auto scrollbar-minimal">
+                    <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
                         {filtered.length === 0 ? (
                             <div className="px-3 py-3 text-sm color-txt-sub">No topics match</div>
                         ) : (
@@ -246,6 +247,7 @@ export default function Questions() {
     const urlTopic = searchParams.get("topic");
     const urlIndexInPaper = searchParams.get("indexInPaper");
     const urlQuestionId = searchParams.get("questionId");
+    const urlImageKey = searchParams.get("imageKey");
     const normalizedUrlLevel = normalizePaperLevel(urlLevel);
     const normalizedUrlSubject = (urlSubject ?? "").trim().toLowerCase();
 
@@ -270,7 +272,28 @@ export default function Questions() {
         setMode(m);
     }, [urlMode]);
 
+    // Restore last in-page practice location when landing without a specific query.
+    useEffect(() => {
+        const hasCurrentLocation =
+            Boolean(urlMode) ||
+            Boolean(urlQuestionId) ||
+            Boolean(urlPaperId) ||
+            Boolean(urlTopic);
+        if (hasCurrentLocation) return;
+        try {
+            const saved = localStorage.getItem(QUESTIONS_RESUME_SEARCH_KEY);
+            if (!saved) return;
+            const restoredParams = new URLSearchParams(saved);
+            if (!restoredParams.toString()) return;
+            setSearchParams(restoredParams, { replace: true });
+        } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const [subjectFilter, setSubjectFilter] = useState<string | null>(urlSubject || null);
+    useEffect(() => {
+        setSubjectFilter(urlSubject || null);
+    }, [urlSubject]);
     const [collectionPaths, setCollectionPaths] = useState<string[]>(initialPaths);
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -281,6 +304,8 @@ export default function Questions() {
     const pendingSearchRef = useRef<{ indexInPaper: number } | null>(null);
     /** Tracks whether the initial urlQuestionId has been consumed (certchamps mode). */
     const urlQuestionIdConsumedRef = useRef(false);
+    /** Tracks whether the initial imageKey has been consumed (imagequestions mode). */
+    const urlImageKeyConsumedRef = useRef(false);
     const getDrawingSnapshotRef = useRef<(() => string | null) | null>(null);
     const registerDrawingSnapshot = useCallback<RegisterDrawingSnapshot>((getSnapshot) => {
         getDrawingSnapshotRef.current = getSnapshot;
@@ -345,6 +370,9 @@ export default function Questions() {
         mode === "imagequestions" ? normalizedUrlSubject || null : null,
         mode === "imagequestions" ? normalizedUrlLevel || null : null
     );
+    useEffect(() => {
+        setImageQuestionTopic(urlTopic || null);
+    }, [urlTopic]);
     const [imageQuestionPosition, setImageQuestionPosition] = useState(0);
     const currentGroupedQuestion: GroupedImageQuestion | undefined = imageGroupedList[imageQuestionPosition];
     const [showComingSoonToast, setShowComingSoonToast] = useState(false);
@@ -371,6 +399,8 @@ export default function Questions() {
         typeof window !== "undefined" ? window.innerWidth : 1024
     );
     const [navbarActionOffsetPx, setNavbarActionOffsetPx] = useState(96);
+    const themedPortalTarget =
+        typeof document !== "undefined" ? document.getElementById("themed-root") ?? document.body : null;
     useEffect(() => {
         const onResize = () => setViewportWidth(window.innerWidth);
         window.addEventListener("resize", onResize);
@@ -413,6 +443,7 @@ export default function Questions() {
     }, []);
     const paperScrollRef = useRef<HTMLDivElement | null>(null);
     const panelsScrollRef = useRef<HTMLDivElement | null>(null);
+    const scrollSyncRafRef = useRef<number | null>(null);
 
     const currentQuestion = questions[position - 1];
 
@@ -516,7 +547,8 @@ export default function Questions() {
         loadCanvas(activeCanvasQuestionId)
             .then((loaded) => {
                 if (cancelled) return;
-                setCanvasStrokes(loaded?.strokes ?? []);
+                const loadedStrokes = loaded?.strokes ?? [];
+                setCanvasStrokes(loadedStrokes);
                 setGradingAnnotations(isSavedGradingAnnotations(loaded?.feedbackOverlay) ? loaded.feedbackOverlay : []);
                 setCanvasLoading(false);
             })
@@ -532,14 +564,18 @@ export default function Questions() {
     const handleStrokesChange = useCallback(
         (strokes: any[]) => {
             if (!activeCanvasQuestionId) return;
-            const nextAnnotations = strokes.length === 0 ? [] : gradingAnnotations;
-            if (strokes.length === 0 && gradingAnnotations.length > 0) {
-                setGradingAnnotations([]);
-            }
-            saveCanvas(activeCanvasQuestionId, strokes, nextAnnotations);
+            setCanvasStrokes(strokes);
+            saveCanvas(activeCanvasQuestionId, strokes, []);
         },
-        [activeCanvasQuestionId, saveCanvas, gradingAnnotations]
+        [activeCanvasQuestionId, saveCanvas]
     );
+
+    const handleCanvasEditInteraction = useCallback(() => {
+        setGradingAnnotations([]);
+        setAiInjectedExchange(null);
+        setCheckMyAnswerStatus(null);
+        setGradingStatus("idle");
+    }, []);
 
     useEffect(() => {
         setCheckMyAnswerStatus(null);
@@ -1024,37 +1060,63 @@ export default function Questions() {
         };
         doScroll();
         requestAnimationFrame(doScroll);
-    }, [isFullPaperExpanded, paperQuestions, paperQuestionPosition, snippetWidth, currentPaperQuestion]);
+    }, [isFullPaperExpanded, paperQuestions, paperQuestionPosition, snippetWidth, currentPaperQuestion, options.laptopMode]);
 
     // Sync PDF scroll with region-aligned panels
     useEffect(() => {
         if (!isFullPaperExpanded || !paperScrollRef.current || !panelsScrollRef.current) return;
         const pdfEl = paperScrollRef.current;
         const panelsEl = panelsScrollRef.current;
-        let raf: number | null = null;
+        let syncingFromPdf = false;
+        let syncingFromPanels = false;
+        let pendingAlignRaf: number | null = null;
+
+        const alignPanelsToPdf = () => {
+            if (syncingFromPanels) return;
+            syncingFromPdf = true;
+            if (panelsEl.scrollTop !== pdfEl.scrollTop) {
+                panelsEl.scrollTop = pdfEl.scrollTop;
+            }
+            syncingFromPdf = false;
+        };
+
+        const alignPdfToPanels = () => {
+            if (syncingFromPdf) return;
+            syncingFromPanels = true;
+            if (pdfEl.scrollTop !== panelsEl.scrollTop) {
+                pdfEl.scrollTop = panelsEl.scrollTop;
+            }
+            syncingFromPanels = false;
+        };
+
         const syncFromPdf = () => {
-            if (raf) return;
-            raf = requestAnimationFrame(() => {
-                raf = null;
-                if (panelsEl.scrollTop !== pdfEl.scrollTop) panelsEl.scrollTop = pdfEl.scrollTop;
-            });
+            alignPanelsToPdf();
         };
         const syncFromPanels = () => {
-            if (raf) return;
-            raf = requestAnimationFrame(() => {
-                raf = null;
-                if (pdfEl.scrollTop !== panelsEl.scrollTop) pdfEl.scrollTop = panelsEl.scrollTop;
-            });
+            alignPdfToPanels();
         };
+
         pdfEl.addEventListener("scroll", syncFromPdf, { passive: true });
         panelsEl.addEventListener("scroll", syncFromPanels, { passive: true });
-        syncFromPdf();
+        alignPanelsToPdf();
+        pendingAlignRaf = requestAnimationFrame(() => {
+            pendingAlignRaf = null;
+            alignPanelsToPdf();
+        });
+
         return () => {
             pdfEl.removeEventListener("scroll", syncFromPdf);
             panelsEl.removeEventListener("scroll", syncFromPanels);
-            if (raf) cancelAnimationFrame(raf);
+            if (pendingAlignRaf != null) {
+                cancelAnimationFrame(pendingAlignRaf);
+                pendingAlignRaf = null;
+            }
+            if (scrollSyncRafRef.current != null) {
+                cancelAnimationFrame(scrollSyncRafRef.current);
+                scrollSyncRafRef.current = null;
+            }
         };
-    }, [isFullPaperExpanded]);
+    }, [isFullPaperExpanded, options.laptopMode, snippetWidth, paperContentHeightPx, paperQuestions.length]);
 
     // Load marking scheme when paper and question (for marking scheme view) have markingSchemePageRange
     useEffect(() => {
@@ -1119,7 +1181,8 @@ export default function Questions() {
 
     // Preselect paper: URL paperId > current question year > first paper
     useEffect(() => {
-        if (scopedPapers.length === 0 || selectedPaper !== null) return;
+        if (scopedPapers.length === 0) return;
+        if (!urlPaperId && selectedPaper !== null) return;
         let match: ExamPaper | undefined;
         if (urlPaperId) {
             match = scopedPapers.find(
@@ -1141,7 +1204,9 @@ export default function Questions() {
             match = scopedPapers.find((p) => p.label.toLowerCase().startsWith("20" + msYear)) ?? scopedPapers[0];
         }
         if (!match) match = scopedPapers[0];
-        setSelectedPaper(match);
+        if (!selectedPaper || selectedPaper.id !== match.id) {
+            setSelectedPaper(match);
+        }
     }, [scopedPapers, msYear, selectedPaper, urlPaperId, normalizedUrlLevel, normalizedUrlSubject]);
 
     // When landing in certchamps mode with a questionId URL param, jump to that question once questions load
@@ -1154,18 +1219,32 @@ export default function Questions() {
         }
     }, [questions, urlQuestionId, mode]);
 
+    // When landing in imagequestions mode with an imageKey URL param, jump to that exact grouped question.
+    useEffect(() => {
+        if (mode !== "imagequestions" || urlImageKeyConsumedRef.current || !urlImageKey || imageGroupedList.length === 0) return;
+        const idx = imageGroupedList.findIndex((q) => q.key === urlImageKey);
+        if (idx >= 0) {
+            urlImageKeyConsumedRef.current = true;
+            setImageQuestionPosition(idx);
+        }
+    }, [mode, urlImageKey, imageGroupedList]);
+
     // Sync URL to the current question (replace so navigating questions doesn't pollute browser history)
     useEffect(() => {
         if (mode === "pastpaper") {
             if (!selectedPaper || !currentPaperQuestion) return;
+            const params: Record<string, string> = {
+                mode: "pastpaper",
+                paperId: selectedPaper.id,
+                level: selectedPaper.level ?? "",
+                subject: selectedPaper.subject ?? "",
+                questionId: currentPaperQuestion.id,
+            };
+            if (paperQuestionIndexInFullList >= 0) {
+                params.indexInPaper = String(paperQuestionIndexInFullList);
+            }
             setSearchParams(
-                {
-                    mode: "pastpaper",
-                    paperId: selectedPaper.id,
-                    level: selectedPaper.level ?? "",
-                    subject: selectedPaper.subject ?? "",
-                    questionId: currentPaperQuestion.id,
-                },
+                params,
                 { replace: true }
             );
         } else if (mode === "imagequestions") {
@@ -1176,6 +1255,7 @@ export default function Questions() {
                     subject: normalizedUrlSubject,
                     level: normalizedUrlLevel,
                     topic: imageQuestionTopic ?? "",
+                    imageKey: currentGroupedQuestion.key,
                 },
                 { replace: true }
             );
@@ -1189,7 +1269,15 @@ export default function Questions() {
             setSearchParams(params, { replace: true });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mode, selectedPaper?.storagePath, currentPaperQuestion?.id, currentQuestion?.id, subjectFilter, currentGroupedQuestion?.key, imageQuestionTopic]);
+    }, [mode, selectedPaper?.storagePath, currentPaperQuestion?.id, currentQuestion?.id, subjectFilter, currentGroupedQuestion?.key, imageQuestionTopic, paperQuestionIndexInFullList]);
+
+    useEffect(() => {
+        try {
+            const serialized = searchParams.toString();
+            if (!serialized) return;
+            localStorage.setItem(QUESTIONS_RESUME_SEARCH_KEY, serialized);
+        } catch {}
+    }, [searchParams]);
 
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
@@ -1271,6 +1359,7 @@ export default function Questions() {
                         registerDrawingSnapshot={registerDrawingSnapshot}
                         registerGetStaveAnalysis={registerGetStaveAnalysis}
                         initialStrokes={canvasStrokes}
+                        onEditInteraction={handleCanvasEditInteraction}
                         onStrokesChange={handleStrokesChange}
                         registerGetGradingCapture={registerGetGradingCapture}
                         gradingAnnotations={gradingAnnotations}
@@ -1748,10 +1837,11 @@ export default function Questions() {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setShowCalculator(true)}
-                                    className="questions-action-button"
+                                    onClick={() => setShowCalculator((prev) => !prev)}
+                                    className={`questions-action-button ${showCalculator ? "questions-action-button--active" : ""}`}
                                     title="Calculator"
                                     aria-label="Calculator"
+                                    aria-pressed={showCalculator}
                                 >
                                     <LuCalculator size={14} strokeWidth={2} />
                                     <span>Calculator</span>
@@ -1766,7 +1856,7 @@ export default function Questions() {
                                         Coming soon
                                     </div>
                                 )}
-                                {typeof document !== "undefined" &&
+                                {themedPortalTarget &&
                                     createPortal(
                                         <div
                                             className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
@@ -1777,10 +1867,10 @@ export default function Questions() {
                                         >
                                             {imageActionButtons}
                                         </div>,
-                                        document.body
+                                        themedPortalTarget
                                     )}
                                 <div className="flex-1 min-h-0 relative pt-4 pb-24">
-                                    <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-minimal h-full py-2 pb-10 items-center">
+                                    <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-10 items-center">
                                         <div className="flex flex-col items-center w-full" style={{ maxWidth: snippetWidth }}>
                                             {currentGroupedQuestion.images.map((img, idx) => (
                                                 <img
@@ -1800,7 +1890,7 @@ export default function Questions() {
                                                     setSidebarOpen(true);
                                                     setSidebarOpenPanel("markingscheme");
                                                 }}
-                                                className="questions-action-button w-full py-4! px-0!  rounded-2xl text-base gap-2"
+                                                className="questions-marking-scheme-button w-full"
                                                 aria-label="Reveal marking scheme"
                                             >
                                                 <LuClipboardList size={20} strokeWidth={2} />
@@ -1881,9 +1971,10 @@ export default function Questions() {
                                         <button
                                             type="button"
                                             onClick={handleExpandToggle}
-                                            className="questions-action-button"
+                                            className={`questions-action-button color-bg color-txt-sub border color-shadow ${isFullPaperExpanded ? "color-bg-accent color-txt-accent" : ""}`}
                                             aria-label={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
                                             title={isFullPaperExpanded ? "Show question only" : "Expand to full paper"}
+                                            aria-pressed={isFullPaperExpanded}
                                         >
                                             {isFullPaperExpanded ? (
                                                 <>
@@ -1903,12 +1994,18 @@ export default function Questions() {
                                             type="button"
                                             data-tutorial-id="sidebar-logtables"
                                             onClick={() => {
+                                                if (showLogTables) {
+                                                    setShowLogTables(false);
+                                                    setLogTablesQuestionIndex(null);
+                                                    return;
+                                                }
                                                 setLogTablesQuestionIndex(paperQuestionIndexInFullList >= 0 ? paperQuestionIndexInFullList : 0);
                                                 setShowLogTables(true);
                                             }}
-                                            className="questions-action-button"
+                                            className={`questions-action-button color-bg color-txt-sub border color-shadow ${showLogTables ? "questions-action-button--active color-bg-accent color-txt-accent" : ""}`}
                                             title="Log tables"
                                             aria-label="Log tables"
+                                            aria-pressed={showLogTables}
                                         >
                                             <LuBookOpen size={14} strokeWidth={2} />
                                             <span>Log tables</span>
@@ -1917,10 +2014,11 @@ export default function Questions() {
                                     {currentPaperQuestion && (
                                         <button
                                             type="button"
-                                            onClick={() => setShowCalculator(true)}
-                                            className="questions-action-button"
+                                            onClick={() => setShowCalculator((prev) => !prev)}
+                                            className={`questions-action-button color-bg color-txt-sub border color-shadow ${showCalculator ? "questions-action-button--active color-bg-accent color-txt-accent" : ""}`}
                                             title="Calculator"
                                             aria-label="Calculator"
+                                            aria-pressed={showCalculator}
                                         >
                                             <LuCalculator size={14} strokeWidth={2} />
                                             <span>Calculator</span>
@@ -1942,7 +2040,7 @@ export default function Questions() {
                                         </div>
                                     )}
                                     {(hasPageRegions || currentPaperQuestion) &&
-                                        typeof document !== "undefined" &&
+                                        themedPortalTarget &&
                                         createPortal(
                                             <div
                                                 className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
@@ -1953,7 +2051,7 @@ export default function Questions() {
                                             >
                                                 {paperActionButtons}
                                             </div>,
-                                            document.body
+                                            themedPortalTarget
                                         )}
                                     <div className="flex-1 min-h-0 relative pt-4 pb-24">
                                         {hasPageRegions ? (
@@ -1968,7 +2066,7 @@ export default function Questions() {
                                                     }}
                                                     transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
                                                 >
-                                                    <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto scrollbar-minimal py-2 pb-10 pr-2 items-center">
+                                                    <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto scrollbar-hide py-2 pb-10 pr-2 items-center">
                                                         <CroppedPdfRegions
                                                             file={paperBlob}
                                                             regions={currentPaperQuestion!.pageRegions!.map((r) => ({
@@ -1989,7 +2087,7 @@ export default function Questions() {
                                                                         setSidebarOpen(true);
                                                                         setSidebarOpenPanel("markingscheme");
                                                                     }}
-                                                                    className="questions-action-button w-full py-6 px-8 rounded-2xl text-base gap-2"
+                                                                    className="questions-marking-scheme-button w-full"
                                                                     aria-label="Reveal marking scheme"
                                                                 >
                                                                     <LuClipboardList size={20} strokeWidth={2} />
@@ -2099,7 +2197,7 @@ export default function Questions() {
                                                     {isFullPaperExpanded && paperQuestions.length > 0 && paperContentHeightPx > 0 && options.laptopMode && (
                                                         <div
                                                             ref={panelsScrollRef}
-                                                            className="shrink-0 min-h-0 overflow-y-auto scrollbar-minimal"
+                                                            className="shrink-0 min-h-0 overflow-y-auto scrollbar-hide"
                                                             style={{ width: panelWidthPx }}
                                                         >
                                                             <div
@@ -2267,9 +2365,41 @@ export default function Questions() {
                 <PaperProGate firstFreePaper={firstFreePaper} />
             )}
         </div>
-        <TimerFloatingWidget leftHandMode={options.leftHandMode} />
+        <TimerFloatingWidget
+            leftHandMode={options.leftHandMode}
+            onClick={() => {
+                setSidebarOpen(true);
+                setSidebarOpenPanel("timer");
+            }}
+        />
+        <TimerTimesUpSync
+            onTimesUp={() => {
+                setSidebarOpen(true);
+                setSidebarOpenPanel("timer");
+            }}
+        />
         </TimerProvider>
     )
+}
+
+function TimerTimesUpSync({ onTimesUp }: { onTimesUp: () => void }) {
+    const timer = useTimerOptional();
+    const timesUpNonce = timer?.state.timesUpNonce ?? 0;
+    const lastHandledNonceRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        if (!timer) return;
+        if (lastHandledNonceRef.current == null) {
+            lastHandledNonceRef.current = timesUpNonce;
+            return;
+        }
+        if (timesUpNonce !== lastHandledNonceRef.current) {
+            lastHandledNonceRef.current = timesUpNonce;
+            onTimesUp();
+        }
+    }, [timer, timesUpNonce, onTimesUp]);
+
+    return null;
 }
 
  

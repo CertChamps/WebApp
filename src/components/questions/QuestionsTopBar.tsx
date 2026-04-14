@@ -84,10 +84,8 @@ export default function QuestionsTopBar({
           )}
         </div>
 
-        {/* Center: question title + navigation arrows */}
-        {centerContent && (
-          <div className="questions-top-bar__center">{centerContent}</div>
-        )}
+        {/* Center: keep grid slot mounted so right controls never shift inward */}
+        <div className="questions-top-bar__center">{centerContent}</div>
 
         {/* Right: action buttons */}
         {rightContent && (

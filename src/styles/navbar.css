@@ -2,7 +2,7 @@
 
 /* ====================================== NAVBAR STYLES ================================= */
 .container {
-    @apply h-container justify-start items-start flex-col p-2 transition-all duration-250 color-bg-grey-5
+    @apply h-container justify-start items-center flex-col py-2 px-5 transition-all duration-250 color-bg-grey-5
   w-12 hover:w-20 hover:min-w-20;
 }
 /* ===================================================================================== */ 
@@ -10,7 +10,8 @@
 
 /* ====================================== USER STYLES  ================================= */ 
 .user-container {
-    @apply flex items-center justify-evenly rounded-out  group-hover:color-bg-accent p-2 cursor-pointer;
+    @apply flex items-center justify-center rounded-out group-hover:color-bg-accent
+  w-9 h-9 group-hover:w-full group-hover:px-2 group-hover:justify-start transition-all duration-250 cursor-pointer;
 }
 
 .user-img {
@@ -36,13 +37,13 @@
 .nav-item {
   @apply flex items-center justify-center rounded-out hover:color-bg my-1 
   cursor-pointer object-cover
-  w-9 h-9 group-hover:w-full group-hover:px-2 group-hover:justify-start
+  w-9 h-9 group-hover:w-full group-hover:px-2.5 group-hover:justify-start
   transition-all duration-250;
 }
 
 .nav-item-selected {
   @apply flex items-center justify-center rounded-out color-bg-accent my-1
-  w-9 h-9 group-hover:w-full group-hover:px-2 group-hover:justify-start
+  w-9 h-9 group-hover:w-full group-hover:px-2.5 group-hover:justify-start
   transition-all duration-250;
 }
 
@@ -93,26 +94,26 @@
 .nav-settings {
   @apply flex items-center justify-center rounded-out hover:color-bg my-1 
   cursor-pointer
-  w-9 h-9 group-hover:w-full group-hover:px-2 group-hover:justify-start
+  w-9 h-9 group-hover:w-full group-hover:px-2.5 group-hover:justify-start
   transition-all duration-250;
 }
 
 .nav-settings-selected {
   @apply flex items-center justify-center rounded-out color-bg-accent my-1
-  w-9 h-9 group-hover:w-full group-hover:px-2 group-hover:justify-start
+  w-9 h-9 group-hover:w-full group-hover:px-2.5 group-hover:justify-start
   transition-all duration-250;
 }
 
 .nav-bottom {
   @apply flex items-center justify-center rounded-out hover:color-bg my-1 
   cursor-pointer
-  w-9 h-9 group-hover:w-full group-hover:px-2 group-hover:justify-start
+  w-9 h-9 group-hover:w-full group-hover:px-2.5 group-hover:justify-start
   transition-all duration-250;
 }
 
 .nav-bottom-selected {
   @apply flex items-center justify-center rounded-out color-bg-accent my-1
-  w-9 h-9 group-hover:w-full group-hover:px-2 group-hover:justify-start
+  w-9 h-9 group-hover:w-full group-hover:px-2.5 group-hover:justify-start
   transition-all duration-250;
 }
 /* ===================================================================================== */ 

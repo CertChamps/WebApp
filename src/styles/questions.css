@@ -5,7 +5,7 @@
   @apply w-full shrink-0;
 }
 .questions-top-bar__inner {
-  @apply grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2;
+  @apply grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2 min-h-12;
 }
 .questions-top-bar__left {
   @apply flex items-center gap-2 justify-self-start min-w-0;
@@ -117,6 +117,29 @@
 
 /* Shared action buttons in question/paper panes */
 /* .questions-action-button intentionally shares the exact same rules as top-bar buttons above */
+
+/* Reveal button is intentionally decoupled from shared action-button tweaks. */
+.questions-marking-scheme-button {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-transparent px-8 py-4 text-base! font-medium! cursor-pointer select-none;
+  @apply color-bg color-shadow color-txt-sub;
+  transform: translateZ(0);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+  will-change: transform, opacity;
+}
+.questions-marking-scheme-button:hover {
+  @apply opacity-95;
+}
+.questions-marking-scheme-button:active {
+  transform: scale(0.965);
+  opacity: 0.9;
+}
+.questions-marking-scheme-button:focus-visible {
+  @apply outline-none ring-2 ring-offset-2 ring-blue/40;
+}
 
 /* Questions search modal (utility-themed) */
 .q-search-overlay {

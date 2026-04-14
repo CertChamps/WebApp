@@ -2,6 +2,12 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 
 export type TimerMode = "stopwatch" | "timer" | "pomodoro";
 export type PomodoroPhase = "work" | "shortBreak" | "longBreak";
+type TimerModeSnapshot = {
+  time: number;
+  totalTime: number;
+  pomodoroPhase: PomodoroPhase;
+  pomodoroRound: number;
+};
 
 const POMODORO_WORK_MS = 25 * 60 * 1000;
 const POMODORO_SHORT_BREAK_MS = 5 * 60 * 1000;
@@ -14,6 +20,9 @@ export type TimerState = {
   totalTime: number;
   pomodoroPhase: PomodoroPhase;
   pomodoroRound: number;
+  modeSnapshots: Record<TimerMode, TimerModeSnapshot>;
+  timesUpPending: boolean;
+  timesUpNonce: number;
 };
 
 type TimerContextType = {
@@ -28,6 +37,51 @@ type TimerContextType = {
   reset: () => void;
   toggle: () => void;
   advancePomodoro: () => void;
+  acknowledgeTimesUp: () => void;
+};
+
+function playTimesUpSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const play = (frequency: number, startTime: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(frequency, startTime);
+      gain.gain.setValueAtTime(0.2, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    play(523.25, 0, 0.12);
+    play(659.25, 0.12, 0.12);
+    const slide = ctx.createOscillator();
+    const g = ctx.createGain();
+    slide.connect(g);
+    g.connect(ctx.destination);
+    slide.type = "sawtooth";
+    slide.frequency.setValueAtTime(392, 0.3);
+    slide.frequency.exponentialRampToValueAtTime(98, 0.85);
+    g.gain.setValueAtTime(0.1, 0.3);
+    g.gain.exponentialRampToValueAtTime(0.01, 0.85);
+    slide.start(0.3);
+    slide.stop(0.85);
+  } catch {
+    // Ignore if AudioContext is unavailable or blocked.
+  }
+}
+
+const defaultSnapshots: Record<TimerMode, TimerModeSnapshot> = {
+  stopwatch: { time: 0, totalTime: 0, pomodoroPhase: "work", pomodoroRound: 1 },
+  timer: { time: 0, totalTime: 0, pomodoroPhase: "work", pomodoroRound: 1 },
+  pomodoro: {
+    time: POMODORO_WORK_MS,
+    totalTime: POMODORO_WORK_MS,
+    pomodoroPhase: "work",
+    pomodoroRound: 1,
+  },
 };
 
 const defaultState: TimerState = {
@@ -37,6 +91,9 @@ const defaultState: TimerState = {
   totalTime: 0,
   pomodoroPhase: "work",
   pomodoroRound: 1,
+  modeSnapshots: defaultSnapshots,
+  timesUpPending: false,
+  timesUpNonce: 0,
 };
 
 const TimerContext = createContext<TimerContextType | null>(null);
@@ -58,19 +115,27 @@ export function TimerProvider({ children }: { children: ReactNode }) {
 
   const setMode = useCallback((mode: TimerMode) => {
     setState((prev) => {
-      const base = { ...prev, mode, running: false };
-      if (mode === "stopwatch") return { ...base, time: 0, totalTime: 0 };
-      if (mode === "timer") return { ...base, time: 0, totalTime: 0 };
-      if (mode === "pomodoro") {
-        return {
-          ...base,
-          time: POMODORO_WORK_MS,
-          totalTime: POMODORO_WORK_MS,
-          pomodoroPhase: "work",
-          pomodoroRound: 1,
-        };
-      }
-      return base;
+      const savedCurrent: TimerModeSnapshot = {
+        time: prev.time,
+        totalTime: prev.totalTime,
+        pomodoroPhase: prev.pomodoroPhase,
+        pomodoroRound: prev.pomodoroRound,
+      };
+      const nextSnapshots = {
+        ...prev.modeSnapshots,
+        [prev.mode]: savedCurrent,
+      };
+      const next = nextSnapshots[mode] ?? defaultSnapshots[mode];
+      return {
+        ...prev,
+        mode,
+        running: false,
+        time: next.time,
+        totalTime: next.totalTime,
+        pomodoroPhase: next.pomodoroPhase,
+        pomodoroRound: next.pomodoroRound,
+        modeSnapshots: nextSnapshots,
+      };
     });
   }, []);
 
@@ -79,6 +144,16 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       ...prev,
       time: Math.max(0, ms),
       totalTime: prev.mode === "timer" ? Math.max(0, ms) : prev.totalTime,
+      modeSnapshots: {
+        ...prev.modeSnapshots,
+        [prev.mode]: {
+          ...prev.modeSnapshots[prev.mode],
+          time: Math.max(0, ms),
+          totalTime: prev.mode === "timer" ? Math.max(0, ms) : prev.totalTime,
+          pomodoroPhase: prev.pomodoroPhase,
+          pomodoroRound: prev.pomodoroRound,
+        },
+      },
     }));
   }, []);
 
@@ -88,6 +163,16 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       ...prev,
       time: Math.max(0, ms),
       totalTime: prev.mode === "timer" ? Math.max(0, ms) : prev.totalTime,
+      modeSnapshots: {
+        ...prev.modeSnapshots,
+        [prev.mode]: {
+          ...prev.modeSnapshots[prev.mode],
+          time: Math.max(0, ms),
+          totalTime: prev.mode === "timer" ? Math.max(0, ms) : prev.totalTime,
+          pomodoroPhase: prev.pomodoroPhase,
+          pomodoroRound: prev.pomodoroRound,
+        },
+      },
     }));
   }, []);
 
@@ -98,13 +183,23 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         const round = prev.pomodoroRound;
         const nextPhase = round % 4 === 0 ? "longBreak" : "shortBreak";
         const totalMs = nextPhase === "longBreak" ? POMODORO_LONG_BREAK_MS : POMODORO_SHORT_BREAK_MS;
-        return {
+        const nextState: TimerState = {
           ...prev,
           pomodoroPhase: nextPhase,
           time: totalMs,
           totalTime: totalMs,
           pomodoroRound: nextPhase === "longBreak" ? round : round,
+          modeSnapshots: {
+            ...prev.modeSnapshots,
+            pomodoro: {
+              time: totalMs,
+              totalTime: totalMs,
+              pomodoroPhase: nextPhase,
+              pomodoroRound: nextPhase === "longBreak" ? round : round,
+            },
+          },
         };
+        return nextState;
       }
       return {
         ...prev,
@@ -112,6 +207,15 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         pomodoroRound: prev.pomodoroRound + 1,
         time: POMODORO_WORK_MS,
         totalTime: POMODORO_WORK_MS,
+        modeSnapshots: {
+          ...prev.modeSnapshots,
+          pomodoro: {
+            time: POMODORO_WORK_MS,
+            totalTime: POMODORO_WORK_MS,
+            pomodoroPhase: "work",
+            pomodoroRound: prev.pomodoroRound + 1,
+          },
+        },
       };
     });
   }, []);
@@ -127,6 +231,15 @@ export function TimerProvider({ children }: { children: ReactNode }) {
           time: POMODORO_WORK_MS,
           totalTime: POMODORO_WORK_MS,
           pomodoroPhase: "work",
+          modeSnapshots: {
+            ...prev.modeSnapshots,
+            pomodoro: {
+              time: POMODORO_WORK_MS,
+              totalTime: POMODORO_WORK_MS,
+              pomodoroPhase: "work",
+              pomodoroRound: prev.pomodoroRound,
+            },
+          },
         };
       }
       return { ...prev, running: true };
@@ -139,8 +252,30 @@ export function TimerProvider({ children }: { children: ReactNode }) {
 
   const reset = useCallback(() => {
     setState((prev) => {
-      if (prev.mode === "stopwatch") return { ...prev, time: 0, running: false, totalTime: 0 };
-      if (prev.mode === "timer") return { ...prev, time: 0, running: false, totalTime: 0 };
+      if (prev.mode === "stopwatch") {
+        return {
+          ...prev,
+          time: 0,
+          running: false,
+          totalTime: 0,
+          modeSnapshots: {
+            ...prev.modeSnapshots,
+            stopwatch: { ...prev.modeSnapshots.stopwatch, time: 0, totalTime: 0 },
+          },
+        };
+      }
+      if (prev.mode === "timer") {
+        return {
+          ...prev,
+          time: 0,
+          running: false,
+          totalTime: 0,
+          modeSnapshots: {
+            ...prev.modeSnapshots,
+            timer: { ...prev.modeSnapshots.timer, time: 0, totalTime: 0 },
+          },
+        };
+      }
       if (prev.mode === "pomodoro") {
         return {
           ...prev,
@@ -149,6 +284,15 @@ export function TimerProvider({ children }: { children: ReactNode }) {
           running: false,
           pomodoroPhase: "work",
           pomodoroRound: 1,
+          modeSnapshots: {
+            ...prev.modeSnapshots,
+            pomodoro: {
+              time: POMODORO_WORK_MS,
+              totalTime: POMODORO_WORK_MS,
+              pomodoroPhase: "work",
+              pomodoroRound: 1,
+            },
+          },
         };
       }
       return prev;
@@ -179,11 +323,39 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(() => {
       setState((prev) => {
         if (prev.mode === "stopwatch") {
-          return { ...prev, time: prev.time + TICK_MS };
+          const nextTime = prev.time + TICK_MS;
+          return {
+            ...prev,
+            time: nextTime,
+            modeSnapshots: {
+              ...prev.modeSnapshots,
+              stopwatch: { ...prev.modeSnapshots.stopwatch, time: nextTime, totalTime: 0 },
+            },
+          };
         }
         if (prev.mode === "timer") {
-          if (prev.time <= TICK_MS) return { ...prev, time: 0, running: false };
-          return { ...prev, time: prev.time - TICK_MS };
+          if (prev.time <= TICK_MS) {
+            return {
+              ...prev,
+              time: 0,
+              running: false,
+              timesUpPending: true,
+              timesUpNonce: prev.timesUpNonce + 1,
+              modeSnapshots: {
+                ...prev.modeSnapshots,
+                timer: { ...prev.modeSnapshots.timer, time: 0, totalTime: prev.totalTime },
+              },
+            };
+          }
+          const nextTime = prev.time - TICK_MS;
+          return {
+            ...prev,
+            time: nextTime,
+            modeSnapshots: {
+              ...prev.modeSnapshots,
+              timer: { ...prev.modeSnapshots.timer, time: nextTime, totalTime: prev.totalTime },
+            },
+          };
         }
         if (prev.mode === "pomodoro") {
           if (prev.time <= TICK_MS) {
@@ -198,6 +370,17 @@ export function TimerProvider({ children }: { children: ReactNode }) {
                 time: totalMs,
                 totalTime: totalMs,
                 pomodoroRound: nextPhase === "longBreak" ? round : round,
+                timesUpPending: true,
+                timesUpNonce: prev.timesUpNonce + 1,
+                modeSnapshots: {
+                  ...prev.modeSnapshots,
+                  pomodoro: {
+                    time: totalMs,
+                    totalTime: totalMs,
+                    pomodoroPhase: nextPhase,
+                    pomodoroRound: nextPhase === "longBreak" ? round : round,
+                  },
+                },
               };
             }
             return {
@@ -206,15 +389,49 @@ export function TimerProvider({ children }: { children: ReactNode }) {
               pomodoroRound: prev.pomodoroRound + 1,
               time: POMODORO_WORK_MS,
               totalTime: POMODORO_WORK_MS,
+              timesUpPending: true,
+              timesUpNonce: prev.timesUpNonce + 1,
+              modeSnapshots: {
+                ...prev.modeSnapshots,
+                pomodoro: {
+                  time: POMODORO_WORK_MS,
+                  totalTime: POMODORO_WORK_MS,
+                  pomodoroPhase: "work",
+                  pomodoroRound: prev.pomodoroRound + 1,
+                },
+              },
             };
           }
-          return { ...prev, time: prev.time - TICK_MS };
+          const nextTime = prev.time - TICK_MS;
+          return {
+            ...prev,
+            time: nextTime,
+            modeSnapshots: {
+              ...prev.modeSnapshots,
+              pomodoro: {
+                ...prev.modeSnapshots.pomodoro,
+                time: nextTime,
+                totalTime: prev.totalTime,
+                pomodoroPhase: prev.pomodoroPhase,
+                pomodoroRound: prev.pomodoroRound,
+              },
+            },
+          };
         }
         return prev;
       });
     }, TICK_MS);
     return () => clearInterval(interval);
   }, [state.running, state.mode, state.pomodoroPhase, state.pomodoroRound]);
+
+  useEffect(() => {
+    if (!state.timesUpPending) return;
+    playTimesUpSound();
+  }, [state.timesUpNonce, state.timesUpPending]);
+
+  const acknowledgeTimesUp = useCallback(() => {
+    setState((prev) => ({ ...prev, timesUpPending: false }));
+  }, []);
 
   const value: TimerContextType = {
     state,
@@ -228,6 +445,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     reset,
     toggle,
     advancePomodoro,
+    acknowledgeTimesUp,
   };
 
   return <TimerContext.Provider value={value}>{children}</TimerContext.Provider>;

@@ -37,6 +37,17 @@ export default function Navbar () {
 
     const [page, setPage ]= useState<string>(() => derivePageFromPath(location.pathname))
 
+    const navigateToPractice = () => {
+        try {
+            const savedSearch = localStorage.getItem("questions-page-resume-search");
+            if (savedSearch && savedSearch.trim().length > 0) {
+                navigate(`/practice/session?${savedSearch}`);
+                return;
+            }
+        } catch {}
+        navigate("/practice");
+    };
+
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //
     const pageNaviagte = (page: string) => {
 
@@ -44,6 +55,10 @@ export default function Navbar () {
         setPage(page)
 
         // navigate to that page
+        if (page === "practice") {
+            navigateToPractice();
+            return;
+        }
         navigate(`/${page}`) 
         
     } 
@@ -135,7 +150,7 @@ export default function Navbar () {
                 <p className={page == 'feedback' ? 'nav-txt-selected' : 'nav-txt'}>Feedback</p>
             </div>
 
-            <div className="mt-auto w-full">
+            <div className="mt-auto w-full flex flex-col items-center">
                 {/* ============================= ADD QUESTIONS (ADMIN ONLY) ================================ */}
                 {isAdmin && (
                     <div className={page == 'admin/add-questions' ? 'nav-bottom-selected' : 'nav-bottom'} onClick={() => {pageNaviagte('admin/add-questions')}}> 

@@ -92,32 +92,33 @@ const LogTables = forwardRef<LogTablesHandle, QuestionType>(({ pgNumber, embedde
       className={`flex flex-col items-center color-bg relative overflow-hidden ${embedded ? "h-full w-full" : "shadow-small rounded-lg ml-5"}`}
       style={embedded ? { height: "100%", width: "100%" } : { height: "70vh", width: "520px" }}
     >
-      {/* ================= 1. TOP BAR ================= */}
-      {/* This is now the first element, so it sits at the top naturally. */}
-        <div className="w-full flex items-center justify-between px-4 py-2 relative color-bg color-txt-main mb-1" style={{ minHeight: "52px" }}>
-        <div className="flex-1 flex items-center">
-          {isNullPage && (
-            <span className="text-sm font-bold color-txt-sub">
-              CertChamps thinks you might not need log tables for this one!
-            </span>
-          )}
+      {/* Internal top row is hidden in embedded mode (FloatingLogTables has its own header). */}
+      {(!embedded || isNullPage) && (
+        <div className="w-full flex items-center justify-between px-4 py-2 relative color-bg color-txt-main" style={{ minHeight: "52px" }}>
+          <div className="flex-1 flex items-center">
+            {isNullPage && (
+              <span className="text-sm font-bold color-txt-sub">
+                CertChamps thinks you might not need log tables for this one!
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {!embedded && !isNullPage && (
+              <button
+                onClick={() => {
+                  const pageIndex = parseInt(effectivePage, 10) - 1;
+                  if (pageIndex >= 0 && pageRefs.current[pageIndex]?.current) {
+                    pageRefs.current[pageIndex].current.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }}
+                className="px-3 py-1 text-sm rounded-lg color-bg-grey-10 color-txt-main hover:opacity-80 transition-all cursor-pointer"
+              >
+                Jump to Pg {effectivePage}
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {!embedded && !isNullPage && (
-            <button
-              onClick={() => {
-                const pageIndex = parseInt(effectivePage, 10) - 1;
-                if (pageIndex >= 0 && pageRefs.current[pageIndex]?.current) {
-                  pageRefs.current[pageIndex].current.scrollIntoView({ behavior: "smooth", block: "start" });
-                }
-              }}
-              className="px-3 py-1 text-sm rounded-lg color-bg-grey-10 color-txt-main hover:opacity-80 transition-all cursor-pointer"
-            >
-              Jump to Pg {effectivePage}
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* ================= 2. CONTENT AREA ================= */}
       {/* We wrap the PDF and the Loading Screen in this relative container */}

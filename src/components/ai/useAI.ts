@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
-export type Message = { role: "user" | "assistant"; content: string };
+export type Message = { role: "user" | "assistant"; content: string; source?: "chat" | "injected" };
 export type InjectedExchange = {
   nonce: string;
   userMessage: string;
@@ -153,6 +153,12 @@ export function useAI(
 
   const lastInjectedNonceRef = useRef<string | null>(null);
   useEffect(() => {
+    if (!injectedExchange) {
+      lastInjectedNonceRef.current = null;
+      setMessages((prev) => prev.filter((msg) => msg.source !== "injected"));
+      return;
+    }
+
     if (!injectedExchange?.nonce) return;
     if (lastInjectedNonceRef.current === injectedExchange.nonce) return;
     lastInjectedNonceRef.current = injectedExchange.nonce;
@@ -161,8 +167,8 @@ export function useAI(
     if (!userText && !assistantText) return;
     setMessages((prev) => {
       const next = [...prev];
-      if (userText) next.push({ role: "user", content: userText });
-      if (assistantText) next.push({ role: "assistant", content: assistantText });
+      if (userText) next.push({ role: "user", content: userText, source: "injected" });
+      if (assistantText) next.push({ role: "assistant", content: assistantText, source: "injected" });
       return next;
     });
   }, [injectedExchange]);
@@ -173,7 +179,7 @@ export function useAI(
 
     setInput("");
     setError(null);
-    const userMessage: Message = { role: "user", content: text };
+    const userMessage: Message = { role: "user", content: text, source: "chat" };
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
 
@@ -245,7 +251,7 @@ export function useAI(
         }
       }
 
-      setMessages((m) => [...m, { role: "assistant", content: fullText }]);
+      setMessages((m) => [...m, { role: "assistant", content: fullText, source: "chat" }]);
       setStreamingContent("");
     } catch (err) {
       setStreamingContent("");

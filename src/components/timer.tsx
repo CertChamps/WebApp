@@ -22,42 +22,8 @@ function applySecondsDigit(current: string, digit: string): string {
   return String(val).padStart(2, "0");
 }
 
-/** Play a silly "time's up" sound: two-tone ding then a descending wah-wah slide */
-function playTimesUpSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    const play = (frequency: number, startTime: number, duration: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(frequency, startTime);
-      gain.gain.setValueAtTime(0.2, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    };
-    play(523.25, 0, 0.12);     // C5
-    play(659.25, 0.12, 0.12);  // E5
-    const slide = ctx.createOscillator();
-    const g = ctx.createGain();
-    slide.connect(g);
-    g.connect(ctx.destination);
-    slide.type = "sawtooth";
-    slide.frequency.setValueAtTime(392, 0.3);
-    slide.frequency.exponentialRampToValueAtTime(98, 0.85);
-    g.gain.setValueAtTime(0.1, 0.3);
-    g.gain.exponentialRampToValueAtTime(0.01, 0.85);
-    slide.start(0.3);
-    slide.stop(0.85);
-  } catch {
-    // Ignore if AudioContext not supported or blocked
-  }
-}
-
 export default function Timer() {
-  const { state, formatTime, setMode, setTimeFromMMSS, start, pause, reset } = useTimer();
+  const { state, formatTime, setMode, setTimeFromMMSS, start, pause, reset, acknowledgeTimesUp } = useTimer();
   const [editing, setEditing] = useState(false);
   const [editMins, setEditMins] = useState("00");
   const [editSecs, setEditSecs] = useState("00");
@@ -66,7 +32,6 @@ export default function Timer() {
   const minsRef = useRef<HTMLInputElement | null>(null);
   const secsRef = useRef<HTMLInputElement | null>(null);
   const switchingFocusRef = useRef(false);
-  const prevRunningRef = useRef(state.running);
 
   const canEdit = state.mode === "timer" && !state.running;
   const showProgress = state.mode === "timer" || state.mode === "pomodoro";
@@ -80,20 +45,12 @@ export default function Timer() {
     (activeField === "mins" ? minsRef.current : secsRef.current)?.focus();
   }, [editing, activeField]);
 
-  // When countdown hits zero (timer or pomodoro), show popup and play sound
+  // Show popup whenever timer context reports a pending time-up event.
   useEffect(() => {
-    const wasRunning = prevRunningRef.current;
-    prevRunningRef.current = state.running;
-    if (
-      wasRunning &&
-      !state.running &&
-      state.time === 0 &&
-      (state.mode === "timer" || state.mode === "pomodoro")
-    ) {
-      playTimesUpSound();
+    if (state.timesUpPending) {
       setShowTimesUpModal(true);
     }
-  }, [state.running, state.time, state.mode]);
+  }, [state.timesUpPending]);
 
   const handleDisplayClick = () => {
     if (!canEdit) return;
@@ -387,11 +344,14 @@ export default function Timer() {
       {/* Time's up popup */}
       {showTimesUpModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-[2px]"
           role="dialog"
           aria-modal="true"
           aria-labelledby="times-up-title"
-          onClick={() => setShowTimesUpModal(false)}
+          onClick={() => {
+            acknowledgeTimesUp();
+            setShowTimesUpModal(false);
+          }}
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -404,7 +364,10 @@ export default function Timer() {
             <p className="text-sm color-txt-sub mb-6">Hope you got through it.</p>
             <button
               type="button"
-              onClick={() => setShowTimesUpModal(false)}
+              onClick={() => {
+                acknowledgeTimesUp();
+                setShowTimesUpModal(false);
+              }}
               className="px-6 py-2.5 rounded-xl font-medium color-bg-accent color-txt-accent hover:opacity-90 transition-opacity"
             >
               Dismiss
