@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { LuX } from "react-icons/lu";
 import katex from "katex";
@@ -139,16 +139,27 @@ export default function FloatingCalculator({ onClose }: Props) {
    ═══════════════════════════════════════════════════════════ */
 
 /** Render a KaTeX string to HTML safely. Returns empty on error. */
+const KATEX_CACHE_LIMIT = 250;
+const katexCache = new Map<string, string>();
+
 function renderKatex(tex: string): string {
   if (!tex) return "";
+  const cached = katexCache.get(tex);
+  if (cached) return cached;
   try {
     // Sanitise common raw chars that aren't valid LaTeX
-    let safe = tex
+    const safe = tex
       .replace(/×/g, "\\times ")
       .replace(/÷/g, "\\div ")
       .replace(/−/g, "-")
       .replace(/·/g, ".");
-    return katex.renderToString(safe, { throwOnError: false, displayMode: false });
+    const html = katex.renderToString(safe, { throwOnError: false, displayMode: false });
+    if (katexCache.size >= KATEX_CACHE_LIMIT) {
+      const firstKey = katexCache.keys().next().value;
+      if (firstKey) katexCache.delete(firstKey);
+    }
+    katexCache.set(tex, html);
+    return html;
   } catch {
     return tex;
   }
@@ -167,9 +178,32 @@ function CalculatorBody({ state, actions, onClose }: { state: CalcState; actions
     pressCloseBracket,
   } = actions;
 
-  const inputHtml = renderKatex(displayExpr || "\\;");
-  const resultHtml = result ? renderKatex(result) : "";
+  const inputHtml = useMemo(() => renderKatex(displayExpr || "\\;"), [displayExpr]);
+  const resultHtml = useMemo(() => (result ? renderKatex(result) : ""), [result]);
   const angleLabel = isRadians ? "RAD" : "DEG";
+  const justExecuted = state.justExecuted;
+
+  const pressUp = useCallback(() => pressArrow("up"), [pressArrow]);
+  const pressDown = useCallback(() => pressArrow("down"), [pressArrow]);
+  const pressLeft = useCallback(() => pressArrow("left"), [pressArrow]);
+  const pressRight = useCallback(() => pressArrow("right"), [pressArrow]);
+  const pressSin = useCallback(() => pressTrig("sin"), [pressTrig]);
+  const pressCos = useCallback(() => pressTrig("cos"), [pressTrig]);
+  const pressTan = useCallback(() => pressTrig("tan"), [pressTrig]);
+  const press7 = useCallback(() => pressDigit("7"), [pressDigit]);
+  const press8 = useCallback(() => pressDigit("8"), [pressDigit]);
+  const press9 = useCallback(() => pressDigit("9"), [pressDigit]);
+  const press4 = useCallback(() => pressDigit("4"), [pressDigit]);
+  const press5 = useCallback(() => pressDigit("5"), [pressDigit]);
+  const press6 = useCallback(() => pressDigit("6"), [pressDigit]);
+  const press1 = useCallback(() => pressDigit("1"), [pressDigit]);
+  const press2 = useCallback(() => pressDigit("2"), [pressDigit]);
+  const press3 = useCallback(() => pressDigit("3"), [pressDigit]);
+  const press0 = useCallback(() => pressDigit("0"), [pressDigit]);
+  const pressMultiply = useCallback(() => pressOperator("*", "\\times "), [pressOperator]);
+  const pressDivide = useCallback(() => pressOperator("/", "\\div "), [pressOperator]);
+  const pressPlus = useCallback(() => pressOperator("+", "+"), [pressOperator]);
+  const pressMinus = useCallback(() => pressOperator("-", "-"), [pressOperator]);
 
   return (
     <div className="casio-emu color-shadow" style={{ width: 320, height: 560 }}>
@@ -199,7 +233,7 @@ function CalculatorBody({ state, actions, onClose }: { state: CalcState; actions
           </div>
           {/* Input line */}
           <div
-            style={{ fontSize: 14, color: "var(--theme-txt-main)", minHeight: "1.4em", overflowX: "auto", overflowY: "hidden", whiteSpace: "nowrap", opacity: state.justExecuted ? 0.55 : 1 }}
+            style={{ fontSize: 14, color: "var(--theme-txt-main)", minHeight: "1.4em", overflowX: "auto", overflowY: "hidden", whiteSpace: "nowrap", opacity: justExecuted ? 0.55 : 1 }}
             dangerouslySetInnerHTML={{ __html: inputHtml || "&nbsp;" }}
           />
           {/* Result line */}
@@ -213,97 +247,186 @@ function CalculatorBody({ state, actions, onClose }: { state: CalcState; actions
       {/* ── CLASSWIZ ──────────────────────────────────── */}
       <div className="casio-emu__classwiz">CLASSWIZ</div>
 
-      {/* ── Keys ──────────────────────────────────────── */}
-      <div className="casio-emu__keys">
-        {/* Top cluster — SHIFT + brackets + d-pad + flanking func buttons */}
-        <div className="casio-emu__top-cluster">
-          <div className="casio-emu__top-grid">
-            <div className="casio-emu__top-cell casio-emu__top-cell--shift">
-              <K v="shift" label="SHIFT" onClick={pressShift} active={shiftActive} />
-            </div>
-            <div className="casio-emu__top-cell casio-emu__top-cell--angle">
-              <K v="dark" label={isRadians ? "RAD" : "DEG"} onClick={pressAngleToggle} />
-            </div>
-            <div className="casio-emu__top-cell casio-emu__top-cell--bracket-left">
-              <K v="dark" label="(" secB="π" onClick={pressBracket} />
-            </div>
-            <div className="casio-emu__top-cell casio-emu__top-cell--bracket-right">
-              <K v="dark" label=")" secB="e" onClick={pressCloseBracket} />
-            </div>
-            <div className="casio-emu__top-cell casio-emu__top-cell--left-a">
-              <K v="dark" label={<>x<sup>2</sup></>} secB={<>x<sup>n</sup></>} onClick={pressSquare} />
-            </div>
-            <div className="casio-emu__top-cell casio-emu__top-cell--left-b">
-              <K v="dark" label={<FracIcon />} cls="casio-emu__btn--symbol" onClick={pressFraction} />
-            </div>
-            <div className="casio-emu__top-cell casio-emu__top-cell--right-a">
-              <K v="dark" label="log" secB={<>10<sup>x</sup></>} onClick={pressLog} />
-            </div>
-            <div className="casio-emu__top-cell casio-emu__top-cell--right-b">
-              <K v="dark" label="ln" secB={<>e<sup>x</sup></>} onClick={pressLn} />
-            </div>
-            <div className="casio-emu__top-dpad-wrap">
-              <div className="casio-emu__dpad">
-                <div className="casio-emu__dpad-bg" />
-                <div className="casio-emu__dpad-center" />
-                <span className="casio-emu__dpad-btn casio-emu__dpad-btn--up" onClick={() => pressArrow("up")}>⌃</span>
-                <span className="casio-emu__dpad-btn casio-emu__dpad-btn--down" onClick={() => pressArrow("down")}>⌄</span>
-                <span className="casio-emu__dpad-btn casio-emu__dpad-btn--left" onClick={() => pressArrow("left")}>❮</span>
-                <span className="casio-emu__dpad-btn casio-emu__dpad-btn--right" onClick={() => pressArrow("right")}>❯</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Row 1 — √, x^□, Ans, sin, cos, tan */}
-        <KeyRow className="casio-emu__row--func">
-          <K v="dark" label="√" secB="ⁿ√" cls="casio-emu__btn--symbol" onClick={pressSqrt} />
-          <K v="dark" label={<>x<sup>□</sup></>} secB={<>x<sup>−1</sup></>} cls="casio-emu__btn--symbol" onClick={pressPower} />
-          <K v="dark" label="Ans" onClick={pressAns} />
-          <K v="dark" label="sin" secB={<>sin<sup>−1</sup></>} onClick={() => pressTrig("sin")} />
-          <K v="dark" label="cos" secB={<>cos<sup>−1</sup></>} onClick={() => pressTrig("cos")} />
-          <K v="dark" label="tan" secB={<>tan<sup>−1</sup></>} onClick={() => pressTrig("tan")} />
-        </KeyRow>
-
-        {/* Row 4 — 7 8 9 DEL AC */}
-        <KeyRow className="casio-emu__row--num5">
-          <K v="num" label="7" onClick={() => pressDigit("7")} />
-          <K v="num" label="8" onClick={() => pressDigit("8")} />
-          <K v="num" label="9" onClick={() => pressDigit("9")} />
-          <K v="dark" label="DEL" onClick={pressBackspace} />
-          <K v="dark" label="AC" onClick={pressAC} />
-        </KeyRow>
-
-        {/* Row 5 — 4 5 6 × ÷ */}
-        <KeyRow className="casio-emu__row--num5">
-          <K v="num" label="4" onClick={() => pressDigit("4")} />
-          <K v="num" label="5" onClick={() => pressDigit("5")} />
-          <K v="num" label="6" onClick={() => pressDigit("6")} />
-          <K v="dark" label="×" secB="" onClick={() => pressOperator("*", "\\times ")} />
-          <K v="dark" label="÷" secB="" onClick={() => pressOperator("/", "\\div ")} />
-        </KeyRow>
-
-        {/* Row 6 — 1 2 3 + − */}
-        <KeyRow className="casio-emu__row--num5">
-          <K v="num" label="1" secO="" onClick={() => pressDigit("1")} />
-          <K v="num" label="2" secO="" onClick={() => pressDigit("2")} />
-          <K v="num" label="3" secO="" onClick={() => pressDigit("3")} />
-          <K v="dark" label="+" secB="" onClick={() => pressOperator("+", "+")} />
-          <K v="dark" label="−" secB="" onClick={() => pressOperator("-", "-")} />
-        </KeyRow>
-
-        {/* Row 7 — 0 . ×10ˣ S/D EXE */}
-        <KeyRow className="casio-emu__row--bot">
-          <K v="num" label="0" secO="" onClick={() => pressDigit("0")} />
-          <K v="num" label="·" onClick={pressDecimal} />
-          <K v="dark" label={<>×10<sup>x</sup></>} onClick={pressSci} />
-          <K v="dark" label="S/D" onClick={pressSD} />
-          <K v="dark" label="EXE" cls="casio-emu__btn--exe" onClick={pressEXE} />
-        </KeyRow>
-      </div>
+      <CalculatorKeys
+        shiftActive={shiftActive}
+        isRadians={isRadians}
+        pressShift={pressShift}
+        pressAngleToggle={pressAngleToggle}
+        pressBracket={pressBracket}
+        pressCloseBracket={pressCloseBracket}
+        pressSquare={pressSquare}
+        pressFraction={pressFraction}
+        pressLog={pressLog}
+        pressLn={pressLn}
+        pressUp={pressUp}
+        pressDown={pressDown}
+        pressLeft={pressLeft}
+        pressRight={pressRight}
+        pressSqrt={pressSqrt}
+        pressPower={pressPower}
+        pressAns={pressAns}
+        pressSin={pressSin}
+        pressCos={pressCos}
+        pressTan={pressTan}
+        press7={press7}
+        press8={press8}
+        press9={press9}
+        pressBackspace={pressBackspace}
+        pressAC={pressAC}
+        press4={press4}
+        press5={press5}
+        press6={press6}
+        pressMultiply={pressMultiply}
+        pressDivide={pressDivide}
+        press1={press1}
+        press2={press2}
+        press3={press3}
+        pressPlus={pressPlus}
+        pressMinus={pressMinus}
+        press0={press0}
+        pressDecimal={pressDecimal}
+        pressSci={pressSci}
+        pressSD={pressSD}
+        pressEXE={pressEXE}
+      />
     </div>
   );
 }
+
+type CalculatorKeysProps = {
+  shiftActive: boolean;
+  isRadians: boolean;
+  pressShift: () => void;
+  pressAngleToggle: () => void;
+  pressBracket: () => void;
+  pressCloseBracket: () => void;
+  pressSquare: () => void;
+  pressFraction: () => void;
+  pressLog: () => void;
+  pressLn: () => void;
+  pressUp: () => void;
+  pressDown: () => void;
+  pressLeft: () => void;
+  pressRight: () => void;
+  pressSqrt: () => void;
+  pressPower: () => void;
+  pressAns: () => void;
+  pressSin: () => void;
+  pressCos: () => void;
+  pressTan: () => void;
+  press7: () => void;
+  press8: () => void;
+  press9: () => void;
+  pressBackspace: () => void;
+  pressAC: () => void;
+  press4: () => void;
+  press5: () => void;
+  press6: () => void;
+  pressMultiply: () => void;
+  pressDivide: () => void;
+  press1: () => void;
+  press2: () => void;
+  press3: () => void;
+  pressPlus: () => void;
+  pressMinus: () => void;
+  press0: () => void;
+  pressDecimal: () => void;
+  pressSci: () => void;
+  pressSD: () => void;
+  pressEXE: () => void;
+};
+
+const CalculatorKeys = memo(function CalculatorKeys({
+  shiftActive, isRadians, pressShift, pressAngleToggle, pressBracket, pressCloseBracket,
+  pressSquare, pressFraction, pressLog, pressLn, pressUp, pressDown, pressLeft, pressRight,
+  pressSqrt, pressPower, pressAns, pressSin, pressCos, pressTan, press7, press8, press9,
+  pressBackspace, pressAC, press4, press5, press6, pressMultiply, pressDivide, press1, press2,
+  press3, pressPlus, pressMinus, press0, pressDecimal, pressSci, pressSD, pressEXE,
+}: CalculatorKeysProps) {
+  return (
+    <div className="casio-emu__keys">
+      <div className="casio-emu__top-cluster">
+        <div className="casio-emu__top-grid">
+          <div className="casio-emu__top-cell casio-emu__top-cell--shift">
+            <K v="shift" label="SHIFT" onClick={pressShift} active={shiftActive} />
+          </div>
+          <div className="casio-emu__top-cell casio-emu__top-cell--angle">
+            <K v="dark" label={isRadians ? "RAD" : "DEG"} onClick={pressAngleToggle} />
+          </div>
+          <div className="casio-emu__top-cell casio-emu__top-cell--bracket-left">
+            <K v="dark" label="(" secB="π" onClick={pressBracket} />
+          </div>
+          <div className="casio-emu__top-cell casio-emu__top-cell--bracket-right">
+            <K v="dark" label=")" secB="e" onClick={pressCloseBracket} />
+          </div>
+          <div className="casio-emu__top-cell casio-emu__top-cell--left-a">
+            <K v="dark" label={<>x<sup>2</sup></>} secB={<>x<sup>n</sup></>} onClick={pressSquare} />
+          </div>
+          <div className="casio-emu__top-cell casio-emu__top-cell--left-b">
+            <K v="dark" label={<FracIcon />} cls="casio-emu__btn--symbol" onClick={pressFraction} />
+          </div>
+          <div className="casio-emu__top-cell casio-emu__top-cell--right-a">
+            <K v="dark" label="log" secB={<>10<sup>x</sup></>} onClick={pressLog} />
+          </div>
+          <div className="casio-emu__top-cell casio-emu__top-cell--right-b">
+            <K v="dark" label="ln" secB={<>e<sup>x</sup></>} onClick={pressLn} />
+          </div>
+          <div className="casio-emu__top-dpad-wrap">
+            <div className="casio-emu__dpad">
+              <div className="casio-emu__dpad-bg" />
+              <div className="casio-emu__dpad-center" />
+              <span className="casio-emu__dpad-btn casio-emu__dpad-btn--up" onClick={pressUp}>⌃</span>
+              <span className="casio-emu__dpad-btn casio-emu__dpad-btn--down" onClick={pressDown}>⌄</span>
+              <span className="casio-emu__dpad-btn casio-emu__dpad-btn--left" onClick={pressLeft}>❮</span>
+              <span className="casio-emu__dpad-btn casio-emu__dpad-btn--right" onClick={pressRight}>❯</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <KeyRow className="casio-emu__row--func">
+        <K v="dark" label="√" secB="ⁿ√" cls="casio-emu__btn--symbol" onClick={pressSqrt} />
+        <K v="dark" label={<>x<sup>□</sup></>} secB={<>x<sup>−1</sup></>} cls="casio-emu__btn--symbol" onClick={pressPower} />
+        <K v="dark" label="Ans" onClick={pressAns} />
+        <K v="dark" label="sin" secB={<>sin<sup>−1</sup></>} onClick={pressSin} />
+        <K v="dark" label="cos" secB={<>cos<sup>−1</sup></>} onClick={pressCos} />
+        <K v="dark" label="tan" secB={<>tan<sup>−1</sup></>} onClick={pressTan} />
+      </KeyRow>
+
+      <KeyRow className="casio-emu__row--num5">
+        <K v="num" label="7" onClick={press7} />
+        <K v="num" label="8" onClick={press8} />
+        <K v="num" label="9" onClick={press9} />
+        <K v="dark" label="DEL" onClick={pressBackspace} />
+        <K v="dark" label="AC" onClick={pressAC} />
+      </KeyRow>
+
+      <KeyRow className="casio-emu__row--num5">
+        <K v="num" label="4" onClick={press4} />
+        <K v="num" label="5" onClick={press5} />
+        <K v="num" label="6" onClick={press6} />
+        <K v="dark" label="×" secB="" onClick={pressMultiply} />
+        <K v="dark" label="÷" secB="" onClick={pressDivide} />
+      </KeyRow>
+
+      <KeyRow className="casio-emu__row--num5">
+        <K v="num" label="1" secO="" onClick={press1} />
+        <K v="num" label="2" secO="" onClick={press2} />
+        <K v="num" label="3" secO="" onClick={press3} />
+        <K v="dark" label="+" secB="" onClick={pressPlus} />
+        <K v="dark" label="−" secB="" onClick={pressMinus} />
+      </KeyRow>
+
+      <KeyRow className="casio-emu__row--bot">
+        <K v="num" label="0" secO="" onClick={press0} />
+        <K v="num" label="·" onClick={pressDecimal} />
+        <K v="dark" label={<>×10<sup>x</sup></>} onClick={pressSci} />
+        <K v="dark" label="S/D" onClick={pressSD} />
+        <K v="dark" label="EXE" cls="casio-emu__btn--exe" onClick={pressEXE} />
+      </KeyRow>
+    </div>
+  );
+});
 
 /* ── tiny helpers ────────────────────────────────────────── */
 

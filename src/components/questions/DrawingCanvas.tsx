@@ -6,7 +6,7 @@ import { buildCapturePayload } from "../../lib/grading/canvasCapture";
 import RenderMath from "../math/mathdisplay";
 
 type Point = { x: number; y: number; pressure: number };
-type Stroke = { points: Point[]; tool: "pen" | "eraser"; colorIndex?: number; color?: string };
+type Stroke = { points: Point[]; tool: "pen" | "eraser"; colorIndex?: number; thicknessIndex?: number; color?: string };
 type ToolMode = "pen" | "eraser" | "lasso";
 type SelectionBounds = { minX: number; minY: number; maxX: number; maxY: number };
 type TransformMode = "move" | "scale" | "rotate";
@@ -61,9 +61,13 @@ const STAVE_LINE_LABELS = ["L5", "L4", "L3", "L2", "L1"];
 const STAVE_SPACE_LABELS = ["S4", "S3", "S2", "S1"];
 const ERASER_WIDTH = 24;
 const ERASER_PREVIEW_WIDTH = 3;
-const BASE_PEN_WIDTH = 2;
+const PEN_THICKNESS_LEVELS = [1.2, 2, 3.2, 4.6, 6.2];
+const DEFAULT_PEN_THICKNESS_INDEX = 1;
+const FIXED_SAMPLE_HZ = 240;
+const FIXED_SAMPLE_INTERVAL_MS = 1000 / FIXED_SAMPLE_HZ;
 const STROKE_ERASER_HIT_RADIUS = ERASER_WIDTH / 2 + 3;
 const ERASE_TARGET_STROKE_COLOR = "rgba(128, 128, 128, 0.7)";
+const TOOL_LONG_PRESS_MS = 420;
 /** Hold still for this long (ms) to snap stroke to straight line */
 const HOLD_TO_STRAIGHTEN_MS = 600;
 const LASSO_MIN_POINTS = 3;
@@ -374,9 +378,45 @@ function normalizeStrokeColors(source: Stroke[] | null | undefined): Stroke[] {
 	if (!source || source.length === 0) return [];
 	return source.map((stroke) => {
 		if (stroke.tool !== "pen") return stroke;
-		if (typeof stroke.colorIndex === "number") return stroke;
-		return { ...stroke, colorIndex: 0 };
+		return {
+			...stroke,
+			colorIndex: typeof stroke.colorIndex === "number" ? stroke.colorIndex : 0,
+			thicknessIndex:
+				typeof stroke.thicknessIndex === "number"
+					? Math.max(0, Math.min(PEN_THICKNESS_LEVELS.length - 1, stroke.thicknessIndex))
+					: DEFAULT_PEN_THICKNESS_INDEX,
+		};
 	});
+}
+
+function appendSampledPointsFixedHz(
+	points: Point[],
+	nextPoint: Point,
+	eventTimeMs: number,
+	lastSample: { point: Point; timeMs: number } | null,
+): { points: Point[]; lastSample: { point: Point; timeMs: number } } {
+	if (!lastSample) {
+		return { points: [...points, nextPoint], lastSample: { point: nextPoint, timeMs: eventTimeMs } };
+	}
+	const appended: Point[] = [...points];
+	let { point: prevPoint, timeMs: prevTime } = lastSample;
+	if (eventTimeMs <= prevTime) {
+		return { points: appended, lastSample };
+	}
+	let cursorTime = prevTime + FIXED_SAMPLE_INTERVAL_MS;
+	while (cursorTime <= eventTimeMs) {
+		const t = (cursorTime - prevTime) / (eventTimeMs - prevTime);
+		const sample: Point = {
+			x: prevPoint.x + (nextPoint.x - prevPoint.x) * t,
+			y: prevPoint.y + (nextPoint.y - prevPoint.y) * t,
+			pressure: prevPoint.pressure + (nextPoint.pressure - prevPoint.pressure) * t,
+		};
+		appended.push(sample);
+		prevPoint = sample;
+		prevTime = cursorTime;
+		cursorTime += FIXED_SAMPLE_INTERVAL_MS;
+	}
+	return { points: appended, lastSample: { point: nextPoint, timeMs: eventTimeMs } };
 }
 
 function strokesEqual(a: Stroke[] | null | undefined, b: Stroke[] | null | undefined): boolean {
@@ -626,8 +666,10 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const penButtonRef = useRef<HTMLButtonElement>(null);
 	const eraserButtonRef = useRef<HTMLButtonElement>(null);
+	const gridButtonRef = useRef<HTMLButtonElement>(null);
 	const penPopoverRef = useRef<HTMLDivElement>(null);
 	const eraserPopoverRef = useRef<HTMLDivElement>(null);
+	const gridPopoverRef = useRef<HTMLDivElement>(null);
 	const popupBgSampleRef = useRef<HTMLDivElement>(null);
 	const colorSampleRef = useRef<HTMLDivElement>(null);
 	const gridColorSampleRef = useRef<HTMLDivElement>(null);
@@ -687,6 +729,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			setLassoPath(null);
 			setSelectedStrokeIndexes([]);
 			setTransformSession(null);
+			lastPenSampleRef.current = null;
 		}
 	}, [initialStrokes]);
 
@@ -741,9 +784,12 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	const [mutedBgColor, setMutedBgColor] = useState("");
 	const [popupBgColor, setPopupBgColor] = useState("");
 	const [activePenColorIndex, setActivePenColorIndex] = useState(0);
+	const [activePenThicknessIndex, setActivePenThicknessIndex] = useState(DEFAULT_PEN_THICKNESS_INDEX);
 	const [isPenPopoverOpen, setIsPenPopoverOpen] = useState(false);
 	const [isEraserPopoverOpen, setIsEraserPopoverOpen] = useState(false);
+	const [isGridPopoverOpen, setIsGridPopoverOpen] = useState(false);
 	const [eraserMode, setEraserMode] = useState<"point" | "stroke">("stroke");
+	const [gridOpacity, setGridOpacity] = useState(0.7);
 	const [lassoPath, setLassoPath] = useState<Point[] | null>(null);
 	const [selectedStrokeIndexes, setSelectedStrokeIndexes] = useState<number[]>([]);
 	const [transformSession, setTransformSession] = useState<TransformSession | null>(null);
@@ -756,6 +802,9 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	const pointerIdsRef = useRef<Map<number, { x: number; y: number }>>(new Map());
 	const holdStraightenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const currentStrokeRef = useRef<Stroke | null>(null);
+	const lastPenSampleRef = useRef<{ point: Point; timeMs: number } | null>(null);
+	const toolLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const longPressHandledRef = useRef(false);
 	const pointEraseBaseRef = useRef<Stroke[] | null>(null);
 	const pointEraseChangedRef = useRef(false);
 	const selectedStrokeIndexesRef = useRef<number[]>([]);
@@ -770,11 +819,12 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				next !== previous &&
 				(next.length !== previous.length || next.some((stroke, index) => stroke !== previous[index]));
 			if (!changed) return previous;
+			onEditInteraction?.();
 			setUndoStack((history) => [...history, previous]);
 			setRedoStack([]);
 			return next;
 		});
-	}, []);
+	}, [onEditInteraction]);
 
 	// Read theme colors from DOM (follows data-theme) - pen: color-txt-main, grid: color-bg-grey-5
 	useLayoutEffect(() => {
@@ -875,7 +925,62 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		ctx.translate(pan.x, pan.y);
 		ctx.scale(scale, scale);
 
-		// Draw strokes first (eraser only affects these; grid is drawn on top so it cannot be erased)
+		// Grid under ink - lines, dots, or music staves
+		if (gridMode !== "off" && gridColor) {
+			const left = -pan.x / scale;
+			const top = -pan.y / scale;
+			const right = left + w / scale;
+			const bottom = top + h / scale;
+			ctx.globalAlpha = gridOpacity;
+
+			if (gridMode === "music") {
+				ctx.strokeStyle = gridColor;
+				ctx.lineWidth = 1.2 / scale;
+				const startStave = Math.floor(top / MUSIC_STAVE_REPEAT);
+				const endStave = Math.ceil(bottom / MUSIC_STAVE_REPEAT);
+				ctx.beginPath();
+				for (let s = startStave; s <= endStave; s++) {
+					const staveTop = s * MUSIC_STAVE_REPEAT;
+					for (let i = 0; i < MUSIC_STAFF_LINES; i++) {
+						const y = staveTop + i * MUSIC_LINE_GAP;
+						ctx.moveTo(left, y);
+						ctx.lineTo(right, y);
+					}
+				}
+				ctx.stroke();
+			} else {
+				const startX = Math.floor(left / GRID_STEP) * GRID_STEP;
+				const endX = Math.ceil(right / GRID_STEP) * GRID_STEP;
+				const startY = Math.floor(top / GRID_STEP) * GRID_STEP;
+				const endY = Math.ceil(bottom / GRID_STEP) * GRID_STEP;
+				if (gridMode === "lines") {
+					ctx.strokeStyle = gridColor;
+					ctx.lineWidth = 1 / scale;
+					ctx.beginPath();
+					for (let x = startX; x <= endX; x += GRID_STEP) {
+						ctx.moveTo(x, top);
+						ctx.lineTo(x, bottom);
+					}
+					for (let y = startY; y <= endY; y += GRID_STEP) {
+						ctx.moveTo(left, y);
+						ctx.lineTo(right, y);
+					}
+					ctx.stroke();
+				} else {
+					ctx.fillStyle = gridColor;
+					for (let x = startX; x <= endX; x += GRID_STEP) {
+						for (let y = startY; y <= endY; y += GRID_STEP) {
+							ctx.beginPath();
+							ctx.arc(x, y, GRID_DOT_RADIUS / scale, 0, Math.PI * 2);
+							ctx.fill();
+						}
+					}
+				}
+			}
+			ctx.globalAlpha = 1;
+		}
+
+		// Draw strokes above the grid
 		for (let index = 0; index < strokes.length; index++) {
 			drawStroke(ctx, strokes[index], { muted: targetedStrokeIndexes.has(index) });
 		}
@@ -937,7 +1042,11 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				for (let i = 0; i < stroke.points.length - 1; i += 1) {
 					const p0 = stroke.points[i];
 					const p1 = stroke.points[i + 1];
-					ctx.lineWidth = BASE_PEN_WIDTH * (Math.max(0.3, p0.pressure) + 0.5) + 1.3 / scale;
+					const baseWidth =
+						PEN_THICKNESS_LEVELS[
+							Math.max(0, Math.min(PEN_THICKNESS_LEVELS.length - 1, stroke.thicknessIndex ?? DEFAULT_PEN_THICKNESS_INDEX))
+						];
+					ctx.lineWidth = baseWidth * (Math.max(0.3, p0.pressure) + 0.5) + 1.3 / scale;
 					ctx.beginPath();
 					ctx.moveTo(p0.x, p0.y);
 					ctx.lineTo(p1.x, p1.y);
@@ -946,61 +1055,6 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			}
 			ctx.globalAlpha = 1;
 			ctx.restore();
-		}
-
-		// Grid on top (not erasable) - lines, dots, or music staves
-		if (gridMode !== "off" && gridColor) {
-			const left = -pan.x / scale;
-			const top = -pan.y / scale;
-			const right = left + w / scale;
-			const bottom = top + h / scale;
-			ctx.globalAlpha = 0.7;
-
-			if (gridMode === "music") {
-				ctx.strokeStyle = gridColor;
-				ctx.lineWidth = 1.2 / scale;
-				const startStave = Math.floor(top / MUSIC_STAVE_REPEAT);
-				const endStave = Math.ceil(bottom / MUSIC_STAVE_REPEAT);
-				ctx.beginPath();
-				for (let s = startStave; s <= endStave; s++) {
-					const staveTop = s * MUSIC_STAVE_REPEAT;
-					for (let i = 0; i < MUSIC_STAFF_LINES; i++) {
-						const y = staveTop + i * MUSIC_LINE_GAP;
-						ctx.moveTo(left, y);
-						ctx.lineTo(right, y);
-					}
-				}
-				ctx.stroke();
-			} else {
-				const startX = Math.floor(left / GRID_STEP) * GRID_STEP;
-				const endX = Math.ceil(right / GRID_STEP) * GRID_STEP;
-				const startY = Math.floor(top / GRID_STEP) * GRID_STEP;
-				const endY = Math.ceil(bottom / GRID_STEP) * GRID_STEP;
-				if (gridMode === "lines") {
-					ctx.strokeStyle = gridColor;
-					ctx.lineWidth = 1 / scale;
-					ctx.beginPath();
-					for (let x = startX; x <= endX; x += GRID_STEP) {
-						ctx.moveTo(x, top);
-						ctx.lineTo(x, bottom);
-					}
-					for (let y = startY; y <= endY; y += GRID_STEP) {
-						ctx.moveTo(left, y);
-						ctx.lineTo(right, y);
-					}
-					ctx.stroke();
-				} else {
-					ctx.fillStyle = gridColor;
-					for (let x = startX; x <= endX; x += GRID_STEP) {
-						for (let y = startY; y <= endY; y += GRID_STEP) {
-							ctx.beginPath();
-							ctx.arc(x, y, GRID_DOT_RADIUS / scale, 0, Math.PI * 2);
-							ctx.fill();
-						}
-					}
-				}
-			}
-			ctx.globalAlpha = 1;
 		}
 
 		if (gradingAnnotations && gradingAnnotations.length > 0) {
@@ -1075,7 +1129,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		}
 
 		ctx.restore();
-	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool, lineAnchors, gradingAnnotations, accentColor, fontReady, lassoPath, selectedStrokeIndexes, transformSession, eraserMode, penPalette, activePenColorIndex]);
+	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool, lineAnchors, gradingAnnotations, accentColor, fontReady, lassoPath, selectedStrokeIndexes, transformSession, eraserMode, penPalette, activePenColorIndex, gridOpacity]);
 
 	useEffect(() => {
 		draw();
@@ -1092,21 +1146,63 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	}, [strokes]);
 
 	useEffect(() => {
-		if (!isPenPopoverOpen && !isEraserPopoverOpen) return;
+		if (tool === "lasso") return;
+		if (selectedStrokeIndexesRef.current.length > 0) setSelectedStrokeIndexes([]);
+		if (lassoPath) setLassoPath(null);
+		if (transformSessionRef.current) setTransformSession(null);
+	}, [tool, lassoPath]);
+
+	const clearToolLongPressTimer = useCallback(() => {
+		if (toolLongPressTimerRef.current) {
+			clearTimeout(toolLongPressTimerRef.current);
+			toolLongPressTimerRef.current = null;
+		}
+	}, []);
+
+	const startToolLongPress = useCallback((kind: "pen" | "eraser" | "grid") => {
+		clearToolLongPressTimer();
+		longPressHandledRef.current = false;
+		toolLongPressTimerRef.current = setTimeout(() => {
+			longPressHandledRef.current = true;
+			if (kind === "pen") {
+				setTool("pen");
+				setIsPenPopoverOpen(true);
+				setIsEraserPopoverOpen(false);
+				setIsGridPopoverOpen(false);
+			} else if (kind === "eraser") {
+				setTool("eraser");
+				setIsEraserPopoverOpen(true);
+				setIsPenPopoverOpen(false);
+				setIsGridPopoverOpen(false);
+			} else {
+				setIsGridPopoverOpen(true);
+				setIsPenPopoverOpen(false);
+				setIsEraserPopoverOpen(false);
+			}
+		}, TOOL_LONG_PRESS_MS);
+	}, [clearToolLongPressTimer]);
+
+	useEffect(() => () => clearToolLongPressTimer(), [clearToolLongPressTimer]);
+
+	useEffect(() => {
+		if (!isPenPopoverOpen && !isEraserPopoverOpen && !isGridPopoverOpen) return;
 		const onPointerDown = (event: PointerEvent) => {
 			const target = event.target as Node | null;
 			if (!target) return;
 			const inPenButton = penButtonRef.current?.contains(target);
 			const inEraserButton = eraserButtonRef.current?.contains(target);
+			const inGridButton = gridButtonRef.current?.contains(target);
 			const inPenPopover = penPopoverRef.current?.contains(target);
 			const inEraserPopover = eraserPopoverRef.current?.contains(target);
-			if (inPenButton || inEraserButton || inPenPopover || inEraserPopover) return;
+			const inGridPopover = gridPopoverRef.current?.contains(target);
+			if (inPenButton || inEraserButton || inGridButton || inPenPopover || inEraserPopover || inGridPopover) return;
 			setIsPenPopoverOpen(false);
 			setIsEraserPopoverOpen(false);
+			setIsGridPopoverOpen(false);
 		};
 		document.addEventListener("pointerdown", onPointerDown, true);
 		return () => document.removeEventListener("pointerdown", onPointerDown, true);
-	}, [isPenPopoverOpen, isEraserPopoverOpen]);
+	}, [isPenPopoverOpen, isEraserPopoverOpen, isGridPopoverOpen]);
 
 	useEffect(() => {
 		if (!expandedCommentId) return;
@@ -1242,11 +1338,28 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			ctx.strokeStyle = paletteColor || penPalette[activePenColorIndex] || "#111827";
 			ctx.lineCap = "round";
 			ctx.lineJoin = "round";
-			for (let i = 0; i < stroke.points.length - 1; i++) {
-				const p0 = stroke.points[i];
-				const p1 = stroke.points[i + 1];
-				const width = BASE_PEN_WIDTH * (Math.max(0.3, p0.pressure) + 0.5);
-				ctx.lineWidth = width;
+			const baseWidth =
+				PEN_THICKNESS_LEVELS[
+					Math.max(0, Math.min(PEN_THICKNESS_LEVELS.length - 1, stroke.thicknessIndex ?? DEFAULT_PEN_THICKNESS_INDEX))
+				];
+			for (let i = 1; i < stroke.points.length - 1; i++) {
+				const prev = stroke.points[i - 1];
+				const curr = stroke.points[i];
+				const next = stroke.points[i + 1];
+				const startX = (prev.x + curr.x) / 2;
+				const startY = (prev.y + curr.y) / 2;
+				const endX = (curr.x + next.x) / 2;
+				const endY = (curr.y + next.y) / 2;
+				ctx.lineWidth = baseWidth * (Math.max(0.2, curr.pressure) + 0.55);
+				ctx.beginPath();
+				ctx.moveTo(startX, startY);
+				ctx.quadraticCurveTo(curr.x, curr.y, endX, endY);
+				ctx.stroke();
+			}
+			if (stroke.points.length === 2) {
+				const p0 = stroke.points[0];
+				const p1 = stroke.points[1];
+				ctx.lineWidth = baseWidth * (Math.max(0.2, p0.pressure) + 0.55);
 				ctx.beginPath();
 				ctx.moveTo(p0.x, p0.y);
 				ctx.lineTo(p1.x, p1.y);
@@ -1368,11 +1481,28 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			ctx.strokeStyle = muted ? ERASE_TARGET_STROKE_COLOR : paletteColor || penPalette[activePenColorIndex] || penPalette[0] || strokeColor || "#111827";
 			ctx.lineCap = "round";
 			ctx.lineJoin = "round";
-			for (let i = 0; i < stroke.points.length - 1; i++) {
-				const p0 = stroke.points[i];
-				const p1 = stroke.points[i + 1];
-				const width = BASE_PEN_WIDTH * (Math.max(0.3, p0.pressure) + 0.5);
-				ctx.lineWidth = width;
+			const baseWidth =
+				PEN_THICKNESS_LEVELS[
+					Math.max(0, Math.min(PEN_THICKNESS_LEVELS.length - 1, stroke.thicknessIndex ?? DEFAULT_PEN_THICKNESS_INDEX))
+				];
+			for (let i = 1; i < stroke.points.length - 1; i += 1) {
+				const prev = stroke.points[i - 1];
+				const curr = stroke.points[i];
+				const next = stroke.points[i + 1];
+				const startX = (prev.x + curr.x) / 2;
+				const startY = (prev.y + curr.y) / 2;
+				const endX = (curr.x + next.x) / 2;
+				const endY = (curr.y + next.y) / 2;
+				ctx.lineWidth = baseWidth * (Math.max(0.2, curr.pressure) + 0.55);
+				ctx.beginPath();
+				ctx.moveTo(startX, startY);
+				ctx.quadraticCurveTo(curr.x, curr.y, endX, endY);
+				ctx.stroke();
+			}
+			if (stroke.points.length === 2) {
+				const p0 = stroke.points[0];
+				const p1 = stroke.points[1];
+				ctx.lineWidth = baseWidth * (Math.max(0.2, p0.pressure) + 0.55);
 				ctx.beginPath();
 				ctx.moveTo(p0.x, p0.y);
 				ctx.lineTo(p1.x, p1.y);
@@ -1482,6 +1612,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			setRedoStack([]);
 		}
 		setTransformSession(null);
+		lastPenSampleRef.current = null;
 	}, []);
 
 	const handlePointerDown = useCallback(
@@ -1489,6 +1620,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			e.preventDefault();
 			setIsPenPopoverOpen(false);
 			setIsEraserPopoverOpen(false);
+			setIsGridPopoverOpen(false);
 			const canvas = canvasRef.current;
 			if (!canvas) return;
 
@@ -1526,7 +1658,6 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				const isMouse = e.pointerType === "mouse";
 				const isTouch = e.pointerType === "touch";
 				if (tool === "lasso" && (isPen || isMouse || isTouch)) {
-					onEditInteraction?.();
 					const hitMode = resolveSelectionHit(world);
 					if (hitMode && selectedStrokeIndexesRef.current.length > 0) {
 						startTransformSession(hitMode, world);
@@ -1541,7 +1672,6 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 
 				const shouldDraw = (isPen || isMouse || isTouch) && (tool === "pen" || tool === "eraser");
 				if (shouldDraw) {
-					onEditInteraction?.();
 					isDrawingRef.current = true;
 					if (tool === "eraser" && eraserMode === "point") {
 						pointEraseBaseRef.current = strokesRef.current;
@@ -1553,8 +1683,14 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 						});
 						setCurrentStroke(null);
 					} else {
-						const newStroke: Stroke = { points: [world], tool, colorIndex: tool === "pen" ? activePenColorIndex : undefined };
+						const newStroke: Stroke = {
+							points: [world],
+							tool,
+							colorIndex: tool === "pen" ? activePenColorIndex : undefined,
+							thicknessIndex: tool === "pen" ? activePenThicknessIndex : undefined,
+						};
 						setCurrentStroke(newStroke);
+						lastPenSampleRef.current = tool === "pen" ? { point: world, timeMs: e.nativeEvent.timeStamp } : null;
 					}
 					lastPointRef.current = world;
 				} else {
@@ -1562,7 +1698,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				}
 			}
 		},
-		[pan, scale, screenToWorld, tool, readOnly, onEditInteraction, resolveSelectionHit, startTransformSession, eraserMode, activePenColorIndex]
+		[pan, scale, screenToWorld, tool, readOnly, onEditInteraction, resolveSelectionHit, startTransformSession, eraserMode, activePenColorIndex, activePenThicknessIndex]
 	);
 
 	const handlePointerMove = useCallback(
@@ -1633,9 +1769,18 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			if (isDrawingRef.current && currentStroke) {
 				const world = screenToWorld(e.clientX, e.clientY);
 				world.pressure = getPressure(e.nativeEvent);
-				setCurrentStroke((prev) =>
-					prev ? { ...prev, points: [...prev.points, world] } : null
-				);
+				setCurrentStroke((prev) => {
+					if (!prev) return null;
+					if (prev.tool !== "pen") return { ...prev, points: [...prev.points, world] };
+					const sampled = appendSampledPointsFixedHz(
+						prev.points,
+						world,
+						e.nativeEvent.timeStamp,
+						lastPenSampleRef.current,
+					);
+					lastPenSampleRef.current = sampled.lastSample;
+					return { ...prev, points: sampled.points };
+				});
 				lastPointRef.current = world;
 				if (currentStroke.tool === "pen") scheduleHoldStraighten();
 			}
@@ -1677,6 +1822,15 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					setLassoPath(null);
 				}
 				if (isDrawingRef.current && currentStroke && currentStroke.points.length > 0) {
+					const world = screenToWorld(e.clientX, e.clientY);
+					world.pressure = getPressure(e.nativeEvent);
+					let finalizedStroke = currentStroke;
+					if (currentStroke.tool === "pen") {
+						const lastPoint = currentStroke.points[currentStroke.points.length - 1];
+						if (!lastPoint || lastPoint.x !== world.x || lastPoint.y !== world.y) {
+							finalizedStroke = { ...currentStroke, points: [...currentStroke.points, world] };
+						}
+					}
 					if (currentStroke.tool === "eraser") {
 						if (eraserMode === "stroke") {
 							commitStrokeChange((previous) => {
@@ -1689,9 +1843,10 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 							commitStrokeChange((previous) => [...previous, currentStroke]);
 						}
 					} else {
-						commitStrokeChange((previous) => [...previous, currentStroke]);
+						commitStrokeChange((previous) => [...previous, finalizedStroke]);
 					}
 					setCurrentStroke(null);
+					lastPenSampleRef.current = null;
 				}
 				isDrawingRef.current = false;
 			}
@@ -1720,15 +1875,15 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	);
 
 	const clearCanvas = useCallback(() => {
-		onEditInteraction?.();
 		commitStrokeChange((previous) => (previous.length > 0 ? [] : previous));
 		setCurrentStroke(null);
 		setLassoPath(null);
 		setSelectedStrokeIndexes([]);
+		lastPenSampleRef.current = null;
 		setTransformSession(null);
 		// Immediately notify parent of clear (bypass debounce)
 		onStrokesChangeRef.current?.([]);
-	}, [commitStrokeChange, onEditInteraction]);
+	}, [commitStrokeChange]);
 
 	const undo = useCallback(() => {
 		if (undoStackRef.current.length === 0) return;
@@ -1739,6 +1894,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		setLassoPath(null);
 		setTransformSession(null);
 		setSelectedStrokeIndexes([]);
+		lastPenSampleRef.current = null;
 		setUndoStack((history) => {
 			if (history.length === 0) return history;
 			const previous = history[history.length - 1];
@@ -1771,6 +1927,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	const canRedo = redoStack.length > 0;
 	const penButtonRect = penButtonRef.current?.getBoundingClientRect() ?? null;
 	const eraserButtonRect = eraserButtonRef.current?.getBoundingClientRect() ?? null;
+	const gridButtonRect = gridButtonRef.current?.getBoundingClientRect() ?? null;
 	const overlayBubbles = badgeLayoutsRef.current.map((badge) => {
 		const expanded = expandedCommentId === badge.id;
 		
@@ -1877,7 +2034,15 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					<button
 						ref={penButtonRef}
 						type="button"
+						onPointerDown={() => startToolLongPress("pen")}
+						onPointerUp={clearToolLongPressTimer}
+						onPointerLeave={clearToolLongPressTimer}
+						onPointerCancel={clearToolLongPressTimer}
 						onClick={() => {
+							if (longPressHandledRef.current) {
+								longPressHandledRef.current = false;
+								return;
+							}
 							if (tool === "pen") {
 								setIsPenPopoverOpen((open) => !open);
 							} else {
@@ -1885,6 +2050,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 								setIsPenPopoverOpen(false);
 							}
 							setIsEraserPopoverOpen(false);
+							setIsGridPopoverOpen(false);
 						}}
 						className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${tool === "pen" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
 						title="Pen"
@@ -1896,7 +2062,15 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					<button
 						ref={eraserButtonRef}
 						type="button"
+						onPointerDown={() => startToolLongPress("eraser")}
+						onPointerUp={clearToolLongPressTimer}
+						onPointerLeave={clearToolLongPressTimer}
+						onPointerCancel={clearToolLongPressTimer}
 						onClick={() => {
+							if (longPressHandledRef.current) {
+								longPressHandledRef.current = false;
+								return;
+							}
 							if (tool === "eraser") {
 								setIsEraserPopoverOpen((open) => !open);
 							} else {
@@ -1904,6 +2078,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 								setIsEraserPopoverOpen(false);
 							}
 							setIsPenPopoverOpen(false);
+							setIsGridPopoverOpen(false);
 						}}
 						className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${tool === "eraser" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
 						title="Eraser"
@@ -1917,6 +2092,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 						setTool("lasso");
 						setIsPenPopoverOpen(false);
 						setIsEraserPopoverOpen(false);
+						setIsGridPopoverOpen(false);
 					}}
 					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${tool === "lasso" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
 					title="Lasso select"
@@ -1924,8 +2100,20 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					<MousePointer2 size={18} strokeWidth={2} />
 				</button>
 				<button
+					ref={gridButtonRef}
 					type="button"
+					onPointerDown={() => startToolLongPress("grid")}
+					onPointerUp={clearToolLongPressTimer}
+					onPointerLeave={clearToolLongPressTimer}
+					onPointerCancel={clearToolLongPressTimer}
 					onClick={() => setGridMode((m) => {
+						if (longPressHandledRef.current) {
+							longPressHandledRef.current = false;
+							return m;
+						}
+						setIsGridPopoverOpen(false);
+						setIsPenPopoverOpen(false);
+						setIsEraserPopoverOpen(false);
 						const modes: GridMode[] = ["off", "lines", "dots", "music"];
 						return modes[(modes.indexOf(m) + 1) % modes.length];
 					})}
@@ -1957,7 +2145,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				{penButtonRect && createPortal(
 					<div
 						ref={penPopoverRef}
-						className={`fixed flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-in)] color-bg transition-all duration-180 ease-out ${isPenPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
+						className={`fixed flex flex-col items-stretch gap-2 px-3 py-2 rounded-[var(--radius-in)] color-bg transition-all duration-180 ease-out ${isPenPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
 						style={{
 							left: penButtonRect.left + penButtonRect.width / 2,
 							top: penButtonRect.top - 10,
@@ -1967,26 +2155,45 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 							zIndex: 2147483646,
 						}}
 					>
-						{penPalette.map((color, index) => (
-							<button
-								key={`${color}-${index}`}
-								type="button"
-								onClick={() => {
-									setActivePenColorIndex(index);
+						<div className="w-[58px] flex justify-center">
+							<input
+								type="range"
+								min={0}
+								max={PEN_THICKNESS_LEVELS.length - 1}
+								step={1}
+								value={activePenThicknessIndex}
+								onChange={(e) => setActivePenThicknessIndex(Number(e.target.value))}
+								className="pen-thickness-slider w-full"
+								style={{
+									["--slider-track-color" as string]: mutedBgColor || "rgba(128, 128, 128, 0.3)",
+									["--slider-thumb-color" as string]: accentColor || strokeColor || "#2563EB",
+									["--slider-thumb-size" as string]: `${10 + activePenThicknessIndex * 2.5}px`,
 								}}
-								className={`w-4 h-4 rounded-full transition-all ${activePenColorIndex === index ? "scale-110" : ""}`}
-								style={{ backgroundColor: color }}
-								aria-label="Set pen color"
-								title="Set pen color"
+								aria-label="Pen thickness"
 							/>
-						))}
+						</div>
+						<div className="w-[58px] flex items-center justify-center gap-1.5 py-0.5">
+							{penPalette.map((color, index) => (
+								<button
+									key={`${color}-${index}`}
+									type="button"
+									onClick={() => {
+										setActivePenColorIndex(index);
+									}}
+									className={`w-4 h-4 p-0 border-none rounded-full appearance-none shrink-0 transition-all ${activePenColorIndex === index ? "scale-110" : ""}`}
+									style={{ backgroundColor: color }}
+									aria-label="Set pen color"
+									title="Set pen color"
+								/>
+							))}
+						</div>
 					</div>,
 					document.body
 				)}
 				{eraserButtonRect && createPortal(
 					<div
 						ref={eraserPopoverRef}
-						className={`fixed flex items-center gap-1 px-2 py-1 rounded-[var(--radius-in)] color-bg color-shadow transition-all duration-180 ease-out ${isEraserPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
+						className={`fixed flex items-center gap-1 px-2 py-1 rounded-[var(--radius-in)] color-bg transition-all duration-180 ease-out ${isEraserPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
 						style={{
 							left: eraserButtonRect.left + eraserButtonRect.width / 2,
 							top: eraserButtonRect.top - 10,
@@ -2001,7 +2208,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 							onClick={() => {
 								setEraserMode("point");
 							}}
-							className="px-2 py-0.5 rounded text-xs"
+							className="px-3 py-1 rounded-md text-sm"
 							style={{
 								backgroundColor: eraserMode === "point" ? accentBgColor || undefined : mutedBgColor || undefined,
 								color: eraserMode === "point" ? accentColor || strokeColor || undefined : strokeColor || undefined,
@@ -2014,7 +2221,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 							onClick={() => {
 								setEraserMode("stroke");
 							}}
-							className="px-2 py-0.5 rounded text-xs"
+							className="px-3 py-1 rounded-md text-sm"
 							style={{
 								backgroundColor: eraserMode === "stroke" ? accentBgColor || undefined : mutedBgColor || undefined,
 								color: eraserMode === "stroke" ? accentColor || strokeColor || undefined : strokeColor || undefined,
@@ -2022,6 +2229,39 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 						>
 							Stroke
 						</button>
+					</div>,
+					document.body
+				)}
+				{gridButtonRect && createPortal(
+					<div
+						ref={gridPopoverRef}
+						className={`fixed flex flex-col items-stretch gap-1.5 px-3 py-2 rounded-[var(--radius-in)] color-bg transition-all duration-180 ease-out ${isGridPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
+						style={{
+							left: gridButtonRect.left + gridButtonRect.width / 2,
+							top: gridButtonRect.top - 10,
+							transform: "translate(-50%, -100%)",
+							backgroundColor: popupBgColor || undefined,
+							color: strokeColor || undefined,
+							zIndex: 2147483646,
+						}}
+					>
+						<div className="w-[58px] flex justify-center">
+							<input
+								type="range"
+								min={5}
+								max={100}
+								step={1}
+								value={Math.round(gridOpacity * 100)}
+								onChange={(e) => setGridOpacity(Math.max(0.05, Math.min(1, Number(e.target.value) / 100)))}
+								className="pen-thickness-slider w-full"
+								style={{
+									["--slider-track-color" as string]: mutedBgColor || "rgba(128, 128, 128, 0.3)",
+									["--slider-thumb-color" as string]: accentColor || strokeColor || "#2563EB",
+									["--slider-thumb-size" as string]: "12px",
+								}}
+								aria-label="Grid opacity"
+							/>
+						</div>
 					</div>,
 					document.body
 				)}

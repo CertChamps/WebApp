@@ -286,7 +286,9 @@ export default function Questions() {
             const restoredParams = new URLSearchParams(saved);
             if (!restoredParams.toString()) return;
             setSearchParams(restoredParams, { replace: true });
-        } catch {}
+        } catch {
+            return;
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -1276,7 +1278,9 @@ export default function Questions() {
             const serialized = searchParams.toString();
             if (!serialized) return;
             localStorage.setItem(QUESTIONS_RESUME_SEARCH_KEY, serialized);
-        } catch {}
+        } catch {
+            return;
+        }
     }, [searchParams]);
 
     useEffect(() => {
@@ -1418,7 +1422,15 @@ export default function Questions() {
 
             {/* Sidebar: left or right depending on left-hand mode */}
             <div
-                className={`absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-auto transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${options.leftHandMode ? "left-0" : "right-0"} ${sidebarOpen ? "w-[35%]" : "w-12"}`}
+                className={`absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-auto ${options.leftHandMode ? "left-0" : "right-0"} w-[35%]`}
+                style={{
+                    transition: "clip-path 300ms cubic-bezier(0.25,0.1,0.25,1)",
+                    clipPath: sidebarOpen
+                        ? "inset(0 0 0 0)"
+                        : options.leftHandMode
+                            ? "inset(0 calc(100% - 3rem) 0 0)"
+                            : "inset(0 0 0 calc(100% - 3rem))",
+                }}
             >
                 <CollapsibleSidebar
                     side={options.leftHandMode ? "left" : "right"}
@@ -1905,7 +1917,7 @@ export default function Questions() {
 
                     return options.laptopMode ? (
                         <div className="absolute inset-0 flex w-full min-h-0 justify-center items-start pointer-events-auto">
-                            <div className="practice-paper-fly-in flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden pointer-events-auto max-w-[920px]">
+                            <div className="flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden pointer-events-auto max-w-[920px]">
                                 <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden pt-2 px-2 pb-0">
                                     {renderImageContent()}
                                 </div>
@@ -2262,7 +2274,7 @@ export default function Questions() {
                         return options.laptopMode ? (
                             <div className="absolute inset-0 flex w-full min-h-0 justify-center items-start pointer-events-auto">
                                 <div
-                                    className={`practice-paper-fly-in flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden pointer-events-auto ${
+                                    className={`flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden pointer-events-auto ${
                                         mode === "pastpaper" ? "max-w-[920px]" : "max-w-[720px]"
                                     }`}
                                 >

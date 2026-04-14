@@ -44,7 +44,9 @@ export default function Navbar () {
                 navigate(`/practice/session?${savedSearch}`);
                 return;
             }
-        } catch {}
+        } catch {
+            return navigate("/practice");
+        }
         navigate("/practice");
     };
 

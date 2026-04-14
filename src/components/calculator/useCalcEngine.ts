@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { evaluate } from "mathjs";
 import nerdamer from "nerdamer";
 import "nerdamer/Algebra";
@@ -1262,7 +1262,7 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
   const cur = cursorRef.current;
   const displayExpr = nodesToLatex(root, cur.list, cur.index, cursorVisible);
 
-  const state: CalcState = {
+  const state: CalcState = useMemo(() => ({
     displayExpr,
     result,
     resultIsError,
@@ -1270,14 +1270,19 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     ansValue,
     shiftActive,
     isRadians,
-  };
+  }), [displayExpr, result, resultIsError, justExecuted, ansValue, shiftActive, isRadians]);
 
-  const actions: CalcActions = {
+  const actions: CalcActions = useMemo(() => ({
     pressDigit, pressDecimal, pressOperator, pressBracket, pressCloseBracket,
     pressBackspace, pressAC, pressEXE, pressAns, pressSquare,
     pressPower, pressSqrt, pressTrig, pressLog, pressLn,
     pressFraction, pressShift, pressAngleToggle, pressSci, pressNeg, pressSD, pressArrow,
-  };
+  }), [
+    pressDigit, pressDecimal, pressOperator, pressBracket, pressCloseBracket,
+    pressBackspace, pressAC, pressEXE, pressAns, pressSquare,
+    pressPower, pressSqrt, pressTrig, pressLog, pressLn,
+    pressFraction, pressShift, pressAngleToggle, pressSci, pressNeg, pressSD, pressArrow,
+  ]);
 
   return [state, actions];
 }
