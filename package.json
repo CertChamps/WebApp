@@ -15,6 +15,7 @@
     "@ai-sdk/openai": "^3.0.25",
     "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.3.0",
+    "@capgo/capacitor-social-login": "^8.3.14",
     "@cortex-js/compute-engine": "^0.30.2",
     "@excalidraw/excalidraw": "^0.18.0",
     "@react-spring/web": "^10.0.3",

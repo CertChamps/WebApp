@@ -16,7 +16,7 @@ import { useImageTopics, listQuestionsForTopic, groupImageQuestions, type ImageT
 import { motion, AnimatePresence } from "framer-motion";
 import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart, LuHouse } from "react-icons/lu";
 import type { IconType } from "react-icons";
-import { subjectMatchesPaper, getSubjectLabel, getStorageFolderName, getFavouriteSubjectIds, PRACTICE_HUB_SUBJECTS } from "../data/practiceHubSubjects";
+import { subjectMatchesPaper, getStorageFolderName, getFavouriteSubjectIds, PRACTICE_HUB_SUBJECTS } from "../data/practiceHubSubjects";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
