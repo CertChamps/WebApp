@@ -12,23 +12,28 @@ import {
 import { UserContext } from "../context/UserContext";
 import PaperProGate from "../components/PaperProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
-import { useImageTopics, type ImageTopic } from "../hooks/useImageQuestions";
+import { useImageTopics, listQuestionsForTopic, groupImageQuestions, type ImageTopic } from "../hooks/useImageQuestions";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart } from "react-icons/lu";
+import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart, LuHouse } from "react-icons/lu";
 import type { IconType } from "react-icons";
 import { subjectMatchesPaper, getSubjectLabel, getStorageFolderName, getFavouriteSubjectIds, PRACTICE_HUB_SUBJECTS } from "../data/practiceHubSubjects";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
 
-/** One searchable row for global question search (paper + question + index). */
+/** One searchable row for global question search (paper or image question). */
 type GlobalSearchEntry = {
-  paper: ExamPaper;
-  question: PaperQuestion;
+  paper: ExamPaper | null;
+  question: PaperQuestion | null;
   indexInPaper: number;
   paperLabel: string;
   questionName: string;
   tagsStr: string;
+  imageMode?: boolean;
+  imageSubject?: string;
+  imageLevel?: string;
+  imageTopic?: string;
+  imageKey?: string;
 };
 
 /** Derive paper number (1 or 2) from label or id; null if unclear. */
@@ -156,6 +161,7 @@ export default function PracticeHub() {
 
   useEffect(() => {
     setSelectedImageTopic(null);
+    setGlobalSearchIndex(null);
   }, [subjectFilter, levelFilter]);
 
   const resetAllFilters = useCallback(() => {
@@ -349,40 +355,78 @@ export default function PracticeHub() {
     );
   }, [selectedImageTopic, storageFolderName, imageLevelFilter, imageLevels, navigate]);
 
-  // Build global search index when user opens search (lazy)
+  // Build global search index when user opens search (lazy) – supports both paper and image modes
   useEffect(() => {
-    if (!globalSearchOpen || papers.length === 0) return;
+    if (!globalSearchOpen) return;
+    const hasContent = papers.length > 0 || (isImageMode && imageTopics.length > 0);
+    if (!hasContent) return;
     let cancelled = false;
     setGlobalSearchLoading(true);
-    Promise.all(
-      papers.map(async (paper) => {
-        const questions = await getPaperQuestions(paper);
-        const label = paper.label ?? paper.id ?? "";
-        return questions.map((q, indexInPaper) => ({
-          paper,
-          question: q,
-          indexInPaper,
-          paperLabel: label,
-          questionName: q.questionName ?? q.id ?? "",
-          tagsStr: Array.isArray(q.tags) ? q.tags.join(", ") : "",
-        })) as GlobalSearchEntry[];
-      })
-    )
-      .then((arrays) => {
-        if (cancelled) return;
-        const flat = arrays.flat();
-        setGlobalSearchIndex(
-          new Fuse(flat, { keys: ["questionName", "tagsStr", "paperLabel"], isCaseSensitive: false })
-        );
-      })
-      .catch(() => {})
-      .finally(() => {
+
+    (async () => {
+      try {
+        const entries: GlobalSearchEntry[] = [];
+
+        if (isImageMode && storageFolderName && imageTopics.length > 0) {
+          const level = imageLevelFilter ?? (imageLevels[0] || "higher");
+          const topicArrays = await Promise.all(
+            imageTopics.map(async (topic) => {
+              try {
+                const qs = await listQuestionsForTopic(storageFolderName, level, topic.name);
+                const grouped = groupImageQuestions(qs);
+                return grouped.map((g) => ({
+                  paper: null,
+                  question: null,
+                  indexInPaper: 0,
+                  paperLabel: topic.displayName,
+                  questionName: g.displayName,
+                  tagsStr: topic.displayName,
+                  imageMode: true,
+                  imageSubject: storageFolderName,
+                  imageLevel: level,
+                  imageTopic: topic.name,
+                  imageKey: g.key,
+                } satisfies GlobalSearchEntry));
+              } catch {
+                return [] as GlobalSearchEntry[];
+              }
+            })
+          );
+          entries.push(...topicArrays.flat());
+        } else if (papers.length > 0) {
+          const paperArrays = await Promise.all(
+            papers.map(async (paper) => {
+              const questions = await getPaperQuestions(paper);
+              const label = paper.label ?? paper.id ?? "";
+              return questions.map((q, indexInPaper) => ({
+                paper,
+                question: q,
+                indexInPaper,
+                paperLabel: label,
+                questionName: q.questionName ?? q.id ?? "",
+                tagsStr: Array.isArray(q.tags) ? q.tags.join(", ") : "",
+              } satisfies GlobalSearchEntry));
+            })
+          );
+          entries.push(...paperArrays.flat());
+        }
+
+        if (!cancelled) {
+          setGlobalSearchIndex(
+            new Fuse(entries, { keys: ["questionName", "tagsStr", "paperLabel"], isCaseSensitive: false })
+          );
+        }
+      } catch {
+        // ignore
+      } finally {
         if (!cancelled) setGlobalSearchLoading(false);
-      });
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [papers, getPaperQuestions, globalSearchOpen]);
+  }, [papers, getPaperQuestions, globalSearchOpen, isImageMode, imageTopics, storageFolderName, imageLevelFilter, imageLevels]);
 
   const globalSearchResults = useMemo(() => {
     const q = globalSearchQuery.trim();
@@ -393,15 +437,23 @@ export default function PracticeHub() {
 
   const goToQuestion = useCallback(
     (entry: GlobalSearchEntry) => {
-      if (!user?.isPro && !isPaperFree(entry.paper)) {
+      if (entry.imageMode) {
+        navigate(
+          `/practice/session?mode=imagequestions&subject=${encodeURIComponent(entry.imageSubject ?? "")}&level=${encodeURIComponent(entry.imageLevel ?? "")}&topic=${encodeURIComponent(entry.imageTopic ?? "")}&imageKey=${encodeURIComponent(entry.imageKey ?? "")}`
+        );
+        setGlobalSearchOpen(false);
+        setGlobalSearchQuery("");
+        return;
+      }
+      if (entry.paper && !user?.isPro && !isPaperFree(entry.paper)) {
         setShowPaperGateModal(true);
         setGlobalSearchOpen(false);
         setGlobalSearchQuery("");
         return;
       }
-      const normalizedLevel = normalizePaperLevel(entry.paper.level);
+      const normalizedLevel = normalizePaperLevel(entry.paper?.level);
       navigate(
-        `/practice/session?mode=pastpaper&paperId=${entry.paper.id}&level=${normalizedLevel}&subject=${entry.paper.subject ?? ""}&indexInPaper=${entry.indexInPaper}`
+        `/practice/session?mode=pastpaper&paperId=${entry.paper?.id}&level=${normalizedLevel}&subject=${entry.paper?.subject ?? ""}&indexInPaper=${entry.indexInPaper}`
       );
       setGlobalSearchOpen(false);
       setGlobalSearchQuery("");
@@ -528,13 +580,24 @@ export default function PracticeHub() {
       <div className="practice-hub__inner flex flex-col flex-1 w-full min-h-0">
         {/* Top bar: subject (oval) left, search right */}
         <section className="topBar flex flex-shrink-0 items-center justify-between w-full mb-1">
-          <div className="practice-hub__subject-field practice-hub__subject-field--oval">
-            <SubjectDropdown
-              value={subjectFilter}
-              onChange={setSubjectFilter}
-              id="ph-subject"
-              onFavouritesChange={onFavouritesChange}
-            />
+          <div className="flex items-center gap-2">
+            <div className="practice-hub__subject-field practice-hub__subject-field--oval">
+              <SubjectDropdown
+                value={subjectFilter}
+                onChange={setSubjectFilter}
+                id="ph-subject"
+                onFavouritesChange={onFavouritesChange}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setSubjectFilter(null)}
+              className={`flex items-center justify-center p-1.5 rounded-out border-0 cursor-pointer transition-colors duration-150 ${subjectFilter == null ? "color-txt-accent" : "color-txt-sub hover:color-txt-main hover:color-bg-grey-5"}`}
+              aria-label="Home"
+              title="Home"
+            >
+              <LuHouse size={20} />
+            </button>
           </div>
           <div ref={globalSearchContainerRef} className="flex items-center txtbox color-bg w-1/4 max-w-80 rounded-out min-w-0 relative ml-auto">
             <input
@@ -565,31 +628,35 @@ export default function PracticeHub() {
                       No questions match
                     </div>
                   ) : (
-                    globalSearchResults.map((entry) => (
-                      <button
-                        key={`${getExamPaperKey(entry.paper)}-${entry.question.id}-${entry.indexInPaper}`}
-                        type="button"
-                        role="option"
-                        className="practice-hub__search-result"
-                        onClick={() => goToQuestion(entry)}
-                      >
-                        <span className="practice-hub__search-result-name txt-bold color-txt-main">
-                          {entry.questionName}
-                        </span>
-                        {entry.tagsStr ? (
-                          <span className="practice-hub__search-result-tags txt-sub color-txt-sub text-xs">
-                            {entry.tagsStr}
+                    globalSearchResults.map((entry) => {
+                      const key = entry.imageMode
+                        ? `img-${entry.imageTopic}-${entry.imageKey}`
+                        : `${entry.paper ? getExamPaperKey(entry.paper) : "p"}-${entry.question?.id ?? ""}-${entry.indexInPaper}`;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          role="option"
+                          className="practice-hub__search-result"
+                          onClick={() => goToQuestion(entry)}
+                        >
+                          <span className="practice-hub__search-result-name txt-bold color-txt-main">
+                            {entry.questionName}
                           </span>
-                        ) : null}
-                        <span className="practice-hub__search-result-paper txt-sub color-txt-sub text-xs italic">
-                          {entry.paperLabel}
-                        </span>
-                      </button>
-                    ))
-                  )
+                          {entry.tagsStr ? (
+                            <span className="practice-hub__search-result-tags txt-sub color-txt-sub text-xs">
+                              {entry.tagsStr}
+                            </span>
+                          ) : null}
+                          <span className="practice-hub__search-result-paper txt-sub color-txt-sub text-xs italic">
+                            {entry.paperLabel}
+                          </span>
+                        </button>
+                      );
+                    }))
                 ) : (
                   <div className="practice-hub__search-hint txt-sub color-txt-sub py-3 px-2">
-                    Type to search across all paper questions
+                    Type to search across all questions
                   </div>
                 )}
               </div>

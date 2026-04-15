@@ -142,17 +142,6 @@ export default function SubjectDropdown({ value, onChange, subjects, id = "ph-su
                 {search.trim() ? "Results" : "All subjects"}
               </div>
               <div className="practice-hub__subject-list">
-                {!search.trim() && allowAllSubjects && value !== null && (
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={false}
-                    className="practice-hub__subject-option"
-                    onClick={() => handleSelect(null)}
-                  >
-                    <span className="truncate">Back to home</span>
-                  </button>
-                )}
                 {filtered.length === 0 ? (
                   <div className="practice-hub__subject-empty color-txt-sub text-sm py-2">
                     No subjects match
