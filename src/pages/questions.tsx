@@ -1040,6 +1040,23 @@ export default function Questions() {
     const PAGE_GAP_PX = 0;
     const PDF_ASPECT = 842 / 595;
     const pageHeightPx = snippetWidth * PDF_ASPECT;
+    const pastPaperSnippetPanelHeightPx = useMemo(() => {
+        const regions = currentPaperQuestion?.pageRegions ?? [];
+        if (regions.length === 0) return 620;
+        const regionsHeightPx = regions.reduce((sum, region) => {
+            const regionHeight = typeof region.height === "number" ? region.height : 150;
+            return sum + (regionHeight / 595) * snippetWidth;
+        }, 0);
+        const hasMarkingSchemeButton = Boolean(markingSchemeBlob && currentPaperQuestion?.markingSchemePageRange);
+        const controlsHeightPx = hasMarkingSchemeButton ? 56 : 0;
+        const controlsGapPx = hasMarkingSchemeButton ? 12 : 0;
+        const estimatedPanelHeight =
+            regionsHeightPx +
+            controlsHeightPx +
+            controlsGapPx +
+            52; // includes inner paddings plus top inset above content
+        return Math.max(360, Math.ceil(estimatedPanelHeight));
+    }, [currentPaperQuestion, markingSchemeBlob, snippetWidth]);
 
     // Full-paper scroll does NOT change the current question; user can scroll freely and click "Question only" to return to the question they were on.
 
@@ -1422,7 +1439,7 @@ export default function Questions() {
 
             {/* Sidebar: left or right depending on left-hand mode */}
             <div
-                className={`absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-auto ${options.leftHandMode ? "left-0" : "right-0"} w-[35%]`}
+                className={`absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-none ${options.leftHandMode ? "left-0" : "right-0"} w-[35%]`}
                 style={{
                     transition: "clip-path 300ms cubic-bezier(0.25,0.1,0.25,1)",
                     clipPath: sidebarOpen
@@ -1433,6 +1450,7 @@ export default function Questions() {
                 }}
             >
                 <CollapsibleSidebar
+                    className="pointer-events-auto"
                     side={options.leftHandMode ? "left" : "right"}
                     question={mode === "pastpaper"
                         ? (currentPaperQuestion && selectedPaper
@@ -1862,7 +1880,7 @@ export default function Questions() {
                         );
 
                         return (
-                            <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
+                            <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden pointer-events-none">
                                 {showComingSoonToast && (
                                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-lg color-bg-grey-5 color-txt-sub text-sm font-medium shadow-lg">
                                         Coming soon
@@ -1881,8 +1899,8 @@ export default function Questions() {
                                         </div>,
                                         themedPortalTarget
                                     )}
-                                <div className="flex-1 min-h-0 relative pt-4 pb-24">
-                                    <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-10 items-center">
+                                <div className="flex-1 min-h-0 relative pt-4 pointer-events-none">
+                                    <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-2 items-center pointer-events-auto">
                                         <div className="flex flex-col items-center w-full" style={{ maxWidth: snippetWidth }}>
                                             {currentGroupedQuestion.images.map((img, idx) => (
                                                 <img
@@ -1924,8 +1942,8 @@ export default function Questions() {
                             </div>
                         </div>
                     ) : (
-                        <div className={`flex flex-1 min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-auto ${options.leftHandMode ? "ml-auto" : ""}`}>
-                            <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden p-2">
+                        <div className={`flex h-auto max-h-full min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}>
+                            <div className="min-h-0 min-w-0 h-auto max-h-full flex flex-col pl-2 overflow-hidden pointer-events-none">
                                 {renderImageContent()}
                             </div>
                         </div>
@@ -2040,7 +2058,7 @@ export default function Questions() {
                             );
 
                             return (
-                                <div className="relative flex-1 min-h-0  flex flex-col overflow-hidden">
+                                <div className="relative flex-1 min-h-0  flex flex-col overflow-hidden pointer-events-none">
                                     {showPdfLoadingOverlay && (
                                         <div
                                             className="absolute inset-0 z-30 flex flex-col items-center justify-center color-bg opacity-95"
@@ -2065,11 +2083,11 @@ export default function Questions() {
                                             </div>,
                                             themedPortalTarget
                                         )}
-                                    <div className="flex-1 min-h-0 relative pt-4 pb-24">
+                                    <div className="flex-1 min-h-0 relative pt-4 pointer-events-none">
                                         {hasPageRegions ? (
                                             <>
                                                 <motion.div
-                                                    className="absolute inset-0 flex flex-col overflow-hidden"
+                                                    className="absolute inset-0 flex flex-col overflow-hidden pointer-events-none"
                                                     initial={false}
                                                     animate={{
                                                         opacity: showSnippetView ? 1 : 0,
@@ -2078,7 +2096,7 @@ export default function Questions() {
                                                     }}
                                                     transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
                                                 >
-                                                    <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto scrollbar-hide py-2 pb-10 pr-2 items-center">
+                                                    <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto scrollbar-hide py-2 pb-2 pr-2 items-center pointer-events-auto">
                                                         <CroppedPdfRegions
                                                             file={paperBlob}
                                                             regions={currentPaperQuestion!.pageRegions!.map((r) => ({
@@ -2256,15 +2274,17 @@ export default function Questions() {
                                                 })()}
                                             </>
                                         ) : (
-                                            <PaperPdfPlaceholder
-                                                file={paperBlob}
-                                                pageWidth={snippetWidth}
-                                                onCurrentPageChange={setCurrentPaperPage}
-                                                scrollToPage={scrollToPage ?? undefined}
-                                                onScrolledToPage={() => setScrollToPage(null)}
-                                                onDocumentLoadSuccess={() => setPaperDocumentLoaded(true)}
-                                                scrollContainerRef={paperScrollRef}
-                                            />
+                                            <div className="h-full pointer-events-auto">
+                                                <PaperPdfPlaceholder
+                                                    file={paperBlob}
+                                                    pageWidth={snippetWidth}
+                                                    onCurrentPageChange={setCurrentPaperPage}
+                                                    scrollToPage={scrollToPage ?? undefined}
+                                                    onScrolledToPage={() => setScrollToPage(null)}
+                                                    onDocumentLoadSuccess={() => setPaperDocumentLoaded(true)}
+                                                    scrollContainerRef={paperScrollRef}
+                                                />
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -2284,8 +2304,16 @@ export default function Questions() {
                                 </div>
                             </div>
                         ) : (
-                            <div className={`flex flex-1 min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-auto ${options.leftHandMode ? "ml-auto" : ""}`}>
-                                <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden p-2">
+                            <div
+                                className={`flex h-auto max-h-[calc(100dvh-7rem)] min-h-[360px] w-full max-w-sm shrink-0 flex-col overflow-hidden self-start pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}
+                                style={{
+                                    height:
+                                        !isFullPaperExpanded && currentPaperQuestion?.pageRegions?.length
+                                            ? `${pastPaperSnippetPanelHeightPx}px`
+                                            : "calc(100dvh - 7rem)",
+                                }}
+                            >
+                                <div className="min-h-0 min-w-0 h-full max-h-full flex flex-col overflow-hidden p-2 pointer-events-none">
                                     {renderPdfContent()}
                                 </div>
                             </div>
