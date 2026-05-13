@@ -2,24 +2,24 @@
 
 /* ====================================== NAVBAR STYLES ================================= */
 .container {
-    @apply h-container justify-start items-center flex-col py-2 px-5 transition-all duration-250 color-bg-grey-5
-  w-12 hover:w-20 hover:min-w-20;
+    @apply h-container justify-start items-center flex-col py-2 px-2 color-bg-grey-5
+  w-12 min-w-12;
 }
 /* ===================================================================================== */ 
 
 
 /* ====================================== USER STYLES  ================================= */ 
 .user-container {
-    @apply flex items-center justify-center rounded-out group-hover:color-bg-accent
-  w-9 h-9 group-hover:w-full group-hover:px-2 group-hover:justify-start transition-all duration-250 cursor-pointer;
+    @apply flex items-center justify-center rounded-out
+  w-9 h-9 cursor-pointer;
 }
 
 .user-img {
-  @apply rounded-full w-6 h-6 min-w-6 min-h-6 group-hover:w-6 group-hover:h-6 transition-all duration-250 object-cover;
+  @apply rounded-full w-6 h-6 min-w-6 min-h-6 object-cover;
 }
 
 .user-info {
-    @apply transition-all duration-250 group-hover:ml-2;
+    @apply hidden;
 }
 
 .username {
@@ -35,16 +35,14 @@
 
 /* ====================================== NAV ITEMS STYLES ================================= */ 
 .nav-item {
-  @apply flex items-center justify-center rounded-out hover:color-bg my-1 
-  cursor-pointer object-cover
-  w-9 h-9 group-hover:w-full group-hover:px-2.5 group-hover:justify-start
-  transition-all duration-250;
+  @apply flex items-center justify-center rounded-out my-1
+  cursor-pointer object-cover relative
+  w-9 h-9;
 }
 
 .nav-item-selected {
   @apply flex items-center justify-center rounded-out color-bg-accent my-1
-  w-9 h-9 group-hover:w-full group-hover:px-2.5 group-hover:justify-start
-  transition-all duration-250;
+  w-9 h-9 relative;
 }
 
 /* ====================================== QUESTION SIDEBAR (icon strip – icons only) ================================= */
@@ -72,23 +70,19 @@
 }
 
 .nav-icon {
-  @apply m-0 p-0 shrink-0 rounded-in color-txt-main transition-all duration-250;
+  @apply m-0 p-0 shrink-0 rounded-in color-txt-main;
 }
 
 .nav-icon-selected {
-  @apply m-0 p-0 shrink-0 rounded-in color-txt-accent transition-all duration-250;
+  @apply m-0 p-0 shrink-0 rounded-in color-txt-accent;
 }
 
 .nav-txt {
-  @apply txt opacity-0 translate-x-[-24px] visible w-0
-  group-hover:opacity-100 group-hover:translate-x-0  group-hover:visible group-hover:w-20
-  transition-all duration-250;
+  @apply hidden;
 }
 
 .nav-txt-selected {
-  @apply txt-bold color-txt-accent opacity-0 translate-x-[-24px] invisible w-0
-  group-hover:opacity-100 group-hover:translate-x-0 group-hover:visible group-hover:w-20
-  transition-all duration-250;
+  @apply hidden;
 }
 
 .nav-settings {
@@ -105,15 +99,30 @@
 }
 
 .nav-bottom {
-  @apply flex items-center justify-center rounded-out hover:color-bg my-1 
+  @apply flex items-center justify-center rounded-out my-1 
   cursor-pointer
-  w-9 h-9 group-hover:w-full group-hover:px-2.5 group-hover:justify-start
-  transition-all duration-250;
+  w-9 h-9 relative;
 }
 
 .nav-bottom-selected {
   @apply flex items-center justify-center rounded-out color-bg-accent my-1
-  w-9 h-9 group-hover:w-full group-hover:px-2.5 group-hover:justify-start
-  transition-all duration-250;
+  w-9 h-9 relative;
+}
+
+.nav-tooltip {
+  @apply hidden absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50
+  items-center rounded-out px-2 py-1 whitespace-nowrap border
+  color-bg color-shadow color-txt-main txt;
+}
+
+.nav-tooltip-txt {
+  @apply txt;
+}
+
+.nav-item:hover .nav-tooltip,
+.nav-item-selected:hover .nav-tooltip,
+.nav-bottom:hover .nav-tooltip,
+.nav-bottom-selected:hover .nav-tooltip {
+  @apply flex;
 }
 /* ===================================================================================== */ 
