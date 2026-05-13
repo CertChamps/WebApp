@@ -7,6 +7,14 @@
 .questions-top-bar__inner {
   @apply grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2 min-h-12;
 }
+
+/* iOS native: push the questions top bar (and its floating action cluster)
+   below the status bar / Dynamic Island. The Questions page renders its
+   top bar inside an `absolute inset-0` wrapper, so a global parent
+   padding-top doesn't reach it — apply the inset here directly. */
+html.capacitor-ios-edge-to-edge .questions-top-bar {
+  padding-top: env(safe-area-inset-top, 0px);
+}
 .questions-top-bar__left {
   @apply flex items-center gap-2 justify-self-start min-w-0;
 }

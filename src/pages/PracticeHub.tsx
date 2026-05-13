@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import Fuse from "fuse.js";
 import {
@@ -1070,7 +1071,10 @@ export default function PracticeHub() {
         </div>
       </div>
 
-      {/* Slide-in preview panels */}
+      {/* Slide-in preview panels — portalled to document.body so they
+          escape any ancestor stacking/transform context (e.g. the
+          sidebar's flex parent) and reliably overlay the navbar. */}
+      {createPortal(
       <AnimatePresence>
         {selectedPaper && (
           <>
@@ -1273,7 +1277,9 @@ export default function PracticeHub() {
             </motion.aside>
           </>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
       {/* Paper pro gate modal – when non-pro tries to open locked paper */}
       {showPaperGateModal && (

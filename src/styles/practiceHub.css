@@ -15,7 +15,9 @@
 .practice-hub__split {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(250px, 0.8fr);
-  gap: 0.75rem;
+  /* Columns are flush so the papers grid and the topics list visually
+     read as a single coherent surface. */
+  gap: 0;
   min-height: 0;
   height: 100%;
 }
@@ -24,6 +26,12 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* When flush, only the topics column gets the left padding so the two
+   columns don't run into each other. */
+.practice-hub__split > .practice-hub__split-column + .practice-hub__split-column {
+  padding-left: 0.75rem;
 }
 
 .practice-hub__split-header {
@@ -35,20 +43,21 @@
 
 .practice-hub__paper-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  /* Fixed 2 columns, rows added as needed. Scrolls vertically. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 0.25rem;
   align-content: start;
-  justify-items: center;
+  justify-items: stretch;
   max-height: 100%;
 }
 
 .practice-hub__paper-grid .deck.paper-card {
   width: 100%;
   min-width: 0;
-  max-width: 16rem;
+  max-width: none;
 }
 
 .practice-hub__topic-list {
@@ -664,6 +673,13 @@
   aspect-ratio: 6 / 7;
 }
 
+/* Inside the 2-column grid, cards must stretch with the column and not
+   keep their default fixed/min width. */
+.practice-hub__paper-grid .deck.paper-card {
+  width: 100%;
+  min-width: 0;
+}
+
 /* Lower the overlay/gradient: position and height; themed gradient to full transparency */
 .practice-hub .deck.paper-card .bg-overlay {
   top: 70%;
@@ -798,7 +814,7 @@
 .practice-hub__backdrop {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 900;
   background: color-mix(in srgb, var(--color-black, #353535) 0.4);
   backdrop-filter: blur(0.5px);
 }
@@ -810,7 +826,7 @@
   bottom: 0;
   width: 100%;
   max-width: 420px;
-  z-index: 50;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   overflow: hidden;
