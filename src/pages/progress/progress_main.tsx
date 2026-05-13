@@ -6,6 +6,7 @@ import "react-grid-layout/css/styles.css";
 import { useProgressModules, getModuleSize } from "../../hooks/useProgressModules";
 import { useAllPaperProgress } from "../../hooks/usePaperProgress";
 import { useSubjectLevels } from "../../hooks/useSubjectLevels";
+import { useExamPapers, normalizePaperLevel } from "../../hooks/useExamPapers";
 import PaperRingModule from "../../components/progress/PaperRingModule";
 import PaperBarModule from "../../components/progress/PaperBarModule";
 import QuestionHeatmapModule from "../../components/progress/QuestionHeatmapModule";
@@ -13,6 +14,7 @@ import TextModule from "../../components/progress/TextModule";
 import DrawingModule from "../../components/progress/DrawingModule";
 import AddModuleModal from "../../components/progress/AddModuleModal";
 import SubjectProgressCard from "../../components/progress/SubjectProgressCard";
+import { paperProgressEntryMatchesSubjectLevel } from "../../lib/matchPaperProgressEntry";
 import "../../styles/progress.css";
 
 const GRID_COLS = 12;
@@ -61,6 +63,57 @@ const Progress = () => {
     useProgressModules();
   const { entries: progressEntries, loading: progressLoading } = useAllPaperProgress();
   const { pairs: subjectLevels, loading: subjectLevelsLoading } = useSubjectLevels();
+  const {
+    papers: leavingCertPapers,
+    loading: leavingCertPapersLoading,
+    error: leavingCertPapersError,
+  } = useExamPapers(null, { loadAllWhenNull: true });
+
+  const visibleSubjectLevels = useMemo(() => {
+    if (leavingCertPapersError) return subjectLevels;
+
+    const normLevel = (l: string) => normalizePaperLevel(l) || l.trim().toLowerCase();
+
+    const fromCurriculum =
+      subjectLevels.length === 0
+        ? []
+        : subjectLevels.filter(({ subject, level }) => {
+            const hasExamPapers = leavingCertPapers.some(
+              (p) =>
+                (p.subject ?? "").toLowerCase() === subject.toLowerCase() &&
+                normalizePaperLevel(p.level) === normalizePaperLevel(level)
+            );
+            if (hasExamPapers) return true;
+
+            return progressEntries.some((e) =>
+              paperProgressEntryMatchesSubjectLevel(e, subject, level)
+            );
+          });
+
+    const keys = new Set(
+      fromCurriculum.map((p) => `${p.subject.toLowerCase()}||${normLevel(p.level)}`)
+    );
+
+    const extras: { subject: string; level: string }[] = [];
+    for (const e of progressEntries) {
+      const sub = e.subject.trim().toLowerCase();
+      const lvl = normLevel(e.level);
+      const key = `${sub}||${lvl}`;
+      if (keys.has(key)) continue;
+
+      const matchesCurriculumRow = subjectLevels.some((sl) =>
+        paperProgressEntryMatchesSubjectLevel(e, sl.subject, sl.level)
+      );
+      if (matchesCurriculumRow) continue;
+
+      keys.add(key);
+      extras.push({ subject: sub, level: lvl });
+    }
+
+    return [...fromCurriculum, ...extras];
+  }, [subjectLevels, leavingCertPapers, progressEntries, leavingCertPapersError]);
+
+  const subjectGridLoading = subjectLevelsLoading || leavingCertPapersLoading || progressLoading;
   const [showAddModal, setShowAddModal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -162,7 +215,7 @@ const Progress = () => {
           <h2 className="text-3xl font-black color-txt-main shrink-0">Progress by Subject</h2>
           <span className="text-sm color-txt-sub italic truncate">&ldquo;{quote[0]}&rdquo; ~ {quote[1]}</span>
         </div>
-        {subjectLevelsLoading ? (
+        {subjectGridLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
@@ -174,9 +227,13 @@ const Progress = () => {
               </div>
             ))}
           </div>
+        ) : visibleSubjectLevels.length === 0 ? (
+          <p className="text-sm color-txt-sub">
+            No subject progress yet. Open a subject in Practice Hub to get started.
+          </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {subjectLevels.map(({ subject, level }) => (
+            {visibleSubjectLevels.map(({ subject, level }) => (
               <SubjectProgressCard
                 key={`${subject}-${level}`}
                 subject={subject}

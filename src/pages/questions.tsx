@@ -12,7 +12,7 @@ import {
     type PaperQuestion,
 } from "../hooks/useExamPapers";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
-import { usePaperProgress } from "../hooks/usePaperProgress";
+import { buildImageTopicExamPaper, usePaperProgress } from "../hooks/usePaperProgress";
 import useFilters from "../hooks/useFilters";
 import { getPastPaperTopicScope } from "../data/mathsHigherTopics";
 import { useQuestionSessionLog, type QuestionMeta } from "../hooks/useQuestionSessionLog";
@@ -353,7 +353,8 @@ export default function Questions() {
         firstFreePaper,
     } = useExamPapers(null, { loadAllWhenNull: true });
     const { availableSets } = useFilters();
-    const { completedForPaper, loadPaperProgress, toggleQuestion, isQuestionCompleted } = usePaperProgress();
+    const { completedForPaper, loadPaperProgress, toggleQuestion, isQuestionCompleted, touchImageTopicProgress } =
+        usePaperProgress();
     const certChampsSet = availableSets.find((s) => s.id === "certchamps");
 
     // Image questions mode state
@@ -378,6 +379,13 @@ export default function Questions() {
     const [imageQuestionPosition, setImageQuestionPosition] = useState(0);
     const currentGroupedQuestion: GroupedImageQuestion | undefined = imageGroupedList[imageQuestionPosition];
     const [showComingSoonToast, setShowComingSoonToast] = useState(false);
+
+    const imageProgressPaper = useMemo(() => {
+        if (mode !== "imagequestions" || !normalizedUrlSubject || !normalizedUrlLevel || !imageQuestionTopic) {
+            return null;
+        }
+        return buildImageTopicExamPaper(normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic);
+    }, [mode, normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic]);
 
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
     const [paperBlob, setPaperBlob] = useState<Blob | null>(null);
@@ -530,8 +538,28 @@ export default function Questions() {
                 completed: isQuestionCompleted(currentPaperQuestion.id),
             };
         }
+        if (mode === "imagequestions" && imageProgressPaper && currentGroupedQuestion) {
+            return {
+                questionId: currentGroupedQuestion.key,
+                questionName: currentGroupedQuestion.displayName,
+                paperId: imageProgressPaper.id,
+                paperLabel: imageProgressPaper.label,
+                subject: imageProgressPaper.subject ?? "unknown",
+                level: imageProgressPaper.level ?? "unknown",
+                topics: imageQuestionTopic ? [imageQuestionTopic] : [],
+                completed: isQuestionCompleted(currentGroupedQuestion.key),
+            };
+        }
         return null;
-    }, [mode, selectedPaper, currentPaperQuestion, isQuestionCompleted]);
+    }, [
+        mode,
+        selectedPaper,
+        currentPaperQuestion,
+        isQuestionCompleted,
+        imageProgressPaper,
+        currentGroupedQuestion,
+        imageQuestionTopic,
+    ]);
 
     useQuestionSessionLog(user?.uid, questionLogMeta);
 
@@ -645,8 +673,19 @@ export default function Questions() {
     const handleToggleQuestionCompleted = useCallback(() => {
         if (mode === "pastpaper" && selectedPaper && currentPaperQuestion) {
             toggleQuestion(selectedPaper, currentPaperQuestion.id, paperQuestions.length);
+        } else if (mode === "imagequestions" && imageProgressPaper && currentGroupedQuestion) {
+            toggleQuestion(imageProgressPaper, currentGroupedQuestion.key, imageGroupedList.length);
         }
-    }, [mode, selectedPaper, currentPaperQuestion, paperQuestions.length, toggleQuestion]);
+    }, [
+        mode,
+        selectedPaper,
+        currentPaperQuestion,
+        paperQuestions.length,
+        toggleQuestion,
+        imageProgressPaper,
+        currentGroupedQuestion,
+        imageGroupedList.length,
+    ]);
 
     const injectGradingMessage = useCallback((result: Awaited<ReturnType<typeof runGrading>>) => {
         if (result.pass2.isFullMarks) {
@@ -987,10 +1026,33 @@ export default function Questions() {
         };
     }, [selectedPaper, getPaperQuestions, selectedSubTopics]);
 
-    // Load paper progress when paper is selected
+    // Load paper progress when a past paper is selected (avoid clobbering image-mode progress state).
     useEffect(() => {
-        if (selectedPaper) loadPaperProgress(selectedPaper);
-    }, [selectedPaper, loadPaperProgress]);
+        if (mode === "pastpaper" && selectedPaper) loadPaperProgress(selectedPaper);
+    }, [mode, selectedPaper, loadPaperProgress]);
+
+    // Image topic: record first visit + load completed ids for the virtual "paper".
+    useEffect(() => {
+        if (mode !== "imagequestions" || !user?.uid || !imageProgressPaper) return;
+        if (imageQuestionsLoading || imageGroupedList.length === 0) return;
+        let cancelled = false;
+        (async () => {
+            await touchImageTopicProgress(imageProgressPaper, imageGroupedList.length);
+            if (cancelled) return;
+            await loadPaperProgress(imageProgressPaper);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        mode,
+        user?.uid,
+        imageProgressPaper,
+        imageQuestionsLoading,
+        imageGroupedList.length,
+        touchImageTopicProgress,
+        loadPaperProgress,
+    ]);
 
     // Clamp past-paper position when filter shrinks the list.
     // If no questions match in the current paper, auto-switch to a paper that has matches.
@@ -1876,6 +1938,30 @@ export default function Questions() {
                                     <LuCalculator size={14} strokeWidth={2} />
                                     <span>Calculator</span>
                                 </button>
+                                <button
+                                    type="button"
+                                    onClick={handleToggleQuestionCompleted}
+                                    className={`questions-top-bar__tick ${isQuestionCompleted(currentGroupedQuestion.key) ? "questions-top-bar__tick--done" : ""}`}
+                                    aria-label={
+                                        isQuestionCompleted(currentGroupedQuestion.key)
+                                            ? "Mark question incomplete"
+                                            : "Mark question complete"
+                                    }
+                                    title={
+                                        isQuestionCompleted(currentGroupedQuestion.key) ? "Mark incomplete" : "Mark complete"
+                                    }
+                                >
+                                    {isQuestionCompleted(currentGroupedQuestion.key) ? (
+                                        <LuCircleCheck size={18} strokeWidth={2.2} />
+                                    ) : (
+                                        <LuCircle size={18} strokeWidth={1.8} />
+                                    )}
+                                </button>
+                                {imageGroupedList.length > 0 && (
+                                    <span className="questions-top-bar__progress-pill">
+                                        {completedForPaper.size}/{imageGroupedList.length}
+                                    </span>
+                                )}
                             </>
                         );
 

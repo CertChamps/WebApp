@@ -2,7 +2,29 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { doc, getDoc, setDoc, getDocs, collection } from "firebase/firestore";
 import { db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
-import type { ExamPaper } from "./useExamPapers";
+import { normalizePaperLevel, type ExamPaper } from "./useExamPapers";
+
+/** Virtual paper for one image-practice topic (Storage-backed questions). */
+export function buildImageTopicExamPaper(
+  subject: string,
+  level: string,
+  topic: string
+): ExamPaper {
+  const sub = subject.trim().toLowerCase();
+  const lev = normalizePaperLevel(level.trim()) || "unknown";
+  const safeTopic = topic.trim() || "_";
+  const topicKey = btoa(unescape(encodeURIComponent(safeTopic)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+  return {
+    id: `img-topic-${topicKey}`,
+    label: safeTopic === "_" ? "Image questions" : topic.trim(),
+    storagePath: `virtual://imagequestions/${sub}/${lev}/${topicKey}`,
+    subject: sub,
+    level: lev,
+  };
+}
 
 export type PaperProgressEntry = {
   paperId: string;
@@ -20,6 +42,10 @@ function progressDocId(paper: ExamPaper): string {
   return `${subject}_${level}_${paper.id}`;
 }
 
+function isVirtualImagePaper(paper: ExamPaper): boolean {
+  return typeof paper.storagePath === "string" && paper.storagePath.startsWith("virtual://imagequestions/");
+}
+
 export function usePaperProgress() {
   const { user } = useContext(UserContext);
 
@@ -30,20 +56,29 @@ export function usePaperProgress() {
   );
   const [activePaperKey, setActivePaperKey] = useState<string | null>(null);
 
+  useEffect(() => {
+    localCacheRef.current.clear();
+  }, [user?.uid]);
+
   const loadPaperProgress = useCallback(
     async (paper: ExamPaper) => {
       const key = progressDocId(paper);
       setActivePaperKey(key);
 
-      const cached = localCacheRef.current.get(key);
-      if (cached) {
-        setCompletedForPaper(cached);
-        return;
-      }
-
       if (!user?.uid) {
         setCompletedForPaper(new Set());
         return;
+      }
+
+      // Image-topic progress must always be read from Firestore: `touchImageTopicProgress`
+      // may prime an empty in-memory cache, which would otherwise skip the fetch and
+      // never show saved completions.
+      if (!isVirtualImagePaper(paper)) {
+        const cached = localCacheRef.current.get(key);
+        if (cached) {
+          setCompletedForPaper(cached);
+          return;
+        }
       }
 
       try {
@@ -105,11 +140,37 @@ export function usePaperProgress() {
     [completedForPaper]
   );
 
+  /** Creates an empty paper-progress row once per image topic so dashboards can detect engagement. */
+  const touchImageTopicProgress = useCallback(
+    async (paper: ExamPaper, totalQuestions: number) => {
+      if (!user?.uid || totalQuestions <= 0) return;
+      const key = progressDocId(paper);
+      try {
+        const ref = doc(db, "user-data", user.uid, "paper-progress", key);
+        const snap = await getDoc(ref);
+        if (snap.exists()) return;
+        await setDoc(ref, {
+          paperId: paper.id,
+          subject: paper.subject ?? "unknown",
+          level: paper.level ?? "unknown",
+          paperLabel: paper.label,
+          completedQuestions: [],
+          totalQuestions,
+          lastUpdated: Date.now(),
+        });
+      } catch (err) {
+        console.error("Failed to touch image topic progress:", err);
+      }
+    },
+    [user?.uid]
+  );
+
   return {
     completedForPaper,
     loadPaperProgress,
     toggleQuestion,
     isQuestionCompleted,
+    touchImageTopicProgress,
   };
 }
 

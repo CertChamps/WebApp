@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import type { PaperProgressEntry } from "../../hooks/usePaperProgress";
+import { paperProgressEntryMatchesSubjectLevel } from "../../lib/matchPaperProgressEntry";
 
 function formatSubject(s: string): string {
   return s.replace(/-/g, " ").replace(/\b(\w)/g, (c) => c.toUpperCase());
@@ -18,11 +19,7 @@ type Props = {
 export default function SubjectProgressCard({ subject, level, entries }: Props) {
   const navigate = useNavigate();
 
-  const filtered = entries.filter(
-    (e) =>
-      e.subject.toLowerCase() === subject.toLowerCase() &&
-      e.level.toLowerCase() === level.toLowerCase()
-  );
+  const filtered = entries.filter((e) => paperProgressEntryMatchesSubjectLevel(e, subject, level));
   const completed = filtered.reduce((s, e) => s + e.completedQuestions.length, 0);
   const total = filtered.reduce((s, e) => s + e.totalQuestions, 0);
   const pct = total > 0 ? completed / total : 0;

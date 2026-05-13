@@ -6,6 +6,7 @@ import { db } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
 import type { PaperProgressEntry } from "../../hooks/usePaperProgress";
 import type { ProgressModuleConfig } from "../../hooks/useProgressModules";
+import { paperProgressEntryMatchesSubjectLevel } from "../../lib/matchPaperProgressEntry";
 
 type PaperQuestion = { id: string; name: string };
 
@@ -131,10 +132,7 @@ export default function QuestionHeatmapModule({ config, entries, onRemove, editi
   const progressMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
     for (const e of entries) {
-      if (
-        e.subject.toLowerCase() === config.subject.toLowerCase() &&
-        e.level.toLowerCase() === config.level.toLowerCase()
-      ) {
+      if (paperProgressEntryMatchesSubjectLevel(e, config.subject, config.level)) {
         map.set(e.paperId, new Set(e.completedQuestions));
       }
     }

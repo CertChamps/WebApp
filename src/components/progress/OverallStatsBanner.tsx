@@ -3,6 +3,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
 import type { PaperProgressEntry } from "../../hooks/usePaperProgress";
+import { paperProgressEntryMatchesSubjectLevel } from "../../lib/matchPaperProgressEntry";
 
 function formatStudyTime(seconds?: number): string {
   if (seconds == null || seconds < 0) return "00:00:00";
@@ -39,10 +40,8 @@ export default function OverallStatsBanner({ entries, subject, level }: Props) {
 
   const filtered = useMemo(() => {
     if (!subject) return entries;
-    return entries.filter(
-      (e) =>
-        e.subject.toLowerCase() === subject.toLowerCase() &&
-        (!level || e.level.toLowerCase() === level.toLowerCase())
+    return entries.filter((e) =>
+      paperProgressEntryMatchesSubjectLevel(e, subject, level ?? e.level)
     );
   }, [entries, subject, level]);
 

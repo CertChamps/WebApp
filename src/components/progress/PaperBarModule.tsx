@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { LuX } from "react-icons/lu";
 import type { PaperProgressEntry } from "../../hooks/usePaperProgress";
 import type { ProgressModuleConfig } from "../../hooks/useProgressModules";
+import { paperProgressEntryMatchesSubjectLevel } from "../../lib/matchPaperProgressEntry";
 
 function formatSubject(s: string): string {
   return s.replace(/-/g, " ").replace(/\b(\w)/g, (c) => c.toUpperCase());
@@ -21,11 +22,7 @@ type Props = {
 export default function PaperBarModule({ config, entries, onRemove, editing }: Props) {
   const filtered = useMemo(
     () =>
-      entries.filter(
-        (e) =>
-          e.subject.toLowerCase() === config.subject.toLowerCase() &&
-          e.level.toLowerCase() === config.level.toLowerCase()
-      ),
+      entries.filter((e) => paperProgressEntryMatchesSubjectLevel(e, config.subject, config.level)),
     [entries, config.subject, config.level]
   );
 

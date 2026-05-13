@@ -456,20 +456,62 @@
 }
 
 /*================ TOPIC BAR CHART ================*/
+.topic-bar-chart {
+    @apply min-w-0 max-w-full;
+}
+
 .topic-bar-chart__container {
-    @apply flex gap-2;
+    @apply flex gap-2 min-w-0 max-w-full;
 }
 
 .topic-bar-chart__y-axis {
     @apply flex flex-col justify-between items-end shrink-0 h-48 pr-2 pb-6;
 }
 
+/** Scrolls when there are many topics (e.g. image practice). Thin thumb like muted stats (—). */
+.topic-bar-chart__bars-scroll {
+    @apply flex-1 min-w-0 overflow-x-auto overflow-y-visible pb-1;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--theme-txt-sub, #888) 30%, transparent) transparent;
+}
+
+.topic-bar-chart__bars-scroll::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+.topic-bar-chart__bars-scroll::-webkit-scrollbar-button {
+    width: 0;
+    height: 0;
+    display: none;
+}
+
+.topic-bar-chart__bars-scroll::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+.topic-bar-chart__bars-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.topic-bar-chart__bars-scroll::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: color-mix(in srgb, var(--theme-txt-sub, #888) 30%, transparent);
+}
+
+.topic-bar-chart__bars-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in srgb, var(--theme-txt-sub, #888) 50%, transparent);
+}
+
 .topic-bar-chart__bars {
-    @apply flex-1 flex items-end gap-1.5 h-48 border-b border-l border-[var(--grey-10,rgba(128,128,128,0.15))] pb-0 pl-0 relative;
+    @apply inline-flex items-end gap-1.5 h-48 border-b border-l border-[var(--grey-10,rgba(128,128,128,0.15))] pb-0 pl-0 relative;
+    width: max-content;
+    min-width: min(100%, max-content);
 }
 
 .topic-bar-chart__col {
-    @apply flex-1 flex flex-col items-center min-w-0;
+    @apply flex flex-none flex-col items-center w-[5.25rem] sm:w-24;
     align-self: stretch;
     display: flex;
     flex-direction: column;
@@ -497,7 +539,8 @@
 }
 
 .topic-bar-chart__label {
-    @apply text-[9px] leading-tight color-txt-sub text-center mt-1.5 truncate w-full shrink-0;
+    @apply text-[9px] leading-tight color-txt-sub text-center mt-1.5 w-full shrink-0 line-clamp-2 break-words hyphens-auto;
+    min-height: 2.5em;
 }
 
 /*================ SUBJECT HEATMAP (full page) ================*/

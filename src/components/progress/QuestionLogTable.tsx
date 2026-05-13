@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
+import { paperProgressEntryMatchesSubjectLevel } from "../../lib/matchPaperProgressEntry";
 import { LuCheck, LuX } from "react-icons/lu";
 
 type LogEntry = {
@@ -79,16 +80,21 @@ export default function QuestionLogTable({ subject, level }: Props) {
         );
         if (cancelled) return;
 
-        const subLower = subject.toLowerCase();
-        const lvlLower = level.toLowerCase();
-
         const list: LogEntry[] = [];
         for (const d of snap.docs) {
           const data = d.data();
           if (
-            (data.subject ?? "").toLowerCase() !== subLower ||
-            (data.level ?? "").toLowerCase() !== lvlLower
-          ) continue;
+            !paperProgressEntryMatchesSubjectLevel(
+              {
+                subject: String(data.subject ?? ""),
+                level: String(data.level ?? ""),
+              },
+              subject,
+              level
+            )
+          ) {
+            continue;
+          }
 
           list.push({
             id: d.id,
