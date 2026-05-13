@@ -846,8 +846,10 @@ export default function PracticeHub() {
         </section>
         )}
 
-        {/* Results: deck-grid + paper/topic cards – fills remaining height */}
-        <div className="flex-1 w-full min-h-0 overflow-y-auto overflow-x-auto scrollbar-minimal">
+        {/* Results: deck-grid + paper/topic cards – fills remaining height.
+            We hide overflow at this level and let the inner column lists
+            (paper grid, topic list) own their own vertical scroll. */}
+        <div className="flex-1 w-full min-h-0 overflow-hidden">
           <AnimatePresence mode="wait">
           {papersLoading || (isImageMode && imageTopicsLoading) ? (
             <motion.div
@@ -963,7 +965,7 @@ export default function PracticeHub() {
                     <h3 className="txt-heading-colour">By Set</h3>
                     <span className="txt-sub color-txt-sub">{imageTopics.length}</span>
                   </header>
-                  <div className="deck-grid practice-hub__paper-grid">
+                  <div className="practice-hub__paper-grid">
                     {imageTopics.map((topic, i) => (
                       <motion.div
                         key={topic.path}
@@ -1019,7 +1021,7 @@ export default function PracticeHub() {
                   <h3 className="txt-heading-colour">By Paper</h3>
                   <span className="txt-sub color-txt-sub">{filteredPapers.length}</span>
                 </header>
-                <div className="deck-grid practice-hub__paper-grid">
+                <div className="practice-hub__paper-grid">
                   {filteredPapers.map((paper, i) => (
                     <motion.div
                       key={getExamPaperKey(paper)}
