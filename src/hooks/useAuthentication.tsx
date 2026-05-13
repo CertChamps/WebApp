@@ -187,8 +187,15 @@ useEffect(() => {
         await userSetup(user.uid, user.displayName ?? "newUser", user.email);
       }
     } catch (err: any) {
-      console.error("Google Login Error:", err);
-      setError((prev: any) => ({ ...prev, general: "Failed to login with Google." }));
+      // Capacitor / Firebase errors have non-enumerable props, so a bare
+      // console.error(err) prints `{}`. Pull the useful bits out by hand.
+      const code = err?.code ?? err?.errorCode;
+      const message = err?.message ?? err?.errorMessage ?? String(err);
+      console.error("Google Login Error:", { code, message, raw: err });
+      setError((prev: any) => ({
+        ...prev,
+        general: code ? `Google login failed (${code}): ${message}` : `Google login failed: ${message}`,
+      }));
     } finally {
       setIsLoggingIn(false);
     }

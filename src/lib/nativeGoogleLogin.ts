@@ -58,18 +58,43 @@ async function initializeNativeGoogle(): Promise<void> {
   console.log("[GoogleAuth] init complete");
 }
 
+function describeError(err: unknown): string {
+  if (!err) return "unknown (no error object)";
+  if (err instanceof Error) {
+    const code = (err as any).code;
+    return code ? `${code}: ${err.message}` : err.message;
+  }
+  if (typeof err === "string") return err;
+  try {
+    const anyErr = err as any;
+    const code = anyErr.code ?? anyErr.errorCode;
+    const msg = anyErr.message ?? anyErr.errorMessage ?? JSON.stringify(anyErr);
+    return code ? `${code}: ${msg}` : msg;
+  } catch {
+    return String(err);
+  }
+}
+
 async function signInWithGoogleNative(): Promise<UserCredential> {
   console.log("[GoogleAuth] signInWithGoogleNative() called");
   await initializeNativeGoogle();
 
   const { SocialLogin } = await import("@capgo/capacitor-social-login");
 
-  console.log("[GoogleAuth] calling SocialLogin.login");
-  const response = await SocialLogin.login({
-    provider: "google",
-    options: { scopes: ["email", "profile"] },
-  });
-  console.log("[GoogleAuth] SocialLogin.login returned", response);
+  // ---- Stage 1: native sign-in sheet ----
+  let response;
+  try {
+    console.log("[GoogleAuth] calling SocialLogin.login");
+    response = await SocialLogin.login({
+      provider: "google",
+      options: { scopes: ["email", "profile"] },
+    });
+    console.log("[GoogleAuth] SocialLogin.login returned", response);
+  } catch (err) {
+    const detail = describeError(err);
+    console.error("[GoogleAuth] SocialLogin.login FAILED", detail, err);
+    throw new Error(`Native Google sign-in failed: ${detail}`);
+  }
 
   const result = response.result as {
     idToken?: string | null;
@@ -78,13 +103,27 @@ async function signInWithGoogleNative(): Promise<UserCredential> {
 
   const idToken = result?.idToken ?? null;
   const accessToken = result?.accessToken?.token ?? null;
+  console.log("[GoogleAuth] tokens received", {
+    hasIdToken: !!idToken,
+    hasAccessToken: !!accessToken,
+  });
 
   if (!idToken && !accessToken) {
     throw new Error("Native Google sign-in returned no usable token.");
   }
 
-  const credential = GoogleAuthProvider.credential(idToken, accessToken);
-  return signInWithCredential(auth, credential);
+  // ---- Stage 2: exchange for Firebase credential ----
+  try {
+    const credential = GoogleAuthProvider.credential(idToken, accessToken);
+    console.log("[GoogleAuth] signing in to Firebase with credential");
+    const userCredential = await signInWithCredential(auth, credential);
+    console.log("[GoogleAuth] Firebase sign-in OK", userCredential.user.uid);
+    return userCredential;
+  } catch (err) {
+    const detail = describeError(err);
+    console.error("[GoogleAuth] Firebase signInWithCredential FAILED", detail, err);
+    throw new Error(`Firebase rejected Google credential: ${detail}`);
+  }
 }
 
 async function signInWithGoogleWeb(): Promise<UserCredential> {
