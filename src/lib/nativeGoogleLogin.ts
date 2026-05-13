@@ -31,6 +31,12 @@ let socialLoginInitialized = false;
 async function initializeNativeGoogle(): Promise<void> {
   if (socialLoginInitialized) return;
 
+  console.log("[GoogleAuth] init starting", {
+    hasIosClientId: !!GOOGLE_IOS_CLIENT_ID,
+    hasWebClientId: !!GOOGLE_WEB_CLIENT_ID,
+    platform: Capacitor.getPlatform(),
+  });
+
   if (!GOOGLE_IOS_CLIENT_ID) {
     throw new Error(
       "Missing VITE_GOOGLE_IOS_CLIENT_ID — set it in your .env so the native plugin can initialize."
@@ -49,17 +55,21 @@ async function initializeNativeGoogle(): Promise<void> {
   });
 
   socialLoginInitialized = true;
+  console.log("[GoogleAuth] init complete");
 }
 
 async function signInWithGoogleNative(): Promise<UserCredential> {
+  console.log("[GoogleAuth] signInWithGoogleNative() called");
   await initializeNativeGoogle();
 
   const { SocialLogin } = await import("@capgo/capacitor-social-login");
 
+  console.log("[GoogleAuth] calling SocialLogin.login");
   const response = await SocialLogin.login({
     provider: "google",
     options: { scopes: ["email", "profile"] },
   });
+  console.log("[GoogleAuth] SocialLogin.login returned", response);
 
   const result = response.result as {
     idToken?: string | null;
@@ -83,10 +93,11 @@ async function signInWithGoogleWeb(): Promise<UserCredential> {
 }
 
 export async function signInWithGoogle(): Promise<UserCredential> {
-  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") {
-    return signInWithGoogleNative();
-  }
-  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+  const platform = Capacitor.getPlatform();
+  const isNative = Capacitor.isNativePlatform();
+  console.log("[GoogleAuth] signInWithGoogle()", { platform, isNative });
+
+  if (isNative && (platform === "ios" || platform === "android")) {
     return signInWithGoogleNative();
   }
   return signInWithGoogleWeb();

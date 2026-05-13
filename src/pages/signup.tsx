@@ -119,9 +119,15 @@ export default function SignUp() {
           Sign Up
         </p>
 
-        <div className="red-btn mx-auto my-2 w-9/12 text-center bg-[#4C8BF5] flex justify-center items-center cursor-pointer">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => { loginWithGoogle(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loginWithGoogle(); } }}
+          className="red-btn mx-auto my-2 w-9/12 text-center bg-[#4C8BF5] flex justify-center items-center cursor-pointer select-none"
+        >
           <FaGoogle className="mr-2 text-white" size={17} />
-          <p onClick={loginWithGoogle}>Sign Up With Google</p>
+          <p>Sign Up With Google</p>
         </div>
 
         <p

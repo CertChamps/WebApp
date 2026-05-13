@@ -69,29 +69,32 @@ html.capacitor-ios-edge-to-edge {
    Rules:
    - Only active when html.capacitor-ios-edge-to-edge is set
      (added in App.tsx for Capacitor.getPlatform() === 'ios').
-   - The navbar (#app-navbar) is NEVER padded — it stays flush with the
-     top edge of the screen so its own background fills the status bar.
-   - For pages that wrap the navbar + content in a flex container, the
-     padding moves to the content sibling instead of the wrapper, so the
-     wrapper's background still extends edge-to-edge.
+   - The navbar gets its OWN safe-area top padding internally (so its
+     background extends under the status bar but its icons don't).
+   - Page content gets a matching push-down so it clears the status bar.
    - Uses env(safe-area-inset-top) so it adapts to notch / Dynamic Island
      / no-notch devices automatically.
    ===================================================================== */
-html.capacitor-ios-edge-to-edge .app-viewport > *:not(#app-navbar) {
+
+/* Direct page roots (Login, Decks, Social, etc.) sit directly under
+   .app-viewport — push them below the status bar. */
+html.capacitor-ios-edge-to-edge .app-viewport > *:not(#app-navbar):not(.page-with-sidebar) {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* If a direct child of .app-viewport contains the navbar (horizontal
-   layout like /practice or /progress), don't pad the wrapper itself,
-   pad only the non-navbar siblings inside it. */
-html.capacitor-ios-edge-to-edge .app-viewport > *:has(> #app-navbar) {
-  padding-top: 0;
-}
-html.capacitor-ios-edge-to-edge
-  .app-viewport
-  > *:has(> #app-navbar)
-  > *:not(#app-navbar) {
+/* Pages wrapped in .page-with-sidebar (a flex row containing the navbar
+   on the left). The wrapper itself stays edge-to-edge; padding goes on
+   the non-navbar children inside. */
+html.capacitor-ios-edge-to-edge .page-with-sidebar > *:not(#app-navbar) {
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Navbar internal padding (iOS native only): push the user avatar /
+   first icon down past the status bar so they don't collide with the
+   notch / Dynamic Island. The navbar's own background continues to fill
+   the safe-area zone. */
+html.capacitor-ios-edge-to-edge #app-navbar {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
 }
 
 /* Hide ALL system cursors everywhere */

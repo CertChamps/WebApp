@@ -39,9 +39,15 @@ export default function Login() {
                 <p className="blue-btn mx-auto my-2 w-9/12 text-center"
                      onClick={() => {signInWithEmail(email ?? '', password ?? '')}}>Login</p>
 
-                <div className="red-btn mx-auto my-2 w-9/12 text-center bg-[#4C8BF5] flex justify-center items-center">
+                <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => { loginWithGoogle() }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loginWithGoogle(); } }}
+                    className="red-btn mx-auto my-2 w-9/12 text-center bg-[#4C8BF5] flex justify-center items-center cursor-pointer select-none"
+                >
                     <FaGoogle className='mr-2 text-white' size={17}/>
-                    <p onClick={() => {loginWithGoogle()}}>Login With Google</p>
+                    <p>Login With Google</p>
                 </div>
 
                 <p className='txt-sub text-center mt-auto hover:color-txt-accent duration-250 transition-all' onClick={() => {
