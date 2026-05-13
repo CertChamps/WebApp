@@ -245,6 +245,7 @@ export default function Questions() {
     const urlPaperId = searchParams.get("paperId");
     const urlLevel = searchParams.get("level");
     const urlTopic = searchParams.get("topic");
+    const urlTopics = searchParams.get("topics");
     const urlIndexInPaper = searchParams.get("indexInPaper");
     const urlQuestionId = searchParams.get("questionId");
     const urlImageKey = searchParams.get("imageKey");
@@ -263,7 +264,12 @@ export default function Questions() {
     const [randomise, setRandomise] = useState(false);
     const [showPastPaperFilter, setShowPastPaperFilter] = useState(false);
     const [showFilter, setShowFilter] = useState(false);
-    const [selectedSubTopics, setSelectedSubTopics] = useState<string[]>([]);
+    const [selectedSubTopics, setSelectedSubTopics] = useState<string[]>(
+        () => (urlTopics ?? "")
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+    );
 
     const [mode, setMode] = useState<QuestionsMode>(initialMode);
 
@@ -358,6 +364,15 @@ export default function Questions() {
 
     // Image questions mode state
     const [imageQuestionTopic, setImageQuestionTopic] = useState<string | null>(urlTopic || null);
+
+    useEffect(() => {
+        if (mode !== "pastpaper") return;
+        const next = (urlTopics ?? "")
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+        setSelectedSubTopics(next);
+    }, [mode, urlTopics]);
     const {
         grouped: imageGroupedList,
         loading: imageQuestionsLoading,
@@ -1262,6 +1277,9 @@ export default function Questions() {
             if (paperQuestionIndexInFullList >= 0) {
                 params.indexInPaper = String(paperQuestionIndexInFullList);
             }
+            if (selectedSubTopics.length > 0) {
+                params.topics = selectedSubTopics.join(",");
+            }
             setSearchParams(
                 params,
                 { replace: true }
@@ -1288,7 +1306,7 @@ export default function Questions() {
             setSearchParams(params, { replace: true });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mode, selectedPaper?.storagePath, currentPaperQuestion?.id, currentQuestion?.id, subjectFilter, currentGroupedQuestion?.key, imageQuestionTopic, paperQuestionIndexInFullList]);
+    }, [mode, selectedPaper?.storagePath, currentPaperQuestion?.id, currentQuestion?.id, subjectFilter, currentGroupedQuestion?.key, imageQuestionTopic, paperQuestionIndexInFullList, selectedSubTopics]);
 
     useEffect(() => {
         try {

@@ -12,6 +12,80 @@
   min-height: 0;
 }
 
+.practice-hub__split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(250px, 0.8fr);
+  gap: 0.75rem;
+  min-height: 0;
+  height: 100%;
+}
+
+.practice-hub__split-column {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.practice-hub__split-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 0.5rem 0.25rem;
+}
+
+.practice-hub__paper-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  gap: 0.85rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.25rem;
+  align-content: start;
+  justify-items: center;
+  max-height: 100%;
+}
+
+.practice-hub__paper-grid .deck.paper-card {
+  width: 100%;
+  min-width: 0;
+  max-width: 16rem;
+}
+
+.practice-hub__topic-list {
+  border-radius: var(--radius-out, 10px);
+  border: 1px solid color-mix(in srgb, var(--theme-txt-sub, #9ca3af) 25%, transparent);
+  padding: 0.35rem;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.practice-hub__topic-list-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-in, 5px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  padding: 0.55rem 0.6rem;
+  cursor: pointer;
+}
+
+.practice-hub__topic-list-item:hover {
+  @apply color-bg-grey-10;
+}
+
+@media (max-width: 1100px) {
+  .practice-hub__split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .practice-hub__topic-list {
+    max-height: 280px;
+  }
+}
+
 /* Practice hub top bar: full width (override decks .topBar) */
 .practice-hub .topBar {
   width: 100%;

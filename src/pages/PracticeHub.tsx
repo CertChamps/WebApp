@@ -247,6 +247,41 @@ export default function PracticeHub() {
     });
   }, [filteredByMeta, topicFilter, paperTagsMap, normTag]);
 
+  const topicEntries = useMemo(() => {
+    const map = new Map<string, { label: string; paperCount: number }>();
+    filteredByMeta.forEach((paper) => {
+      const tags = paperTagsMap[getExamPaperKey(paper)] ?? [];
+      const seen = new Set<string>();
+      tags.forEach((tag) => {
+        const raw = String(tag).trim();
+        if (!raw) return;
+        const normalized = normTag(raw);
+        if (seen.has(normalized)) return;
+        seen.add(normalized);
+        const existing = map.get(normalized);
+        if (existing) {
+          existing.paperCount += 1;
+        } else {
+          map.set(normalized, { label: raw, paperCount: 1 });
+        }
+      });
+    });
+    return Array.from(map.entries())
+      .map(([normalized, data]) => ({ normalized, ...data }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [filteredByMeta, paperTagsMap, normTag]);
+
+  const imageTopicEntries = useMemo(() => {
+    return imageTopics
+      .map((topic) => ({
+        normalized: normTag(topic.displayName),
+        label: topic.displayName,
+        questionCount: topic.questionCount,
+        topic,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [imageTopics, normTag]);
+
   useEffect(() => {
     if (filteredByMeta.length === 0) {
       setPaperTagsMap({});
@@ -354,6 +389,44 @@ export default function PracticeHub() {
       `/practice/session?mode=imagequestions&subject=${encodeURIComponent(storageFolderName)}&level=${encodeURIComponent(level)}&topic=${encodeURIComponent(selectedImageTopic.name)}`
     );
   }, [selectedImageTopic, storageFolderName, imageLevelFilter, imageLevels, navigate]);
+
+  const goToImageTopicSession = useCallback(
+    (topic: ImageTopic) => {
+      if (!storageFolderName) return;
+      const level = imageLevelFilter ?? (imageLevels[0] || "higher");
+      navigate(
+        `/practice/session?mode=imagequestions&subject=${encodeURIComponent(storageFolderName)}&level=${encodeURIComponent(level)}&topic=${encodeURIComponent(topic.name)}`
+      );
+    },
+    [storageFolderName, imageLevelFilter, imageLevels, navigate]
+  );
+
+  const goToPastPaperTopicSession = useCallback(
+    (topic: string) => {
+      const topicKey = normTag(topic);
+      const matchingPapers = filteredByMeta.filter((paper) => {
+        const tags = paperTagsMap[getExamPaperKey(paper)] ?? [];
+        return tags.some((tag) => normTag(String(tag)) === topicKey);
+      });
+      if (matchingPapers.length === 0) return;
+
+      let targetPaper = matchingPapers[0];
+      if (!user?.isPro) {
+        const freePaper = matchingPapers.find((paper) => isPaperFree(paper));
+        if (!freePaper) {
+          setShowPaperGateModal(true);
+          return;
+        }
+        targetPaper = freePaper;
+      }
+
+      const normalizedLevel = normalizePaperLevel(targetPaper.level);
+      navigate(
+        `/practice/session?mode=pastpaper&paperId=${targetPaper.id}&level=${encodeURIComponent(normalizedLevel)}&subject=${encodeURIComponent(targetPaper.subject ?? "")}&topics=${encodeURIComponent(topic)}`
+      );
+    },
+    [filteredByMeta, normTag, paperTagsMap, user?.isPro, navigate]
+  );
 
   // Build global search index when user opens search (lazy) – supports both paper and image modes
   useEffect(() => {
@@ -878,25 +951,53 @@ export default function PracticeHub() {
             ) : (
               <motion.div
                 key={`topics-${subjectFilter}`}
-                className="deck-grid"
+                className="practice-hub__split"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
               >
-                {imageTopics.map((topic, i) => (
-                  <motion.div
-                    key={topic.path}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
-                  >
-                    <TopicCard
-                      topic={topic}
-                      onSelect={() => setSelectedImageTopic(topic)}
-                    />
-                  </motion.div>
-                ))}
+                <section className="practice-hub__split-column">
+                  <header className="practice-hub__split-header">
+                    <h3 className="txt-heading-colour">By Set</h3>
+                    <span className="txt-sub color-txt-sub">{imageTopics.length}</span>
+                  </header>
+                  <div className="deck-grid practice-hub__paper-grid">
+                    {imageTopics.map((topic, i) => (
+                      <motion.div
+                        key={topic.path}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
+                      >
+                        <TopicCard
+                          topic={topic}
+                          onSelect={() => setSelectedImageTopic(topic)}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="practice-hub__split-column">
+                  <header className="practice-hub__split-header">
+                    <h3 className="txt-heading-colour">By Topic</h3>
+                    <span className="txt-sub color-txt-sub">{imageTopicEntries.length}</span>
+                  </header>
+                  <div className="practice-hub__topic-list color-bg-grey-5">
+                    {imageTopicEntries.map((entry) => (
+                      <button
+                        key={entry.topic.path}
+                        type="button"
+                        className="practice-hub__topic-list-item"
+                        onClick={() => goToImageTopicSession(entry.topic)}
+                      >
+                        <span className="txt color-txt-main">{entry.label}</span>
+                        <span className="txt-sub color-txt-sub">{entry.questionCount} question{entry.questionCount !== 1 ? "s" : ""}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
               </motion.div>
             )
           ) : filteredPapers.length === 0 ? (
@@ -906,31 +1007,63 @@ export default function PracticeHub() {
           ) : (
             <motion.div
               key={`papers-${subjectFilter}`}
-              className="deck-grid"
+              className="practice-hub__split"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              {filteredPapers.map((paper, i) => (
-                <motion.div
-                  key={getExamPaperKey(paper)}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
-                >
-                  <PaperCard
-                    paper={paper}
-                    getPaperBlob={getPaperBlob}
-                    questionCount={paperQuestionCountMap[getExamPaperKey(paper)]}
-                    tags={paperTagsMap[getExamPaperKey(paper)] ?? []}
-                    onSelect={() => {
-                      setSelectedPaper(paper);
-                      setPanelAnimationDone(false);
-                    }}
-                  />
-                </motion.div>
-              ))}
+              <section className="practice-hub__split-column">
+                <header className="practice-hub__split-header">
+                  <h3 className="txt-heading-colour">By Paper</h3>
+                  <span className="txt-sub color-txt-sub">{filteredPapers.length}</span>
+                </header>
+                <div className="deck-grid practice-hub__paper-grid">
+                  {filteredPapers.map((paper, i) => (
+                    <motion.div
+                      key={getExamPaperKey(paper)}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
+                    >
+                      <PaperCard
+                        paper={paper}
+                        getPaperBlob={getPaperBlob}
+                        questionCount={paperQuestionCountMap[getExamPaperKey(paper)]}
+                        tags={paperTagsMap[getExamPaperKey(paper)] ?? []}
+                        onSelect={() => {
+                          setSelectedPaper(paper);
+                          setPanelAnimationDone(false);
+                        }}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="practice-hub__split-column">
+                <header className="practice-hub__split-header">
+                  <h3 className="txt-heading-colour">By Topic</h3>
+                  <span className="txt-sub color-txt-sub">{topicEntries.length}</span>
+                </header>
+                <div className="practice-hub__topic-list color-bg-grey-5">
+                  {topicEntries.length === 0 ? (
+                    <p className="txt-sub color-txt-sub px-3 py-3">No topics found for the current filters.</p>
+                  ) : (
+                    topicEntries.map((topic) => (
+                      <button
+                        key={topic.normalized}
+                        type="button"
+                        className="practice-hub__topic-list-item"
+                        onClick={() => goToPastPaperTopicSession(topic.label)}
+                      >
+                        <span className="txt color-txt-main">{topic.label}</span>
+                        <span className="txt-sub color-txt-sub">{topic.paperCount} paper{topic.paperCount !== 1 ? "s" : ""}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </section>
             </motion.div>
           )}
           </AnimatePresence>

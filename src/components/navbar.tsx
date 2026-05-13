@@ -7,6 +7,7 @@ import '../styles/navbar.css'
 // ======================= ICON IMPORTS ======================== // 
 import { LuPencil, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText } from "react-icons/lu";
 import { TbCards } from 'react-icons/tb';
+import type { IconType } from 'react-icons';
 
 export default function Navbar () {
 
@@ -69,8 +70,41 @@ export default function Navbar () {
         setPage(derivePageFromPath(location.pathname))
     }, [location.pathname])
 
+    const renderNavItem = (
+        key: string,
+        label: string,
+        Icon: IconType,
+        targetPage: string,
+        isBottom = false,
+    ) => {
+        const isSelected = page === targetPage
+        const baseClass = isBottom ? 'nav-bottom' : 'nav-item'
+        const selectedClass = isBottom ? 'nav-bottom-selected' : 'nav-item-selected'
+
+        return (
+            <button
+                key={key}
+                type="button"
+                data-tutorial-id={key}
+                className={isSelected ? selectedClass : baseClass}
+                onClick={() => {pageNaviagte(targetPage)}}
+                aria-label={label}
+            >
+                <Icon
+                    strokeWidth={strokewidth}
+                    size={iconSize}
+                    className={isSelected ? 'nav-icon-selected' : 'nav-icon'}
+                    fill={isSelected ? 'currentColor' : 'none'}
+                />
+                <span className="nav-tooltip" role="tooltip">
+                    <span className="nav-tooltip-txt">{label}</span>
+                </span>
+            </button>
+        )
+    }
+
     return (
-        <div id="app-navbar" className="container group" >
+        <div id="app-navbar" className="container" >
 
             {/* ============================= USER CARD ================================ */}
             <div className='user-container'>
@@ -85,52 +119,16 @@ export default function Navbar () {
             </div>
 
             {/* ============================= PRACTICE ICON ================================ */}
-            <div 
-                data-tutorial-id="nav-practice"
-                className={page == 'practice' ? 'nav-item-selected' : 'nav-item'} 
-                onClick={() => {pageNaviagte('practice')}} 
-            >
-                <LuPencil strokeWidth={strokewidth} size={iconSize} 
-                    className={page == 'practice' ? 'nav-icon-selected' : 'nav-icon'}
-                    fill={page == 'practice' ? 'currentColor' : 'none'} />
-                <p className={page == 'practice' ? 'nav-txt-selected' : 'nav-txt'} >Practice</p>
-            </div>
+            {renderNavItem('nav-practice', 'Practice', LuPencil, 'practice')}
             
-            {/* ============================= SOCIAL ICON ================================ */}
-            <div 
-                data-tutorial-id="nav-social"
-                className={page == 'social/social' ? 'nav-item-selected' : 'nav-item'} 
-                onClick={() => {pageNaviagte('social/social')}}
-            > 
-                <LuUsers strokeWidth={strokewidth} size={iconSize} 
-                    className={page == 'social/social' ? 'nav-icon-selected' : 'nav-icon'}
-                    fill={page == 'social/social' ? 'currentColor' : 'none'} />  
-                <p className={page == 'social/social' ? 'nav-txt-selected' : 'nav-txt'} >Social</p>
-            </div>
+            {/* ============================= SOCIAL ICON ================================ */} 
+            {renderNavItem('nav-social', 'Social', LuUsers, 'social/social')}
 
-            <div 
-                data-tutorial-id="nav-progress"
-                className={page == 'progress' ? 'nav-item-selected' : 'nav-item'} 
-                onClick={() => {pageNaviagte('progress')}}
-            >
-                <LuChartSpline strokeWidth={strokewidth} size={iconSize}
-                    className={page == 'progress' ? 'nav-icon-selected' : 'nav-icon'}
-                    fill="none" />
-                <p className={page == 'progress' ? 'nav-txt-selected' : 'nav-txt'}>Progress</p>
-            </div>
+            {renderNavItem('nav-progress', 'Progress', LuChartSpline, 'progress')}
             
 
             {/* ============================= DECKS ICON ================================ */}
-            <div 
-                data-tutorial-id="nav-decks"
-                className={page == 'decks' ? 'nav-item-selected' : 'nav-item'} 
-                onClick={() => {pageNaviagte('decks')}}
-            > 
-                <TbCards strokeWidth={strokewidth} size={iconSize} 
-                    className={page == 'decks' ? 'nav-icon-selected' : 'nav-icon'}
-                    fill={page == 'decks' ? 'currentColor' : 'none'} />  
-                <p className={page == 'decks' ? 'nav-txt-selected' : 'nav-txt'} >Decks</p>
-            </div>
+            {renderNavItem('nav-decks', 'Decks', TbCards, 'decks')}
 
             {/* ============================= GAMES ICON ================================ */}
             {/* <div className={page == 'games' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('games')}}> 
@@ -141,47 +139,19 @@ export default function Navbar () {
             </div> */}
 
             {/* ============================= FEEDBACK ICON ================================ */}
-            <div 
-                data-tutorial-id="nav-feedback"
-                className={page == 'feedback' ? 'nav-item-selected' : 'nav-item'} 
-                onClick={() => {pageNaviagte('feedback')}}
-            >
-                <LuMessageSquareText strokeWidth={strokewidth} size={iconSize}
-                    className={page == 'feedback' ? 'nav-icon-selected' : 'nav-icon'}
-                    fill={page == 'feedback' ? 'currentColor' : 'none'} />
-                <p className={page == 'feedback' ? 'nav-txt-selected' : 'nav-txt'}>Feedback</p>
-            </div>
+            {renderNavItem('nav-feedback', 'Feedback', LuMessageSquareText, 'feedback')}
 
             <div className="mt-auto w-full flex flex-col items-center">
                 {/* ============================= ADD QUESTIONS (ADMIN ONLY) ================================ */}
                 {isAdmin && (
-                    <div className={page == 'admin/add-questions' ? 'nav-bottom-selected' : 'nav-bottom'} onClick={() => {pageNaviagte('admin/add-questions')}}> 
-                        <LuFilePlus strokeWidth={strokewidth} size={iconSize} 
-                            className={page == 'admin/add-questions' ? 'nav-icon-selected' : 'nav-icon'}
-                            fill={page == 'admin/add-questions' ? 'currentColor' : 'none'} />  
-                        <p className={page == 'admin/add-questions' ? 'nav-txt-selected' : 'nav-txt'} >Add Q's</p>
-                    </div>
+                    renderNavItem('nav-add-questions', "Add Q's", LuFilePlus, 'admin/add-questions', true)
                 )}
 
                 {isAdmin && (
-                    <div className={page == 'admin/canvas-viewer' ? 'nav-bottom-selected' : 'nav-bottom'} onClick={() => {pageNaviagte('admin/canvas-viewer')}}> 
-                        <LuUsers strokeWidth={strokewidth} size={iconSize} 
-                            className={page == 'admin/canvas-viewer' ? 'nav-icon-selected' : 'nav-icon'}
-                            fill={page == 'admin/canvas-viewer' ? 'currentColor' : 'none'} />  
-                        <p className={page == 'admin/canvas-viewer' ? 'nav-txt-selected' : 'nav-txt'} >Users</p>
-                    </div>
+                    renderNavItem('nav-canvas-viewer', 'Users', LuUsers, 'admin/canvas-viewer', true)
                 )}
                 
-                <div 
-                    data-tutorial-id="nav-settings"
-                    className={page == 'user/settings' ? 'nav-bottom-selected' : 'nav-bottom'} 
-                    onClick={() => {pageNaviagte('user/settings')}}
-                > 
-                    <LuSettings strokeWidth={strokewidth} size={iconSize} 
-                        className={page == 'user/settings' ? 'nav-icon-selected' : 'nav-icon'}
-                        fill={page == 'user/settings' ? 'currentColor' : 'none'} />  
-                    <p className={page == 'user/settings' ? 'nav-txt-selected' : 'nav-txt'} >Settings</p>
-                </div>
+                {renderNavItem('nav-settings', 'Settings', LuSettings, 'user/settings', true)}
             </div>
         </div>
     )

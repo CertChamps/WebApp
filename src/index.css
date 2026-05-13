@@ -33,7 +33,7 @@ body {
   min-height: 100dvh;
   height: 100dvh;
   min-height: -webkit-fill-available;
-  padding-top: calc(var(--safe-area-top) + var(--temporary-ipad-top-offset));
+  padding-top: 0;
   padding-right: var(--safe-area-right);
   padding-bottom: var(--safe-area-bottom);
   padding-left: var(--safe-area-left);
@@ -48,8 +48,7 @@ html.capacitor-native body {
 :root {
   font-family: "Mulish", sans-serif;
   font-size: 16px;
-  /* TEMP: Extra top room for iPad build/status bar. Set to 0px or remove to revert. */
-  --temporary-ipad-top-offset: 16px;
+  --temporary-ipad-top-offset: 0px;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
