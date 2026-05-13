@@ -6,14 +6,13 @@ import { setDoc, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../firebase";
 import { isAdminUid } from "../constants/adminUids";
 import {
-  GoogleAuthProvider,
-  signInWithPopup,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   onAuthStateChanged,
   sendEmailVerification,
 } from "firebase/auth";
 import { auth } from "../../firebase";
+import { signInWithGoogle } from "../lib/nativeGoogleLogin";
 
 type authprops = { prevRoute?: string };
 
@@ -174,23 +173,24 @@ useEffect(() => {
 }, [isLoggingIn]); // Listener restarts if isLoggingIn changes
 
 
-  /** ==================== GOOGLE LOGIN ==================== */
+  /** ==================== GOOGLE LOGIN ====================
+   * Single entry point — signInWithGoogle() picks the native plugin on
+   * iOS/Android Capacitor and the existing web popup on the browser.
+   */
   const loginWithGoogle = async () => {
     setIsLoggingIn(true); // Stop auto-listener
-    const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithGoogle();
       const user = result.user;
-      
+
       if (user && user.email) {
-          // Await the setup so we know when it's done
-          await userSetup(user.uid, user.displayName ?? "newUser", user.email);
+        await userSetup(user.uid, user.displayName ?? "newUser", user.email);
       }
     } catch (err: any) {
       console.error("Google Login Error:", err);
       setError((prev: any) => ({ ...prev, general: "Failed to login with Google." }));
     } finally {
-        setIsLoggingIn(false);
+      setIsLoggingIn(false);
     }
   };
 

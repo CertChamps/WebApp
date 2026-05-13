@@ -63,6 +63,37 @@ html.capacitor-ios-edge-to-edge {
   --safe-area-left: 0px;
 }
 
+/* =====================================================================
+   iOS native: global safe-area top padding for page content.
+
+   Rules:
+   - Only active when html.capacitor-ios-edge-to-edge is set
+     (added in App.tsx for Capacitor.getPlatform() === 'ios').
+   - The navbar (#app-navbar) is NEVER padded — it stays flush with the
+     top edge of the screen so its own background fills the status bar.
+   - For pages that wrap the navbar + content in a flex container, the
+     padding moves to the content sibling instead of the wrapper, so the
+     wrapper's background still extends edge-to-edge.
+   - Uses env(safe-area-inset-top) so it adapts to notch / Dynamic Island
+     / no-notch devices automatically.
+   ===================================================================== */
+html.capacitor-ios-edge-to-edge .app-viewport > *:not(#app-navbar) {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* If a direct child of .app-viewport contains the navbar (horizontal
+   layout like /practice or /progress), don't pad the wrapper itself,
+   pad only the non-navbar siblings inside it. */
+html.capacitor-ios-edge-to-edge .app-viewport > *:has(> #app-navbar) {
+  padding-top: 0;
+}
+html.capacitor-ios-edge-to-edge
+  .app-viewport
+  > *:has(> #app-navbar)
+  > *:not(#app-navbar) {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 /* Hide ALL system cursors everywhere */
 /* *,
 *::before,
