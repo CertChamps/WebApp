@@ -740,8 +740,9 @@ export default function PracticeHub() {
 
         {/* Filter section – only visible when a subject is selected */}
         {subjectFilter != null && (
-        <section className="flex items-center justify-start gap-2 practice-hub__filter-section pb-2 w-full flex-shrink-0 mb-2" aria-label="Filters">
-            <h2 className="txt-heading-colour text-xl font-bold mr-3">
+        <section className="practice-hub__filter-section pb-2 w-full flex-shrink-0 mb-2" aria-label="Filters">
+            <div className="practice-hub__filter-toolbar flex items-center flex-wrap gap-2 min-w-0">
+            <h2 className="txt-heading-colour text-xl font-bold mr-1 shrink-0">
               {isImageMode ? "Practice Questions" : "State Exam Papers"}
             </h2>
 
@@ -812,7 +813,7 @@ export default function PracticeHub() {
             </div>
 
             {!isImageMode && (
-              <div className="flex items-center justify-center color-txt-sub font-bold py-1 px-3 rounded-in ">
+              <div className="flex items-center justify-center color-txt-sub font-bold py-1 px-3 rounded-in">
                 <p className="mr-1 font-normal">Paper</p>
                 <button
                   type="button"
@@ -835,14 +836,22 @@ export default function PracticeHub() {
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={resetAllFilters}
-              className="ml-auto flex items-center justify-center p-1.5 rounded-out color-txt-sub hover:color-txt-main hover:color-bg-grey-5 border-0 cursor-pointer"
-              aria-label="Reset all filters"
-            >
-              <LuTrash2 size={18} aria-hidden />
-            </button>
+            {isImageMode && (
+              <h3 className="txt-heading-colour text-xl font-bold shrink-0">Set</h3>
+            )}
+            </div>
+
+            <div className="practice-hub__filter-aside flex items-center justify-between gap-2 min-w-0 pl-3">
+              <h3 className="txt-heading-colour text-xl font-bold shrink-0">Topic</h3>
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="flex items-center justify-center p-1.5 rounded-out color-txt-sub hover:color-txt-main hover:color-bg-grey-5 border-0 cursor-pointer shrink-0"
+                aria-label="Reset all filters"
+              >
+                <LuTrash2 size={18} aria-hidden />
+              </button>
+            </div>
         </section>
         )}
 
@@ -960,47 +969,41 @@ export default function PracticeHub() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
               >
-                <section className="practice-hub__split-column">
-                  <header className="practice-hub__split-header">
-                    <h3 className="txt-heading-colour">By Set</h3>
-                    <span className="txt-sub color-txt-sub">{imageTopics.length}</span>
-                  </header>
-                  <div className="practice-hub__paper-grid">
-                    {imageTopics.map((topic, i) => (
-                      <motion.div
-                        key={topic.path}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
-                      >
-                        <TopicCard
-                          topic={topic}
-                          onSelect={() => setSelectedImageTopic(topic)}
-                        />
-                      </motion.div>
-                    ))}
-                  </div>
-                </section>
+                <div className="practice-hub__split-body">
+                  <section className="practice-hub__split-column">
+                    <div className="practice-hub__paper-grid">
+                      {imageTopics.map((topic, i) => (
+                        <motion.div
+                          key={topic.path}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
+                        >
+                          <TopicCard
+                            topic={topic}
+                            onSelect={() => setSelectedImageTopic(topic)}
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </section>
 
-                <section className="practice-hub__split-column">
-                  <header className="practice-hub__split-header">
-                    <h3 className="txt-heading-colour">By Topic</h3>
-                    <span className="txt-sub color-txt-sub">{imageTopicEntries.length}</span>
-                  </header>
-                  <div className="practice-hub__topic-list color-bg-grey-5">
-                    {imageTopicEntries.map((entry) => (
-                      <button
-                        key={entry.topic.path}
-                        type="button"
-                        className="practice-hub__topic-list-item"
-                        onClick={() => goToImageTopicSession(entry.topic)}
-                      >
-                        <span className="txt color-txt-main">{entry.label}</span>
-                        <span className="txt-sub color-txt-sub">{entry.questionCount} question{entry.questionCount !== 1 ? "s" : ""}</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
+                  <section className="practice-hub__split-column">
+                    <div className="practice-hub__topic-list color-bg-grey-5">
+                      {imageTopicEntries.map((entry) => (
+                        <button
+                          key={entry.topic.path}
+                          type="button"
+                          className="practice-hub__topic-list-item"
+                          onClick={() => goToImageTopicSession(entry.topic)}
+                        >
+                          <span className="txt color-txt-main">{entry.label}</span>
+                          <span className="txt-sub color-txt-sub">{entry.questionCount} question{entry.questionCount !== 1 ? "s" : ""}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                </div>
               </motion.div>
             )
           ) : filteredPapers.length === 0 ? (
@@ -1016,11 +1019,8 @@ export default function PracticeHub() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
+              <div className="practice-hub__split-body">
               <section className="practice-hub__split-column">
-                <header className="practice-hub__split-header">
-                  <h3 className="txt-heading-colour">By Paper</h3>
-                  <span className="txt-sub color-txt-sub">{filteredPapers.length}</span>
-                </header>
                 <div className="practice-hub__paper-grid">
                   {filteredPapers.map((paper, i) => (
                     <motion.div
@@ -1045,10 +1045,6 @@ export default function PracticeHub() {
               </section>
 
               <section className="practice-hub__split-column">
-                <header className="practice-hub__split-header">
-                  <h3 className="txt-heading-colour">By Topic</h3>
-                  <span className="txt-sub color-txt-sub">{topicEntries.length}</span>
-                </header>
                 <div className="practice-hub__topic-list color-bg-grey-5">
                   {topicEntries.length === 0 ? (
                     <p className="txt-sub color-txt-sub px-3 py-3">No topics found for the current filters.</p>
@@ -1067,6 +1063,7 @@ export default function PracticeHub() {
                   )}
                 </div>
               </section>
+              </div>
             </motion.div>
           )}
           </AnimatePresence>
@@ -1355,7 +1352,7 @@ function PaperCard({
       {/* Top 75%: PDF title page (same as deck .image) */}
       <div className="image overflow-hidden">
         {snapshot ? (
-          <img src={snapshot} alt="" className="w-full h-full object-cover" />
+          <img src={snapshot} alt="" className="w-full h-full object-cover object-center" />
         ) : (
           <div className="w-full h-full flex items-center justify-center color-txt-sub text-xs">
             {blob ? "Loading…" : "—"}
@@ -1365,7 +1362,7 @@ function PaperCard({
       {/* Same as decks: gradient overlay that goes up into the image */}
       <div className="bg-overlay" />
       <div className="practice-hub__paper-card-body">
-      <div className="flex w-full z-50 mt-21 px-2.5 items-center pt-0.5">
+      <div className="flex w-full z-50 items-center">
         <LuFileCheck size={18} className="color-txt-accent shrink-0" aria-hidden />
         <div className="flex flex-col ml-2 min-w-0 flex-1">
           <span className="txt-heading-colour truncate">{paper.label}</span>
@@ -1379,7 +1376,7 @@ function PaperCard({
       </div>
       {/* Tags: one line only; "see more" opens side panel for all tags */}
       {tags.length > 0 && (
-        <div className="practice-hub__paper-card-tags px-2.5 mt-0.5 relative z-50 pb-1.5">
+        <div className="practice-hub__paper-card-tags mt-1.5 relative z-50">
           {visibleTags.map((tag) => (
             <span key={tag} className="practice-hub__paper-card-tag-pill blue-btn color-bg-grey-5 font-semibold">
               {tag}
@@ -1437,7 +1434,7 @@ function TopicCard({
       </div>
       <div className="bg-overlay" />
       <div className="practice-hub__paper-card-body">
-        <div className="flex w-full z-50 mt-21 px-2.5 items-center pt-0.5">
+        <div className="flex w-full z-50 items-center">
           <LuImage size={18} className="color-txt-accent shrink-0" aria-hidden />
           <div className="flex flex-col ml-2 min-w-0 flex-1">
             <span className="txt-heading-colour truncate">{topic.displayName}</span>

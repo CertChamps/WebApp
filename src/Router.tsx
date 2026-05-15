@@ -183,10 +183,10 @@ const router = createHashRouter([
     path: "/admin/canvas-viewer",
     element: (
       <ProtectedRoute>
-        <>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <AdminCanvasViewer />
-        </>
+        </div>
       </ProtectedRoute>
     ),
   },
