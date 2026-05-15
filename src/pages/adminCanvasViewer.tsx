@@ -549,9 +549,14 @@ export default function AdminCanvasViewer() {
 
   const canvasDocLabel = selectedCanvasQuestionId || "No question selected";
 
+  const canvasAspectRatio = useMemo(() => {
+    if (!canvasBounds) return 4 / 3;
+    return Math.max(0.25, Math.min(4, canvasBounds.width / canvasBounds.height));
+  }, [canvasBounds]);
+
   if (!isAdmin) {
     return (
-      <div className="settings-page flex items-center justify-center">
+      <div className="flex flex-1 min-w-0 min-h-0 w-full h-full items-center justify-center color-bg">
         <div className="color-bg-grey-5 p-8 rounded-xl text-center">
           <LuX size={48} className="color-txt-accent mx-auto mb-4" />
           <h2 className="txt-heading-colour text-2xl mb-2">Access Denied</h2>
@@ -562,8 +567,9 @@ export default function AdminCanvasViewer() {
   }
 
   return (
-    <div className="settings-page w-full mx-auto p-6 max-w-[1800px]">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <div className="flex flex-col flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden color-bg">
+      <div className="shrink-0 w-full mx-auto px-6 pt-6 pb-4 max-w-[1800px]">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
@@ -582,13 +588,15 @@ export default function AdminCanvasViewer() {
       </div>
 
       {pageError && (
-        <div className="mb-4 px-4 py-3 rounded-xl color-bg-grey-5 color-txt-main border border-[var(--accent)]/30">
+        <div className="mt-4 px-4 py-3 rounded-xl color-bg-grey-5 color-txt-main border border-[var(--accent)]/30">
           {pageError}
         </div>
       )}
+      </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-5 min-h-[calc(100vh-220px)]">
-        <section className="rounded-2xl color-bg-grey-5 p-4 flex flex-col min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden w-full mx-auto px-6 pb-6 max-w-[1800px]">
+      <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-5 h-full min-h-0">
+        <section className="rounded-2xl color-bg-grey-5 p-4 flex flex-col min-h-0 h-full overflow-hidden">
           <div className="flex items-center gap-2 mb-3">
             <LuSearch size={16} className="color-txt-sub" />
             <input
@@ -604,7 +612,7 @@ export default function AdminCanvasViewer() {
             {loadingUsers ? "Loading users..." : `${filteredUsers.length} users loaded`}
           </div>
 
-          <div className="flex-1 overflow-auto space-y-2 pr-1">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-2 pr-1 scrollbar-minimal">
             {loadingUsers && (
               <div className="flex items-center gap-2 color-txt-sub text-sm px-2 py-3">
                 <LuLoaderCircle className="animate-spin" size={16} />
@@ -670,11 +678,11 @@ export default function AdminCanvasViewer() {
           </div>
         </section>
 
-        <section className="rounded-2xl color-bg-grey-5 p-4 min-h-0 overflow-hidden flex flex-col">
+        <section className="rounded-2xl color-bg-grey-5 p-4 min-h-0 h-full overflow-hidden flex flex-col">
           {!selectedUser ? (
             <div className="flex-1 flex items-center justify-center color-txt-sub">Select a user to inspect tracked data.</div>
           ) : (
-            <div className="flex-1 min-h-0 overflow-auto space-y-5 pr-1">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-5 pr-1 scrollbar-minimal">
               <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)]">
                 <div className="flex flex-wrap items-center gap-4">
                   {selectedUser.pictureUrl ? (
@@ -793,36 +801,38 @@ export default function AdminCanvasViewer() {
                       </div>
                     </div>
 
-                    <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)] flex flex-col min-h-[420px]">
-                      <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)] flex flex-col">
+                      <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
                         <h3 className="color-txt-main font-semibold">Canvas Viewer</h3>
                         <span className="text-xs color-txt-sub truncate">{canvasDocLabel}</span>
                       </div>
 
                       {loadingCanvas && (
-                        <div className="flex-1 flex items-center justify-center color-txt-sub text-sm gap-2">
+                        <div className="h-48 flex items-center justify-center color-txt-sub text-sm gap-2">
                           <LuLoaderCircle className="animate-spin" size={16} />
                           Loading canvas JSON...
                         </div>
                       )}
 
                       {!loadingCanvas && canvasError && (
-                        <div className="flex-1 rounded-xl border border-[var(--accent)]/30 px-3 py-2 color-txt-main text-sm">
+                        <div className="h-48 rounded-xl border border-[var(--accent)]/30 px-3 py-2 color-txt-main text-sm flex items-center">
                           {canvasError}
                         </div>
                       )}
 
                       {!loadingCanvas && !canvasError && !canvasBounds && (
-                        <div className="flex-1 rounded-xl border border-dashed border-[var(--grey-20)] flex items-center justify-center color-txt-sub text-sm">
+                        <div className="h-48 rounded-xl border border-dashed border-[var(--grey-20)] flex items-center justify-center color-txt-sub text-sm">
                           Select a question canvas to preview.
                         </div>
                       )}
 
                       {!loadingCanvas && !canvasError && canvasBounds && (
-                        <div className="rounded-xl overflow-hidden border border-[var(--grey-20)] bg-white flex-1 min-h-[320px]">
+                        <div
+                          className="w-full max-h-[min(360px,40vh)] overflow-hidden rounded-xl border border-[var(--grey-20)] bg-white"
+                          style={{ aspectRatio: canvasAspectRatio }}
+                        >
                           <svg
-                            width="100%"
-                            height="100%"
+                            className="block w-full h-full"
                             viewBox={`${canvasBounds.minX} ${canvasBounds.minY} ${canvasBounds.width} ${canvasBounds.height}`}
                             preserveAspectRatio="xMidYMid meet"
                           >
@@ -861,12 +871,12 @@ export default function AdminCanvasViewer() {
                       )}
                     </div>
 
-                    <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)] min-h-[420px] flex flex-col">
-                      <div className="flex items-center gap-2 mb-3">
+                    <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)] flex flex-col">
+                      <div className="flex items-center gap-2 mb-3 shrink-0">
                         <LuFileJson size={16} className="color-txt-sub" />
                         <h3 className="color-txt-main font-semibold">Canvas JSON</h3>
                       </div>
-                      <pre className="flex-1 overflow-auto rounded-xl color-bg-grey-5 p-3 text-xs color-txt-main whitespace-pre-wrap break-words">
+                      <pre className="max-h-[min(360px,40vh)] overflow-auto rounded-xl color-bg-grey-5 p-3 text-xs color-txt-main whitespace-pre-wrap break-words scrollbar-minimal">
                         {selectedCanvasRaw || "No canvas JSON loaded yet."}
                       </pre>
                     </div>
@@ -898,6 +908,7 @@ export default function AdminCanvasViewer() {
             </div>
           )}
         </section>
+      </div>
       </div>
     </div>
   );

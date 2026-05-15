@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import GoogleSignIn
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -9,6 +10,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         return true
+    }
+
+    /// Lock iPad to horizontal orientations (matches `UISupportedInterfaceOrientations~ipad` in Info.plist).
+    /// Ensures the window does not follow child view controllers that advertise portrait.
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            return [.landscapeLeft, .landscapeRight]
+        }
+        return [.portrait, .landscapeLeft, .landscapeRight]
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -34,8 +44,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Called when the app was launched with a url. Feel free to add additional processing here,
-        // but if you want the App API to support tracking app url opens, make sure to keep this call
+        // Give Google Sign-In first crack at the URL (returned from the
+        // Google auth web flow after the user picks an account).
+        if GIDSignIn.sharedInstance.handle(url) {
+            return true
+        }
+        // Fall through to Capacitor for everything else (deep links, etc.).
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 

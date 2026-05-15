@@ -65,7 +65,7 @@ const router = createHashRouter([
         path: "/practice",
         element: (
           <ProtectedRoute>
-            <div className="flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+            <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
               <Navbar />
               <PracticeHub />
             </div>
@@ -76,7 +76,7 @@ const router = createHashRouter([
         path: "/practice/session",
         element: (
           <ProtectedRoute>
-            <div className="flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+            <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
               <Navbar />
               <Questions />
             </div>
@@ -128,7 +128,7 @@ const router = createHashRouter([
     path: "/progress",
     element: (
       <ProtectedRoute>
-        <div className="flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <Progress />
         </div>
@@ -139,7 +139,7 @@ const router = createHashRouter([
     path: "/progress/subject/:subject/:level",
     element: (
       <ProtectedRoute>
-        <div className="flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <SubjectProgressPage />
         </div>
@@ -183,10 +183,10 @@ const router = createHashRouter([
     path: "/admin/canvas-viewer",
     element: (
       <ProtectedRoute>
-        <>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <AdminCanvasViewer />
-        </>
+        </div>
       </ProtectedRoute>
     ),
   },

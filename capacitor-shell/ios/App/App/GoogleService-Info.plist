@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>433584407503-nut01c2d5nc5gs7broo33i6pvihqvpjn.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.433584407503-nut01c2d5nc5gs7broo33i6pvihqvpjn</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>433584407503-jv8pu26surmurnp1raq5i0gugv1ooijo.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyC_zyoyL1kIKcfA5z97v8N4Nlche1Q895s</string>
+	<key>GCM_SENDER_ID</key>
+	<string>433584407503</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.certchamps.app</string>
+	<key>PROJECT_ID</key>
+	<string>certchamps-a7527</string>
+	<key>STORAGE_BUCKET</key>
+	<string>certchamps-a7527.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:433584407503:ios:d7d4a488b78db3b36ac8ba</string>
+	<key>DATABASE_URL</key>
+	<string>https://certchamps-a7527-default-rtdb.firebaseio.com</string>
+</dict>
+</plist>
