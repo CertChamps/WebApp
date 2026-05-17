@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { LuArrowLeft, LuPencil, LuSparkles, LuCheck } from "react-icons/lu";
+import { LuArrowLeft, LuLogOut, LuPencil, LuSparkles, LuCheck, LuTrash2 } from "react-icons/lu";
 import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import Cropper from "react-easy-crop";
@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { usePayments, refetchSubscriptionState } from "../hooks/usePayments";
+import { signOutSession } from "../lib/authSession";
+import { deleteAccount as deleteAccountRequest } from "../lib/deleteAccount";
 import "../styles/settings.css";
 
 type TabId = "home" | "payments";
@@ -206,6 +208,11 @@ const ManageAccount = () => {
     const [showCropper, setShowCropper] = useState(false);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [paymentCancel, setPaymentCancel] = useState(false);
+    const [logoutLoading, setLogoutLoading] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteConfirmUsername, setDeleteConfirmUsername] = useState("");
+    const [deleteError, setDeleteError] = useState("");
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     // Unified payment hook — picks Stripe on web/Android, Apple IAP on
     // iOS native. Handles loading / error state for both surfaces.
@@ -333,6 +340,37 @@ const ManageAccount = () => {
         }
     };
 
+    const handleLogOut = async () => {
+        setLogoutLoading(true);
+        try {
+            await signOutSession();
+            setUser(null);
+            navigate("/");
+        } catch (err) {
+            console.error("Log out failed:", err);
+        } finally {
+            setLogoutLoading(false);
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        setDeleteError("");
+        setDeleteLoading(true);
+        try {
+            await deleteAccountRequest(deleteConfirmUsername);
+            setUser(null);
+            navigate("/");
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Failed to delete account.";
+            setDeleteError(message);
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
+    const canConfirmDelete =
+        deleteConfirmUsername.trim() === (user?.username ?? "").trim() && !deleteLoading;
+
     return (
         <div className="relative flex flex-1 min-w-0 w-full h-full overflow-auto color-bg justify-center items-start pt-4 px-8 pb-8">
             {/* Back to Settings - top left */}
@@ -409,6 +447,34 @@ const ManageAccount = () => {
                                 <p className="font-semibold color-txt-sub text-lg mb-2">Email</p>
                                 <p className="color-txt-main font-medium mt-2 text-lg">{user?.email ?? "—"}</p>
                             </div>
+
+                            <div className="manage-account-actions">
+                                <p className="manage-account-actions__title">Account actions</p>
+                                <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={handleLogOut}
+                                        disabled={logoutLoading || deleteLoading}
+                                        className="manage-account-actions__btn manage-account-actions__btn--logout"
+                                    >
+                                        <LuLogOut size={18} aria-hidden />
+                                        {logoutLoading ? "Signing out…" : "Log out"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setDeleteConfirmUsername("");
+                                            setDeleteError("");
+                                            setShowDeleteModal(true);
+                                        }}
+                                        disabled={logoutLoading || deleteLoading}
+                                        className="manage-account-actions__btn manage-account-actions__btn--delete"
+                                    >
+                                        <LuTrash2 size={18} aria-hidden />
+                                        Delete account
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </>
                 )}
@@ -452,18 +518,58 @@ const ManageAccount = () => {
                         </button>
                     ))}
                 </div>
-                <div className="rounded-xl p-5 color-bg shadow-small">
-                    <p className="text-lg font-bold uppercase tracking-wider color-txt-sub mb-4">Support</p>
-                    <button
-                        type="button"
-                        className="block w-full text-left py-3 text-base font-semibold color-txt-main hover:color-txt-accent transition-colors cursor-pointer"
-                        onClick={(e) => e.preventDefault()}
-                    >
-                        Help Center
-                    </button>
-                </div>
             </aside>
             </div>
+
+            {showDeleteModal && (
+                <div className="delete-account-modal" role="dialog" aria-modal="true" aria-labelledby="delete-account-title">
+                    <div className="delete-account-modal__panel">
+                        <h2 id="delete-account-title" className="txt-heading-colour text-xl font-bold mb-2">
+                            Delete account permanently?
+                        </h2>
+                        <p className="color-txt-sub text-sm leading-relaxed">
+                            This removes your profile, progress, posts, and subscription data. This cannot be undone.
+                        </p>
+                        <p className="color-txt-main text-sm mt-4">
+                            Type your username <strong>{user?.username}</strong> to confirm.
+                        </p>
+                        <input
+                            type="text"
+                            className="delete-account-modal__input"
+                            value={deleteConfirmUsername}
+                            onChange={(e) => setDeleteConfirmUsername(e.target.value)}
+                            placeholder={user?.username ?? ""}
+                            autoComplete="off"
+                            disabled={deleteLoading}
+                        />
+                        {deleteError && (
+                            <p className="text-red-500 text-sm mb-3" role="alert">
+                                {deleteError}
+                            </p>
+                        )}
+                        <div className="flex justify-end gap-3">
+                            <button
+                                type="button"
+                                className="manage-account-actions__btn manage-account-actions__btn--logout"
+                                onClick={() => {
+                                    if (!deleteLoading) setShowDeleteModal(false);
+                                }}
+                                disabled={deleteLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="manage-account-actions__btn manage-account-actions__btn--delete"
+                                onClick={handleDeleteAccount}
+                                disabled={!canConfirmDelete}
+                            >
+                                {deleteLoading ? "Deleting…" : "Delete my account"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {showCropper && previewUrl && (
                 <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">

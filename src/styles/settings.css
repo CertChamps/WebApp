@@ -31,6 +31,46 @@
     @apply font-bold text-4xl color-txt-main tracking-tight
 }
 
+.settings-manage-account-btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-out color-bg-accent color-txt-accent
+           font-semibold text-sm cursor-pointer border-0 transition-all
+           hover:brightness-105 active:scale-[0.98];
+}
+
+.manage-account-actions {
+    @apply mt-10 pt-8 border-t border-[var(--color-grey)]/25 max-w-xl;
+}
+
+.manage-account-actions__title {
+    @apply font-semibold color-txt-sub text-lg mb-4;
+}
+
+.manage-account-actions__btn {
+    @apply w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl
+           text-sm font-semibold cursor-pointer border transition-all;
+}
+
+.manage-account-actions__btn--logout {
+    @apply color-txt-main border-[var(--color-grey)]/30 hover:color-bg-grey-5;
+}
+
+.manage-account-actions__btn--delete {
+    @apply text-red-600 border-red-500/40 hover:bg-red-500/10;
+}
+
+.delete-account-modal {
+    @apply fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/55;
+}
+
+.delete-account-modal__panel {
+    @apply w-full max-w-md rounded-out color-bg color-shadow border-2 p-6;
+}
+
+.delete-account-modal__input {
+    @apply w-full mt-3 mb-4 px-4 py-2.5 rounded-xl color-bg-grey-5 color-txt-main text-sm outline-none
+           border border-[var(--color-grey)]/20 focus:border-[var(--accent)]/50;
+}
+
 .avatar-edit {
     @apply text-center font-bold my-2 cursor-pointer color-txt-accent
            hover:opacity-80 transition-opacity bg-transparent border-none p-0 
