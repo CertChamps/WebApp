@@ -15,6 +15,10 @@ import DrawingModule from "../../components/progress/DrawingModule";
 import AddModuleModal from "../../components/progress/AddModuleModal";
 import SubjectProgressCard from "../../components/progress/SubjectProgressCard";
 import { paperProgressEntryMatchesSubjectLevel } from "../../lib/matchPaperProgressEntry";
+import {
+  progressSubjectLevelKey,
+  useProgressHiddenSubjectLevelKeys,
+} from "../../hooks/useProgressHiddenSubjectLevels";
 import "../../styles/progress.css";
 
 const GRID_COLS = 12;
@@ -63,6 +67,7 @@ const Progress = () => {
     useProgressModules();
   const { entries: progressEntries, loading: progressLoading } = useAllPaperProgress();
   const { pairs: subjectLevels, loading: subjectLevelsLoading } = useSubjectLevels();
+  const hiddenSubjectLevelKeys = useProgressHiddenSubjectLevelKeys(progressEntries);
   const {
     papers: leavingCertPapers,
     loading: leavingCertPapersLoading,
@@ -110,8 +115,16 @@ const Progress = () => {
       extras.push({ subject: sub, level: lvl });
     }
 
-    return [...fromCurriculum, ...extras];
-  }, [subjectLevels, leavingCertPapers, progressEntries, leavingCertPapersError]);
+    return [...fromCurriculum, ...extras].filter(
+      (p) => !hiddenSubjectLevelKeys.has(progressSubjectLevelKey(p.subject, p.level))
+    );
+  }, [
+    subjectLevels,
+    leavingCertPapers,
+    progressEntries,
+    leavingCertPapersError,
+    hiddenSubjectLevelKeys,
+  ]);
 
   const subjectGridLoading = subjectLevelsLoading || leavingCertPapersLoading || progressLoading;
   const [showAddModal, setShowAddModal] = useState(false);
