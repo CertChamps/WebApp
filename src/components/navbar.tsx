@@ -6,7 +6,6 @@ import '../styles/navbar.css'
 
 // ======================= ICON IMPORTS ======================== // 
 import { LuPencil, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText } from "react-icons/lu";
-import { TbCards } from 'react-icons/tb';
 import type { IconType } from 'react-icons';
 
 export default function Navbar () {
@@ -125,10 +124,8 @@ export default function Navbar () {
             {renderNavItem('nav-social', 'Social', LuUsers, 'social/social')}
 
             {renderNavItem('nav-progress', 'Progress', LuChartSpline, 'progress')}
-            
 
-            {/* ============================= DECKS ICON ================================ */}
-            {renderNavItem('nav-decks', 'Decks', TbCards, 'decks')}
+            {/* Decks nav temporarily hidden while decks are rebuilt */}
 
             {/* ============================= GAMES ICON ================================ */}
             {/* <div className={page == 'games' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('games')}}> 

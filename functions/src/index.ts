@@ -6,6 +6,10 @@ import Stripe from "stripe";
 
 admin.initializeApp();
 
+// Apple IAP (via RevenueCat). Two HTTPS endpoints — see the module
+// docstring for the full wiring story.
+export { revenueCatWebhook, verifyAppleEntitlement } from "./iap/revenueCatWebhook";
+
 const corsMiddleware = cors({ origin: true });
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";

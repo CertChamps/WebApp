@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import crown from '../assets/logo.png'
-import { FaGoogle } from 'react-icons/fa'
+import { FaGoogle, FaApple } from 'react-icons/fa'
 import useAuthentication from '../hooks/useAuthentication'
 import { useNavigate } from 'react-router-dom'
 
@@ -10,7 +10,7 @@ export default function Login() {
     const navigate = useNavigate()
     
 
-    const {signInWithEmail, loginWithGoogle, error } = useAuthentication()
+    const {signInWithEmail, loginWithGoogle, loginWithApple, error } = useAuthentication()
     const [email, setEmail] = useState<string>()
     const [password, setPassword] = useState<string>()
 
@@ -38,6 +38,18 @@ export default function Login() {
 
                 <p className="blue-btn mx-auto my-2 w-9/12 text-center"
                      onClick={() => {signInWithEmail(email ?? '', password ?? '')}}>Login</p>
+
+                <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Sign in with Apple"
+                    onClick={() => { loginWithApple() }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loginWithApple(); } }}
+                    className="red-btn mx-auto my-2 w-9/12 text-center bg-black text-white flex justify-center items-center cursor-pointer select-none"
+                >
+                    <FaApple className='mr-2 text-white' size={19}/>
+                    <p>Sign in with Apple</p>
+                </div>
 
                 <div
                     role="button"

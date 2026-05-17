@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FaGoogle } from "react-icons/fa";
+import { FaGoogle, FaApple } from "react-icons/fa";
 import crown from "../assets/logo.png";
 import useAuthentication from "../hooks/useAuthentication";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -9,7 +9,7 @@ export default function SignUp() {
   const location = useLocation();
   const prevRoute = location.state?.prevRoute;
 
-  const { signUpWithEmail,loginWithGoogle, error, setError } = useAuthentication({ prevRoute });
+  const { signUpWithEmail, loginWithGoogle, loginWithApple, error, setError } = useAuthentication({ prevRoute });
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -118,6 +118,18 @@ export default function SignUp() {
         >
           Sign Up
         </p>
+
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Sign up with Apple"
+          onClick={() => { loginWithApple(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loginWithApple(); } }}
+          className="red-btn mx-auto my-2 w-9/12 text-center bg-black text-white flex justify-center items-center cursor-pointer select-none"
+        >
+          <FaApple className="mr-2 text-white" size={19} />
+          <p>Sign Up With Apple</p>
+        </div>
 
         <div
           role="button"

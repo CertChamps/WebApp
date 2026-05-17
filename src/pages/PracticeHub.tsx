@@ -685,7 +685,7 @@ export default function PracticeHub() {
               aria-expanded={globalSearchOpen}
               aria-controls="ph-global-search-results"
             />
-            <LuSearch className="color-txt-sub shrink-0" size={24} aria-hidden />
+            <LuSearch className="color-txt-sub shrink-0 ml-1 mr-1" size={20} aria-hidden />
             {globalSearchOpen && (
               <div
                 id="ph-global-search-results"
@@ -1288,6 +1288,7 @@ export default function PracticeHub() {
           onClose={() => setShowPaperGateModal(false)}
         />
       )}
+
     </div>
   );
 }

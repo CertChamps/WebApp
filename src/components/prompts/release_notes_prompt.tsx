@@ -9,6 +9,9 @@ export const OPEN_RELEASE_NOTES_EVENT = "open-release-notes";
 const RELEASE_VERSION = "0.10.0";
 const RELEASE_TITLE = "Beta Release Version: 0.10.0";
 
+/** Set false to skip the login popup; manual open via Settings still works. */
+const AUTO_SHOW_ON_LOGIN = false;
+
 const RELEASE_CONTENT = {
   intro: "We've brought some cool new features to CertChamps for you try:",
   newBetaFeatures: [
@@ -53,6 +56,12 @@ export default function ReleaseNotesPrompt() {
   }, [user?.uid]);
 
   useEffect(() => {
+    if (!AUTO_SHOW_ON_LOGIN) {
+      setShowPrompt(false);
+      setCheckingStatus(false);
+      return;
+    }
+
     const checkReleaseNotesStatus = async () => {
       if (!canCheck) {
         setShowPrompt(false);

@@ -1,16 +1,14 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { LuArrowLeft, LuPencil, LuSparkles, LuCheck } from "react-icons/lu";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import Cropper from "react-easy-crop";
 import { motion, AnimatePresence } from "framer-motion";
-import { auth, db } from "../../firebase";
+import { db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
+import { usePayments, refetchSubscriptionState } from "../hooks/usePayments";
 import "../styles/settings.css";
-
-const CREATE_PRO_CHECKOUT_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/createProCheckout";
-const CREATE_BILLING_PORTAL_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/createBillingPortalSession";
 
 type TabId = "home" | "payments";
 
@@ -24,6 +22,26 @@ const fadeUp = {
     show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] as const } },
 };
 
+interface PaymentsTabProps {
+    user: any;
+    paymentSuccess: boolean;
+    paymentCancel: boolean;
+    checkoutLoading: boolean;
+    checkoutError: string | null;
+    portalLoading: boolean;
+    portalError: string | null;
+    restoreLoading: boolean;
+    /** What this device would charge a NEW purchase with — drives the
+     *  Apple-specific "Restore Purchases" button + price label. */
+    activeProvider: "stripe" | "apple";
+    /** Display price for the upgrade card. Null while loading. */
+    priceFormatted: string | null;
+    pricePeriod: "year" | "month";
+    onUpgrade: () => void;
+    onManage: () => void;
+    onRestore: () => void;
+}
+
 const PaymentsTab = ({
     user,
     paymentSuccess,
@@ -32,20 +50,25 @@ const PaymentsTab = ({
     checkoutError,
     portalLoading,
     portalError,
+    restoreLoading,
+    activeProvider,
+    priceFormatted,
+    pricePeriod,
     onUpgrade,
     onManage,
-}: {
-    user: any;
-    paymentSuccess: boolean;
-    paymentCancel: boolean;
-    checkoutLoading: boolean;
-    checkoutError: string | null;
-    portalLoading: boolean;
-    portalError: string | null;
-    onUpgrade: () => void;
-    onManage: () => void;
-}) => {
+    onRestore,
+}: PaymentsTabProps) => {
     const isPro = !!user?.isPro;
+    const storedProvider: "stripe" | "apple" | undefined = user?.paymentProvider;
+
+    // Friendly label for the "Manage" button. Apple subs are managed in
+    // iOS Settings, Stripe in the Billing Portal.
+    const manageLabel =
+        storedProvider === "apple"
+            ? "Manage in App Store"
+            : storedProvider === "stripe"
+                ? "Manage subscription"
+                : "Manage subscription";
 
     return (
         <motion.div variants={container} initial="hidden" animate="show" className="max-w-xl">
@@ -108,23 +131,25 @@ const PaymentsTab = ({
                                         {new Date(user.subscriptionPeriodEnd * 1000).toLocaleDateString(undefined, { dateStyle: "long" })}
                                     </p>
                                 )}
-                                <div className="pt-2">
+                                <div className="pt-2 flex flex-wrap gap-3">
                                     <button
                                         type="button"
                                         onClick={onManage}
                                         disabled={portalLoading}
                                         className="px-5 py-2.5 rounded-xl border border-color-border color-txt-main hover:color-bg-grey-10 disabled:opacity-60 disabled:cursor-not-allowed transition-all text-sm font-medium cursor-pointer"
                                     >
-                                        {portalLoading ? "Opening…" : "Manage subscription"}
+                                        {portalLoading ? "Opening…" : manageLabel}
                                     </button>
-                                    {portalError && <p className="text-red-500 text-sm mt-2">{portalError}</p>}
                                 </div>
+                                {portalError && <p className="text-red-500 text-sm mt-2">{portalError}</p>}
                             </div>
                         ) : (
                             <>
                                 <div className="flex items-baseline gap-2 mt-4 mb-6">
-                                    <span className="text-4xl font-extrabold color-txt-main">€30</span>
-                                    <span className="color-txt-sub text-base font-medium">/ year</span>
+                                    <span className="text-4xl font-extrabold color-txt-main">
+                                        {priceFormatted ?? "€30"}
+                                    </span>
+                                    <span className="color-txt-sub text-base font-medium">/ {pricePeriod}</span>
                                 </div>
 
                                 <motion.p variants={fadeUp} className="color-txt-sub text-base leading-relaxed mb-8">
@@ -141,10 +166,23 @@ const PaymentsTab = ({
                                 >
                                     <span className="ace-cta-shimmer" />
                                     <span className="relative z-[1] color-txt-main font-bold">
-                                        {checkoutLoading ? "Redirecting to checkout…" : "Get ACE"}
+                                        {checkoutLoading
+                                            ? (activeProvider === "apple" ? "Opening Apple…" : "Redirecting to checkout…")
+                                            : "Get ACE"}
                                     </span>
                                 </motion.button>
                                 {checkoutError && <p className="text-red-500 text-sm mt-3">{checkoutError}</p>}
+
+                                {activeProvider === "apple" && (
+                                    <button
+                                        type="button"
+                                        onClick={onRestore}
+                                        disabled={restoreLoading}
+                                        className="mt-4 text-sm color-txt-sub hover:color-txt-accent underline disabled:opacity-60 cursor-pointer"
+                                    >
+                                        {restoreLoading ? "Restoring…" : "Restore previous purchases"}
+                                    </button>
+                                )}
                             </>
                         )}
                     </div>
@@ -166,12 +204,12 @@ const ManageAccount = () => {
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
     const [showCropper, setShowCropper] = useState(false);
-    const [checkoutLoading, setCheckoutLoading] = useState(false);
-    const [checkoutError, setCheckoutError] = useState<string | null>(null);
-    const [portalLoading, setPortalLoading] = useState(false);
-    const [portalError, setPortalError] = useState<string | null>(null);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [paymentCancel, setPaymentCancel] = useState(false);
+
+    // Unified payment hook — picks Stripe on web/Android, Apple IAP on
+    // iOS native. Handles loading / error state for both surfaces.
+    const payments = usePayments();
 
     useEffect(() => {
         if (searchParams.get("tab") === "payments") {
@@ -255,90 +293,44 @@ const ManageAccount = () => {
         { id: "payments", label: "Payments" },
     ];
 
-    // Read success/cancel from URL and refetch user when returning from Stripe
+    // Read success/cancel from URL and refetch user when returning from
+    // Stripe Checkout (web only — Apple IAP completes in-app).
     useEffect(() => {
         const success = searchParams.get("success");
         const cancel = searchParams.get("cancel");
         if (success === "pro") {
             setPaymentSuccess(true);
             setSearchParams({}, { replace: true });
-            // Refetch user so isPro and subscriptionPeriodEnd are up to date (webhook may have run)
-            const refetch = async () => {
-                if (!user?.uid) return;
-                const userDoc = await getDoc(doc(db, "user-data", user.uid));
-                if (userDoc.exists()) {
-                    const d = userDoc.data();
-                    setUser((prev: typeof user) => ({
-                        ...prev,
-                        isPro: d.isPro === true,
-                        subscriptionPeriodEnd: typeof d.subscriptionPeriodEnd === "number" ? d.subscriptionPeriodEnd : undefined,
-                    }));
-                }
-            };
-            refetch();
+            void refetchSubscriptionState(setUser);
         }
         if (cancel === "pro") {
             setPaymentCancel(true);
             setSearchParams({}, { replace: true });
         }
-    }, [searchParams, setSearchParams, user?.uid]);
+    }, [searchParams, setSearchParams, setUser]);
 
+    // For Apple IAP, `purchase()` resolves locally when the StoreKit
+    // sheet closes successfully. Refetch the Firestore doc so the rest
+    // of the app sees `isPro: true` immediately. Stripe path bails out
+    // before this because `window.location.href` already navigated away.
     const handleUpgradeToPro = async () => {
-        if (!auth.currentUser) return;
-        setCheckoutError(null);
-        setCheckoutLoading(true);
-        try {
-            const idToken = await auth.currentUser.getIdToken();
-            const res = await fetch(CREATE_PRO_CHECKOUT_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ idToken }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                setCheckoutError(data.error || "Failed to start checkout");
-                setCheckoutLoading(false);
-                return;
-            }
-            if (data.url) {
-                window.location.href = data.url;
-                return;
-            }
-            setCheckoutError("Invalid response from server");
-        } catch (e) {
-            console.error("Checkout error:", e);
-            setCheckoutError("Something went wrong. Please try again.");
+        const ok = await payments.purchase();
+        if (ok) {
+            setPaymentSuccess(true);
+            await refetchSubscriptionState(setUser);
         }
-        setCheckoutLoading(false);
     };
 
     const handleManageSubscription = async () => {
-        if (!auth.currentUser) return;
-        setPortalError(null);
-        setPortalLoading(true);
-        try {
-            const idToken = await auth.currentUser.getIdToken();
-            const res = await fetch(CREATE_BILLING_PORTAL_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ idToken }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                setPortalError(data.error || "Failed to open billing portal");
-                setPortalLoading(false);
-                return;
-            }
-            if (data.url) {
-                window.location.href = data.url;
-                return;
-            }
-            setPortalError("Invalid response from server");
-        } catch (e) {
-            console.error("Billing portal error:", e);
-            setPortalError("Something went wrong. Please try again.");
+        await payments.openManagement();
+    };
+
+    const handleRestore = async () => {
+        const ok = await payments.restore();
+        if (ok) {
+            setPaymentSuccess(true);
+            await refetchSubscriptionState(setUser);
         }
-        setPortalLoading(false);
     };
 
     return (
@@ -424,14 +416,19 @@ const ManageAccount = () => {
                 {activeTab === "payments" && (
                     <PaymentsTab
                         user={user}
-                        paymentSuccess={paymentSuccess}
+                        paymentSuccess={paymentSuccess || payments.success}
                         paymentCancel={paymentCancel}
-                        checkoutLoading={checkoutLoading}
-                        checkoutError={checkoutError}
-                        portalLoading={portalLoading}
-                        portalError={portalError}
+                        checkoutLoading={payments.purchaseLoading}
+                        checkoutError={payments.error}
+                        portalLoading={payments.manageLoading}
+                        portalError={payments.error}
+                        restoreLoading={payments.restoreLoading}
+                        activeProvider={payments.activeProvider}
+                        priceFormatted={payments.price?.formatted ?? null}
+                        pricePeriod={payments.price?.period ?? "year"}
                         onUpgrade={handleUpgradeToPro}
                         onManage={handleManageSubscription}
+                        onRestore={handleRestore}
                     />
                 )}
             </div>

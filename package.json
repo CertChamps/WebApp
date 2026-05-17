@@ -19,6 +19,7 @@
     "@cortex-js/compute-engine": "^0.30.2",
     "@excalidraw/excalidraw": "^0.18.0",
     "@react-spring/web": "^10.0.3",
+    "@revenuecat/purchases-capacitor": "^13.1.1",
     "@tailwindcss/vite": "^4.1.11",
     "@types/katex": "^0.16.7",
     "ai": "^6.0.67",

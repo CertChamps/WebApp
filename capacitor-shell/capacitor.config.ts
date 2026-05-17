@@ -8,13 +8,17 @@ const config: CapacitorConfig = {
     App: {
       disableBackButtonHandler: true,
     },
-    // @capgo/capacitor-social-login — bundle only Google to keep IPA small.
-    // The actual iOSClientId / webClientId are passed at runtime via
-    // SocialLogin.initialize() in src/lib/nativeGoogleLogin.ts.
+    // @capgo/capacitor-social-login — bundle Google + Apple. Provider runtime
+    // config is passed via SocialLogin.initialize() in
+    // src/lib/nativeGoogleLogin.ts and src/lib/nativeAppleLogin.ts.
+    //
+    // NOTE: enabling `apple: true` makes the plugin link Alamofire (used by
+    // its Apple provider). The "Sign In With Apple" capability also needs to
+    // be present in App.entitlements / Apple Developer portal for the App ID.
     SocialLogin: {
       providers: {
         google: true,
-        apple: false,
+        apple: true,
         facebook: false,
         twitter: false,
       },

@@ -12,8 +12,6 @@ import Replies from "./pages/social/replies";
 import Settings from "./pages/settings";
 import ManageAccount from "./pages/manageAccount";
 import DeckViewer from "./pages/deckViewer";
-import Decks from "./pages/decks";
-import MyDecks from "./pages/myDecks";
 import AddQuestions from "./pages/addQuestions";
 import AdminCanvasViewer from "./pages/adminCanvasViewer";
 import ProfileViewer from "./pages/profileViewer";
@@ -95,10 +93,7 @@ const router = createHashRouter([
     path: "/decks",
     element: (
       <ProtectedRoute>
-        <>
-          <Navbar />
-          <Decks />
-        </>
+        <Navigate to="/practice" replace />
       </ProtectedRoute>
     ),
   },
@@ -106,10 +101,7 @@ const router = createHashRouter([
     path: "/decks/my-decks",
     element: (
       <ProtectedRoute>
-        <>
-          <Navbar />
-          <MyDecks />
-        </>
+        <Navigate to="/practice" replace />
       </ProtectedRoute>
     ),
   },

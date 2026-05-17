@@ -23,6 +23,17 @@ export type UserContextType = {
     emailVerified: boolean,
     isPro?: boolean,
     subscriptionPeriodEnd?: number,
+    /** Where the user actually pays today. Drives the "Manage
+     *  subscription" routing on the account page so that a user who
+     *  signed up via Stripe on web can still cancel from inside the
+     *  iPad app (and vice versa). */
+    paymentProvider?: "stripe" | "apple",
+    /** Set once a Stripe checkout completes. Required to open the
+     *  Stripe Billing Portal. */
+    stripeCustomerId?: string,
+    /** Set once an Apple IAP completes. Permanent identifier for the
+     *  Apple subscription across renewals. */
+    appleOriginalTransactionId?: string,
     releaseNotesSeenVersions?: string[],
     },
     setUser: React.Dispatch<React.SetStateAction<any>>
@@ -50,6 +61,9 @@ export const UserContext = createContext<UserContextType>({
     emailVerified: false,
     isPro: false,
     subscriptionPeriodEnd: undefined,
+    paymentProvider: undefined,
+    stripeCustomerId: undefined,
+    appleOriginalTransactionId: undefined,
     releaseNotesSeenVersions: [],
     },
     setUser: () => {}

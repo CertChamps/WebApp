@@ -6,6 +6,7 @@ import { TutorialProvider } from "./context/TutorialContext";
 import AppRouter from "./Router";
 import UsernamePrompt from "./components/prompts/username_prompt";
 import ReleaseNotesPrompt from "./components/prompts/release_notes_prompt";
+import { initPayments } from "./lib/payments";
 //import CustomCursor from "./components/CustomCursor"
 
 export default function App() {
@@ -29,6 +30,16 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("OPTIONS", JSON.stringify(options));
   }, [options]);
+
+  // Configure RevenueCat early so the Apple IAP sheet is ready by the
+  // time the user lands on the upgrade page. Safe no-op on web/Android.
+  // `setPaymentsUser` in useAuthentication will identify the user once
+  // we know their Firebase UID.
+  useEffect(() => {
+    const cachedUid: string | undefined = user?.uid;
+    void initPayments(cachedUid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Native shell UX controls (Android back handling + touch-safe viewport)
   useEffect(() => {

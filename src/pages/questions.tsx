@@ -249,6 +249,7 @@ export default function Questions() {
     const urlIndexInPaper = searchParams.get("indexInPaper");
     const urlQuestionId = searchParams.get("questionId");
     const urlImageKey = searchParams.get("imageKey");
+    /** When stepping through an AI-curated set of questions saved by Practice Hub. */
     const normalizedUrlLevel = normalizePaperLevel(urlLevel);
     const normalizedUrlSubject = (urlSubject ?? "").trim().toLowerCase();
 
@@ -302,6 +303,7 @@ export default function Questions() {
     useEffect(() => {
         setSubjectFilter(urlSubject || null);
     }, [urlSubject]);
+
     const [collectionPaths, setCollectionPaths] = useState<string[]>(initialPaths);
     const [sidebarOpen, setSidebarOpen] = useState(true);
 

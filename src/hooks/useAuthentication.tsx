@@ -13,6 +13,8 @@ import {
 } from "firebase/auth";
 import { auth } from "../../firebase";
 import { signInWithGoogle } from "../lib/nativeGoogleLogin";
+import { signInWithApple } from "../lib/nativeAppleLogin";
+import { setPaymentsUser } from "../lib/payments";
 
 type authprops = { prevRoute?: string };
 
@@ -115,12 +117,25 @@ const userSetup = async (uid: string, username: string, email: string) => {
         isAdmin: userData.isAdmin === true || isAdminUid(userDoc.id),
         isPro: userData.isPro === true,
         subscriptionPeriodEnd: typeof userData.subscriptionPeriodEnd === "number" ? userData.subscriptionPeriodEnd : undefined,
+        paymentProvider:
+          userData.paymentProvider === "stripe" || userData.paymentProvider === "apple"
+            ? userData.paymentProvider
+            : undefined,
+        stripeCustomerId: typeof userData.stripeCustomerId === "string" ? userData.stripeCustomerId : undefined,
+        appleOriginalTransactionId:
+          typeof userData.appleOriginalTransactionId === "string"
+            ? userData.appleOriginalTransactionId
+            : undefined,
         releaseNotesSeenVersions: Array.isArray(userData.releaseNotesSeenVersions)
           ? userData.releaseNotesSeenVersions
           : [],
       });
 
       console.log("2. Context Set. Verified:", isEmailVerified);
+
+      // Identify the user to RevenueCat so any Apple IAP webhook fires
+      // with our Firebase UID in `app_user_id`. No-op on web / Android.
+      void setPaymentsUser(uid);
 
       // Log daily login for activity heatmap
       try {
@@ -196,6 +211,50 @@ useEffect(() => {
         ...prev,
         general: code ? `Google login failed (${code}): ${message}` : `Google login failed: ${message}`,
       }));
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  /** ==================== APPLE LOGIN ====================
+   * Single entry point — signInWithApple() picks the native plugin on
+   * iOS/Android Capacitor and the Firebase web popup on the browser
+   * (including iPad Safari).
+   */
+  const loginWithApple = async () => {
+    setIsLoggingIn(true);
+    try {
+      const result = await signInWithApple();
+      const user = result.user;
+
+      if (user && user.email) {
+        await userSetup(user.uid, user.displayName ?? "newUser", user.email);
+      } else if (user) {
+        // Apple users may opt out of sharing their email. We still create a
+        // Firebase session, but we can't proceed without one in our schema.
+        setError((prev: any) => ({
+          ...prev,
+          general:
+            "Apple did not share an email with us. Please retry and choose 'Share My Email'.",
+        }));
+      }
+    } catch (err: any) {
+      const code = err?.code ?? err?.errorCode;
+      const message = err?.message ?? err?.errorMessage ?? String(err);
+      console.error("Apple Login Error:", { code, message, raw: err });
+      // Silently swallow user-cancelled flows (no need to scare the user).
+      const cancelled =
+        code === "auth/popup-closed-by-user" ||
+        code === "auth/cancelled-popup-request" ||
+        /cancel/i.test(message ?? "");
+      if (!cancelled) {
+        setError((prev: any) => ({
+          ...prev,
+          general: code
+            ? `Apple login failed (${code}): ${message}`
+            : `Apple login failed: ${message}`,
+        }));
+      }
     } finally {
       setIsLoggingIn(false);
     }
@@ -295,5 +354,5 @@ useEffect(() => {
   //   return () => unsubscribe();
   // }, [isLoggingIn]); 
 
-  return { loginWithGoogle, signUpWithEmail, signInWithEmail, userSetup, error, setError };
+  return { loginWithGoogle, loginWithApple, signUpWithEmail, signInWithEmail, userSetup, error, setError };
 }
