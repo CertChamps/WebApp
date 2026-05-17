@@ -15,12 +15,12 @@
  *       in `functions/src/index.ts`) to write the canonical `isPro` /
  *       `subscriptionPeriodEnd` fields into Firestore.
  *
- * The entitlement we check is called `ace` in the RevenueCat dashboard.
- * The product itself is identified by Apple as
- * `ACE_PRODUCT_IDENTIFIER` (must match App Store Connect).
+ * Entitlement, offering, package, and product IDs must match the
+ * RevenueCat dashboard exactly (see constants below).
  */
 
 import { Capacitor } from "@capacitor/core";
+import type { PurchasesPackage } from "@revenuecat/purchases-capacitor";
 import { auth } from "../../../firebase";
 import type {
     PaymentProvider,
@@ -28,17 +28,28 @@ import type {
     PurchaseResult,
 } from "./types";
 
-/** RevenueCat entitlement identifier that gates ACE. Configure this in
- *  the RevenueCat dashboard ("Entitlements"). */
-export const ACE_ENTITLEMENT_ID = "ace";
+/** RevenueCat entitlement identifier that gates ACE. */
+export const ACE_ENTITLEMENT_ID = "CertChamps ACE";
 
-/** Apple product identifier for the €30/year ACE subscription.
- *  This MUST match the product you create in App Store Connect. */
-export const ACE_PRODUCT_IDENTIFIER = "certchamps_ace_yearly";
+/** App Store / RevenueCat product identifier for the yearly ACE subscription. */
+export const ACE_PRODUCT_IDENTIFIER = "CertChamps_ACE";
 
-/** RevenueCat offering identifier. Use the default offering unless you
- *  start running A/B tests. */
-const ACE_OFFERING_IDENTIFIER = "default";
+/** RevenueCat offering identifier. */
+const ACE_OFFERING_IDENTIFIER = "CertChamps_ACE";
+
+/** RevenueCat package identifier (annual). */
+const ACE_PACKAGE_IDENTIFIER = "$rc_annual";
+
+function resolveAcePackage(
+    offering: { annual?: PurchasesPackage | null; availablePackages?: PurchasesPackage[] } | null | undefined
+): PurchasesPackage | null | undefined {
+    if (!offering) return null;
+    return (
+        offering.annual ??
+        offering.availablePackages?.find((p) => p.identifier === ACE_PACKAGE_IDENTIFIER) ??
+        offering.availablePackages?.[0]
+    );
+}
 
 /** Firebase Function that hits the RevenueCat REST API server-side and
  *  reconciles the user's entitlement into Firestore immediately, so the
@@ -101,9 +112,11 @@ export const appleProvider: PaymentProvider = {
             const offerings = await Purchases.getOfferings();
             const offering =
                 offerings.all[ACE_OFFERING_IDENTIFIER] ?? offerings.current;
-            const pkg = offering?.annual ?? offering?.availablePackages?.[0];
+            const pkg = resolveAcePackage(offering);
             if (!pkg) {
                 console.warn("[applePayment] no ACE package available in offering", {
+                    offeringId: ACE_OFFERING_IDENTIFIER,
+                    packageId: ACE_PACKAGE_IDENTIFIER,
                     offerings: Object.keys(offerings.all ?? {}),
                 });
                 return null;
@@ -128,7 +141,7 @@ export const appleProvider: PaymentProvider = {
             const offerings = await Purchases.getOfferings();
             const offering =
                 offerings.all[ACE_OFFERING_IDENTIFIER] ?? offerings.current;
-            const pkg = offering?.annual ?? offering?.availablePackages?.[0];
+            const pkg = resolveAcePackage(offering);
             if (!pkg) {
                 return {
                     success: false,
@@ -136,6 +149,11 @@ export const appleProvider: PaymentProvider = {
                 };
             }
 
+            console.log("[applePayment] purchasing package", {
+                offeringId: ACE_OFFERING_IDENTIFIER,
+                packageId: pkg.identifier,
+                productId: pkg.product.identifier,
+            });
             const result = await Purchases.purchasePackage({ aPackage: pkg });
             const entitlement =
                 result.customerInfo.entitlements.active[ACE_ENTITLEMENT_ID];

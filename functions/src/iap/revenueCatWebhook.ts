@@ -47,9 +47,9 @@ import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import fetch from "node-fetch";
 
-/** RevenueCat entitlement that grants ACE. Configure on the dashboard
- *  under "Entitlements" — this constant just identifies it server-side. */
-const ACE_ENTITLEMENT_ID = "ace";
+/** RevenueCat entitlement that grants ACE — must match the dashboard
+ *  entitlement identifier exactly (including the space). */
+const ACE_ENTITLEMENT_ID = "CertChamps ACE";
 
 /** Firestore mirror of the App Store originalTransactionId → Firebase
  *  uid mapping. Mirrors the existing `stripe_subscriptions` collection. */
