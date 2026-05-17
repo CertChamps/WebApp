@@ -14,12 +14,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     /// Lock iPad to horizontal orientations (matches `UISupportedInterfaceOrientations~ipad` in Info.plist).
     /// Ensures the window does not follow child view controllers that advertise portrait.
-    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            return [.landscapeLeft, .landscapeRight]
-        }
-        return [.portrait, .landscapeLeft, .landscapeRight]
-    }
+    // func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+    //     if UIDevice.current.userInterfaceIdiom == .pad {
+    //         return [.landscapeLeft, .landscapeRight]
+    //     }
+    //     return [.portrait, .landscapeLeft, .landscapeRight]
+    // }
 
     func applicationWillResignActive(_ application: UIApplication) {
         // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
