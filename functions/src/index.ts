@@ -9,6 +9,7 @@ admin.initializeApp();
 // Apple IAP (via RevenueCat). Two HTTPS endpoints — see the module
 // docstring for the full wiring story.
 export { revenueCatWebhook, verifyAppleEntitlement } from "./iap/revenueCatWebhook";
+export { deleteAccount } from "./account/deleteAccount";
 
 const corsMiddleware = cors({ origin: true });
 

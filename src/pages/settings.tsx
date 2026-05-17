@@ -2,9 +2,6 @@
 import { useContext } from "react"
 import { useNavigate } from "react-router-dom";
 
-// Firebase Auth
-import { auth } from "../../firebase";
-
 // Contexts
 import { OptionsContext } from "../context/OptionsContext"
 import { UserContext } from "../context/UserContext";
@@ -15,13 +12,13 @@ import { TutorialTriggerButton } from "../components/tutorial/Tutorial";
 import { OPEN_RELEASE_NOTES_EVENT } from "../components/prompts/release_notes_prompt";
 
 // Styles & Icons
-import { LuChevronRight, LuLogOut, LuNotebookText, LuRotateCcw, LuUserCog } from "react-icons/lu";
+import { LuChevronRight, LuNotebookText, LuRotateCcw, LuUserCog } from "react-icons/lu";
 import '../styles/settings.css'
 
 export default function Settings() {
 
     const { options, setOptions } = useContext(OptionsContext)
-    const { user, setUser } = useContext(UserContext)
+    const { user } = useContext(UserContext)
     const navigate = useNavigate()
     
     // Tutorial context
@@ -33,16 +30,6 @@ export default function Settings() {
             theme
         }))
     }
-
-    // ======================================== EXISTING USERS ======================================= //
-    const logOut = async () => {
-        await auth.signOut()
-        localStorage.setItem("USER", "")
-        setUser(null)
-        navigate('/')
-    }
-    // =============================================================================================== //
-
 
     return (
         <div className="p-4 w-full h-full overflow-y-scroll scrollbar-minimal">        
@@ -64,22 +51,18 @@ export default function Settings() {
                 alt="User Avatar"
                 className="avatar-img"
             />
-            <h1 className="avatar-username">{user?.username}</h1>
+            <div className="flex flex-col items-start gap-3 min-w-0">
+                <h1 className="avatar-username">{user?.username}</h1>
+                <button
+                    type="button"
+                    className="settings-manage-account-btn"
+                    onClick={() => navigate("/user/manage-account")}
+                >
+                    <span className="font-bold">Manage Account</span>
+                    <LuUserCog className="txt-heading-colour shrink-0" strokeWidth={2.5} size={18} />
+                </button>
+            </div>
         </div>
-
-        <span className="cursor-target color-bg-accent txt-heading-colour px-4 py-2 rounded-out mb-2 hover:scale-95 duration-200
-            mx-6 cursor-pointer transition-all" 
-                onClick={() => navigate('/user/manage-account')}>
-                <span className="font-bold">Manage Account</span>
-                <LuUserCog className="txt-heading-colour inline mx-1.5" strokeWidth={3}/>
-        </span>
-
-        <span className="cursor-target color-bg-accent txt-heading-colour px-4 py-2 rounded-out mb-2 hover:scale-95 duration-200
-            mx-6 cursor-pointer transition-all" 
-                onClick={() => {logOut()}}>
-                <span className="font-bold">Log Out</span>
-                <LuLogOut className="txt-heading-colour inline mx-1" strokeWidth={3}/>
-        </span> 
 
         {/* ====================================== QUESTION SETTINGS ========================================= */}
         {/* <div className="flex w-full items-center mt-6">
