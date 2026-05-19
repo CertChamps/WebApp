@@ -26,7 +26,7 @@ import ExtractQuestionsFlow, {
   type ExtractedRegion,
 } from "../components/addQuestions/ExtractQuestionsFlow";
 import "../styles/settings.css";
-import { ADMIN_UIDS } from "../constants/adminUids";
+import { isAdminUid } from "../constants/adminUids";
 
 type AddQuestionsTab = "upload" | "extract";
 
@@ -297,7 +297,7 @@ export default function AddQuestions() {
     null
   );
 
-  const isAdmin = user?.uid && ADMIN_UIDS.includes(user.uid);
+  const isAdmin = isAdminUid(user?.uid, user?.email);
   const [tab, setTab] = useState<AddQuestionsTab>(
     persistedOnce?.tab ?? "upload"
   );

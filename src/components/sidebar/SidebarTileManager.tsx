@@ -8,6 +8,7 @@ import Timer from "../timer";
 import PastPaperMarkingScheme from "../questions/PastPaperMarkingScheme";
 import ProGate from "../ProGate";
 import { UserContext } from "../../context/UserContext";
+import { canUseAceFeature } from "../../lib/contentAccess";
 
 const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const };
 
@@ -260,7 +261,7 @@ function TileContent({
 function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionId: string; part: number; isPaperThread: boolean; question?: any }) {
   const { user } = useContext(UserContext);
 
-  if (!user?.isPro) {
+  if (!canUseAceFeature(user, "threads")) {
     return (
       <div className="relative h-full overflow-hidden color-bg">
         <div className="h-full filter blur-[2px] pointer-events-none select-none opacity-85 p-4 space-y-4">

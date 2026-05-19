@@ -3,9 +3,8 @@ import { Capacitor } from "@capacitor/core";
 import { UserContext } from "./context/UserContext";
 import { OptionsContext } from "./context/OptionsContext";
 import { TutorialProvider } from "./context/TutorialContext";
+import { OnboardingProvider } from "./context/OnboardingContext";
 import AppRouter from "./Router";
-import UsernamePrompt from "./components/prompts/username_prompt";
-import ReleaseNotesPrompt from "./components/prompts/release_notes_prompt";
 import { initPayments } from "./lib/payments";
 //import CustomCursor from "./components/CustomCursor"
 
@@ -94,17 +93,17 @@ export default function App() {
     // ================ CONTEXT PROVIDERS ===================== //
     <OptionsContext.Provider value={{ options, setOptions }}>
       <UserContext.Provider value={{ user, setUser }}>
+        <OnboardingProvider>
         <TutorialProvider>
           {/* // ================ DIV THEME WRAPPER ===================== // */}
           <div id="themed-root" data-theme={options.theme}>
             <div className="app-viewport color-bg flex flex-row overflow-hidden">
               {/* <CustomCursor /> */}
               <AppRouter />
-              <UsernamePrompt />
-              <ReleaseNotesPrompt />
             </div>
           </div>
         </TutorialProvider>
+        </OnboardingProvider>
       </UserContext.Provider>
     </OptionsContext.Provider>
   );

@@ -24,6 +24,9 @@ import { useTutorialContext } from "./context/TutorialContext";
 import MobileRedirect from "./pages/mobileRedirect";
 import PhoneRedirect from "./components/PhoneRedirect";
 import SessionTracker from "./components/SessionTracker";
+import UsernamePrompt from "./components/prompts/username_prompt";
+import OnboardingPrompt from "./components/prompts/onboarding_prompt";
+import ReleaseNotesPrompt from "./components/prompts/release_notes_prompt";
 
 /** Redirects /practice/:id (deck links from social) to /decks/:id */
 function PracticeToDeckRedirect() {
@@ -40,6 +43,9 @@ function RootLayout() {
       <SessionTracker />
       <PhoneRedirect />
       <Outlet />
+      <UsernamePrompt />
+      <OnboardingPrompt />
+      <ReleaseNotesPrompt />
       <Tutorial
         isOpen={showTutorial}
         onClose={() => setShowTutorial(false)}

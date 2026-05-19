@@ -344,7 +344,7 @@ export default function AdminCanvasViewer() {
   const [loadingCanvas, setLoadingCanvas] = useState(false);
   const [canvasError, setCanvasError] = useState("");
 
-  const isAdmin = isAdminUid(user?.uid);
+  const isAdmin = isAdminUid(user?.uid, user?.email);
   const selectedUser = users.find((entry) => entry.uid === selectedUid) ?? null;
   const selectedDetails = selectedUid ? detailsByUid[selectedUid] : undefined;
 

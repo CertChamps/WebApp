@@ -15,7 +15,7 @@ export default function FriendsSearch() {
   const { user } = useContext(UserContext)
   
   // Check if current user is a moderator
-  const isModerator = isAdminUid(user?.uid);
+  const isModerator = isAdminUid(user?.uid, user?.email);
 
   const [search, setSearch] = useState<string>('');
   const [usersFound, setUsersFound] = useState<any[]>([]);

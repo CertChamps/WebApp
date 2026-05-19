@@ -4,21 +4,34 @@ import { useNavigate } from "react-router-dom";
 import Fuse from "fuse.js";
 import {
   useExamPapers,
-  isPaperFree,
   normalizePaperLevel,
+  formatLevelDisplay,
   getExamPaperKey,
   type ExamPaper,
   type PaperQuestion,
 } from "../hooks/useExamPapers";
+import {
+  buildFreeImageSample,
+  canAccessImageTopic,
+  canAccessPaper,
+  computeFreePaperKeys,
+  getContentAccessLabel,
+  hasAceAccess,
+  isImageTopicContentFree,
+  pickStarterImageTopic,
+  type ContentAccessLabel,
+} from "../lib/contentAccess";
 import { UserContext } from "../context/UserContext";
-import PaperProGate from "../components/PaperProGate";
+import { useTutorialContext } from "../context/TutorialContext";
+import ContentProGate from "../components/ContentProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { useImageTopics, listQuestionsForTopic, groupImageQuestions, type ImageTopic } from "../hooks/useImageQuestions";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart, LuHouse } from "react-icons/lu";
+import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart, LuHouse, LuLock } from "react-icons/lu";
 import type { IconType } from "react-icons";
-import { subjectMatchesPaper, getStorageFolderName, getFavouriteSubjectIds, PRACTICE_HUB_SUBJECTS } from "../data/practiceHubSubjects";
+import { subjectMatchesPaper, getStorageFolderName, getFavouriteSubjectIds, FAVOURITES_CHANGED_EVENT, PRACTICE_HUB_SUBJECTS } from "../data/practiceHubSubjects";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
+import IrishHarpIcon from "../components/practiceHub/IrishHarpIcon";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
 
@@ -43,19 +56,6 @@ function getPaperNumber(paper: ExamPaper): number | null {
   if (/\bpaper\s*1\b|paper-1/.test(s)) return 1;
   if (/\bpaper\s*2\b|paper-2/.test(s)) return 2;
   return null;
-}
-
-/** Format level for display */
-function formatLevel(level: string | undefined): string {
-  const normalized = normalizePaperLevel(level);
-  if (!normalized) return "—";
-  return normalized === "higher"
-    ? "Higher"
-    : normalized === "ordinary"
-      ? "Ordinary"
-      : normalized === "foundation"
-        ? "Foundation"
-        : normalized;
 }
 
 type PaperFilter = "1" | "2" | "all";
@@ -110,10 +110,13 @@ function getSubjectIcon(subjectId: string): IconType {
 export default function PracticeHub() {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
+  const { tutorialFlow, hubTourPhase, hubSubjectId, showTutorial, signalHubTourAdvance, setHubContentType } =
+    useTutorialContext();
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
+  const hubTourStartedRef = useRef(false);
   const { papers, loading: papersLoading, getPaperBlob, getPaperQuestions, firstFreePaper } =
     useExamPapers(subjectFilter);
-  const [showPaperGateModal, setShowPaperGateModal] = useState(false);
+  const [showContentGateModal, setShowContentGateModal] = useState(false);
   const [paperFilter, setPaperFilter] = useState<PaperFilter>("all");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
   const [yearFilter, setYearFilter] = useState<YearFilterValue>("all");
@@ -133,6 +136,47 @@ export default function PracticeHub() {
 
   const [hubFavourites, setHubFavourites] = useState<string[]>(() => getFavouriteSubjectIds());
   const onFavouritesChange = useCallback((ids: string[]) => setHubFavourites(ids), []);
+  useEffect(() => {
+    const syncFavourites = () => setHubFavourites(getFavouriteSubjectIds());
+    window.addEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
+    return () => window.removeEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (tutorialFlow === 'from-onboarding' && showTutorial) {
+      if (!hubTourStartedRef.current) {
+        hubTourStartedRef.current = true;
+        setSubjectFilter(null);
+      }
+    } else {
+      hubTourStartedRef.current = false;
+    }
+  }, [tutorialFlow, showTutorial]);
+
+  const handleSubjectSelect = useCallback(
+    (subjectId: string) => {
+      setSubjectFilter(subjectId);
+      setHubContentType(null);
+      if (
+        tutorialFlow === 'from-onboarding' &&
+        showTutorial &&
+        hubTourPhase === 'pick-subject'
+      ) {
+        signalHubTourAdvance();
+      }
+    },
+    [tutorialFlow, showTutorial, hubTourPhase, signalHubTourAdvance, setHubContentType]
+  );
+
+  useEffect(() => {
+    if (tutorialFlow !== 'from-onboarding' || !showTutorial || subjectFilter == null) {
+      setHubContentType(null);
+      return;
+    }
+    if (papersLoading) return;
+    setHubContentType(papers.length === 0 ? 'topic' : 'paper');
+  }, [tutorialFlow, showTutorial, subjectFilter, papersLoading, papers.length, setHubContentType]);
+
   const favouriteSubjects = useMemo(
     () => PRACTICE_HUB_SUBJECTS.filter((s) => hubFavourites.includes(s.id)),
     [hubFavourites]
@@ -157,6 +201,17 @@ export default function PracticeHub() {
     loading: imageTopicsLoading,
     error: imageTopicsError,
   } = useImageTopics(isImageMode ? storageFolderName : null, imageLevelFilter);
+
+  /** Image topics are level-scoped; pick a concrete level when filter is "all" or invalid. */
+  useEffect(() => {
+    if (!isImageMode || imageLevels.length === 0) return;
+    setLevelFilter((current) => {
+      if (current !== "all" && imageLevels.includes(current)) return current;
+      return (imageLevels.includes("higher") ? "higher" : imageLevels[0]) as LevelFilter;
+    });
+  }, [isImageMode, imageLevels]);
+
+  const activeImageLevel = imageLevelFilter ?? imageLevels[0] ?? "higher";
 
   const [selectedImageTopic, setSelectedImageTopic] = useState<ImageTopic | null>(null);
 
@@ -247,6 +302,30 @@ export default function PracticeHub() {
       return tags.some((tag) => set.has(normTag(String(tag))));
     });
   }, [filteredByMeta, topicFilter, paperTagsMap, normTag]);
+
+  const freePaperKeys = useMemo(() => computeFreePaperKeys(papers), [papers]);
+
+  const starterImageTopic = useMemo(
+    () => pickStarterImageTopic(imageTopics, storageFolderName),
+    [imageTopics, storageFolderName]
+  );
+
+  const freeImageSample = useMemo(
+    () =>
+      buildFreeImageSample(
+        starterImageTopic,
+        storageFolderName,
+        activeImageLevel
+      ),
+    [starterImageTopic, storageFolderName, activeImageLevel]
+  );
+
+  const hubTutorialPaperIndex = useMemo(() => {
+    if (filteredPapers.length === 0) return 0;
+    if (hasAceAccess(user)) return 0;
+    const freeIdx = filteredPapers.findIndex((p) => canAccessPaper(user, p, freePaperKeys));
+    return freeIdx >= 0 ? freeIdx : 0;
+  }, [filteredPapers, user, freePaperKeys]);
 
   const topicEntries = useMemo(() => {
     const map = new Map<string, { label: string; paperCount: number }>();
@@ -373,33 +452,56 @@ export default function PracticeHub() {
     setTagsVisibleWhenCollapsed(count > 0 ? count : 1);
   }, [panelTagsExpanded, allTagsInPreview, selectedPaper?.id]);
 
+  const goToPaperSession = useCallback(
+    (paper: ExamPaper) => {
+      if (!canAccessPaper(user, paper, freePaperKeys)) {
+        setShowContentGateModal(true);
+        return;
+      }
+      const normalizedLevel = normalizePaperLevel(paper.level);
+      navigate(
+        `/practice/session?mode=pastpaper&paperId=${paper.id}&level=${normalizedLevel}&subject=${paper.subject ?? ""}`
+      );
+      if (tutorialFlow === "from-onboarding" && hubTourPhase === "pick-paper") {
+        signalHubTourAdvance();
+      }
+    },
+    [user, freePaperKeys, navigate, tutorialFlow, hubTourPhase, signalHubTourAdvance]
+  );
+
   const goToSession = useCallback(() => {
     if (!selectedPaper) return;
-    if (!user?.isPro && !isPaperFree(selectedPaper)) {
-      setShowPaperGateModal(true);
-      return;
-    }
-    const normalizedLevel = normalizePaperLevel(selectedPaper.level);
-    navigate(`/practice/session?mode=pastpaper&paperId=${selectedPaper.id}&level=${normalizedLevel}&subject=${selectedPaper.subject ?? ""}`);
-  }, [selectedPaper, user?.isPro, navigate]);
+    goToPaperSession(selectedPaper);
+  }, [selectedPaper, goToPaperSession]);
 
   const goToImageSession = useCallback(() => {
     if (!selectedImageTopic || !storageFolderName) return;
-    const level = imageLevelFilter ?? (imageLevels[0] || "higher");
+    if (!canAccessImageTopic(user, selectedImageTopic, starterImageTopic, storageFolderName)) {
+      setShowContentGateModal(true);
+      return;
+    }
+    const level = activeImageLevel;
     navigate(
       `/practice/session?mode=imagequestions&subject=${encodeURIComponent(storageFolderName)}&level=${encodeURIComponent(level)}&topic=${encodeURIComponent(selectedImageTopic.name)}`
     );
-  }, [selectedImageTopic, storageFolderName, imageLevelFilter, imageLevels, navigate]);
+  }, [selectedImageTopic, storageFolderName, activeImageLevel, navigate, user, starterImageTopic]);
 
   const goToImageTopicSession = useCallback(
     (topic: ImageTopic) => {
       if (!storageFolderName) return;
-      const level = imageLevelFilter ?? (imageLevels[0] || "higher");
+      if (!canAccessImageTopic(user, topic, starterImageTopic, storageFolderName)) {
+        setShowContentGateModal(true);
+        return;
+      }
+      const level = activeImageLevel;
       navigate(
         `/practice/session?mode=imagequestions&subject=${encodeURIComponent(storageFolderName)}&level=${encodeURIComponent(level)}&topic=${encodeURIComponent(topic.name)}`
       );
+      if (tutorialFlow === "from-onboarding" && hubTourPhase === "pick-paper") {
+        signalHubTourAdvance();
+      }
     },
-    [storageFolderName, imageLevelFilter, imageLevels, navigate]
+    [storageFolderName, activeImageLevel, navigate, tutorialFlow, hubTourPhase, signalHubTourAdvance, user, starterImageTopic]
   );
 
   const goToPastPaperTopicSession = useCallback(
@@ -412,10 +514,10 @@ export default function PracticeHub() {
       if (matchingPapers.length === 0) return;
 
       let targetPaper = matchingPapers[0];
-      if (!user?.isPro) {
-        const freePaper = matchingPapers.find((paper) => isPaperFree(paper));
+      if (!hasAceAccess(user)) {
+        const freePaper = matchingPapers.find((paper) => canAccessPaper(user, paper, freePaperKeys));
         if (!freePaper) {
-          setShowPaperGateModal(true);
+          setShowContentGateModal(true);
           return;
         }
         targetPaper = freePaper;
@@ -426,7 +528,7 @@ export default function PracticeHub() {
         `/practice/session?mode=pastpaper&paperId=${targetPaper.id}&level=${encodeURIComponent(normalizedLevel)}&subject=${encodeURIComponent(targetPaper.subject ?? "")}&topics=${encodeURIComponent(topic)}`
       );
     },
-    [filteredByMeta, normTag, paperTagsMap, user?.isPro, navigate]
+    [filteredByMeta, normTag, paperTagsMap, user, freePaperKeys, navigate]
   );
 
   // Build global search index when user opens search (lazy) – supports both paper and image modes
@@ -442,7 +544,7 @@ export default function PracticeHub() {
         const entries: GlobalSearchEntry[] = [];
 
         if (isImageMode && storageFolderName && imageTopics.length > 0) {
-          const level = imageLevelFilter ?? (imageLevels[0] || "higher");
+          const level = activeImageLevel;
           const topicArrays = await Promise.all(
             imageTopics.map(async (topic) => {
               try {
@@ -452,7 +554,7 @@ export default function PracticeHub() {
                   paper: null,
                   question: null,
                   indexInPaper: 0,
-                  paperLabel: topic.displayName,
+                  paperLabel: `${topic.displayName} · ${formatLevelDisplay(level)}`,
                   questionName: g.displayName,
                   tagsStr: topic.displayName,
                   imageMode: true,
@@ -500,7 +602,7 @@ export default function PracticeHub() {
     return () => {
       cancelled = true;
     };
-  }, [papers, getPaperQuestions, globalSearchOpen, isImageMode, imageTopics, storageFolderName, imageLevelFilter, imageLevels]);
+  }, [papers, getPaperQuestions, globalSearchOpen, isImageMode, imageTopics, storageFolderName, activeImageLevel, imageLevels]);
 
   const globalSearchResults = useMemo(() => {
     const q = globalSearchQuery.trim();
@@ -509,9 +611,22 @@ export default function PracticeHub() {
     return globalSearchIndex.search(q).slice(0, 12).map((r) => r.item);
   }, [globalSearchIndex, globalSearchQuery]);
 
+  const hubTutorialTopicIndex = useMemo(() => {
+    if (!starterImageTopic || imageTopics.length === 0) return 0;
+    const idx = imageTopics.findIndex((t) => t.name === starterImageTopic.name);
+    return idx >= 0 ? idx : 0;
+  }, [imageTopics, starterImageTopic]);
+
   const goToQuestion = useCallback(
     (entry: GlobalSearchEntry) => {
       if (entry.imageMode) {
+        const topic = imageTopics.find((t) => t.name === entry.imageTopic);
+        if (topic && !canAccessImageTopic(user, topic, starterImageTopic, storageFolderName)) {
+          setShowContentGateModal(true);
+          setGlobalSearchOpen(false);
+          setGlobalSearchQuery("");
+          return;
+        }
         navigate(
           `/practice/session?mode=imagequestions&subject=${encodeURIComponent(entry.imageSubject ?? "")}&level=${encodeURIComponent(entry.imageLevel ?? "")}&topic=${encodeURIComponent(entry.imageTopic ?? "")}&imageKey=${encodeURIComponent(entry.imageKey ?? "")}`
         );
@@ -519,8 +634,8 @@ export default function PracticeHub() {
         setGlobalSearchQuery("");
         return;
       }
-      if (entry.paper && !user?.isPro && !isPaperFree(entry.paper)) {
-        setShowPaperGateModal(true);
+      if (entry.paper && !canAccessPaper(user, entry.paper, freePaperKeys)) {
+        setShowContentGateModal(true);
         setGlobalSearchOpen(false);
         setGlobalSearchQuery("");
         return;
@@ -532,7 +647,7 @@ export default function PracticeHub() {
       setGlobalSearchOpen(false);
       setGlobalSearchQuery("");
     },
-    [navigate, user?.isPro]
+    [navigate, user, freePaperKeys, imageTopics, starterImageTopic, storageFolderName]
   );
 
 
@@ -658,7 +773,10 @@ export default function PracticeHub() {
             <div className="practice-hub__subject-field practice-hub__subject-field--oval">
               <SubjectDropdown
                 value={subjectFilter}
-                onChange={setSubjectFilter}
+                onChange={(id) => {
+                  if (id) handleSubjectSelect(id);
+                  else setSubjectFilter(null);
+                }}
                 id="ph-subject"
                 onFavouritesChange={onFavouritesChange}
               />
@@ -783,7 +901,7 @@ export default function PracticeHub() {
                 >
                   {(isImageMode
                     ? LEVEL_OPTIONS.filter(
-                        (opt) => opt.value === "all" || imageLevels.includes(opt.value)
+                        (opt) => opt.value !== "all" && imageLevels.includes(opt.value)
                       )
                     : LEVEL_OPTIONS
                   ).map((opt) => (
@@ -899,20 +1017,26 @@ export default function PracticeHub() {
                       <div
                         role="button"
                         tabIndex={0}
-                        onClick={() => setSubjectFilter(s.id)}
+                        onClick={() => handleSubjectSelect(s.id)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            setSubjectFilter(s.id);
+                            handleSubjectSelect(s.id);
                           }
                         }}
-                        className="deck paper-card flex flex-col"
+                        className="deck paper-card practice-hub__subject-card flex flex-col"
+                        data-tutorial-id={
+                          tutorialFlow === "from-onboarding" &&
+                          showTutorial &&
+                          hubSubjectId === s.id
+                            ? "hub-subject-card"
+                            : undefined
+                        }
                       >
                         <div className="color-border" />
                         <SubjectIconImage subjectId={s.id} />
-                        <div className="bg-overlay" />
                         <div className="practice-hub__paper-card-body">
-                          <div className="flex w-full z-50 mt-21 px-2.5 items-center pt-0.5">
+                          <div className="flex w-full z-50 items-center">
                             <div className="flex flex-col ml-1 min-w-0 flex-1">
                               <span className="txt-heading-colour truncate">{s.label}</span>
                             </div>
@@ -981,7 +1105,30 @@ export default function PracticeHub() {
                         >
                           <TopicCard
                             topic={topic}
-                            onSelect={() => setSelectedImageTopic(topic)}
+                            levelLabel={formatLevelDisplay(activeImageLevel)}
+                            accessLabel={getContentAccessLabel(
+                              user,
+                              isImageTopicContentFree(topic, starterImageTopic, storageFolderName)
+                            )}
+                            tutorialTargetId={
+                              tutorialFlow === "from-onboarding" &&
+                              showTutorial &&
+                              subjectFilter != null &&
+                              hubTourPhase === "pick-paper" &&
+                              i === hubTutorialTopicIndex
+                                ? "hub-first-topic"
+                                : undefined
+                            }
+                            onSelect={() => {
+                              if (
+                                tutorialFlow === "from-onboarding" &&
+                                hubTourPhase === "pick-paper"
+                              ) {
+                                goToImageTopicSession(topic);
+                                return;
+                              }
+                              setSelectedImageTopic(topic);
+                            }}
                           />
                         </motion.div>
                       ))}
@@ -998,7 +1145,9 @@ export default function PracticeHub() {
                           onClick={() => goToImageTopicSession(entry.topic)}
                         >
                           <span className="txt color-txt-main">{entry.label}</span>
-                          <span className="txt-sub color-txt-sub">{entry.questionCount} question{entry.questionCount !== 1 ? "s" : ""}</span>
+                          <span className="txt-sub color-txt-sub">
+                            {formatLevelDisplay(activeImageLevel)} · {entry.questionCount} question{entry.questionCount !== 1 ? "s" : ""}
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -1034,7 +1183,27 @@ export default function PracticeHub() {
                         getPaperBlob={getPaperBlob}
                         questionCount={paperQuestionCountMap[getExamPaperKey(paper)]}
                         tags={paperTagsMap[getExamPaperKey(paper)] ?? []}
+                        accessLabel={getContentAccessLabel(
+                          user,
+                          canAccessPaper(user, paper, freePaperKeys)
+                        )}
+                        tutorialTargetId={
+                          tutorialFlow === "from-onboarding" &&
+                          showTutorial &&
+                          subjectFilter != null &&
+                          hubTourPhase === "pick-paper" &&
+                          i === hubTutorialPaperIndex
+                            ? "hub-first-paper"
+                            : undefined
+                        }
                         onSelect={() => {
+                          if (
+                            tutorialFlow === "from-onboarding" &&
+                            hubTourPhase === "pick-paper"
+                          ) {
+                            goToPaperSession(paper);
+                            return;
+                          }
                           setSelectedPaper(paper);
                           setPanelAnimationDone(false);
                         }}
@@ -1130,7 +1299,7 @@ export default function PracticeHub() {
                 <p className="practice-hub__panel-meta color-txt-sub text-sm">
                   <span>{selectedPaper.year ?? "—"}</span>
                   <span className="practice-hub__panel-meta-sep" aria-hidden> · </span>
-                  <span>{formatLevel(selectedPaper.level)}</span>
+                  <span>{formatLevelDisplay(selectedPaper.level)}</span>
                   <span className="practice-hub__panel-meta-sep" aria-hidden> · </span>
                   <span>Paper {getPaperNumber(selectedPaper) ?? "—"}</span>
                 </p>
@@ -1258,7 +1427,7 @@ export default function PracticeHub() {
                   <p className="practice-hub__panel-meta color-txt-sub text-sm">
                     <span>{selectedImageTopic.questionCount} question{selectedImageTopic.questionCount !== 1 ? "s" : ""}</span>
                     <span className="practice-hub__panel-meta-sep" aria-hidden> · </span>
-                    <span>{formatLevel(imageLevelFilter ?? imageLevels[0])}</span>
+                    <span>{formatLevelDisplay(activeImageLevel)}</span>
                   </p>
 
                   <div className="practice-hub__panel-actions-spacer" aria-hidden />
@@ -1281,11 +1450,12 @@ export default function PracticeHub() {
       )}
 
       {/* Paper pro gate modal – when non-pro tries to open locked paper */}
-      {showPaperGateModal && (
-        <PaperProGate
-          firstFreePaper={firstFreePaper}
+      {showContentGateModal && (
+        <ContentProGate
+          freePaper={isImageMode ? null : firstFreePaper}
+          freeImageSample={isImageMode ? freeImageSample : null}
           asModal
-          onClose={() => setShowPaperGateModal(false)}
+          onClose={() => setShowContentGateModal(false)}
         />
       )}
 
@@ -1296,6 +1466,18 @@ export default function PracticeHub() {
 /** Tags on card: one line only; show first N then "see more" */
 const TAGS_VISIBLE_ON_CARD = 3;
 
+function ContentAccessBadge({ label }: { label: ContentAccessLabel }) {
+  if (label === "free") {
+    return <span className="practice-hub__access-badge practice-hub__access-badge--free">Free</span>;
+  }
+  return (
+    <span className="practice-hub__access-badge practice-hub__access-badge--locked">
+      <LuLock size={10} aria-hidden />
+      ACE
+    </span>
+  );
+}
+
 /** Paper card – deck styling (shadow-small, color-border, txt-heading-colour, blue-btn tags) */
 function PaperCard({
   paper,
@@ -1303,12 +1485,16 @@ function PaperCard({
   questionCount = 0,
   tags = [],
   onSelect,
+  tutorialTargetId,
+  accessLabel,
 }: {
   paper: ExamPaper;
   getPaperBlob: (p: ExamPaper) => Promise<Blob>;
   questionCount?: number;
   tags?: string[];
   onSelect: () => void;
+  tutorialTargetId?: string;
+  accessLabel?: ContentAccessLabel | null;
 }) {
   const [blob, setBlob] = useState<Blob | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -1330,7 +1516,7 @@ function PaperCard({
   }, [paper, getPaperBlob]);
 
   const snapshot = usePaperSnapshot(blob, 1);
-  const levelLabel = formatLevel(paper.level);
+  const levelLabel = formatLevelDisplay(paper.level);
   const visibleTags = tags.slice(0, TAGS_VISIBLE_ON_CARD);
   const hasMoreTags = tags.length > TAGS_VISIBLE_ON_CARD;
 
@@ -1347,11 +1533,16 @@ function PaperCard({
         }
       }}
       className="deck paper-card flex flex-col"
+      data-tutorial-id={tutorialTargetId}
     >
 
       <div className="color-border" />
-      {/* Top 75%: PDF title page (same as deck .image) */}
-      <div className="image overflow-hidden">
+      <div className="image overflow-hidden relative">
+        {accessLabel && (
+          <div className="absolute top-2 right-2 z-10">
+            <ContentAccessBadge label={accessLabel} />
+          </div>
+        )}
         {snapshot ? (
           <img src={snapshot} alt="" className="w-full h-full object-cover object-center" />
         ) : (
@@ -1405,10 +1596,16 @@ function PaperCard({
 /** Topic card for image-based subjects */
 function TopicCard({
   topic,
+  levelLabel,
   onSelect,
+  tutorialTargetId,
+  accessLabel,
 }: {
   topic: ImageTopic;
+  levelLabel: string;
   onSelect: () => void;
+  tutorialTargetId?: string;
+  accessLabel?: ContentAccessLabel | null;
 }) {
   return (
     <div
@@ -1422,9 +1619,15 @@ function TopicCard({
         }
       }}
       className="deck paper-card flex flex-col"
+      data-tutorial-id={tutorialTargetId}
     >
       <div className="color-border" />
-      <div className="image overflow-hidden flex items-center justify-center">
+      <div className="image overflow-hidden flex items-center justify-center relative">
+        {accessLabel && (
+          <div className="absolute top-2 right-2 z-10">
+            <ContentAccessBadge label={accessLabel} />
+          </div>
+        )}
         {topic.thumbnailUrl ? (
           <img src={topic.thumbnailUrl} alt="" className="w-full h-full object-contain" />
         ) : (
@@ -1439,6 +1642,7 @@ function TopicCard({
           <LuImage size={18} className="color-txt-accent shrink-0" aria-hidden />
           <div className="flex flex-col ml-2 min-w-0 flex-1">
             <span className="txt-heading-colour truncate">{topic.displayName}</span>
+            <span className="txt color-txt-sub">{levelLabel}</span>
           </div>
           <div className="ml-auto flex flex-col items-end justify-end shrink-0">
             <span className="txt color-txt-sub">
@@ -1453,10 +1657,18 @@ function TopicCard({
 
 /** Icon thumbnail for favourite subject cards on the landing page */
 function SubjectIconImage({ subjectId }: { subjectId: string }) {
+  if (subjectId === "irish") {
+    return (
+      <div className="image overflow-hidden flex items-center justify-center color-bg-grey-5">
+        <IrishHarpIcon size={48} className="color-txt-accent opacity-70" />
+      </div>
+    );
+  }
+
   const Icon = getSubjectIcon(subjectId);
   return (
     <div className="image overflow-hidden flex items-center justify-center color-bg-grey-5">
-      <Icon size={36} className="color-txt-accent opacity-60" />
+      <Icon size={48} className="color-txt-accent opacity-70" />
     </div>
   );
 }

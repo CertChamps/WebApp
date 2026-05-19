@@ -3,6 +3,9 @@ import { getBlob, ref } from "firebase/storage";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { storage, db } from "../../firebase";
 import { getFirestoreSubjectIds } from "../data/practiceHubSubjects";
+import { computeFreePaperKeys } from "../lib/contentAccess";
+
+export { isPaperFree, isLegacyFreePaper, canAccessPaper, computeFreePaperKeys } from "../lib/contentAccess";
 
 export function normalizePaperLevel(level: string | undefined | null): string {
   const raw = String(level ?? "").trim().toLowerCase();
@@ -17,6 +20,23 @@ export function normalizePaperLevel(level: string | undefined | null): string {
     return "foundation";
   }
   return raw;
+}
+
+export function formatLevelDisplay(level: string | undefined | null): string {
+  const normalized = normalizePaperLevel(level);
+  if (!normalized) return "—";
+  if (normalized === "higher") return "Higher";
+  if (normalized === "ordinary") return "Ordinary";
+  if (normalized === "foundation") return "Foundation";
+  return normalized;
+}
+
+export function formatLevelCode(level: string | undefined | null): string {
+  const normalized = normalizePaperLevel(level);
+  if (normalized === "higher") return "HL";
+  if (normalized === "ordinary") return "OL";
+  if (normalized === "foundation") return "FD";
+  return normalized ? normalized.toUpperCase() : "—";
 }
 
 /** Derive paper number (1 or 2) from label or id. */
@@ -34,7 +54,7 @@ export type ExamPaper = {
   year?: number;
   subject?: string;
   level?: string;
-  /** If true, paper is free for non-pro users. From Firestore or derived for 2024 Paper 1 & 2 maths. */
+  /** If true, paper is free for non-pro users. From Firestore or derived for 2024 Maths HL/OL Paper 1 & 2. */
   isFree?: boolean;
 };
 
@@ -44,17 +64,6 @@ export function getExamPaperKey(paper: Pick<ExamPaper, "id" | "subject" | "level
   return `${subject}::${level}::${paper.id}`;
 }
 
-/** Returns true if paper is free (2024 Paper 1 or 2, maths higher). */
-export function isPaperFree(paper: ExamPaper): boolean {
-  if (paper.isFree === true) return true;
-  const num = getPaperNumber(paper.id, paper.label);
-  return (
-    paper.year === 2024 &&
-    (num === 1 || num === 2) &&
-    (paper.subject ?? "").toLowerCase() === "maths" &&
-    (paper.level ?? "").toLowerCase() === "higher"
-  );
-}
 
 /** One page region defining a snippet of the question on a PDF page. */
 export type PaperPageRegion = {
@@ -402,10 +411,14 @@ export function useExamPapers(
     []
   );
 
-  const firstFreePaper =
-    papers.find((p) => isPaperFree(p) && getPaperNumber(p.id, p.label) === 1) ??
-    papers.find((p) => isPaperFree(p)) ??
-    null;
+  const firstFreePaper = (() => {
+    const freeKeys = computeFreePaperKeys(papers);
+    return (
+      papers.find((p) => freeKeys.has(getExamPaperKey(p)) && getPaperNumber(p.id, p.label) === 1) ??
+      papers.find((p) => freeKeys.has(getExamPaperKey(p))) ??
+      null
+    );
+  })();
 
   return {
     papers,

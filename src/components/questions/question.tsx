@@ -557,7 +557,7 @@ export default function Question(props: questionsProps) {
                           <p className="txt-bold color-txt-accent">{properties?.name}
                               <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
 
-                              {isAdminUid(user?.uid) ? (
+                              {isAdminUid(user?.uid, user?.email) ? (
                                 Array.isArray(content?.[part]?.inputs) && content[part].inputs.length ? (
                                   content[part].inputs.map((input: any, idx: number) => (
                                     Array.isArray(input.answer) ? input.answer.map((ans: any, aidx: number) => (

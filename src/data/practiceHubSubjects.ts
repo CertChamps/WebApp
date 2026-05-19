@@ -150,6 +150,7 @@ export function getFirestoreSubjectIds(subjectSlug: string): string[] {
 }
 
 const FAVOURITES_KEY = "practice-hub-subject-favourites";
+export const FAVOURITES_CHANGED_EVENT = "practice-hub-favourites-changed";
 
 export function getFavouriteSubjectIds(): string[] {
   try {
@@ -165,6 +166,7 @@ export function getFavouriteSubjectIds(): string[] {
 export function setFavouriteSubjectIds(ids: string[]): void {
   try {
     localStorage.setItem(FAVOURITES_KEY, JSON.stringify(ids));
+    window.dispatchEvent(new Event(FAVOURITES_CHANGED_EVENT));
   } catch (_) {}
 }
 

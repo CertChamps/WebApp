@@ -1,7 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { UserContext } from './UserContext';
+import { useOnboardingContext } from './OnboardingContext';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebase';
+
+type TutorialFlow = 'default' | 'from-onboarding';
+export type HubTourPhase = 'pick-subject' | 'pick-paper' | null;
+export type HubContentType = 'paper' | 'topic' | null;
 
 type TutorialContextType = {
   showTutorial: boolean;
@@ -10,6 +15,15 @@ type TutorialContextType = {
   completeTutorial: () => Promise<void>;
   resetTutorial: () => Promise<void>;
   triggerTutorial: () => void;
+  triggerTutorialFromOnboarding: (subjectId: string) => void;
+  tutorialFlow: TutorialFlow;
+  hubSubjectId: string | null;
+  hubTourPhase: HubTourPhase;
+  setHubTourPhase: (phase: HubTourPhase) => void;
+  hubTourAdvanceSignal: number;
+  signalHubTourAdvance: () => void;
+  hubContentType: HubContentType;
+  setHubContentType: (type: HubContentType) => void;
   isLoading: boolean;
 };
 
@@ -17,9 +31,27 @@ const TutorialContext = createContext<TutorialContextType | null>(null);
 
 export function TutorialProvider({ children }: { children: ReactNode }) {
   const { user, setUser } = useContext(UserContext);
+  const { hasCompletedOnboarding, isLoading: onboardingLoading } = useOnboardingContext();
   const [showTutorial, setShowTutorial] = useState(false);
   const [hasCompletedTutorial, setHasCompletedTutorial] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [tutorialFlow, setTutorialFlow] = useState<TutorialFlow>('default');
+  const [hubSubjectId, setHubSubjectId] = useState<string | null>(null);
+  const [hubTourPhase, setHubTourPhase] = useState<HubTourPhase>(null);
+  const [hubTourAdvanceSignal, setHubTourAdvanceSignal] = useState(0);
+  const [hubContentType, setHubContentType] = useState<HubContentType>(null);
+
+  const resetTutorialFlow = useCallback(() => {
+    setTutorialFlow('default');
+    setHubSubjectId(null);
+    setHubTourPhase(null);
+    setHubTourAdvanceSignal(0);
+    setHubContentType(null);
+  }, []);
+
+  const signalHubTourAdvance = useCallback(() => {
+    setHubTourAdvanceSignal((n) => n + 1);
+  }, []);
 
   // Check if user has completed the tutorial on mount
   useEffect(() => {
@@ -39,8 +71,13 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Keep setup order deterministic: username/avatar setup must complete first.
+      // Keep setup order deterministic: profile → onboarding → tutorial.
       if (!user?.username || user.username.trim().length < 1) {
+        setIsLoading(false);
+        return;
+      }
+
+      if (onboardingLoading || !hasCompletedOnboarding) {
         setIsLoading(false);
         return;
       }
@@ -59,6 +96,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         if (userDoc.exists()) {
           const userData = userDoc.data();
           const completed = userData.hasCompletedTutorial ?? false;
+          const declinedOffer = userData.tutorialOfferDeclined ?? false;
           
           setHasCompletedTutorial(completed);
           
@@ -66,7 +104,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
             localStorage.setItem(`tutorial_completed_${user.uid}`, 'true');
           }
           
-          if (!completed) {
+          if (!completed && !declinedOffer) {
             setTimeout(() => {
               setShowTutorial(true);
             }, 500);
@@ -86,7 +124,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     };
 
     checkTutorialStatus();
-  }, [user?.uid, user?.emailVerified, user?.username]);
+  }, [user?.uid, user?.emailVerified, user?.username, hasCompletedOnboarding, onboardingLoading]);
 
   const completeTutorial = useCallback(async () => {
     if (!user?.uid) return;
@@ -100,6 +138,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
 
       setHasCompletedTutorial(true);
       setShowTutorial(false);
+      resetTutorialFlow();
       localStorage.setItem(`tutorial_completed_${user.uid}`, 'true');
 
       setUser((prev: any) => ({
@@ -111,7 +150,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error completing tutorial:', error);
     }
-  }, [user?.uid, setUser]);
+  }, [user?.uid, setUser, resetTutorialFlow]);
 
   const resetTutorial = useCallback(async () => {
     if (!user?.uid) return;
@@ -119,11 +158,13 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     try {
       await setDoc(
         doc(db, 'user-data', user.uid),
-        { hasCompletedTutorial: false },
+        { hasCompletedTutorial: false, tutorialOfferDeclined: false },
         { merge: true }
       );
 
       setHasCompletedTutorial(false);
+      setShowTutorial(false);
+      resetTutorialFlow();
       localStorage.removeItem(`tutorial_completed_${user.uid}`);
 
       setUser((prev: any) => ({
@@ -135,9 +176,17 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error resetting tutorial:', error);
     }
-  }, [user?.uid, setUser]);
+  }, [user?.uid, setUser, resetTutorialFlow]);
 
   const triggerTutorial = useCallback(() => {
+    resetTutorialFlow();
+    setShowTutorial(true);
+  }, [resetTutorialFlow]);
+
+  const triggerTutorialFromOnboarding = useCallback((subjectId: string) => {
+    setTutorialFlow('from-onboarding');
+    setHubSubjectId(subjectId);
+    setHubTourPhase('pick-subject');
     setShowTutorial(true);
   }, []);
 
@@ -145,11 +194,23 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     <TutorialContext.Provider
       value={{
         showTutorial,
-        setShowTutorial,
+        setShowTutorial: (show) => {
+          if (!show) resetTutorialFlow();
+          setShowTutorial(show);
+        },
         hasCompletedTutorial,
         completeTutorial,
         resetTutorial,
         triggerTutorial,
+        triggerTutorialFromOnboarding,
+        tutorialFlow,
+        hubSubjectId,
+        hubTourPhase,
+        setHubTourPhase,
+        hubTourAdvanceSignal,
+        signalHubTourAdvance,
+        hubContentType,
+        setHubContentType,
         isLoading,
       }}
     >

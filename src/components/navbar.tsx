@@ -16,7 +16,7 @@ export default function Navbar () {
 
     // Context and State and Hooks
     const { user } = useContext(UserContext)
-    const isAdmin = isAdminUid(user?.uid)
+    const isAdmin = isAdminUid(user?.uid, user?.email)
     const navigate = useNavigate()
     const location = useLocation()
 

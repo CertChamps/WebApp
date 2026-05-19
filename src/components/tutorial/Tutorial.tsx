@@ -10,10 +10,12 @@ import {
   LuMousePointerClick,
   LuX,
   LuBookMarked,
-  LuTimer
+  LuTimer,
+  LuPencil
 } from 'react-icons/lu';
 import '../../styles/tutorial.css';
 import { normalizePaperLevel, useExamPapers } from '../../hooks/useExamPapers';
+import { useTutorialContext, type HubContentType } from '../../context/TutorialContext';
 
 // Tutorial step definitions
 export type TutorialStep = {
@@ -31,7 +33,63 @@ export type TutorialStep = {
   waitForClick?: boolean; // New: wait for user to click the target
 };
 
-const tutorialSteps: TutorialStep[] = [
+const HUB_PICK_SUBJECT_STEP: TutorialStep = {
+  id: 'hub-pick-subject',
+  title: 'Open your subject',
+  description: 'Tap the subject you picked during setup to browse its content.',
+  icon: LuMousePointerClick,
+  targetId: 'hub-subject-card',
+  position: 'bottom',
+  waitForClick: true,
+  showSkip: true,
+};
+
+const HUB_PICK_PAPER_STEP: TutorialStep = {
+  id: 'hub-pick-paper',
+  title: 'Choose a past paper',
+  description: 'Select a paper to open it — then we\'ll walk you through the practice workspace.',
+  icon: LuMousePointerClick,
+  targetId: 'hub-first-paper',
+  position: 'bottom',
+  waitForClick: true,
+};
+
+const HUB_PICK_TOPIC_STEP: TutorialStep = {
+  id: 'hub-pick-topic',
+  title: 'Choose a topic',
+  description: 'Select a topic to open it — then we\'ll walk you through the practice workspace.',
+  icon: LuMousePointerClick,
+  targetId: 'hub-first-topic',
+  position: 'bottom',
+  waitForClick: true,
+};
+
+const HUB_PICK_CONTENT_STEP: TutorialStep = {
+  id: 'hub-pick-content',
+  title: 'Choose what to practice',
+  description: 'Select a past paper or topic to open — then we\'ll walk you through the practice workspace.',
+  icon: LuMousePointerClick,
+  position: 'bottom',
+  waitForClick: true,
+};
+
+/** @deprecated Use getPracticeHubTutorialSteps — kept for step count references */
+export const PRACTICE_HUB_TUTORIAL_STEPS: TutorialStep[] = [
+  HUB_PICK_SUBJECT_STEP,
+  HUB_PICK_PAPER_STEP,
+];
+
+function getHubPickContentStep(contentType: HubContentType): TutorialStep {
+  if (contentType === 'topic') return HUB_PICK_TOPIC_STEP;
+  if (contentType === 'paper') return HUB_PICK_PAPER_STEP;
+  return HUB_PICK_CONTENT_STEP;
+}
+
+function getPracticeHubTutorialSteps(contentType: HubContentType): TutorialStep[] {
+  return [HUB_PICK_SUBJECT_STEP, getHubPickContentStep(contentType)];
+}
+
+const sessionTutorialSteps: TutorialStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to CertChamps!',
@@ -46,24 +104,6 @@ const tutorialSteps: TutorialStep[] = [
     description: 'This is your AI assistant. It can see your working and the exam paper. Ask it anything about the question and it will help you work through it!',
     icon: LuSparkles,
     targetId: 'sidebar',
-    position: 'left',
-  },
-  {
-    id: 'sidebar-intro',
-    title: 'The Sidebar',
-    description: 'This sidebar has AI, Threads for discussions, a Timer, and more. Click the Threads icon to explore!',
-    icon: LuTarget,
-    targetId: 'sidebar-threads',
-    position: 'left',
-    waitForClick: true,
-    tip: 'Click the Threads icon in the tab bar above.',
-  },
-  {
-    id: 'threads-opened',
-    title: 'Discussion Threads',
-    description: 'This panel shows discussions about the current question. Ask questions or help others here!',
-    icon: LuMessageCircle,
-    targetId: 'sideview-threads',
     position: 'left',
   },
   {
@@ -90,6 +130,14 @@ const tutorialSteps: TutorialStep[] = [
     icon: LuTarget,
     targetId: 'laptop-tablet-toggle',
     position: 'bottom',
+  },
+  {
+    id: 'drawing-toolbar',
+    title: 'Your Working Canvas',
+    description: 'Use the pen, eraser, and grid tools here to write out solutions. Undo, redo, and clear your work anytime while you practice.',
+    icon: LuPencil,
+    targetId: 'drawing-toolbar',
+    position: 'top',
   },
   {
     id: 'click-logtables',
@@ -125,6 +173,38 @@ const tutorialSteps: TutorialStep[] = [
   },
 ];
 
+const LOG_TABLES_STEP_IDS = new Set(['click-logtables', 'logtables-opened']);
+
+function getSessionTutorialSteps(options: {
+  skipWelcome?: boolean;
+  includeLogTables?: boolean;
+}): TutorialStep[] {
+  let steps = sessionTutorialSteps;
+  if (options.skipWelcome) {
+    steps = steps.filter((s) => s.id !== 'welcome');
+  }
+  if (options.includeLogTables === false) {
+    steps = steps.filter((s) => !LOG_TABLES_STEP_IDS.has(s.id));
+  }
+  return steps;
+}
+
+function getActiveTutorialSteps(
+  flow: 'default' | 'from-onboarding',
+  hubContentType: HubContentType = null
+): TutorialStep[] {
+  const includeLogTables = hubContentType !== 'topic';
+  const sessionSteps = getSessionTutorialSteps({
+    skipWelcome: flow === 'from-onboarding',
+    includeLogTables,
+  });
+
+  if (flow === 'from-onboarding') {
+    return [...getPracticeHubTutorialSteps(hubContentType), ...sessionSteps];
+  }
+  return sessionSteps;
+}
+
 type TutorialProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -135,11 +215,21 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
   const navigate = useNavigate();
   const location = useLocation();
   const { papers } = useExamPapers(null, { loadAllWhenNull: true });
+  const { tutorialFlow, setHubTourPhase, hubTourAdvanceSignal, hubContentType } = useTutorialContext();
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isWaitingForAction, setIsWaitingForAction] = useState(false);
   const observerRef = useRef<MutationObserver | null>(null);
   const clickListenerRef = useRef<(() => void) | null>(null);
+  const lastHubAdvanceSignal = useRef(0);
+  const wasOpenRef = useRef(false);
+
+  const activeSteps = useMemo(
+    () => getActiveTutorialSteps(tutorialFlow, hubContentType),
+    [tutorialFlow, hubContentType]
+  );
+  const hubStepCount = tutorialFlow === 'from-onboarding' ? 2 : 0;
+  const inHubPhase = currentStep < hubStepCount;
 
   const tutorialPaper = useMemo(() => {
     const getPaperNumber = (id: string, label?: string): number | null => {
@@ -160,9 +250,9 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
     );
   }, [papers]);
 
-  const step = tutorialSteps[currentStep];
-  const isLastStep = currentStep === tutorialSteps.length - 1;
-  const progress = ((currentStep + 1) / tutorialSteps.length) * 100;
+  const step = activeSteps[currentStep];
+  const isLastStep = currentStep === activeSteps.length - 1;
+  const progress = ((currentStep + 1) / activeSteps.length) * 100;
 
   // Check if current step requires waiting for user action
   const needsUserAction = step?.waitForClick || step?.requiredAction === 'navigate';
@@ -191,16 +281,71 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
     }
   }, [findTargetElement]);
 
-  // Reset on open
+  // Reset only when tutorial opens (not on every re-render while open)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !wasOpenRef.current) {
       setCurrentStep(0);
       setIsWaitingForAction(false);
+      lastHubAdvanceSignal.current = 0;
+      wasOpenRef.current = true;
+    }
+    if (!isOpen) {
+      wasOpenRef.current = false;
     }
   }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
+
+    const hubStep = activeSteps[currentStep];
+    if (tutorialFlow === 'from-onboarding') {
+      if (hubStep?.id === 'hub-pick-subject') {
+        setHubTourPhase('pick-subject');
+      } else if (
+        hubStep?.id === 'hub-pick-paper' ||
+        hubStep?.id === 'hub-pick-topic' ||
+        hubStep?.id === 'hub-pick-content'
+      ) {
+        setHubTourPhase('pick-paper');
+      } else {
+        setHubTourPhase(null);
+      }
+    } else {
+      setHubTourPhase(null);
+    }
+  }, [isOpen, currentStep, tutorialFlow, activeSteps, setHubTourPhase]);
+
+  // Hub tour: advance when Practice Hub reports subject/paper selection
+  useEffect(() => {
+    if (!isOpen || tutorialFlow !== 'from-onboarding') return;
+    if (hubTourAdvanceSignal === 0 || hubTourAdvanceSignal === lastHubAdvanceSignal.current) return;
+
+    const hubStep = activeSteps[currentStep];
+    if (!hubStep?.id.startsWith('hub-')) return;
+
+    lastHubAdvanceSignal.current = hubTourAdvanceSignal;
+    setIsWaitingForAction(false);
+    setTimeout(() => {
+      setCurrentStep((prev) => Math.min(prev + 1, activeSteps.length - 1));
+    }, 300);
+  }, [hubTourAdvanceSignal, isOpen, tutorialFlow, activeSteps, currentStep]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (inHubPhase) {
+      if (location.pathname.includes("/practice/session")) {
+        return;
+      }
+      if (location.pathname !== "/practice") {
+        navigate("/practice", { replace: true });
+      }
+      return;
+    }
+
+    if (tutorialFlow === 'from-onboarding' && location.pathname.includes('/practice/session')) {
+      return;
+    }
 
     const targetPath = tutorialPaper
       ? `/practice/session?mode=pastpaper&subject=maths&level=higher&paperId=${encodeURIComponent(tutorialPaper.id)}`
@@ -210,7 +355,7 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
     if (currentPath !== targetPath) {
       navigate(targetPath, { replace: true });
     }
-  }, [isOpen, tutorialPaper, location.pathname, location.search, navigate]);
+  }, [isOpen, inHubPhase, tutorialFlow, tutorialPaper, location.pathname, location.search, navigate]);
 
   // Set waiting state when step changes
   useEffect(() => {
@@ -221,9 +366,9 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
     }
   }, [currentStep, step]);
 
-  // Handle click on target elements for waitForClick steps
+  // Handle click on target elements for waitForClick steps (session steps only — hub uses state signals)
   useEffect(() => {
-    if (!isOpen || !step?.waitForClick) return;
+    if (!isOpen || !step?.waitForClick || step.id.startsWith('hub-')) return;
 
     const targetElement = findTargetElement();
     if (!targetElement) return;
@@ -536,7 +681,7 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
 
             {/* Step counter */}
             <div className="tutorial-step-counter txt-sub color-txt-sub">
-              {currentStep + 1} / {tutorialSteps.length}
+              {currentStep + 1} / {activeSteps.length}
             </div>
 
             {/* Icon */}
@@ -625,7 +770,7 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
 
             {/* Step dots */}
             <div className="tutorial-dots">
-              {tutorialSteps.map((_, idx) => (
+              {activeSteps.map((_, idx) => (
                 <div
                   key={idx}
                   className={`tutorial-dot ${idx === currentStep ? 'active' : ''} ${idx < currentStep ? 'completed' : ''}`}
@@ -652,7 +797,7 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
 
             {/* Step counter */}
             <div className="tutorial-step-counter txt-sub color-txt-sub">
-              {currentStep + 1} / {tutorialSteps.length}
+              {currentStep + 1} / {activeSteps.length}
             </div>
 
             {/* Icon */}
@@ -741,7 +886,7 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
 
             {/* Step dots */}
             <div className="tutorial-dots">
-              {tutorialSteps.map((_, idx) => (
+              {activeSteps.map((_, idx) => (
                 <div
                   key={idx}
                   className={`tutorial-dot ${idx === currentStep ? 'active' : ''} ${idx < currentStep ? 'completed' : ''}`}

@@ -7,6 +7,7 @@ import { LuPen } from "react-icons/lu";
 import Cropper from "react-easy-crop";
 import Rank1 from "../../assets/Rank2-CCOkr3g2.png"
 import { useTutorialContext } from "../../context/TutorialContext";
+import { useOnboardingContext } from "../../context/OnboardingContext";
 
 export default function UsernamePrompt() {
     const { user, setUser } = useContext(UserContext); 
@@ -24,14 +25,15 @@ export default function UsernamePrompt() {
     const [croppedAvatarUrl, setCroppedAvatarUrl] = useState<string>('');
 
     const {showTutorial} = useTutorialContext();
+    const { showOnboarding } = useOnboardingContext();
 
     useEffect(() => {
         
-        if(user?.username?.length < 1 && !showTutorial) 
+        if(user?.username?.length < 1 && !showTutorial && !showOnboarding) 
             setShowPrompt(true); 
         else 
             setShowPrompt(false); 
-    }, [user, showTutorial])
+    }, [user, showTutorial, showOnboarding])
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {

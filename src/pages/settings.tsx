@@ -6,10 +6,13 @@ import { useNavigate } from "react-router-dom";
 import { OptionsContext } from "../context/OptionsContext"
 import { UserContext } from "../context/UserContext";
 
-// Tutorial
+// Tutorial & onboarding
 import { useTutorialContext } from "../context/TutorialContext";
+import { useOnboardingContext } from "../context/OnboardingContext";
 import { TutorialTriggerButton } from "../components/tutorial/Tutorial";
 import { OPEN_RELEASE_NOTES_EVENT } from "../components/prompts/release_notes_prompt";
+import { setFavouriteSubjectIds } from "../data/practiceHubSubjects";
+import { isAdminUid } from "../constants/adminUids";
 
 // Styles & Icons
 import { LuChevronRight, LuNotebookText, LuRotateCcw, LuUserCog } from "react-icons/lu";
@@ -21,8 +24,17 @@ export default function Settings() {
     const { user } = useContext(UserContext)
     const navigate = useNavigate()
     
-    // Tutorial context
     const { triggerTutorial, resetTutorial, hasCompletedTutorial } = useTutorialContext();
+    const { resetOnboarding, hasCompletedOnboarding } = useOnboardingContext();
+
+    const isAdmin = isAdminUid(user?.uid, user?.email);
+
+    const handleResetFirstTimeExperience = async () => {
+        setFavouriteSubjectIds([]);
+        await resetTutorial();
+        await resetOnboarding();
+        navigate("/practice");
+    };
 
     const setTheme = (theme: string) => {
         setOptions(( opts : any ) => ({
@@ -156,27 +168,38 @@ export default function Settings() {
                     <LuChevronRight size={18} className="color-txt-accent" />
                 </button>
             </div>
-            
-            {/* Admin option to reset tutorial */}
-            {user?.isAdmin && (
-                <button 
-                    className="flex items-center gap-2 mt-3 px-4 py-2 text-sm color-txt-sub 
+
+            {user?.uid && (
+                <button
+                    type="button"
+                    className="flex items-center gap-2 mt-3 px-4 py-2 text-sm color-txt-sub
                                hover:color-txt-accent transition-colors cursor-pointer"
-                    onClick={async () => {
-                        await resetTutorial();
-                        triggerTutorial();
-                    }}
+                    onClick={() => void handleResetFirstTimeExperience()}
                 >
                     <LuRotateCcw size={16} />
-                    <span>Reset & Replay Tutorial (Admin)</span>
+                    <span>Reset First-Time Experience (Testing)</span>
                 </button>
             )}
-            
-            {/* Show tutorial status for debugging/admin */}
-            {user?.isAdmin && (
-                <p className="text-xs color-txt-sub mt-2">
-                    Tutorial completed: {hasCompletedTutorial ? 'Yes' : 'No'}
-                </p>
+
+            {isAdmin && (
+                <>
+                    <button
+                        type="button"
+                        className="flex items-center gap-2 mt-2 px-4 py-2 text-sm color-txt-sub
+                                   hover:color-txt-accent transition-colors cursor-pointer"
+                        onClick={async () => {
+                            await resetTutorial();
+                            triggerTutorial();
+                        }}
+                    >
+                        <LuRotateCcw size={16} />
+                        <span>Reset & Replay Tutorial (Admin)</span>
+                    </button>
+                    <p className="text-xs color-txt-sub mt-2">
+                        Onboarding completed: {hasCompletedOnboarding ? "Yes" : "No"} · Tutorial
+                        completed: {hasCompletedTutorial ? "Yes" : "No"}
+                    </p>
+                </>
             )}
         </div>
         {/* ======================================================================================== */}

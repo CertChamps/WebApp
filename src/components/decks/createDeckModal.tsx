@@ -358,7 +358,7 @@ export default function CreateDeckModal(props: CreateDeckModalProps) {
         {/* Official Toggle and Visibility */}
         <div className="mb-6">
 
-          {isAdminUid(user?.uid) ? (
+          {isAdminUid(user?.uid, user?.email) ? (
           <div className="mb-4">
             <label className="color-txt-main block mb-2 font-semibold">Make it official?</label>
             <button

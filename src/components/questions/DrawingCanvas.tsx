@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2 } from "lucide-react";
+import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2, FileText, Ban } from "lucide-react";
 import type { CanvasAnnotation, CanvasCapturePayload } from "../../lib/grading/GradingTypes";
 import { buildCapturePayload } from "../../lib/grading/canvasCapture";
 import RenderMath from "../math/mathdisplay";
@@ -45,13 +45,34 @@ export type WhiteboardFeedbackOverlay = {
 	finalMark?: string;
 };
 
-/** Grid display: off, square (lines), dots at intersections, or music staves. */
-type GridMode = "off" | "lines" | "dots" | "music";
+/** Grid display: off, square (lines), dots, music staves, or ruled essay lines. */
+type GridMode = "off" | "lines" | "dots" | "music" | "essay";
+
+type GridModeOption = {
+	mode: GridMode;
+	label: string;
+	Icon: typeof Grid3X3;
+};
+
+const GRID_MODE_OPTIONS: GridModeOption[] = [
+	{ mode: "off", label: "Off", Icon: Ban },
+	{ mode: "lines", label: "Square", Icon: Grid3X3 },
+	{ mode: "dots", label: "Dots", Icon: CircleDot },
+	{ mode: "music", label: "Music", Icon: Music },
+	{ mode: "essay", label: "Essay", Icon: FileText },
+];
+
+function getGridModeOption(mode: GridMode): GridModeOption {
+	return GRID_MODE_OPTIONS.find((option) => option.mode === mode) ?? GRID_MODE_OPTIONS[1];
+}
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 10;
 const GRID_STEP = 40;
 const GRID_DOT_RADIUS = 1.5;
+const ESSAY_LINE_GAP = 32;
+const ESSAY_MARGIN_X = 64;
+const ESSAY_MARGIN_COLOR = "#E57373";
 const MUSIC_LINE_GAP = 16;
 const MUSIC_STAFF_LINES = 5;
 const MUSIC_STAFF_HEIGHT = (MUSIC_STAFF_LINES - 1) * MUSIC_LINE_GAP;
@@ -59,6 +80,41 @@ const MUSIC_STAVE_REPEAT = MUSIC_STAFF_HEIGHT * 3;
 
 const STAVE_LINE_LABELS = ["L5", "L4", "L3", "L2", "L1"];
 const STAVE_SPACE_LABELS = ["S4", "S3", "S2", "S1"];
+
+function drawEssayGrid(
+	ctx: CanvasRenderingContext2D,
+	left: number,
+	top: number,
+	right: number,
+	bottom: number,
+	scale: number,
+	lineColor: string,
+	opacity: number
+) {
+	const startY = Math.floor(top / ESSAY_LINE_GAP) * ESSAY_LINE_GAP;
+	const endY = Math.ceil(bottom / ESSAY_LINE_GAP) * ESSAY_LINE_GAP;
+
+	ctx.save();
+	ctx.globalAlpha = opacity;
+	ctx.strokeStyle = lineColor;
+	ctx.lineWidth = 1 / scale;
+	ctx.beginPath();
+	for (let y = startY; y <= endY; y += ESSAY_LINE_GAP) {
+		ctx.moveTo(left, y);
+		ctx.lineTo(right, y);
+	}
+	ctx.stroke();
+
+	if (ESSAY_MARGIN_X >= left && ESSAY_MARGIN_X <= right) {
+		ctx.strokeStyle = ESSAY_MARGIN_COLOR;
+		ctx.lineWidth = 1.25 / scale;
+		ctx.beginPath();
+		ctx.moveTo(ESSAY_MARGIN_X, top);
+		ctx.lineTo(ESSAY_MARGIN_X, bottom);
+		ctx.stroke();
+	}
+	ctx.restore();
+}
 const ERASER_WIDTH = 24;
 const ERASER_PREVIEW_WIDTH = 3;
 const PEN_THICKNESS_LEVELS = [1.2, 2, 3.2, 4.6, 6.2];
@@ -948,6 +1004,8 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					}
 				}
 				ctx.stroke();
+			} else if (gridMode === "essay") {
+				drawEssayGrid(ctx, left, top, right, bottom, scale, gridColor, gridOpacity);
 			} else {
 				const startX = Math.floor(left / GRID_STEP) * GRID_STEP;
 				const endX = Math.ceil(right / GRID_STEP) * GRID_STEP;
@@ -1326,6 +1384,12 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					ctx.fillText(STAVE_SPACE_LABELS[i], labelX, y);
 				}
 			}
+		} else if (gridMode === "essay") {
+			const left = -pan.x / scale;
+			const top = -pan.y / scale;
+			const right = left + w / scale;
+			const bottom = top + h / scale;
+			drawEssayGrid(ctx, left, top, right, bottom, scale, "#BBBBBB", 1);
 		}
 
 		const drawSnapshotPenStroke = (stroke: Stroke) => {
@@ -2006,6 +2070,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				{!readOnly && (
 				<div
 					className="drawing-canvas-toolbar absolute bottom-4 left-1/2 -translate-x-1/2 z-[2000] flex items-center justify-center gap-1 py-1.5 px-2 rounded-[var(--radius-out)] color-shadow"
+					data-tutorial-id="drawing-toolbar"
 					style={{
 						background: "rgba(128, 128, 128, 0.05)",
 						backdropFilter: "blur(6px)",
@@ -2099,29 +2164,30 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				>
 					<MousePointer2 size={18} strokeWidth={2} />
 				</button>
+				<div className="relative">
 				<button
 					ref={gridButtonRef}
 					type="button"
-					onPointerDown={() => startToolLongPress("grid")}
-					onPointerUp={clearToolLongPressTimer}
-					onPointerLeave={clearToolLongPressTimer}
-					onPointerCancel={clearToolLongPressTimer}
-					onClick={() => setGridMode((m) => {
-						if (longPressHandledRef.current) {
-							longPressHandledRef.current = false;
-							return m;
-						}
-						setIsGridPopoverOpen(false);
+					onClick={() => {
 						setIsPenPopoverOpen(false);
 						setIsEraserPopoverOpen(false);
-						const modes: GridMode[] = ["off", "lines", "dots", "music"];
-						return modes[(modes.indexOf(m) + 1) % modes.length];
-					})}
+						setIsGridPopoverOpen((open) => !open);
+					}}
 					className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${gridMode !== "off" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
-					title={gridMode === "off" ? "Grid (off)" : gridMode === "lines" ? "Grid: square" : gridMode === "dots" ? "Grid: dots" : "Grid: music staves"}
+					title={
+						gridMode === "off"
+							? "Grid"
+							: `Grid: ${getGridModeOption(gridMode).label.toLowerCase()}`
+					}
+					aria-expanded={isGridPopoverOpen}
+					aria-haspopup="true"
 				>
-					{gridMode === "dots" ? <CircleDot size={18} strokeWidth={2} /> : gridMode === "music" ? <Music size={18} strokeWidth={2} /> : <Grid3X3 size={18} strokeWidth={2} />}
+					{(() => {
+						const { Icon } = getGridModeOption(gridMode);
+						return <Icon size={18} strokeWidth={2} />;
+					})()}
 				</button>
+				</div>
 				<button
 					type="button"
 					onClick={clearCanvas}
@@ -2235,7 +2301,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				{gridButtonRect && createPortal(
 					<div
 						ref={gridPopoverRef}
-						className={`fixed flex flex-col items-stretch gap-1.5 px-3 py-2 rounded-[var(--radius-in)] color-bg transition-all duration-180 ease-out ${isGridPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
+						className={`fixed flex flex-col items-stretch gap-2 px-3 py-2 rounded-[var(--radius-in)] color-bg transition-all duration-180 ease-out ${isGridPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
 						style={{
 							left: gridButtonRect.left + gridButtonRect.width / 2,
 							top: gridButtonRect.top - 10,
@@ -2245,23 +2311,47 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 							zIndex: 2147483646,
 						}}
 					>
-						<div className="w-[58px] flex justify-center">
-							<input
-								type="range"
-								min={5}
-								max={100}
-								step={1}
-								value={Math.round(gridOpacity * 100)}
-								onChange={(e) => setGridOpacity(Math.max(0.05, Math.min(1, Number(e.target.value) / 100)))}
-								className="pen-thickness-slider w-full"
-								style={{
-									["--slider-track-color" as string]: mutedBgColor || "rgba(128, 128, 128, 0.3)",
-									["--slider-thumb-color" as string]: accentColor || strokeColor || "#2563EB",
-									["--slider-thumb-size" as string]: "12px",
-								}}
-								aria-label="Grid opacity"
-							/>
+						<div className="grid grid-cols-3 gap-1.5">
+							{GRID_MODE_OPTIONS.map(({ mode, label, Icon }) => {
+								const selected = gridMode === mode;
+								return (
+									<button
+										key={mode}
+										type="button"
+										onClick={() => setGridMode(mode)}
+										className={`flex flex-col items-center justify-center gap-0.5 min-w-[3.25rem] px-2 py-1.5 rounded-[var(--radius-in)] transition-all ${
+											selected
+												? "color-bg-accent color-txt-accent"
+												: "hover:color-bg-grey-10 color-txt-main"
+										}`}
+										title={label}
+										aria-pressed={selected}
+									>
+										<Icon size={16} strokeWidth={2} />
+										<span className="text-[10px] leading-none font-medium">{label}</span>
+									</button>
+								);
+							})}
 						</div>
+						{gridMode !== "off" && (
+							<div className="w-full flex justify-center pt-0.5 border-t border-[color-mix(in_srgb,currentColor_12%,transparent)]">
+								<input
+									type="range"
+									min={5}
+									max={100}
+									step={1}
+									value={Math.round(gridOpacity * 100)}
+									onChange={(e) => setGridOpacity(Math.max(0.05, Math.min(1, Number(e.target.value) / 100)))}
+									className="pen-thickness-slider w-[7.5rem]"
+									style={{
+										["--slider-track-color" as string]: mutedBgColor || "rgba(128, 128, 128, 0.3)",
+										["--slider-thumb-color" as string]: accentColor || strokeColor || "#2563EB",
+										["--slider-thumb-size" as string]: "12px",
+									}}
+									aria-label="Grid opacity"
+								/>
+							</div>
+						)}
 					</div>,
 					document.body
 				)}

@@ -6,11 +6,19 @@ import { OptionsContext } from "../context/OptionsContext";
 import { UserContext } from "../context/UserContext";
 import {
     useExamPapers,
-    isPaperFree,
     normalizePaperLevel,
+    formatLevelDisplay,
     type ExamPaper,
     type PaperQuestion,
 } from "../hooks/useExamPapers";
+import {
+    buildFreeImageSample,
+    canAccessImageTopic,
+    canAccessPaper,
+    computeFreePaperKeys,
+    hasAceAccess,
+    pickStarterImageTopic,
+} from "../lib/contentAccess";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
 import { buildImageTopicExamPaper, usePaperProgress } from "../hooks/usePaperProgress";
 import useFilters from "../hooks/useFilters";
@@ -42,7 +50,7 @@ import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
 import { TimerProvider, useTimerOptional } from "../context/TimerContext";
 import { TimerFloatingWidget } from "../components/TimerFloatingWidget";
 import PastPaperFilterPanel from "../components/questions/PastPaperFilterPanel";
-import PaperProGate from "../components/PaperProGate";
+import ContentProGate from "../components/ContentProGate";
 import Filter from "../components/filter";
 import { getDocumentCached } from "../utils/pdfDocumentCache";
 import type { InjectedExchange } from "../components/ai/useAI";
@@ -405,6 +413,36 @@ export default function Questions() {
     }, [mode, normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic]);
 
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
+
+    const freePaperKeys = useMemo(() => computeFreePaperKeys(papers), [papers]);
+
+    const starterImageTopic = useMemo(
+        () => pickStarterImageTopic(imageAllTopics, normalizedUrlSubject),
+        [imageAllTopics, normalizedUrlSubject]
+    );
+
+    const freeImageSample = useMemo(
+        () =>
+            buildFreeImageSample(
+                starterImageTopic,
+                normalizedUrlSubject,
+                normalizedUrlLevel ?? "higher"
+            ),
+        [starterImageTopic, normalizedUrlSubject, normalizedUrlLevel]
+    );
+
+    const imageTopicBlocked = useMemo(() => {
+        if (mode !== "imagequestions" || hasAceAccess(user)) return false;
+        if (!normalizedUrlSubject || !imageQuestionTopic || imageAllTopics.length === 0) return false;
+        const topic = imageAllTopics.find((t) => t.name === imageQuestionTopic);
+        if (!topic) return false;
+        return !canAccessImageTopic(user, topic, starterImageTopic, normalizedUrlSubject);
+    }, [mode, user, normalizedUrlSubject, imageQuestionTopic, imageAllTopics, starterImageTopic]);
+
+    const paperContentBlocked = useMemo(() => {
+        if (mode !== "pastpaper" || !selectedPaper) return false;
+        return !canAccessPaper(user, selectedPaper, freePaperKeys);
+    }, [mode, selectedPaper, user, freePaperKeys]);
     const [paperBlob, setPaperBlob] = useState<Blob | null>(null);
     const [paperLoadError, setPaperLoadError] = useState<string | null>(null);
     const [currentPaperPage, setCurrentPaperPage] = useState(1);
@@ -1608,7 +1646,7 @@ export default function Questions() {
                 const centerLabel = overrideTitle ?? currentQuestion?.properties?.name ?? "...";
                 const overrideTags = mode === "pastpaper" ? (currentPaperQuestion?.tags ?? []) : undefined;
                 const imageTagsDisplay = mode === "imagequestions" && imageQuestionTopic
-                    ? `${imageQuestionPosition + 1} / ${imageGroupedList.length}`
+                    ? `${formatLevelDisplay(normalizedUrlLevel)} · ${imageQuestionPosition + 1} / ${imageGroupedList.length}`
                     : undefined;
                 const tagsDisplay = imageTagsDisplay ?? (overrideTags != null
                     ? formatTags(overrideTags)
@@ -2507,8 +2545,8 @@ export default function Questions() {
             {/*===============================================================================================*/}
 
             {/* Paper pro gate: when non-pro loads a locked past paper */}
-            {mode === "pastpaper" && selectedPaper && !user?.isPro && !isPaperFree(selectedPaper) && (
-                <PaperProGate firstFreePaper={firstFreePaper} />
+            {(paperContentBlocked || imageTopicBlocked) && (
+                <ContentProGate freePaper={firstFreePaper} freeImageSample={freeImageSample} />
             )}
         </div>
         <TimerFloatingWidget

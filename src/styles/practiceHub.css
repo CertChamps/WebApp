@@ -443,7 +443,10 @@
 
 .practice-hub__subject-fav:hover {
   @apply color-bg-grey-10;
+}
 
+.practice-hub__subject-fav--on {
+  @apply color-txt-accent;
 }
 
 .practice-hub__subject-empty {
@@ -772,6 +775,54 @@
 
 .practice-hub .deck.paper-card .practice-hub__paper-card-body .txt {
   font-size: 0.75rem;
+}
+
+.practice-hub__access-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.practice-hub__access-badge--free {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-accent);
+}
+
+.practice-hub__access-badge--locked {
+  background: color-mix(in srgb, var(--color-grey) 12%, transparent);
+  color: var(--color-txt-sub);
+}
+
+/* Favourite-subject tiles: compact — icons only, not full paper previews.
+   Must come after the generic .paper-card .image rules above so the fixed
+   icon slot isn't overridden by flex: 1 1 0 (which collapses when the
+   card has no aspect-ratio). */
+.practice-hub .deck.paper-card.practice-hub__subject-card {
+  width: 11rem;
+  min-width: 11rem;
+  height: auto;
+  aspect-ratio: unset;
+}
+
+.practice-hub .deck.paper-card.practice-hub__subject-card .image {
+  flex: 0 0 6rem;
+  min-height: 6rem;
+  height: 6rem;
+}
+
+.practice-hub .deck.paper-card.practice-hub__subject-card .practice-hub__paper-card-body {
+  padding: 0.5625rem 0.75rem 0.6875rem;
+}
+
+.practice-hub .deck.paper-card.practice-hub__subject-card .practice-hub__paper-card-body .txt-heading-colour {
+  font-size: 0.875rem;
 }
 
 .practice-hub .deck.paper-card .practice-hub__paper-card-body .blue-btn {

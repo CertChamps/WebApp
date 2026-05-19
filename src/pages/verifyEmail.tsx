@@ -13,7 +13,6 @@ export default function VerifyEmail() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [isChecking, setIsChecking] = useState(false);
 
   // Auto-check verification status every 3 seconds
   useEffect(() => {
@@ -21,7 +20,6 @@ export default function VerifyEmail() {
       if (!auth.currentUser) return;
 
       try {
-        setIsChecking(true);
         // Reload the user to get the latest emailVerified status from Firebase Auth
         await auth.currentUser.reload();
 
@@ -46,8 +44,6 @@ export default function VerifyEmail() {
         }
       } catch (err) {
         console.error("Error checking verification status:", err);
-      } finally {
-        setIsChecking(false);
       }
     };
 
@@ -142,14 +138,6 @@ export default function VerifyEmail() {
           </div>
         )}
         {error && <p className="text-red text-center text-sm mb-4">{error}</p>}
-
-        {/* Checking indicator */}
-        {isChecking && (
-          <div className="flex items-center justify-center gap-2 txt-sub mb-4">
-            <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
-            <p className="text-sm">Checking verification status...</p>
-          </div>
-        )}
 
         {/* Resend Button */}
         <button
