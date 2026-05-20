@@ -25,10 +25,11 @@ import {
 import ExtractQuestionsFlow, {
   type ExtractedRegion,
 } from "../components/addQuestions/ExtractQuestionsFlow";
+import GeneratePredictionFlow from "../components/addQuestions/GeneratePredictionFlow";
 import "../styles/settings.css";
 import { isAdminUid } from "../constants/adminUids";
 
-type AddQuestionsTab = "upload" | "extract";
+type AddQuestionsTab = "upload" | "extract" | "predict";
 
 const SUBJECTS = ["maths", "applied-maths", "physics", "irish"] as const;
 const LEVELS = ["higher", "ordinary"] as const;
@@ -705,6 +706,18 @@ export default function AddQuestions() {
             <LuUpload size={18} />
             Upload Papers
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("predict")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === "predict"
+                ? "color-bg-accent color-txt-accent"
+                : "color-txt-sub hover:color-bg-grey-10"
+            }`}
+          >
+            <LuSparkles size={18} />
+            Generate Prediction
+          </button>
         </div>
       </div>
 
@@ -720,6 +733,10 @@ export default function AddQuestions() {
           isUploading={isUploading}
           uploadProgress={uploadProgress}
         />
+      )}
+
+      {tab === "predict" && (
+        <GeneratePredictionFlow subject={subject} level={level} />
       )}
 
       {tab === "upload" && (

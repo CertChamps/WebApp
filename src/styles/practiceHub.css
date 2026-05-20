@@ -454,6 +454,36 @@
   padding-right: 0.75rem;
 }
 
+.practice-hub__prediction-modal-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.practice-hub__prediction-modal {
+  width: 100%;
+  max-width: 42rem;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+}
+
+.practice-hub__prediction-modal .blue-btn {
+  width: auto;
+  display: inline-flex;
+}
+
+.practice-hub__predictions .blue-btn {
+  width: auto;
+  display: inline-flex;
+}
+
 /* Content filter row: State Exam Papers + Year, Pills, Level, Topics */
 .practice-hub__filter-row {
   flex-shrink: 0;

@@ -20,7 +20,8 @@ import {
     pickStarterImageTopic,
 } from "../lib/contentAccess";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
-import { buildImageTopicExamPaper, usePaperProgress } from "../hooks/usePaperProgress";
+import { buildImageTopicExamPaper, buildImagePredictionExamPaper, usePaperProgress } from "../hooks/usePaperProgress";
+import { loadPredictionImageSession } from "../lib/predictions/loadPredictionImages";
 import useFilters from "../hooks/useFilters";
 import { getPastPaperTopicScope } from "../data/mathsHigherTopics";
 import { useQuestionSessionLog, type QuestionMeta } from "../hooks/useQuestionSessionLog";
@@ -257,12 +258,17 @@ export default function Questions() {
     const urlIndexInPaper = searchParams.get("indexInPaper");
     const urlQuestionId = searchParams.get("questionId");
     const urlImageKey = searchParams.get("imageKey");
+    const urlPredictionId = searchParams.get("predictionId");
     /** When stepping through an AI-curated set of questions saved by Practice Hub. */
     const normalizedUrlLevel = normalizePaperLevel(urlLevel);
     const normalizedUrlSubject = (urlSubject ?? "").trim().toLowerCase();
 
     const initialMode: QuestionsMode =
-        urlMode === "certchamps" || urlMode === "pastpaper" || urlMode === "imagequestions" ? urlMode : getStoredMode();
+        urlPredictionId
+            ? "imagequestions"
+            : urlMode === "certchamps" || urlMode === "pastpaper" || urlMode === "imagequestions"
+              ? urlMode
+              : getStoredMode();
     const initialPaths = getPathsForMode(initialMode, urlSubject || null);
 
     //==============================================> State <========================================//
@@ -364,10 +370,11 @@ export default function Questions() {
         loading: papersLoading,
         error: papersError,
         getPaperBlob,
+        getPaperBlobForQuestion,
         getPaperQuestions,
         getMarkingSchemeBlob,
         firstFreePaper,
-    } = useExamPapers(null, { loadAllWhenNull: true });
+    } = useExamPapers(null, { loadAllWhenNull: true, includePredictions: true });
     const { availableSets } = useFilters();
     const { completedForPaper, loadPaperProgress, toggleQuestion, isQuestionCompleted, touchImageTopicProgress } =
         usePaperProgress();
@@ -385,13 +392,41 @@ export default function Questions() {
         setSelectedSubTopics(next);
     }, [mode, urlTopics]);
     const {
-        grouped: imageGroupedList,
-        loading: imageQuestionsLoading,
+        grouped: topicImageGroupedList,
+        loading: topicImageQuestionsLoading,
     } = useImageQuestionsForTopic(
-        mode === "imagequestions" ? normalizedUrlSubject || null : null,
-        mode === "imagequestions" ? normalizedUrlLevel || null : null,
-        mode === "imagequestions" ? imageQuestionTopic : null
+        mode === "imagequestions" && !urlPredictionId ? normalizedUrlSubject || null : null,
+        mode === "imagequestions" && !urlPredictionId ? normalizedUrlLevel || null : null,
+        mode === "imagequestions" && !urlPredictionId ? imageQuestionTopic : null
     );
+    const [predictionImageGrouped, setPredictionImageGrouped] = useState<GroupedImageQuestion[]>([]);
+    const [predictionImageLoading, setPredictionImageLoading] = useState(false);
+
+    useEffect(() => {
+        if (!urlPredictionId) {
+            setPredictionImageGrouped([]);
+            setPredictionImageLoading(false);
+            return;
+        }
+        let cancelled = false;
+        setPredictionImageLoading(true);
+        loadPredictionImageSession(urlPredictionId)
+            .then((list) => {
+                if (!cancelled) setPredictionImageGrouped(list);
+            })
+            .catch(() => {
+                if (!cancelled) setPredictionImageGrouped([]);
+            })
+            .finally(() => {
+                if (!cancelled) setPredictionImageLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [urlPredictionId]);
+
+    const imageGroupedList = urlPredictionId ? predictionImageGrouped : topicImageGroupedList;
+    const imageQuestionsLoading = urlPredictionId ? predictionImageLoading : topicImageQuestionsLoading;
     const {
         topics: imageAllTopics,
     } = useAllTopicsForSubjectLevel(
@@ -406,11 +441,19 @@ export default function Questions() {
     const [showComingSoonToast, setShowComingSoonToast] = useState(false);
 
     const imageProgressPaper = useMemo(() => {
+        if (urlPredictionId && normalizedUrlSubject && normalizedUrlLevel) {
+            return buildImagePredictionExamPaper(
+                urlPredictionId,
+                normalizedUrlSubject,
+                normalizedUrlLevel,
+                "Prediction"
+            );
+        }
         if (mode !== "imagequestions" || !normalizedUrlSubject || !normalizedUrlLevel || !imageQuestionTopic) {
             return null;
         }
         return buildImageTopicExamPaper(normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic);
-    }, [mode, normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic]);
+    }, [urlPredictionId, mode, normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic]);
 
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
 
@@ -433,11 +476,12 @@ export default function Questions() {
 
     const imageTopicBlocked = useMemo(() => {
         if (mode !== "imagequestions" || hasAceAccess(user)) return false;
+        if (urlPredictionId) return true;
         if (!normalizedUrlSubject || !imageQuestionTopic || imageAllTopics.length === 0) return false;
         const topic = imageAllTopics.find((t) => t.name === imageQuestionTopic);
         if (!topic) return false;
         return !canAccessImageTopic(user, topic, starterImageTopic, normalizedUrlSubject);
-    }, [mode, user, normalizedUrlSubject, imageQuestionTopic, imageAllTopics, starterImageTopic]);
+    }, [mode, user, urlPredictionId, normalizedUrlSubject, imageQuestionTopic, imageAllTopics, starterImageTopic]);
 
     const paperContentBlocked = useMemo(() => {
         if (mode !== "pastpaper" || !selectedPaper) return false;
@@ -551,6 +595,17 @@ export default function Questions() {
         markingSchemeQuestionIndex != null
             ? paperQuestions[markingSchemeQuestionIndex]
             : currentPaperQuestion;
+
+    /** For composite predictions, marking schemes come from the source paper's year. */
+    const markingSchemeSourcePaper = useMemo((): ExamPaper | null => {
+        if (!selectedPaper) return null;
+        const q = questionForMarkingScheme ?? currentPaperQuestion;
+        if (selectedPaper.isComposite && q?.sourceYear) {
+            return { ...selectedPaper, year: q.sourceYear };
+        }
+        return selectedPaper;
+    }, [selectedPaper, questionForMarkingScheme, currentPaperQuestion]);
+
     const questionForLogTables =
         logTablesQuestionIndex != null ? paperQuestions[logTablesQuestionIndex] : currentPaperQuestion;
     const aiPaperPage = useMemo(() => {
@@ -827,7 +882,7 @@ export default function Questions() {
             let markingSchemeText = "";
             if (mode === "pastpaper") {
                 if (!selectedPaper || !currentPaperQuestion?.markingSchemePageRange) throw new Error("Something went wrong - try again");
-                const msBlob = markingSchemeBlob ?? (await getMarkingSchemeBlob(selectedPaper));
+                const msBlob = markingSchemeBlob ?? (await getMarkingSchemeBlob(markingSchemeSourcePaper ?? selectedPaper));
                 if (!msBlob) throw new Error("Something went wrong - try again");
                 const start = Math.max(1, Math.min(currentPaperQuestion.markingSchemePageRange.start, currentPaperQuestion.markingSchemePageRange.end));
                 const end = Math.max(start, Math.max(currentPaperQuestion.markingSchemePageRange.start, currentPaperQuestion.markingSchemePageRange.end));
@@ -970,16 +1025,25 @@ export default function Questions() {
             setPaperLoadError(null);
             return;
         }
+        const activeQuestion =
+            paperQuestions[paperQuestionPosition - 1] ??
+            filteredPaperQuestions[paperQuestionPosition - 1];
         let cancelled = false;
         setPaperBlob(null);
         setPaperLoadError(null);
-        getPaperBlob(selectedPaper)
+        const loadBlob = activeQuestion
+            ? getPaperBlobForQuestion(selectedPaper, activeQuestion)
+            : selectedPaper.isComposite
+              ? Promise.reject(new Error("Select a question to view its source paper."))
+              : getPaperBlob(selectedPaper);
+        loadBlob
             .then((blob) => {
                 if (!cancelled) setPaperBlob(blob);
-                // Preload next paper so "Next" is instant
-                const idx = scopedPapers.findIndex((p: ExamPaper) => p.storagePath === selectedPaper.storagePath);
-                if (idx >= 0 && idx < scopedPapers.length - 1) {
-                    getPaperBlob(scopedPapers[idx + 1]!).catch(() => {});
+                if (!selectedPaper.isComposite) {
+                    const idx = scopedPapers.findIndex((p: ExamPaper) => p.storagePath === selectedPaper.storagePath);
+                    if (idx >= 0 && idx < scopedPapers.length - 1) {
+                        getPaperBlob(scopedPapers[idx + 1]!).catch(() => {});
+                    }
                 }
             })
             .catch((err) => {
@@ -992,7 +1056,7 @@ export default function Questions() {
         return () => {
             cancelled = true;
         };
-    }, [selectedPaper, getPaperBlob, scopedPapers]);
+    }, [selectedPaper, getPaperBlob, getPaperBlobForQuestion, scopedPapers, paperQuestions, filteredPaperQuestions, paperQuestionPosition]);
 
     // Reset "current page" when user selects a different paper
     useEffect(() => {
@@ -1265,7 +1329,7 @@ export default function Questions() {
             return;
         }
         let cancelled = false;
-        getMarkingSchemeBlob(selectedPaper)
+        getMarkingSchemeBlob(markingSchemeSourcePaper ?? selectedPaper)
             .then((blob) => {
                 if (!cancelled) setMarkingSchemeBlob(blob ?? null);
             })
@@ -1275,7 +1339,7 @@ export default function Questions() {
         return () => {
             cancelled = true;
         };
-    }, [selectedPaper, getMarkingSchemeBlob, questionForMarkingScheme?.markingSchemePageRange]);
+    }, [selectedPaper, markingSchemeSourcePaper, getMarkingSchemeBlob, questionForMarkingScheme?.markingSchemePageRange]);
 
     // Reset PDF document loaded and page count when paper blob changes (new paper)
     useEffect(() => {
@@ -1388,16 +1452,29 @@ export default function Questions() {
             );
         } else if (mode === "imagequestions") {
             if (!currentGroupedQuestion) return;
-            setSearchParams(
-                {
-                    mode: "imagequestions",
-                    subject: normalizedUrlSubject,
-                    level: normalizedUrlLevel,
-                    topic: imageQuestionTopic ?? "",
-                    imageKey: currentGroupedQuestion.key,
-                },
-                { replace: true }
-            );
+            if (urlPredictionId) {
+                setSearchParams(
+                    {
+                        mode: "imagequestions",
+                        predictionId: urlPredictionId,
+                        subject: normalizedUrlSubject,
+                        level: normalizedUrlLevel,
+                        imageKey: currentGroupedQuestion.key,
+                    },
+                    { replace: true }
+                );
+            } else {
+                setSearchParams(
+                    {
+                        mode: "imagequestions",
+                        subject: normalizedUrlSubject,
+                        level: normalizedUrlLevel,
+                        topic: imageQuestionTopic ?? "",
+                        imageKey: currentGroupedQuestion.key,
+                    },
+                    { replace: true }
+                );
+            }
         } else {
             if (!currentQuestion?.id) return;
             const params: Record<string, string> = {
@@ -1408,7 +1485,7 @@ export default function Questions() {
             setSearchParams(params, { replace: true });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mode, selectedPaper?.storagePath, currentPaperQuestion?.id, currentQuestion?.id, subjectFilter, currentGroupedQuestion?.key, imageQuestionTopic, paperQuestionIndexInFullList, selectedSubTopics]);
+    }, [mode, selectedPaper?.storagePath, currentPaperQuestion?.id, currentQuestion?.id, subjectFilter, currentGroupedQuestion?.key, imageQuestionTopic, urlPredictionId, normalizedUrlSubject, normalizedUrlLevel, paperQuestionIndexInFullList, selectedSubTopics]);
 
     useEffect(() => {
         try {

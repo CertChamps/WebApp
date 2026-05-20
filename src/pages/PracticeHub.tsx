@@ -1,4 +1,6 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { getDownloadURL, ref as storageRef } from "firebase/storage";
+import { storage } from "../../firebase";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import Fuse from "fuse.js";
@@ -10,6 +12,7 @@ import {
   type ExamPaper,
   type PaperQuestion,
 } from "../hooks/useExamPapers";
+import { usePredictionPapers } from "../hooks/usePredictionPapers";
 import {
   buildFreeImageSample,
   canAccessImageTopic,
@@ -27,11 +30,12 @@ import ContentProGate from "../components/ContentProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { useImageTopics, listQuestionsForTopic, groupImageQuestions, type ImageTopic } from "../hooks/useImageQuestions";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart, LuHouse, LuLock } from "react-icons/lu";
+import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuSparkles, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart, LuHouse, LuLock } from "react-icons/lu";
 import type { IconType } from "react-icons";
-import { subjectMatchesPaper, getStorageFolderName, getFavouriteSubjectIds, FAVOURITES_CHANGED_EVENT, PRACTICE_HUB_SUBJECTS } from "../data/practiceHubSubjects";
+import { subjectMatchesPaper, getStorageFolderName, getFavouriteSubjectIds, FAVOURITES_CHANGED_EVENT, PRACTICE_HUB_SUBJECTS, getSubjectLabel } from "../data/practiceHubSubjects";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import IrishHarpIcon from "../components/practiceHub/IrishHarpIcon";
+import GeneratePredictionFlow from "../components/addQuestions/GeneratePredictionFlow";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
 
@@ -114,11 +118,40 @@ export default function PracticeHub() {
     useTutorialContext();
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
   const hubTourStartedRef = useRef(false);
+  const [papersReloadKey, setPapersReloadKey] = useState(0);
   const { papers, loading: papersLoading, getPaperBlob, getPaperQuestions, firstFreePaper } =
-    useExamPapers(subjectFilter);
+    useExamPapers(subjectFilter, { loadAllWhenNull: subjectFilter == null, reloadKey: papersReloadKey });
+  const {
+    predictions: predictionPapers,
+    loading: predictionsLoading,
+  } = usePredictionPapers(subjectFilter, { reloadKey: papersReloadKey });
+  const [showPredictionModal, setShowPredictionModal] = useState(false);
+  const [predictionSubject, setPredictionSubject] = useState(
+    () => PRACTICE_HUB_SUBJECTS[0]?.id ?? "accounting"
+  );
+  const [predictionLevel, setPredictionLevel] = useState("higher");
   const [showContentGateModal, setShowContentGateModal] = useState(false);
   const [paperFilter, setPaperFilter] = useState<PaperFilter>("all");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
+  const openPredictionModal = useCallback(() => {
+    if (!hasAceAccess(user)) {
+      setShowContentGateModal(true);
+      return;
+    }
+    if (subjectFilter && PRACTICE_HUB_SUBJECTS.some((s) => s.id === subjectFilter)) {
+      setPredictionSubject(subjectFilter);
+    } else {
+      setPredictionSubject((prev) =>
+        PRACTICE_HUB_SUBJECTS.some((s) => s.id === prev)
+          ? prev
+          : (PRACTICE_HUB_SUBJECTS[0]?.id ?? "accounting")
+      );
+    }
+    if (levelFilter === "higher" || levelFilter === "ordinary") {
+      setPredictionLevel(levelFilter);
+    }
+    setShowPredictionModal(true);
+  }, [user, subjectFilter, levelFilter]);
   const [yearFilter, setYearFilter] = useState<YearFilterValue>("all");
   const [topicFilter, setTopicFilter] = useState<string[]>([]);
   const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
@@ -459,6 +492,12 @@ export default function PracticeHub() {
         return;
       }
       const normalizedLevel = normalizePaperLevel(paper.level);
+      if (paper.contentType === "image") {
+        navigate(
+          `/practice/session?mode=imagequestions&predictionId=${encodeURIComponent(paper.id)}&level=${normalizedLevel}&subject=${encodeURIComponent(paper.subject ?? "")}`
+        );
+        return;
+      }
       navigate(
         `/practice/session?mode=pastpaper&paperId=${paper.id}&level=${normalizedLevel}&subject=${paper.subject ?? ""}`
       );
@@ -996,85 +1035,147 @@ export default function PracticeHub() {
               ))}
             </motion.div>
           ) : subjectFilter == null ? (
-            favouriteSubjects.length > 0 ? (
-              <motion.div
-                key="fav-grid"
-                className="w-full"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <h2 className="txt-heading-colour text-xl font-bold mb-3">Your Subjects</h2>
-                <div className="deck-grid">
-                  {favouriteSubjects.map((s, i) => (
-                    <motion.div
-                      key={s.id}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
-                    >
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => handleSubjectSelect(s.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            handleSubjectSelect(s.id);
-                          }
-                        }}
-                        className="deck paper-card practice-hub__subject-card flex flex-col"
-                        data-tutorial-id={
-                          tutorialFlow === "from-onboarding" &&
-                          showTutorial &&
-                          hubSubjectId === s.id
-                            ? "hub-subject-card"
-                            : undefined
-                        }
+            <motion.div
+              key="home"
+              className="w-full min-h-0 overflow-y-auto scrollbar-minimal pb-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              {favouriteSubjects.length > 0 ? (
+                <>
+                  <h2 className="txt-heading-colour text-xl font-bold mb-3">Your Subjects</h2>
+                  <div className="deck-grid">
+                    {favouriteSubjects.map((s, i) => (
+                      <motion.div
+                        key={s.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
                       >
-                        <div className="color-border" />
-                        <SubjectIconImage subjectId={s.id} />
-                        <div className="practice-hub__paper-card-body">
-                          <div className="flex w-full z-50 items-center">
-                            <div className="flex flex-col ml-1 min-w-0 flex-1">
-                              <span className="txt-heading-colour truncate">{s.label}</span>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleSubjectSelect(s.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSubjectSelect(s.id);
+                            }
+                          }}
+                          className="deck paper-card practice-hub__subject-card flex flex-col"
+                          data-tutorial-id={
+                            tutorialFlow === "from-onboarding" &&
+                            showTutorial &&
+                            hubSubjectId === s.id
+                              ? "hub-subject-card"
+                              : undefined
+                          }
+                        >
+                          <div className="color-border" />
+                          <SubjectIconImage subjectId={s.id} />
+                          <div className="practice-hub__paper-card-body">
+                            <div className="flex w-full z-50 items-center">
+                              <div className="flex flex-col ml-1 min-w-0 flex-1">
+                                <span className="txt-heading-colour truncate">{s.label}</span>
+                              </div>
+                              <LuChevronRight size={18} className="color-txt-sub shrink-0" aria-hidden />
                             </div>
-                            <LuChevronRight size={18} className="color-txt-sub shrink-0" aria-hidden />
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="empty"
-                className="h-full min-h-[360px] w-full flex items-center justify-center px-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <div className="max-w-xl text-center">
-                  <LuStar size={40} className="color-txt-sub opacity-40 mx-auto mb-3" />
-                  <p className="txt-heading-colour text-2xl font-bold mb-2">No favourite subjects yet</p>
-                  <p className="txt-sub color-txt-sub mb-5">
-                    Star your favourite subjects and they'll appear here for quick access.
-                  </p>
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      className="blue-btn px-5 py-2.5"
-                      onClick={openSubjectPicker}
-                    >
-                      Choose a subject
-                    </button>
+                      </motion.div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="min-h-[280px] w-full flex items-center justify-center px-4 mb-6">
+                  <div className="max-w-xl text-center">
+                    <LuStar size={40} className="color-txt-sub opacity-40 mx-auto mb-3" />
+                    <p className="txt-heading-colour text-2xl font-bold mb-2">No favourite subjects yet</p>
+                    <p className="txt-sub color-txt-sub mb-5">
+                      Star your favourite subjects and they'll appear here for quick access.
+                    </p>
+                    <div className="flex justify-center">
+                      <button
+                        type="button"
+                        className="blue-btn px-5 py-2.5"
+                        onClick={openSubjectPicker}
+                      >
+                        Choose a subject
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </motion.div>
-            )
+              )}
+
+              <section className="practice-hub__predictions mt-8" aria-label="Predictions">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <LuSparkles size={20} className="color-txt-accent shrink-0" aria-hidden />
+                    <h2 className="txt-heading-colour text-xl font-bold">Predictions</h2>
+                  </div>
+                  <button
+                    type="button"
+                    className="blue-btn !w-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-sm shrink-0"
+                    onClick={openPredictionModal}
+                  >
+                    <LuSparkles size={16} aria-hidden />
+                    Generate
+                  </button>
+                </div>
+                {predictionsLoading ? (
+                  <div className="deck-grid">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="deck flex flex-col">
+                        <div className="color-border" />
+                        <div className="image color-bg-grey-5 animate-pulse" />
+                        <div className="flex w-full z-50 mt-21 px-3 py-2 items-center color-bg-grey-5 animate-pulse rounded-b-2xl h-14" />
+                      </div>
+                    ))}
+                  </div>
+                ) : predictionPapers.length === 0 ? (
+                  <p className="txt-sub color-txt-sub py-2">
+                    Exam predictions will appear here when available.
+                  </p>
+                ) : (
+                  <div className="deck-grid">
+                    {predictionPapers.map((paper, i) => (
+                      <motion.div
+                        key={getExamPaperKey(paper)}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
+                      >
+                        {paper.contentType === "image" ? (
+                          <ImagePredictionCard
+                            paper={paper}
+                            accessLabel={getContentAccessLabel(
+                              user,
+                              canAccessPaper(user, paper, freePaperKeys)
+                            )}
+                            onSelect={() => goToPaperSession(paper)}
+                          />
+                        ) : (
+                          <PaperCard
+                            paper={paper}
+                            getPaperBlob={getPaperBlob}
+                            accessLabel={getContentAccessLabel(
+                              user,
+                              canAccessPaper(user, paper, freePaperKeys)
+                            )}
+                            onSelect={() => goToPaperSession(paper)}
+                          />
+                        )}
+                        <p className="txt-sub color-txt-sub text-xs mt-1.5 px-1 truncate">
+                          {getSubjectLabel(paper.subject ?? "")} · {formatLevelDisplay(paper.level)}
+                        </p>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </motion.div>
           ) : isImageMode ? (
             imageTopicsError ? (
               <motion.p key="error" className="txt-sub color-txt-sub py-4 ml-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
@@ -1459,6 +1560,82 @@ export default function PracticeHub() {
         />
       )}
 
+      {showPredictionModal &&
+        createPortal(
+          <>
+            <div
+              className="practice-hub__backdrop"
+              onClick={() => setShowPredictionModal(false)}
+              aria-hidden
+            />
+            <div
+              className="practice-hub__prediction-modal-wrap"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ph-prediction-modal-title"
+              onClick={() => setShowPredictionModal(false)}
+            >
+              <div
+                className="practice-hub__prediction-modal color-bg"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <h2 id="ph-prediction-modal-title" className="txt-heading-colour text-xl font-bold">
+                    Generate prediction
+                  </h2>
+                  <button
+                    type="button"
+                    className="practice-hub__panel-close"
+                    onClick={() => setShowPredictionModal(false)}
+                    aria-label="Close"
+                  >
+                    <LuX size={24} />
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-3 mb-5">
+                  <div>
+                    <label className="block color-txt-sub text-xs mb-1">Subject</label>
+                    <select
+                      value={predictionSubject}
+                      onChange={(e) => setPredictionSubject(e.target.value)}
+                      className="px-3 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm"
+                    >
+                      {PRACTICE_HUB_SUBJECTS.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block color-txt-sub text-xs mb-1">Level</label>
+                    <select
+                      value={predictionLevel}
+                      onChange={(e) => setPredictionLevel(e.target.value)}
+                      className="px-3 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm"
+                    >
+                      <option value="higher">Higher</option>
+                      <option value="ordinary">Ordinary</option>
+                    </select>
+                  </div>
+                </div>
+
+                <GeneratePredictionFlow
+                  key={`${predictionSubject}-${predictionLevel}`}
+                  subject={predictionSubject}
+                  level={predictionLevel}
+                  onSaved={() => {
+                    setPapersReloadKey((k) => k + 1);
+                    setShowPredictionModal(false);
+                  }}
+                />
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
+
     </div>
   );
 }
@@ -1475,6 +1652,79 @@ function ContentAccessBadge({ label }: { label: ContentAccessLabel }) {
       <LuLock size={10} aria-hidden />
       ACE
     </span>
+  );
+}
+
+/** Prediction card for image-based subjects (thumbnail from Storage, not PDF). */
+function ImagePredictionCard({
+  paper,
+  onSelect,
+  accessLabel,
+}: {
+  paper: ExamPaper;
+  onSelect: () => void;
+  accessLabel?: ContentAccessLabel | null;
+}) {
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const loaded = useRef(false);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || loaded.current || !paper.storagePath) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        loaded.current = true;
+        getDownloadURL(storageRef(storage, paper.storagePath))
+          .then(setThumbUrl)
+          .catch(() => {});
+      },
+      { rootMargin: "100px", threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [paper.storagePath]);
+
+  const levelLabel = formatLevelDisplay(paper.level);
+
+  return (
+    <div
+      ref={cardRef}
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      className="deck paper-card flex flex-col"
+    >
+      <div className="color-border" />
+      <div className="image overflow-hidden relative">
+        {accessLabel && (
+          <div className="absolute top-2 right-2 z-10">
+            <ContentAccessBadge label={accessLabel} />
+          </div>
+        )}
+        {thumbUrl ? (
+          <img src={thumbUrl} alt="" className="w-full h-full object-cover object-center" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center color-txt-sub text-xs">
+            <LuSparkles size={20} className="opacity-50" aria-hidden />
+          </div>
+        )}
+      </div>
+      <div className="bg-overlay" />
+      <div className="flex w-full z-50 mt-21 px-3 py-2 items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="txt-heading-colour font-bold text-sm truncate">{paper.label}</p>
+          <p className="txt-sub color-txt-sub text-xs">{levelLabel} · Image prediction</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
