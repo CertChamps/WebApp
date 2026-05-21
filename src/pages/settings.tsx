@@ -10,12 +10,11 @@ import { UserContext } from "../context/UserContext";
 import { useTutorialContext } from "../context/TutorialContext";
 import { useOnboardingContext } from "../context/OnboardingContext";
 import { TutorialTriggerButton } from "../components/tutorial/Tutorial";
-import { OPEN_RELEASE_NOTES_EVENT } from "../components/prompts/release_notes_prompt";
 import { setFavouriteSubjectIds } from "../data/practiceHubSubjects";
 import { isAdminUid } from "../constants/adminUids";
 
 // Styles & Icons
-import { LuChevronRight, LuNotebookText, LuRotateCcw, LuUserCog } from "react-icons/lu";
+import { LuRotateCcw, LuUserCog } from "react-icons/lu";
 import '../styles/settings.css'
 
 export default function Settings() {
@@ -157,17 +156,7 @@ export default function Settings() {
         </div>
 
         <div className="mx-6 my-4 max-w-md">
-            <div className="flex flex-col md:flex-row gap-3 md:items-center">
-                <TutorialTriggerButton onClick={triggerTutorial} />
-                <button
-                    className="tutorial-trigger-btn color-bg-accent"
-                    onClick={() => window.dispatchEvent(new CustomEvent(OPEN_RELEASE_NOTES_EVENT))}
-                >
-                    <LuNotebookText size={20} className="color-txt-accent" />
-                    <span className="txt-bold color-txt-accent">View Release Notes</span>
-                    <LuChevronRight size={18} className="color-txt-accent" />
-                </button>
-            </div>
+            <TutorialTriggerButton onClick={triggerTutorial} />
 
             {user?.uid && (
                 <button
