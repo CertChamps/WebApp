@@ -27,7 +27,10 @@ import { getPastPaperTopicScope } from "../data/mathsHigherTopics";
 import { useQuestionSessionLog, type QuestionMeta } from "../hooks/useQuestionSessionLog";
 import {
   useImageQuestionsForTopic,
+  useImageMarkingSchemesForTopic,
+  useMarkingSchemeUrls,
   useAllTopicsForSubjectLevel,
+  getMarkingSchemeFilesForGroupedQuestion,
   type GroupedImageQuestion,
   type ImageTopic,
 } from "../hooks/useImageQuestions";
@@ -399,6 +402,14 @@ export default function Questions() {
         mode === "imagequestions" && !urlPredictionId ? normalizedUrlLevel || null : null,
         mode === "imagequestions" && !urlPredictionId ? imageQuestionTopic : null
     );
+    const {
+        files: topicMarkingSchemeFiles,
+        loading: topicMarkingSchemesLoading,
+    } = useImageMarkingSchemesForTopic(
+        mode === "imagequestions" && !urlPredictionId ? normalizedUrlSubject || null : null,
+        mode === "imagequestions" && !urlPredictionId ? normalizedUrlLevel || null : null,
+        mode === "imagequestions" && !urlPredictionId ? imageQuestionTopic : null
+    );
     const [predictionImageGrouped, setPredictionImageGrouped] = useState<GroupedImageQuestion[]>([]);
     const [predictionImageLoading, setPredictionImageLoading] = useState(false);
 
@@ -438,6 +449,14 @@ export default function Questions() {
     }, [urlTopic]);
     const [imageQuestionPosition, setImageQuestionPosition] = useState(0);
     const currentGroupedQuestion: GroupedImageQuestion | undefined = imageGroupedList[imageQuestionPosition];
+    const currentMarkingSchemeFiles = useMemo(() => {
+        if (mode !== "imagequestions" || !currentGroupedQuestion || urlPredictionId) return [];
+        return getMarkingSchemeFilesForGroupedQuestion(topicMarkingSchemeFiles, currentGroupedQuestion);
+    }, [mode, currentGroupedQuestion, topicMarkingSchemeFiles, urlPredictionId]);
+    const {
+        images: currentImageMarkingSchemes,
+        loading: currentMarkingSchemeUrlsLoading,
+    } = useMarkingSchemeUrls(currentMarkingSchemeFiles);
     const [showComingSoonToast, setShowComingSoonToast] = useState(false);
 
     const imageProgressPaper = useMemo(() => {
@@ -1692,7 +1711,19 @@ export default function Questions() {
                     }}
                     markingSchemeBlob={mode === "pastpaper" ? markingSchemeBlob : undefined}
                     markingSchemePageRange={mode === "pastpaper" ? questionForMarkingScheme?.markingSchemePageRange : undefined}
-                    markingSchemeQuestionName={mode === "pastpaper" ? questionForMarkingScheme?.questionName : undefined}
+                    markingSchemeQuestionName={
+                        mode === "pastpaper"
+                            ? questionForMarkingScheme?.questionName
+                            : mode === "imagequestions"
+                                ? currentGroupedQuestion?.displayName
+                                : undefined
+                    }
+                    markingSchemeImages={mode === "imagequestions" ? currentImageMarkingSchemes : undefined}
+                    markingSchemeLoading={
+                        mode === "imagequestions" && !urlPredictionId
+                            ? topicMarkingSchemesLoading || currentMarkingSchemeUrlsLoading
+                            : undefined
+                    }
                     aiInjectedExchange={aiInjectedExchange}
                     onMarkCompleteFromGrading={handleToggleQuestionCompleted}
                 />

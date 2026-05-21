@@ -3,6 +3,9 @@ import { ref, listAll, getDownloadURL, getMetadata } from "firebase/storage";
 import { storage } from "../../firebase";
 
 const STORAGE_BASE = "temp_images/leaving-cert";
+const MARKING_SCHEME_BASE = "marking-schemes/leaving-cert";
+
+const markingSchemeFileCache = new Map<string, CacheEntry<MarkingSchemeFile[]>>();
 
 export type ImageTopic = {
   name: string;
@@ -257,6 +260,81 @@ export async function listTopicsForSubjectLevel(
   return topics;
 }
 
+export type MarkingSchemeFile = {
+  name: string;
+  storagePath: string;
+};
+
+export async function listMarkingSchemeFilesForTopic(
+  subject: string,
+  level: string,
+  topic: string
+): Promise<MarkingSchemeFile[]> {
+  const key = `ms/${subject}/${level}/${topic}`;
+  const cached = getCached(markingSchemeFileCache, key);
+  if (cached) return cached;
+
+  const resolved = await resolveStorageFolder(subject);
+  const folderRef = ref(storage, `${MARKING_SCHEME_BASE}/${resolved}/${level}-level/${topic}`);
+  const result = await listAll(folderRef);
+
+  const files = result.items.map((item) => ({
+    name: item.name,
+    storagePath: item.fullPath,
+  }));
+
+  if (files.length > 0) {
+    markingSchemeFileCache.set(key, { data: files, ts: Date.now() });
+  }
+  return files;
+}
+
+/** Match marking scheme files to a grouped question by filename prefix (e.g. 2016_-_3_Q8_7). */
+export function getMarkingSchemeFilesForGroupedQuestion(
+  allFiles: MarkingSchemeFile[],
+  grouped: GroupedImageQuestion
+): MarkingSchemeFile[] {
+  if (allFiles.length === 0) return [];
+
+  const groupKey = grouped.key;
+  const partPrefix = `${groupKey}_`;
+
+  const matched = allFiles.filter((f) => {
+    const bare = stripExtension(f.name);
+    return bare === groupKey || bare.startsWith(partPrefix);
+  });
+
+  matched.sort((a, b) => {
+    const pa = getPartNumber(stripExtension(a.name), groupKey);
+    const pb = getPartNumber(stripExtension(b.name), groupKey);
+    return pa - pb || naturalCompare(a.name, b.name);
+  });
+
+  return matched;
+}
+
+export async function resolveMarkingSchemeUrls(
+  files: MarkingSchemeFile[]
+): Promise<ImageQuestion[]> {
+  if (files.length === 0) return [];
+
+  const results = await Promise.allSettled(
+    files.map(async (f) => {
+      const downloadUrl = await getDownloadURL(ref(storage, f.storagePath));
+      return {
+        name: f.name,
+        displayName: prettifyName(f.name),
+        storagePath: f.storagePath,
+        downloadUrl,
+      };
+    })
+  );
+
+  return results
+    .filter((r): r is PromiseFulfilledResult<ImageQuestion> => r.status === "fulfilled")
+    .map((r) => r.value);
+}
+
 export async function listQuestionsForTopic(
   subject: string,
   level: string,
@@ -351,6 +429,81 @@ export type UseImageQuestionsResult = {
   loading: boolean;
   error: string | null;
 };
+
+export function useImageMarkingSchemesForTopic(
+  subject: string | null,
+  level: string | null,
+  topic: string | null
+): { files: MarkingSchemeFile[]; loading: boolean; error: string | null } {
+  const [files, setFiles] = useState<MarkingSchemeFile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef(0);
+
+  useEffect(() => {
+    if (!subject || !level || !topic) {
+      setFiles([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    const id = ++abortRef.current;
+    setLoading(true);
+    setError(null);
+
+    listMarkingSchemeFilesForTopic(subject, level, topic)
+      .then((items) => {
+        if (id !== abortRef.current) return;
+        setFiles(items);
+      })
+      .catch((err: unknown) => {
+        if (id !== abortRef.current) return;
+        console.error("Failed to load marking scheme files:", err);
+        setError(err instanceof Error ? err.message : "Failed to load marking schemes");
+        setFiles([]);
+      })
+      .finally(() => {
+        if (id === abortRef.current) setLoading(false);
+      });
+  }, [subject, level, topic]);
+
+  return { files, loading, error };
+}
+
+export function useMarkingSchemeUrls(files: MarkingSchemeFile[]) {
+  const [images, setImages] = useState<ImageQuestion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const abortRef = useRef(0);
+  const filesKey = files.map((f) => f.storagePath).join("\0");
+
+  useEffect(() => {
+    if (files.length === 0) {
+      setImages([]);
+      setLoading(false);
+      return;
+    }
+
+    const id = ++abortRef.current;
+    setLoading(true);
+
+    resolveMarkingSchemeUrls(files)
+      .then((items) => {
+        if (id !== abortRef.current) return;
+        setImages(items);
+      })
+      .catch((err: unknown) => {
+        if (id !== abortRef.current) return;
+        console.error("Failed to resolve marking scheme URLs:", err);
+        setImages([]);
+      })
+      .finally(() => {
+        if (id === abortRef.current) setLoading(false);
+      });
+  }, [filesKey, files.length]);
+
+  return { images, loading };
+}
 
 export function useImageQuestionsForTopic(
   subject: string | null,
