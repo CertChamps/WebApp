@@ -1,28 +1,23 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LuChevronRight, 
+import {
+  LuChevronRight,
   LuSparkles,
-  LuTarget,
-  LuMessageCircle,
   LuRocket,
   LuMousePointerClick,
   LuX,
-  LuBookMarked,
-  LuTimer,
-  LuPencil
 } from 'react-icons/lu';
+import crownLogo from '../../assets/logo.png';
 import '../../styles/tutorial.css';
 import { normalizePaperLevel, useExamPapers } from '../../hooks/useExamPapers';
-import { useTutorialContext, type HubContentType } from '../../context/TutorialContext';
+import { useTutorialContext } from '../../context/TutorialContext';
 
 // Tutorial step definitions
 export type TutorialStep = {
   id: string;
   title: string;
   description: string;
-  icon: React.ElementType;
   targetSelector?: string;
   targetId?: string;
   requiredAction?: 'click' | 'navigate' | 'any';
@@ -30,71 +25,79 @@ export type TutorialStep = {
   position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
   showSkip?: boolean;
   tip?: string;
-  waitForClick?: boolean; // New: wait for user to click the target
+  waitForClick?: boolean;
+  waitForHubAction?: boolean;
 };
 
-const HUB_PICK_SUBJECT_STEP: TutorialStep = {
-  id: 'hub-pick-subject',
-  title: 'Open your subject',
-  description: 'Tap the subject you picked during setup to browse its content.',
-  icon: LuMousePointerClick,
-  targetId: 'hub-subject-card',
-  position: 'bottom',
-  waitForClick: true,
-  showSkip: true,
-};
-
-const HUB_PICK_PAPER_STEP: TutorialStep = {
-  id: 'hub-pick-paper',
-  title: 'Choose a past paper',
-  description: 'Select a paper to open it — then we\'ll walk you through the practice workspace.',
-  icon: LuMousePointerClick,
-  targetId: 'hub-first-paper',
-  position: 'bottom',
-  waitForClick: true,
-};
-
-const HUB_PICK_TOPIC_STEP: TutorialStep = {
-  id: 'hub-pick-topic',
-  title: 'Choose a topic',
-  description: 'Select a topic to open it — then we\'ll walk you through the practice workspace.',
-  icon: LuMousePointerClick,
-  targetId: 'hub-first-topic',
-  position: 'bottom',
-  waitForClick: true,
-};
-
-const HUB_PICK_CONTENT_STEP: TutorialStep = {
-  id: 'hub-pick-content',
-  title: 'Choose what to practice',
-  description: 'Select a past paper or topic to open — then we\'ll walk you through the practice workspace.',
-  icon: LuMousePointerClick,
-  position: 'bottom',
-  waitForClick: true,
-};
-
-/** @deprecated Use getPracticeHubTutorialSteps — kept for step count references */
-export const PRACTICE_HUB_TUTORIAL_STEPS: TutorialStep[] = [
-  HUB_PICK_SUBJECT_STEP,
-  HUB_PICK_PAPER_STEP,
+const PREDICTIONS_ONBOARDING_STEPS: TutorialStep[] = [
+  {
+    id: 'hub-intro-predictions',
+    title: 'Exam predictions',
+    description:
+      "You must be here for the 2026 predictions, let's show you how everything works. Let's give it a go!",
+    targetId: 'hub-prediction-generate',
+    position: 'left',
+    showSkip: true,
+  },
+  {
+    id: 'hub-generate-prediction',
+    title: 'Generate your first prediction',
+    description:
+      'Try generating one now: pick your subject and paper, then press generate!',
+    targetId: 'hub-prediction-generate',
+    position: 'left',
+    waitForHubAction: true,
+    showSkip: true,
+  },
+  {
+    id: 'hub-predictions-list',
+    title: 'Your predictions',
+    description:
+      "This is where all your generated predictions will live. Let's give one a go.",
+    targetId: 'hub-predictions-section',
+    position: 'top',
+    showSkip: true,
+  },
+  {
+    id: 'hub-click-prediction',
+    title: 'Open a prediction',
+    description: 'Tap your prediction to open it and start practicing.',
+    targetId: 'hub-first-prediction',
+    position: 'bottom',
+    waitForHubAction: true,
+    showSkip: true,
+  },
 ];
 
-function getHubPickContentStep(contentType: HubContentType): TutorialStep {
-  if (contentType === 'topic') return HUB_PICK_TOPIC_STEP;
-  if (contentType === 'paper') return HUB_PICK_PAPER_STEP;
-  return HUB_PICK_CONTENT_STEP;
-}
+const ONBOARDING_SESSION_PREFIX_STEPS: TutorialStep[] = [
+  {
+    id: 'session-change-question',
+    title: 'Change question',
+    description:
+      'Use the arrows beside the question title to move between questions in this paper.',
+    targetId: 'session-question-nav',
+    position: 'bottom',
+    showSkip: true,
+  },
+  {
+    id: 'session-open-question-list',
+    title: 'Question list',
+    description: 'Open the question list to jump to any question in this paper.',
+    targetId: 'session-question-list-btn',
+    position: 'bottom',
+    waitForClick: true,
+    showSkip: true,
+  },
+];
 
-function getPracticeHubTutorialSteps(contentType: HubContentType): TutorialStep[] {
-  return [HUB_PICK_SUBJECT_STEP, getHubPickContentStep(contentType)];
-}
+/** @deprecated Legacy hub tour — predictions onboarding uses PREDICTIONS_ONBOARDING_STEPS */
+export const PRACTICE_HUB_TUTORIAL_STEPS: TutorialStep[] = PREDICTIONS_ONBOARDING_STEPS;
 
 const sessionTutorialSteps: TutorialStep[] = [
   {
     id: 'welcome',
     title: 'Welcome to CertChamps!',
     description: 'Let\'s take a quick tour to help you get the most out of our platform. We\'ll guide you through the key features.',
-    icon: LuRocket,
     position: 'center',
     showSkip: true,
   },
@@ -102,7 +105,6 @@ const sessionTutorialSteps: TutorialStep[] = [
     id: 'ai-intro',
     title: 'Your AI Assistant',
     description: 'This is your AI assistant. It can see your working and the exam paper. Ask it anything about the question and it will help you work through it!',
-    icon: LuSparkles,
     targetId: 'sidebar',
     position: 'left',
   },
@@ -110,7 +112,6 @@ const sessionTutorialSteps: TutorialStep[] = [
     id: 'click-timer',
     title: 'Practice Timer',
     description: 'Click the Timer icon to practice under exam conditions!',
-    icon: LuTimer,
     targetId: 'sidebar-timer',
     position: 'left',
     waitForClick: true,
@@ -119,7 +120,6 @@ const sessionTutorialSteps: TutorialStep[] = [
     id: 'timer-opened',
     title: 'Exam Timer',
     description: 'Use the timer to simulate real exam conditions and improve your speed.',
-    icon: LuTimer,
     targetId: 'sideview-timer',
     position: 'left',
   },
@@ -127,7 +127,6 @@ const sessionTutorialSteps: TutorialStep[] = [
     id: 'laptop-tablet',
     title: 'Laptop or Tablet Mode',
     description: 'Switch between laptop layout (PDF beside question) and tablet layout (full screen). Use whichever works best for you!',
-    icon: LuTarget,
     targetId: 'laptop-tablet-toggle',
     position: 'bottom',
   },
@@ -135,7 +134,6 @@ const sessionTutorialSteps: TutorialStep[] = [
     id: 'drawing-toolbar',
     title: 'Your Working Canvas',
     description: 'Use the pen, eraser, and grid tools here to write out solutions. Undo, redo, and clear your work anytime while you practice.',
-    icon: LuPencil,
     targetId: 'drawing-toolbar',
     position: 'top',
   },
@@ -143,7 +141,6 @@ const sessionTutorialSteps: TutorialStep[] = [
     id: 'click-logtables',
     title: 'Log Tables',
     description: 'Click this icon to open the log tables and formula booklet. You\'ll need these for exam questions!',
-    icon: LuBookMarked,
     targetId: 'sidebar-logtables',
     position: 'right',
     waitForClick: true,
@@ -152,7 +149,6 @@ const sessionTutorialSteps: TutorialStep[] = [
     id: 'logtables-opened',
     title: 'Log Tables',
     description: 'Reference materials at your fingertips. The log tables opens to the exact page you need for the current question.',
-    icon: LuBookMarked,
     targetId: 'sideview-logtables',
     position: 'left',
   },
@@ -160,7 +156,6 @@ const sessionTutorialSteps: TutorialStep[] = [
     id: 'feedback-tab',
     title: 'Feedback',
     description: 'Found a bug or have a suggestion? Use the Feedback tab in the navbar to let us know. We read every submission!',
-    icon: LuMessageCircle,
     targetId: 'nav-feedback',
     position: 'right',
   },
@@ -168,7 +163,6 @@ const sessionTutorialSteps: TutorialStep[] = [
     id: 'complete',
     title: 'You\'re All Set!',
     description: 'You\'ve completed the tour! Start practicing and good luck!',
-    icon: LuSparkles,
     position: 'center',
   },
 ];
@@ -189,20 +183,15 @@ function getSessionTutorialSteps(options: {
   return steps;
 }
 
-function getActiveTutorialSteps(
-  flow: 'default' | 'from-onboarding',
-  hubContentType: HubContentType = null
-): TutorialStep[] {
-  const includeLogTables = hubContentType !== 'topic';
-  const sessionSteps = getSessionTutorialSteps({
-    skipWelcome: flow === 'from-onboarding',
-    includeLogTables,
-  });
-
+function getActiveTutorialSteps(flow: 'default' | 'from-onboarding'): TutorialStep[] {
   if (flow === 'from-onboarding') {
-    return [...getPracticeHubTutorialSteps(hubContentType), ...sessionSteps];
+    return [
+      ...PREDICTIONS_ONBOARDING_STEPS,
+      ...ONBOARDING_SESSION_PREFIX_STEPS,
+      ...getSessionTutorialSteps({ skipWelcome: true, includeLogTables: true }),
+    ];
   }
-  return sessionSteps;
+  return getSessionTutorialSteps({ skipWelcome: false, includeLogTables: true });
 }
 
 type TutorialProps = {
@@ -211,11 +200,25 @@ type TutorialProps = {
   onComplete: () => void;
 };
 
+function TutorialTitleRow({ title }: { title?: string }) {
+  return (
+    <motion.div
+      className="tutorial-title-row"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.15 }}
+    >
+      <img src={crownLogo} alt="" className="tutorial-title-crown" aria-hidden />
+      <h3 className="tutorial-title txt-heading color-txt-main">{title}</h3>
+    </motion.div>
+  );
+}
+
 export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { papers } = useExamPapers(null, { loadAllWhenNull: true });
-  const { tutorialFlow, setHubTourPhase, hubTourAdvanceSignal, hubContentType } = useTutorialContext();
+  const { tutorialFlow, setHubTourPhase, hubTourAdvanceSignal } = useTutorialContext();
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isWaitingForAction, setIsWaitingForAction] = useState(false);
@@ -225,10 +228,11 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
   const wasOpenRef = useRef(false);
 
   const activeSteps = useMemo(
-    () => getActiveTutorialSteps(tutorialFlow, hubContentType),
-    [tutorialFlow, hubContentType]
+    () => getActiveTutorialSteps(tutorialFlow),
+    [tutorialFlow]
   );
-  const hubStepCount = tutorialFlow === 'from-onboarding' ? 2 : 0;
+  const hubStepCount =
+    tutorialFlow === 'from-onboarding' ? PREDICTIONS_ONBOARDING_STEPS.length : 0;
   const inHubPhase = currentStep < hubStepCount;
 
   const tutorialPaper = useMemo(() => {
@@ -255,7 +259,8 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
   const progress = ((currentStep + 1) / activeSteps.length) * 100;
 
   // Check if current step requires waiting for user action
-  const needsUserAction = step?.waitForClick || step?.requiredAction === 'navigate';
+  const needsUserAction =
+    step?.waitForClick || step?.requiredAction === 'navigate' || step?.waitForHubAction === true;
 
   // Find and highlight target element
   const findTargetElement = useCallback(() => {
@@ -299,14 +304,14 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
 
     const hubStep = activeSteps[currentStep];
     if (tutorialFlow === 'from-onboarding') {
-      if (hubStep?.id === 'hub-pick-subject') {
-        setHubTourPhase('pick-subject');
-      } else if (
-        hubStep?.id === 'hub-pick-paper' ||
-        hubStep?.id === 'hub-pick-topic' ||
-        hubStep?.id === 'hub-pick-content'
-      ) {
-        setHubTourPhase('pick-paper');
+      if (hubStep?.id === 'hub-intro-predictions') {
+        setHubTourPhase('intro');
+      } else if (hubStep?.id === 'hub-generate-prediction') {
+        setHubTourPhase('generate');
+      } else if (hubStep?.id === 'hub-predictions-list') {
+        setHubTourPhase('view-list');
+      } else if (hubStep?.id === 'hub-click-prediction') {
+        setHubTourPhase('click-prediction');
       } else {
         setHubTourPhase(null);
       }
@@ -347,19 +352,21 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
       return;
     }
 
-    const targetPath = tutorialPaper
-      ? `/practice/session?mode=pastpaper&subject=maths&level=higher&paperId=${encodeURIComponent(tutorialPaper.id)}`
-      : '/practice/session?mode=pastpaper&subject=maths&level=higher';
-    const currentPath = `${location.pathname}${location.search}`;
+    if (tutorialFlow !== 'from-onboarding') {
+      const targetPath = tutorialPaper
+        ? `/practice/session?mode=pastpaper&subject=maths&level=higher&paperId=${encodeURIComponent(tutorialPaper.id)}`
+        : '/practice/session?mode=pastpaper&subject=maths&level=higher';
+      const currentPath = `${location.pathname}${location.search}`;
 
-    if (currentPath !== targetPath) {
-      navigate(targetPath, { replace: true });
+      if (currentPath !== targetPath) {
+        navigate(targetPath, { replace: true });
+      }
     }
   }, [isOpen, inHubPhase, tutorialFlow, tutorialPaper, location.pathname, location.search, navigate]);
 
   // Set waiting state when step changes
   useEffect(() => {
-    if (step?.waitForClick || step?.requiredAction === 'navigate') {
+    if (step?.waitForClick || step?.requiredAction === 'navigate' || step?.waitForHubAction) {
       setIsWaitingForAction(true);
     } else {
       setIsWaitingForAction(false);
@@ -478,11 +485,31 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
 
   if (!isOpen) return null;
 
-  const IconComponent = step?.icon || LuSparkles;
-
-  // Calculate tooltip position - ensures it never overlaps with the target
   const getTooltipStyle = (): React.CSSProperties => {
-    if (!targetRect || step?.position === 'center') {
+    const pad = 16;
+    const gap = 24;
+    const tooltipWidth = 260;
+    const tooltipHeight = 300;
+
+    if (!targetRect) {
+      if (step?.position === 'center') {
+        return {
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+        };
+      }
+      const fallbackLeft = pad + Math.max(0, (window.innerWidth * 0.32 - tooltipWidth) / 2);
+      return {
+        position: 'fixed',
+        top: '50%',
+        left: fallbackLeft,
+        transform: 'translateY(-50%)',
+      };
+    }
+
+    if (step?.position === 'center') {
       return {
         position: 'fixed',
         top: '50%',
@@ -490,63 +517,96 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
         transform: 'translate(-50%, -50%)',
       };
     }
+    const r = targetRect;
 
-    const padding = 32; // Increased padding
-    const tooltipWidth = 320;
-    const tooltipHeight = 280;
+    const clamp = (value: number, min: number, max: number) =>
+      Math.max(min, Math.min(value, max));
 
-    let top = targetRect.top;
-    let left = targetRect.right + padding;
+    const centerInGutter = (gutterStart: number, gutterEnd: number) => {
+      const width = Math.max(0, gutterEnd - gutterStart);
+      return gutterStart + Math.max(0, (width - tooltipWidth) / 2);
+    };
+    const sideTop = clamp(
+      r.top + r.height / 2 - tooltipHeight / 2,
+      pad,
+      window.innerHeight - tooltipHeight - pad
+    );
 
-    switch (step?.position) {
-      case 'right':
-        top = Math.max(padding, Math.min(targetRect.top + targetRect.height / 2 - tooltipHeight / 2, window.innerHeight - tooltipHeight - padding));
-        left = targetRect.right + padding;
-        // If not enough space on right, try left
-        if (left + tooltipWidth > window.innerWidth - padding) {
-          left = Math.max(padding, targetRect.left - tooltipWidth - padding);
-        }
-        break;
-      case 'left':
-        top = Math.max(padding, Math.min(targetRect.top + targetRect.height / 2 - tooltipHeight / 2, window.innerHeight - tooltipHeight - padding));
-        left = Math.max(padding, targetRect.left - tooltipWidth - padding);
-        // If not enough space on left, try right
-        if (left < padding) {
-          left = targetRect.right + padding;
-        }
-        break;
-      case 'bottom':
-        top = targetRect.bottom + padding;
-        left = Math.max(padding, Math.min(targetRect.left + targetRect.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - padding));
-        // If not enough space below, position to the side
-        if (top + tooltipHeight > window.innerHeight - padding) {
-          top = Math.max(padding, targetRect.top - tooltipHeight / 2);
-          left = targetRect.right + padding;
-          if (left + tooltipWidth > window.innerWidth - padding) {
-            left = Math.max(padding, targetRect.left - tooltipWidth - padding);
-          }
-        }
-        break;
-      case 'top':
-        top = Math.max(padding, targetRect.top - tooltipHeight - padding);
-        left = Math.max(padding, Math.min(targetRect.left + targetRect.width / 2 - tooltipWidth / 2, window.innerWidth - tooltipWidth - padding));
-        // If not enough space above, position to the side instead
-        if (top < padding || targetRect.top - tooltipHeight - padding < padding) {
-          // Try positioning to the left of the target
-          left = Math.max(padding, targetRect.left - tooltipWidth - padding);
-          top = Math.max(padding, Math.min(targetRect.top, window.innerHeight - tooltipHeight - padding));
-          // If not enough space on left, try right
-          if (left < padding || targetRect.left - tooltipWidth - padding < padding) {
-            left = targetRect.right + padding;
-          }
-        }
-        break;
+    const placements: Record<
+      NonNullable<TutorialStep['position']>,
+      { top: number; left: number }
+    > = {
+      center: { top: 0, left: 0 },
+      right: {
+        top: sideTop,
+        left: centerInGutter(r.right + gap, window.innerWidth - pad),
+      },
+      left: {
+        top: sideTop,
+        left: centerInGutter(pad, r.left - gap),
+      },
+      bottom: {
+        top: r.bottom + gap,
+        left: clamp(
+          r.left + r.width / 2 - tooltipWidth / 2,
+          pad,
+          window.innerWidth - tooltipWidth - pad
+        ),
+      },
+      top: {
+        top: r.top - tooltipHeight - gap,
+        left: clamp(
+          r.left + r.width / 2 - tooltipWidth / 2,
+          pad,
+          window.innerWidth - tooltipWidth - pad
+        ),
+      },
+    };
+
+    const fitsViewport = (top: number, left: number) =>
+      left >= pad &&
+      left + tooltipWidth <= window.innerWidth - pad &&
+      top >= pad &&
+      top + tooltipHeight <= window.innerHeight - pad;
+
+    const overlapsTarget = (top: number, left: number) =>
+      !(
+        left + tooltipWidth <= r.left - gap ||
+        left >= r.right + gap ||
+        top + tooltipHeight <= r.top - gap ||
+        top >= r.bottom + gap
+      );
+
+    const preferred = step?.position ?? 'bottom';
+    const tryOrder: NonNullable<TutorialStep['position']>[] = [
+      preferred,
+      'right',
+      'left',
+      'bottom',
+      'top',
+    ];
+    const seen = new Set<string>();
+
+    for (const side of tryOrder) {
+      if (side === 'center' || seen.has(side)) continue;
+      seen.add(side);
+      const { top, left } = placements[side];
+      if (fitsViewport(top, left) && !overlapsTarget(top, left)) {
+        return { position: 'fixed', top, left };
+      }
     }
 
+    // Fallback: pick the wider side gutter and center the tooltip in it
+    const rightGutter = window.innerWidth - pad - (r.right + gap);
+    const leftGutter = r.left - gap - pad;
+    const useRight = rightGutter >= leftGutter;
+    const fallbackLeft = useRight
+      ? centerInGutter(r.right + gap, window.innerWidth - pad)
+      : centerInGutter(pad, r.left - gap);
     return {
       position: 'fixed',
-      top,
-      left,
+      top: sideTop,
+      left: clamp(fallbackLeft, pad, window.innerWidth - tooltipWidth - pad),
     };
   };
 
@@ -684,25 +744,7 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
               {currentStep + 1} / {activeSteps.length}
             </div>
 
-            {/* Icon */}
-            <motion.div 
-              className="tutorial-icon-wrapper color-bg-accent"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', damping: 15, delay: 0.1 }}
-            >
-              <IconComponent size={28} className="color-txt-accent" />
-            </motion.div>
-
-            {/* Content */}
-            <motion.h3 
-              className="tutorial-title txt-heading color-txt-main"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-            >
-              {step?.title}
-            </motion.h3>
+            <TutorialTitleRow title={step?.title} />
             <motion.p 
               className="tutorial-description color-txt-sub"
               initial={{ opacity: 0 }}
@@ -800,25 +842,7 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
               {currentStep + 1} / {activeSteps.length}
             </div>
 
-            {/* Icon */}
-            <motion.div 
-              className="tutorial-icon-wrapper color-bg-accent"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', damping: 15, delay: 0.1 }}
-            >
-              <IconComponent size={28} className="color-txt-accent" />
-            </motion.div>
-
-            {/* Content */}
-            <motion.h3 
-              className="tutorial-title txt-heading color-txt-main"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-            >
-              {step?.title}
-            </motion.h3>
+            <TutorialTitleRow title={step?.title} />
             <motion.p 
               className="tutorial-description color-txt-sub"
               initial={{ opacity: 0 }}
