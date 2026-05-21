@@ -24,6 +24,10 @@ type Props = {
   /** When set with onPaperNumberChange, paper select is rendered by the parent. */
   paperNumber?: 1 | 2;
   onPaperNumberChange?: (paper: 1 | 2) => void;
+  /** Tutorial spotlight on the generated-paper review panel (step 2). */
+  tutorialHighlightReview?: boolean;
+  /** Called after a prediction blueprint is generated successfully. */
+  onBlueprintReady?: () => void;
 };
 
 const GeneratePredictionFlow = forwardRef<GeneratePredictionFlowHandle, Props>(
@@ -36,6 +40,8 @@ const GeneratePredictionFlow = forwardRef<GeneratePredictionFlowHandle, Props>(
       onLoadingChange,
       paperNumber: paperNumberProp,
       onPaperNumberChange,
+      tutorialHighlightReview = false,
+      onBlueprintReady,
     },
     ref
   ) {
@@ -67,6 +73,7 @@ const GeneratePredictionFlow = forwardRef<GeneratePredictionFlowHandle, Props>(
           contentType,
         });
         setBlueprint(result);
+        onBlueprintReady?.();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Generation failed");
         setBlueprint(null);
@@ -199,7 +206,10 @@ const GeneratePredictionFlow = forwardRef<GeneratePredictionFlowHandle, Props>(
         )}
 
         {blueprint && (
-          <div className="rounded-xl p-5 flex flex-col gap-5 color-bg-grey-5 color-shadow-small">
+          <div
+            className="rounded-xl p-5 flex flex-col gap-5 color-bg-grey-5 color-shadow-small"
+            {...(tutorialHighlightReview ? { "data-tutorial-id": "hub-prediction-review" } : {})}
+          >
             <div>
               <h3 className="txt-heading-colour text-lg font-bold">{blueprint.label}</h3>
               <p className="txt-sub color-txt-sub mt-2 text-sm">{blueprint.summary}</p>

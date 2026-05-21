@@ -26,6 +26,7 @@ import {
 } from "../lib/contentAccess";
 import { UserContext } from "../context/UserContext";
 import { useTutorialContext } from "../context/TutorialContext";
+import { useOnboardingContext } from "../context/OnboardingContext";
 import ContentProGate from "../components/ContentProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { useImageTopics, listQuestionsForTopic, groupImageQuestions, type ImageTopic } from "../hooks/useImageQuestions";
@@ -119,15 +120,17 @@ function getSubjectIcon(subjectId: string): IconType {
 export default function PracticeHub() {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
+  const { showOnboarding } = useOnboardingContext();
   const {
     tutorialFlow,
+    hubSubjectId,
     hubTourPhase,
     showTutorial,
     signalHubTourAdvance,
     setHubContentType,
   } = useTutorialContext();
   const isPredictionsOnboardingTour =
-    tutorialFlow === "from-onboarding" && showTutorial;
+    tutorialFlow === "from-onboarding" && showTutorial && !showOnboarding;
   const isTutorialModalLocked =
     isPredictionsOnboardingTour &&
     (hubTourPhase === "intro" || hubTourPhase === "generate");
@@ -201,19 +204,22 @@ export default function PracticeHub() {
     if (isPredictionsOnboardingTour) {
       if (!hubTourStartedRef.current) {
         hubTourStartedRef.current = true;
-        setSubjectFilter(null);
+        if (hubSubjectId && PRACTICE_HUB_SUBJECTS.some((s) => s.id === hubSubjectId)) {
+          setSubjectFilter(hubSubjectId);
+          setPredictionSubject(hubSubjectId);
+        }
       }
     } else {
       hubTourStartedRef.current = false;
     }
-  }, [isPredictionsOnboardingTour]);
+  }, [isPredictionsOnboardingTour, hubSubjectId]);
 
   useEffect(() => {
-    if (!isPredictionsOnboardingTour) return;
+    if (!isPredictionsOnboardingTour || showOnboarding) return;
     if (hubTourPhase === "intro" || hubTourPhase === "generate") {
       openPredictionModal();
     }
-  }, [isPredictionsOnboardingTour, hubTourPhase, openPredictionModal]);
+  }, [isPredictionsOnboardingTour, showOnboarding, hubTourPhase, openPredictionModal]);
 
   const handleSubjectSelect = useCallback((subjectId: string) => {
     setSubjectFilter(subjectId);
@@ -1582,9 +1588,6 @@ export default function PracticeHub() {
               <div
                 className="practice-hub__prediction-modal color-bg"
                 onClick={(e) => e.stopPropagation()}
-                {...(isTutorialModalLocked
-                  ? { "data-tutorial-id": "hub-prediction-generate" }
-                  : {})}
               >
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <h2 id="ph-prediction-modal-title" className="txt-heading-colour text-xl font-bold">
@@ -1603,7 +1606,12 @@ export default function PracticeHub() {
                   </button>
                 </div>
 
-                <div className="prediction-flow__controls-row prediction-flow__controls-row--modal mb-5">
+                <div
+                  className="prediction-flow__controls-row prediction-flow__controls-row--modal mb-5"
+                  {...(isPredictionsOnboardingTour && hubTourPhase === "intro"
+                    ? { "data-tutorial-id": "hub-prediction-setup" }
+                    : {})}
+                >
                   <div className="prediction-flow__field">
                     <label className="prediction-flow__label color-txt-sub">Subject</label>
                     <select
@@ -1662,7 +1670,14 @@ export default function PracticeHub() {
                   onPaperNumberChange={setPredictionPaper}
                   embeddedControls
                   onLoadingChange={setPredictionGenerating}
-                  tutorialAutoSave={isPredictionsOnboardingTour && hubTourPhase === "generate"}
+                  tutorialHighlightReview={
+                    isPredictionsOnboardingTour && hubTourPhase === "generate"
+                  }
+                  onBlueprintReady={() => {
+                    if (isPredictionsOnboardingTour && hubTourPhase === "intro") {
+                      signalHubTourAdvance();
+                    }
+                  }}
                   onSaved={() => {
                     setPapersReloadKey((k) => k + 1);
                     setShowPredictionModal(false);

@@ -21,6 +21,7 @@ import SubjectProgressPage from "./pages/progress/SubjectProgressPage";
 import Feedback from "./pages/feedback";
 import Tutorial from "./components/tutorial/Tutorial";
 import { useTutorialContext } from "./context/TutorialContext";
+import { useOnboardingContext } from "./context/OnboardingContext";
 import MobileRedirect from "./pages/mobileRedirect";
 import PhoneRedirect from "./components/PhoneRedirect";
 import SessionTracker from "./components/SessionTracker";
@@ -37,7 +38,8 @@ function PracticeToDeckRedirect() {
 // Layout component that includes the Tutorial overlay
 function RootLayout() {
   const { showTutorial, setShowTutorial, completeTutorial } = useTutorialContext();
-  
+  const { showOnboarding } = useOnboardingContext();
+
   return (
     <>
       <SessionTracker />
@@ -47,7 +49,7 @@ function RootLayout() {
       <OnboardingPrompt />
       <ReleaseNotesPrompt />
       <Tutorial
-        isOpen={showTutorial}
+        isOpen={showTutorial && !showOnboarding}
         onClose={() => setShowTutorial(false)}
         onComplete={completeTutorial}
       />

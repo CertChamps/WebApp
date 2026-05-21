@@ -27,26 +27,41 @@ export type TutorialStep = {
   tip?: string;
   waitForClick?: boolean;
   waitForHubAction?: boolean;
+  /** Tighter spotlight around small controls (default 10px). */
+  spotlightPadding?: number;
+  /** Shown while waiting for user action instead of generic copy. */
+  actionHint?: string;
+  /** Allow clicks inside the spotlight (subject selects, scroll, etc.). */
+  interactiveSpotlight?: boolean;
 };
 
 const PREDICTIONS_ONBOARDING_STEPS: TutorialStep[] = [
   {
     id: 'hub-intro-predictions',
-    title: 'Exam predictions',
+    title: 'Set up your prediction',
     description:
-      "You must be here for the 2026 predictions, let's show you how everything works. Let's give it a go!",
-    targetId: 'hub-prediction-generate',
+      'Choose your subject, level, and paper in the highlighted area. When you are ready, click Generate prediction to build your paper.',
+    targetId: 'hub-prediction-setup',
     position: 'left',
+    waitForHubAction: true,
+    interactiveSpotlight: true,
+    spotlightPadding: 6,
+    actionHint:
+      'Use the highlighted controls to pick subject, level, and paper — then click Generate prediction.',
     showSkip: true,
   },
   {
     id: 'hub-generate-prediction',
-    title: 'Generate your first prediction',
+    title: 'Save your prediction',
     description:
-      'Try generating one now: pick your subject and paper, then press generate!',
-    targetId: 'hub-prediction-generate',
+      'Review your predicted paper in the highlighted section. Scroll if you need to, then save it to add it to your Predictions list.',
+    targetId: 'hub-prediction-review',
     position: 'left',
     waitForHubAction: true,
+    interactiveSpotlight: true,
+    spotlightPadding: 6,
+    actionHint:
+      'Scroll through your prediction if needed, then click Save Prediction at the bottom of the highlighted area.',
     showSkip: true,
   },
   {
@@ -82,7 +97,7 @@ const ONBOARDING_SESSION_PREFIX_STEPS: TutorialStep[] = [
   {
     id: 'session-open-question-list',
     title: 'Question list',
-    description: 'Open the question list to jump to any question in this paper.',
+    description: 'Click the question title to open the list and jump to any question in this paper.',
     targetId: 'session-question-list-btn',
     position: 'bottom',
     waitForClick: true,
@@ -106,21 +121,6 @@ const sessionTutorialSteps: TutorialStep[] = [
     title: 'Your AI Assistant',
     description: 'This is your AI assistant. It can see your working and the exam paper. Ask it anything about the question and it will help you work through it!',
     targetId: 'sidebar',
-    position: 'left',
-  },
-  {
-    id: 'click-timer',
-    title: 'Practice Timer',
-    description: 'Click the Timer icon to practice under exam conditions!',
-    targetId: 'sidebar-timer',
-    position: 'left',
-    waitForClick: true,
-  },
-  {
-    id: 'timer-opened',
-    title: 'Exam Timer',
-    description: 'Use the timer to simulate real exam conditions and improve your speed.',
-    targetId: 'sideview-timer',
     position: 'left',
   },
   {
@@ -169,16 +169,10 @@ const sessionTutorialSteps: TutorialStep[] = [
 
 const LOG_TABLES_STEP_IDS = new Set(['click-logtables', 'logtables-opened']);
 
-function getSessionTutorialSteps(options: {
-  skipWelcome?: boolean;
-  includeLogTables?: boolean;
-}): TutorialStep[] {
-  let steps = sessionTutorialSteps;
+function getSessionTutorialSteps(options: { skipWelcome?: boolean }): TutorialStep[] {
+  let steps = sessionTutorialSteps.filter((s) => !LOG_TABLES_STEP_IDS.has(s.id));
   if (options.skipWelcome) {
     steps = steps.filter((s) => s.id !== 'welcome');
-  }
-  if (options.includeLogTables === false) {
-    steps = steps.filter((s) => !LOG_TABLES_STEP_IDS.has(s.id));
   }
   return steps;
 }
@@ -188,10 +182,10 @@ function getActiveTutorialSteps(flow: 'default' | 'from-onboarding'): TutorialSt
     return [
       ...PREDICTIONS_ONBOARDING_STEPS,
       ...ONBOARDING_SESSION_PREFIX_STEPS,
-      ...getSessionTutorialSteps({ skipWelcome: true, includeLogTables: true }),
+      ...getSessionTutorialSteps({ skipWelcome: true }),
     ];
   }
-  return getSessionTutorialSteps({ skipWelcome: false, includeLogTables: true });
+  return getSessionTutorialSteps({ skipWelcome: false });
 }
 
 type TutorialProps = {
@@ -199,6 +193,33 @@ type TutorialProps = {
   onClose: () => void;
   onComplete: () => void;
 };
+
+function getSpotlightPadding(step: TutorialStep | undefined): number {
+  return step?.spotlightPadding ?? 10;
+}
+
+function TutorialActionHint({ step }: { step: TutorialStep | undefined }) {
+  if (!step) return null;
+  const text =
+    step.actionHint ??
+    (step.waitForHubAction
+      ? 'Complete the step above to continue.'
+      : step.waitForClick
+        ? 'Interact with the highlighted control to continue.'
+        : null);
+  if (!text) return null;
+  return (
+    <motion.div
+      className="tutorial-action-indicator color-bg-accent"
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: [1, 1.02, 1] }}
+      transition={{ scale: { repeat: Infinity, duration: 1.5 } }}
+    >
+      <LuMousePointerClick size={16} className="color-txt-accent" />
+      <span className="txt-sub color-txt-accent">{text}</span>
+    </motion.div>
+  );
+}
 
 function TutorialTitleRow({ title }: { title?: string }) {
   return (
@@ -373,9 +394,21 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
     }
   }, [currentStep, step]);
 
-  // Handle click on target elements for waitForClick steps (session steps only — hub uses state signals)
+  // Scroll the review panel into view when the save step becomes active
   useEffect(() => {
-    if (!isOpen || !step?.waitForClick || step.id.startsWith('hub-')) return;
+    if (!isOpen || step?.id !== 'hub-generate-prediction') return;
+    const scrollToReview = () => {
+      const el = document.querySelector('[data-tutorial-id="hub-prediction-review"]');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+    scrollToReview();
+    const interval = setInterval(scrollToReview, 600);
+    return () => clearInterval(interval);
+  }, [isOpen, currentStep, step?.id]);
+
+  // Handle click on target elements for waitForClick steps
+  useEffect(() => {
+    if (!isOpen || !step?.waitForClick || step.waitForHubAction) return;
 
     const targetElement = findTargetElement();
     if (!targetElement) return;
@@ -484,6 +517,8 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
   }, [isOpen, currentStep, isWaitingForAction]);
 
   if (!isOpen) return null;
+
+  const spotlightPad = getSpotlightPadding(step);
 
   const getTooltipStyle = (): React.CSSProperties => {
     const pad = 16;
@@ -631,11 +666,11 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
                     <motion.rect
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      x={targetRect.left - 10}
-                      y={targetRect.top - 10}
-                      width={targetRect.width + 20}
-                      height={targetRect.height + 20}
-                      rx="12"
+                      x={targetRect.left - spotlightPad}
+                      y={targetRect.top - spotlightPad}
+                      width={targetRect.width + spotlightPad * 2}
+                      height={targetRect.height + spotlightPad * 2}
+                      rx={spotlightPad <= 4 ? 8 : 12}
                       fill="black"
                     />
                   )}
@@ -657,10 +692,11 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
                 animate={{ opacity: 1, scale: 1 }}
                 style={{
                   position: 'fixed',
-                  left: targetRect.left - 10,
-                  top: targetRect.top - 10,
-                  width: targetRect.width + 20,
-                  height: targetRect.height + 20,
+                  left: targetRect.left - spotlightPad,
+                  top: targetRect.top - spotlightPad,
+                  width: targetRect.width + spotlightPad * 2,
+                  height: targetRect.height + spotlightPad * 2,
+                  borderRadius: spotlightPad <= 4 ? 8 : 12,
                   pointerEvents: 'none',
                 }}
               />
@@ -668,7 +704,7 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
           </motion.div>
 
           {/* Clickable area blocker - blocks clicks everywhere except the target */}
-          {needsUserAction && targetRect && (
+          {needsUserAction && targetRect && !step?.interactiveSpotlight && (
             <>
               {/* Top blocker */}
               <div 
@@ -677,14 +713,14 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
                   top: 0, 
                   left: 0, 
                   right: 0, 
-                  height: targetRect.top - 10,
+                  height: targetRect.top - spotlightPad,
                 }} 
               />
               {/* Bottom blocker */}
               <div 
                 className="tutorial-click-blocker" 
                 style={{ 
-                  top: targetRect.bottom + 10, 
+                  top: targetRect.bottom + spotlightPad, 
                   left: 0, 
                   right: 0, 
                   bottom: 0,
@@ -694,20 +730,20 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
               <div 
                 className="tutorial-click-blocker" 
                 style={{ 
-                  top: targetRect.top - 10, 
+                  top: targetRect.top - spotlightPad, 
                   left: 0, 
-                  width: targetRect.left - 10,
-                  height: targetRect.height + 20,
+                  width: targetRect.left - spotlightPad,
+                  height: targetRect.height + spotlightPad * 2,
                 }} 
               />
               {/* Right blocker */}
               <div 
                 className="tutorial-click-blocker" 
                 style={{ 
-                  top: targetRect.top - 10, 
-                  left: targetRect.right + 10, 
+                  top: targetRect.top - spotlightPad, 
+                  left: targetRect.right + spotlightPad, 
                   right: 0,
-                  height: targetRect.height + 20,
+                  height: targetRect.height + spotlightPad * 2,
                 }} 
               />
             </>
@@ -768,17 +804,7 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
             )}
 
             {/* Action indicator */}
-            {isWaitingForAction && (
-              <motion.div 
-                className="tutorial-action-indicator color-bg-accent"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: [1, 1.02, 1] }}
-                transition={{ scale: { repeat: Infinity, duration: 1.5 } }}
-              >
-                <LuMousePointerClick size={16} className="color-txt-accent" />
-                <span className="txt-sub color-txt-accent">Click the highlighted element</span>
-              </motion.div>
-            )}
+            {isWaitingForAction && <TutorialActionHint step={step} />}
 
             {/* Navigation */}
             <div className="tutorial-nav">
@@ -866,17 +892,7 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
             )}
 
             {/* Action indicator */}
-            {isWaitingForAction && (
-              <motion.div 
-                className="tutorial-action-indicator color-bg-accent"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: [1, 1.02, 1] }}
-                transition={{ scale: { repeat: Infinity, duration: 1.5 } }}
-              >
-                <LuMousePointerClick size={16} className="color-txt-accent" />
-                <span className="txt-sub color-txt-accent">Click the highlighted element</span>
-              </motion.div>
-            )}
+            {isWaitingForAction && <TutorialActionHint step={step} />}
 
             {/* Navigation */}
             <div className="tutorial-nav">
