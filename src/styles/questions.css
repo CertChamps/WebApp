@@ -202,6 +202,26 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   white-space: nowrap;
 }
 
+/* Clickable question title dropdown in top bar */
+.question-title-picker__trigger {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.question-title-picker__trigger:focus-visible {
+  @apply outline-none ring-2 ring-offset-2 ring-blue/40;
+}
+.question-title-picker__item {
+  border: none;
+  cursor: pointer;
+}
+.question-title-picker__item:focus-visible {
+  @apply outline-none ring-2 ring-inset ring-blue/40;
+}
+.question-title-picker__backdrop {
+  appearance: none;
+}
+
 /* AI Chat markdown – tuned for LLM output (headings, lists, code, blockquotes, tables) */
 .chat-markdown,
 .chat-markdown-prose {

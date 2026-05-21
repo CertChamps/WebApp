@@ -28,12 +28,14 @@ function extractYear(...parts: string[]): number {
 function buildTopicForecast(topicWeights: Map<string, number>): TopicForecast[] {
   const sorted = [...topicWeights.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
   const max = sorted[0]?.[1] ?? 1;
+  const total = [...topicWeights.values()].reduce((sum, w) => sum + w, 0);
   return sorted.map(([topic, weight]) => ({
     topic,
     likelihood: (weight >= max * 0.7 ? "high" : weight >= max * 0.4 ? "medium" : "low") as
       | "high"
       | "medium"
       | "low",
+    percent: total > 0 ? Math.round((weight / total) * 100) : 0,
     reason: `Topic has ${Math.round(weight)} questions in the image bank (weighted by recency).`,
   }));
 }
@@ -107,6 +109,7 @@ export function buildImagePredictionFromCatalog(
     topicCounts.set(c.primaryTag, topicUsed + 1);
     selections.push({
       slot: selections.length + 1,
+      displayName: c.displayName,
       sourceTopic: c.topic,
       imageKey: c.imageKey,
       reason: `Selected from ${c.topicDisplay}${c.year ? ` (${c.year})` : ""} — common topic in the image bank.`,

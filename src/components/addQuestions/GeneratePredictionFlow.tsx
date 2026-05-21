@@ -1,208 +1,270 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { LuSparkles, LuSave, LuRefreshCw } from "react-icons/lu";
 import { generatePredictedPaper, resolvePredictionContentType } from "../../lib/predictions/api";
 import { savePredictedPaperToFirestore } from "../../lib/predictions/savePredictedPaper";
 import { getSubjectLabel } from "../../data/practiceHubSubjects";
 import type { PredictedPaperBlueprint } from "../../lib/predictions/types";
 
+/** Shared themed select — must be on JSX (not only in CSS @apply) for theme variants. */
+export const PREDICTION_SELECT_CLASS =
+  "px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm outline-none min-w-[8rem] focus:ring-2 focus:ring-[var(--accent)]/50";
+
+export type GeneratePredictionFlowHandle = {
+  generate: () => void;
+  loading: boolean;
+};
+
 type Props = {
   subject: string;
   level: string;
   onSaved?: (paperId: string) => void;
-  /** During onboarding tour: save automatically after a successful generate */
-  tutorialAutoSave?: boolean;
+  /** Parent renders subject/level/generate row (Practice Hub modal). */
+  embeddedControls?: boolean;
+  onLoadingChange?: (loading: boolean) => void;
+  /** When set with onPaperNumberChange, paper select is rendered by the parent. */
+  paperNumber?: 1 | 2;
+  onPaperNumberChange?: (paper: 1 | 2) => void;
 };
 
-export default function GeneratePredictionFlow({
-  subject,
-  level,
-  onSaved,
-  tutorialAutoSave = false,
-}: Props) {
-  const subjectLabel = getSubjectLabel(subject);
-  const contentType = useMemo(() => resolvePredictionContentType(subject), [subject]);
-  const isImageSubject = contentType === "image";
-  const [paperNumber, setPaperNumber] = useState<1 | 2>(1);
-  const [targetYear, setTargetYear] = useState(new Date().getFullYear());
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [blueprint, setBlueprint] = useState<PredictedPaperBlueprint | null>(null);
-  const [savedPaperId, setSavedPaperId] = useState<string | null>(null);
-  const tutorialSaveStarted = useRef(false);
+const GeneratePredictionFlow = forwardRef<GeneratePredictionFlowHandle, Props>(
+  function GeneratePredictionFlow(
+    {
+      subject,
+      level,
+      onSaved,
+      embeddedControls = false,
+      onLoadingChange,
+      paperNumber: paperNumberProp,
+      onPaperNumberChange,
+    },
+    ref
+  ) {
+    const subjectLabel = getSubjectLabel(subject);
+    const contentType = useMemo(() => resolvePredictionContentType(subject), [subject]);
+    const isImageSubject = contentType === "image";
+    const [internalPaperNumber, setInternalPaperNumber] = useState<1 | 2>(1);
+    const paperControlled = onPaperNumberChange !== undefined;
+    const paperNumber = paperControlled ? (paperNumberProp ?? 1) : internalPaperNumber;
+    const setPaperNumber = paperControlled ? onPaperNumberChange : setInternalPaperNumber;
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [blueprint, setBlueprint] = useState<PredictedPaperBlueprint | null>(null);
+    const [savedPaperId, setSavedPaperId] = useState<string | null>(null);
 
-  const handleSave = async (blueprintToSave: PredictedPaperBlueprint) => {
-    setSaving(true);
-    setError(null);
-    try {
-      const paperId = await savePredictedPaperToFirestore(subject, level, blueprintToSave);
-      setSavedPaperId(paperId);
-      onSaved?.(paperId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
-  };
+    const levelLabel =
+      level === "higher" ? "Higher" : level === "ordinary" ? "Ordinary" : level;
 
-  useEffect(() => {
-    if (!tutorialAutoSave || !blueprint || tutorialSaveStarted.current) return;
-    tutorialSaveStarted.current = true;
-    void handleSave(blueprint);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per generated blueprint in tour mode
-  }, [tutorialAutoSave, blueprint]);
+    const handleGenerate = async () => {
+      setLoading(true);
+      setError(null);
+      setSavedPaperId(null);
+      try {
+        const result = await generatePredictedPaper({
+          subject,
+          level,
+          paperNumber: isImageSubject ? undefined : paperNumber,
+          contentType,
+        });
+        setBlueprint(result);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Generation failed");
+        setBlueprint(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleGenerate = async () => {
-    setLoading(true);
-    setError(null);
-    setSavedPaperId(null);
-    try {
-      const result = await generatePredictedPaper({
-        subject,
-        level,
-        paperNumber: isImageSubject ? undefined : paperNumber,
-        targetYear,
-        contentType,
-      });
-      setBlueprint(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Generation failed");
-      setBlueprint(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+    useEffect(() => {
+      onLoadingChange?.(loading);
+    }, [loading, onLoadingChange]);
 
-  const handleSaveClick = async () => {
-    if (!blueprint) return;
-    await handleSave(blueprint);
-  };
+    useImperativeHandle(ref, () => ({ generate: handleGenerate, loading }), [loading]);
 
-  return (
-    <div className="max-w-3xl">
-      <p className="txt-bold color-txt-main text-sm mb-2">
-        Subject: {subjectLabel} · {level === "higher" ? "Higher" : level === "ordinary" ? "Ordinary" : level}
-        {contentType === "pastpaper" ? " · Past paper" : " · Image questions"}
-      </p>
-      <p className="txt-sub color-txt-sub mb-6">
-        {isImageSubject ? (
+    const handleSave = async () => {
+      if (!blueprint) return;
+      setSaving(true);
+      setError(null);
+      try {
+        const paperId = await savePredictedPaperToFirestore(subject, level, blueprint);
+        setSavedPaperId(paperId);
+        onSaved?.(paperId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Save failed");
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    return (
+      <div className="prediction-flow color-txt-main">
+        {!embeddedControls && (
           <>
-            Scans image question banks in Storage for {subject} {level}, picks questions from topics
-            that appear most often (recent years weighted higher when detectable). Runs in-app — zero
-            cost.
-          </>
-        ) : (
-          <>
-            Analyses tagged questions from past {subject} {level} papers and assembles a prediction
-            paper by picking real questions whose topics appear most often in recent exams. Runs
-            entirely in-app — no AI API call, zero cost.
+            <p className="prediction-flow__meta txt-bold color-txt-main text-sm">
+              {subjectLabel} · {levelLabel}
+              {contentType === "pastpaper" ? " · Past paper" : " · Image questions"}
+            </p>
+            <p className="prediction-flow__desc txt-sub color-txt-sub">
+              {isImageSubject ? (
+                <>
+                  Scans image question banks in Storage for {subject} {level}, picks questions from
+                  topics that appear most often (recent years weighted higher when detectable). Runs
+                  in-app — zero cost.
+                </>
+              ) : (
+                <>
+                  Analyses tagged questions from past {subject} {level} papers and assembles a
+                  prediction paper by picking real questions whose topics appear most often in recent
+                  exams. Runs entirely in-app — no AI API call, zero cost.
+                </>
+              )}
+            </p>
+
+            <div className="prediction-flow__controls-row">
+              {!isImageSubject && (
+                <div className="prediction-flow__field">
+                  <label className="prediction-flow__label color-txt-sub">Paper</label>
+                  <select
+                    value={paperNumber}
+                    onChange={(e) => setPaperNumber(Number(e.target.value) as 1 | 2)}
+                    className={PREDICTION_SELECT_CLASS}
+                  >
+                    <option value={1}>Paper 1</option>
+                    <option value={2}>Paper 2</option>
+                  </select>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={loading}
+                className="blue-btn prediction-flow__generate-btn"
+              >
+                {loading ? (
+                  <LuRefreshCw size={18} className="animate-spin" aria-hidden />
+                ) : (
+                  <LuSparkles size={18} aria-hidden />
+                )}
+                {loading ? "Generating…" : "Generate prediction"}
+              </button>
+            </div>
           </>
         )}
-      </p>
 
-      <div className="flex flex-wrap gap-4 mb-6">
-        {!isImageSubject && (
-          <div>
-            <label className="block color-txt-sub text-sm mb-1">Paper</label>
-            <select
-              value={paperNumber}
-              onChange={(e) => setPaperNumber(Number(e.target.value) as 1 | 2)}
-              className="px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm"
-            >
-              <option value={1}>Paper 1</option>
-              <option value={2}>Paper 2</option>
-            </select>
+        {embeddedControls && !isImageSubject && !paperControlled && (
+          <div className="prediction-flow__controls-row mb-4">
+            <div className="prediction-flow__field">
+              <label className="prediction-flow__label txt-sub">Paper</label>
+              <select
+                value={paperNumber}
+                onChange={(e) => setPaperNumber(Number(e.target.value) as 1 | 2)}
+                className={PREDICTION_SELECT_CLASS}
+              >
+                <option value={1}>Paper 1</option>
+                <option value={2}>Paper 2</option>
+              </select>
+            </div>
           </div>
         )}
-        <div>
-          <label className="block color-txt-sub text-sm mb-1">Target year</label>
-          <input
-            type="number"
-            value={targetYear}
-            onChange={(e) => setTargetYear(Number(e.target.value) || new Date().getFullYear())}
-            className="px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm w-28"
-          />
-        </div>
-        <div className="flex items-end">
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={loading}
-            className="blue-btn !w-auto inline-flex items-center gap-2 px-5 py-2.5 whitespace-nowrap disabled:opacity-50"
-          >
-            {loading ? (
-              <LuRefreshCw size={18} className="animate-spin" aria-hidden />
+
+        {embeddedControls && (
+          <p className="prediction-flow__desc txt-sub color-txt-sub mb-4">
+            {isImageSubject ? (
+              <>
+                Picks image questions from topics that show up most often in the bank. Runs in-app —
+                zero cost.
+              </>
             ) : (
-              <LuSparkles size={18} aria-hidden />
+              <>
+                Analyses past {subjectLabel} {levelLabel} papers and builds a prediction from the
+                most common topics. Runs in-app — zero cost.
+              </>
             )}
-            {loading ? "Generating…" : "Generate prediction"}
-          </button>
-        </div>
-      </div>
+          </p>
+        )}
 
-      {error && (
-        <div className="mb-4 p-3 rounded-xl bg-red-500/20 text-red-400 text-sm">{error}</div>
-      )}
-
-      {savedPaperId && (
-        <div className="mb-4 p-3 rounded-xl color-bg-accent/10 color-txt-accent text-sm">
-          Saved to{" "}
-          <span className="font-mono font-bold">questions/leavingcert/predictions/{savedPaperId}</span>{" "}
-          — it will appear in Practice Hub → Predictions.
-        </div>
-      )}
-
-      {blueprint && (
-        <div className="rounded-xl color-bg-grey-5 p-5 space-y-5">
-          <div>
-            <h3 className="txt-heading-colour text-lg font-bold">{blueprint.label}</h3>
-            <p className="txt-sub color-txt-sub mt-2 text-sm">{blueprint.summary}</p>
+        {error && (
+          <div
+            className="mb-4 p-3 rounded-xl text-sm bg-red/15 text-red"
+            role="alert"
+          >
+            {error}
           </div>
+        )}
 
-          {blueprint.topicForecast.length > 0 && (
+        {savedPaperId && (
+          <div className="mb-4 p-3 rounded-xl color-bg-accent color-txt-accent text-sm">
+            Prediction saved — it will appear in Practice Hub → Predictions.
+          </div>
+        )}
+
+        {blueprint && (
+          <div className="rounded-xl p-5 flex flex-col gap-5 color-bg-grey-5 color-shadow-small">
             <div>
-              <h4 className="txt-bold color-txt-main text-sm mb-2">Topic forecast</h4>
-              <ul className="space-y-2">
-                {blueprint.topicForecast.map((t) => (
-                  <li key={t.topic} className="text-sm color-txt-sub">
-                    <span className="color-txt-main font-medium">{t.topic}</span>
-                    <span className="mx-1.5 uppercase text-xs opacity-70">({t.likelihood})</span>
-                    — {t.reason}
+              <h3 className="txt-heading-colour text-lg font-bold">{blueprint.label}</h3>
+              <p className="txt-sub color-txt-sub mt-2 text-sm">{blueprint.summary}</p>
+            </div>
+
+            {blueprint.topicForecast.length > 0 && (
+              <div className="prediction-flow__forecast">
+                <h4 className="prediction-flow__section-title txt-bold">Topic forecast</h4>
+                <ul className="prediction-flow__forecast-list">
+                  {blueprint.topicForecast.map((t) => (
+                    <li key={t.topic} className="prediction-flow__forecast-item">
+                      <div className="prediction-flow__forecast-header">
+                        <span className="prediction-flow__forecast-topic txt-bold">{t.topic}</span>
+                        <span className="prediction-flow__forecast-pct color-txt-accent">
+                          {t.percent}%
+                        </span>
+                      </div>
+                      <div
+                        className="prediction-flow__forecast-track color-bg-grey-10"
+                        role="presentation"
+                        aria-hidden
+                      >
+                        <div
+                          className="prediction-flow__forecast-fill color-bg-accent"
+                          style={{ width: `${Math.min(100, Math.max(0, t.percent))}%` }}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div>
+              <h4 className="prediction-flow__section-title txt-bold">
+                Selected questions ({blueprint.selections.length})
+              </h4>
+              <ol className="prediction-flow__selection-list">
+                {blueprint.selections.map((s) => (
+                  <li
+                    key={`${s.slot}-${s.imageKey ?? s.sourceQuestionId}`}
+                    className="prediction-flow__selection-item color-bg color-shadow-small"
+                  >
+                    <span className="prediction-flow__selection-name txt-bold">
+                      {s.displayName || `Question ${s.slot}`}
+                    </span>
                   </li>
                 ))}
-              </ul>
+              </ol>
             </div>
-          )}
 
-          <div>
-            <h4 className="txt-bold color-txt-main text-sm mb-2">
-              Selected questions ({blueprint.selections.length})
-            </h4>
-            <ol className="space-y-2 list-decimal list-inside">
-              {blueprint.selections.map((s) => (
-                <li key={`${s.slot}-${s.imageKey ?? s.sourceQuestionId}`} className="text-sm color-txt-sub">
-                  <span className="color-txt-main font-mono text-xs">
-                    {s.sourceTopic && s.imageKey
-                      ? `${s.sourceTopic}/${s.imageKey}`
-                      : `${s.sourcePaperId}/${s.sourceQuestionId}`}
-                  </span>
-                  <span className="block pl-5 mt-0.5">{s.reason}</span>
-                </li>
-              ))}
-            </ol>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || !!savedPaperId}
+              className="blue-btn prediction-flow__save-btn"
+            >
+              <LuSave size={18} aria-hidden />
+              {saving ? "Saving…" : savedPaperId ? "Saved" : "Save Prediction"}
+            </button>
           </div>
+        )}
+      </div>
+    );
+  }
+);
 
-          <button
-            type="button"
-            onClick={handleSaveClick}
-            disabled={saving || !!savedPaperId}
-            className="blue-btn !w-auto inline-flex items-center gap-2 px-5 py-2.5 disabled:opacity-50"
-          >
-            <LuSave size={18} aria-hidden />
-            {saving ? "Saving…" : savedPaperId ? "Saved" : "Save to Firestore"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+export default GeneratePredictionFlow;

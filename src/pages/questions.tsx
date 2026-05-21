@@ -40,11 +40,12 @@ import { createPortal } from "react-dom";
 import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle, LuListOrdered } from "react-icons/lu";
 import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
+import QuestionTitlePicker, { type QuestionPickerItem } from "../components/questions/QuestionTitlePicker";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas, { type RegisterDrawingSnapshot, type RegisterGetGradingCapture, type RegisterGetStaveAnalysis } from "../components/questions/DrawingCanvas";
 import { useCanvasStorage } from "../hooks/useCanvasStorage";
 import RenderMath from "../components/math/mathdisplay";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import PaperPdfPlaceholder, { getQuestionScrollOffset } from "../components/questions/PaperPdfPlaceholder";
 import PaperQuestionRegionPanel from "../components/questions/PaperQuestionRegionPanel";
 import CroppedPdfRegions from "../components/questions/CroppedPdfRegions";
@@ -326,6 +327,7 @@ export default function Questions() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
         const pastPaperFilterRef = useRef<HTMLDivElement>(null);
+        const centerTitleRowRef = useRef<HTMLDivElement>(null);
     /** When set, next paperQuestions effect will jump here (used for random across scoped papers). */
     const pendingRandomRef = useRef<{ pos: number } | { questionId: string } | null>(null);
     /** When set, next paperQuestions effect will jump to this index (used when selecting from scoped-paper search). */
@@ -1881,6 +1883,43 @@ export default function Questions() {
 
                 const hideTitleAndArrows = mode === "pastpaper" && isFullPaperExpanded;
 
+                const pickerItems: QuestionPickerItem[] = mode === "pastpaper"
+                    ? filteredPaperQuestions.map((q) => ({ id: q.id, label: q.questionName }))
+                    : mode === "imagequestions"
+                        ? imageGroupedList.map((q) => ({ id: q.key, label: q.displayName }))
+                        : questions.map((q: { id?: string; properties?: { name?: string } }, idx: number) => ({
+                            id: String(q.id ?? idx),
+                            label: q.properties?.name ?? `Question ${idx + 1}`,
+                        }));
+
+                const pickerCurrentIndex = mode === "pastpaper"
+                    ? paperQuestionPosition - 1
+                    : mode === "imagequestions"
+                        ? imageQuestionPosition
+                        : position - 1;
+
+                const pickerDisabled = mode === "pastpaper"
+                    ? papersLoading || papersError != null || filteredPaperQuestions.length === 0
+                    : mode === "imagequestions"
+                        ? imageQuestionsLoading || imageGroupedList.length === 0
+                        : questions.length === 0;
+
+                const pickerTitleKey = mode === "pastpaper"
+                    ? currentPaperQuestion?.id
+                    : mode === "imagequestions"
+                        ? currentGroupedQuestion?.key
+                        : currentQuestion?.id;
+
+                const onPickerSelect = mode === "pastpaper"
+                    ? (index: number) => {
+                        setPaperQuestionPosition(index + 1);
+                        const q = filteredPaperQuestions[index];
+                        setScrollToPage(q?.pageRegions?.[0]?.page ?? q?.pageRange?.[0] ?? null);
+                    }
+                    : mode === "imagequestions"
+                        ? (index: number) => setImageQuestionPosition(index)
+                        : (index: number) => setPosition(index + 1);
+
                 return (
                     <QuestionsTopBar
                         onBack={() => navigate("/practice")}
@@ -1891,10 +1930,7 @@ export default function Questions() {
                         onSubjectFilterChange={setSubjectFilter}
                         subjectOptions={certChampsSet?.sections?.map((sec) => ({ value: sec, label: formatSectionLabel(sec) })) ?? []}
                         centerContent={!hideTitleAndArrows ? (
-                            <div
-                                className="flex items-center gap-1"
-                                data-tutorial-id="session-question-nav"
-                            >
+                            <div ref={centerTitleRowRef} className="flex items-center gap-1">
                                 <button
                                     type="button"
                                     aria-label={mode === "pastpaper" ? "Previous paper" : "Previous question"}
@@ -1903,27 +1939,18 @@ export default function Questions() {
                                 >
                                     <LuChevronLeft size={16} strokeWidth={2.5} />
                                 </button>
-                                <div className="flex min-w-0 flex-col overflow-hidden px-2">
-                                    <AnimatePresence mode="wait">
-                                        <motion.div
-                                            key={overrideTitle ?? currentQuestion?.id ?? "empty"}
-                                            initial={{ opacity: 0, x: 8 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: -8 }}
-                                            transition={{ duration: 0.15, ease: [0.25, 0.4, 0.25, 1] }}
-                                            className="flex min-w-0 flex-col"
-                                        >
-                                            <h2 className="question-selector-title question-selector-truncate color-txt-accent text-sm font-bold leading-tight">
-                                                {centerLabel}
-                                            </h2>
-                                            {tagsDisplay && (
-                                                <p className="question-selector-truncate color-txt-sub mt-0.5 text-xs font-normal">
-                                                    {tagsDisplay}
-                                                </p>
-                                            )}
-                                        </motion.div>
-                                    </AnimatePresence>
-                                </div>
+                                <QuestionTitlePicker
+                                    anchorRef={centerTitleRowRef}
+                                    title={centerLabel}
+                                    titleKey={pickerTitleKey ?? centerLabel}
+                                    tagsDisplay={tagsDisplay}
+                                    items={pickerItems}
+                                    currentIndex={pickerCurrentIndex}
+                                    onSelect={onPickerSelect}
+                                    isCompleted={isQuestionCompleted}
+                                    showCompletion={mode === "pastpaper" || mode === "imagequestions"}
+                                    disabled={pickerDisabled}
+                                />
                                 <button
                                     type="button"
                                     aria-label={mode === "pastpaper" ? "Next paper" : "Next question"}

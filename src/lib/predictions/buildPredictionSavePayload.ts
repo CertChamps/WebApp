@@ -115,6 +115,10 @@ export async function buildPredictionSavePayload(
       sel.sourceQuestionId
     );
 
+    if (!thumbnailStoragePath && storagePath) {
+      thumbnailStoragePath = storagePath;
+    }
+
     questions.push({
       id: questionId,
       data: {
@@ -147,7 +151,10 @@ export async function buildPredictionSavePayload(
       topicForecast: blueprint.topicForecast,
       generatedAt: Date.now(),
       ...(blueprint.contentType === "pastpaper"
-        ? { paperNumber: blueprint.paperNumber ?? 1 }
+        ? {
+            paperNumber: blueprint.paperNumber ?? 1,
+            ...(thumbnailStoragePath ? { thumbnailStoragePath } : {}),
+          }
         : { thumbnailStoragePath }),
     },
     questions,
