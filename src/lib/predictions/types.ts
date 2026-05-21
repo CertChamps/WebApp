@@ -1,6 +1,8 @@
 export type TopicForecast = {
   topic: string;
   likelihood: "high" | "medium" | "low";
+  /** Share of total weighted topic appearances (0–100). */
+  percent: number;
   reason: string;
 };
 
@@ -8,6 +10,7 @@ export type PredictionContentType = "pastpaper" | "image";
 
 export type PredictedQuestionSelection = {
   slot: number;
+  displayName: string;
   reason: string;
   /** Past-paper prediction source. */
   sourcePaperId?: string;

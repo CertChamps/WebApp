@@ -88,12 +88,14 @@ function primaryTag(tags: string[]): string {
 function buildTopicForecast(tagWeights: Map<string, number>): TopicForecast[] {
   const sorted = [...tagWeights.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
   const max = sorted[0]?.[1] ?? 1;
+  const total = [...tagWeights.values()].reduce((sum, w) => sum + w, 0);
   return sorted.map(([topic, weight]) => ({
     topic,
     likelihood: (weight >= max * 0.7 ? "high" : weight >= max * 0.4 ? "medium" : "low") as
       | "high"
       | "medium"
       | "low",
+    percent: total > 0 ? Math.round((weight / total) * 100) : 0,
     reason: `Appeared ${Math.round(weight)} times in weighted recent past papers.`,
   }));
 }
@@ -152,6 +154,7 @@ export function buildPredictionFromCatalog(
     tagCounts.set(c.primaryTag, tagUsed + 1);
     selections.push({
       slot: selections.length + 1,
+      displayName: c.name,
       sourcePaperId: c.sourcePaperId,
       sourceQuestionId: c.sourceQuestionId,
       reason: `Strong ${c.primaryTag} weighting from recent papers (${c.tags.slice(0, 2).join(", ") || "untagged"}).`,

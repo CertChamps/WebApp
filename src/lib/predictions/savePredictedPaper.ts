@@ -1,5 +1,5 @@
 import { doc, writeBatch } from "firebase/firestore";
-import { auth } from "../../../firebase";
+import { auth, db } from "../../../firebase";
 import { buildPredictionSavePayload } from "./buildPredictionSavePayload";
 import { predictionDocRef, predictionQuestionsRef } from "./firestorePaths";
 import type { PredictedPaperBlueprint } from "./types";

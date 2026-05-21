@@ -1,4 +1,4 @@
-import { useContext, useState, useRef, useEffect } from "react";
+import { useContext, useMemo, useState, useRef, useEffect } from "react";
 import { UserContext } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import { ref, uploadBytes } from "firebase/storage";
@@ -25,8 +25,13 @@ import {
 import ExtractQuestionsFlow, {
   type ExtractedRegion,
 } from "../components/addQuestions/ExtractQuestionsFlow";
-import GeneratePredictionFlow from "../components/addQuestions/GeneratePredictionFlow";
+import GeneratePredictionFlow, {
+  PREDICTION_SELECT_CLASS,
+  type GeneratePredictionFlowHandle,
+} from "../components/addQuestions/GeneratePredictionFlow";
+import { resolvePredictionContentType } from "../lib/predictions/api";
 import "../styles/settings.css";
+import "../styles/practiceHub.css";
 import { isAdminUid } from "../constants/adminUids";
 
 type AddQuestionsTab = "upload" | "extract" | "predict";
@@ -257,6 +262,9 @@ export default function AddQuestions() {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const predictionFlowRef = useRef<GeneratePredictionFlowHandle>(null);
+  const [predictionGenerating, setPredictionGenerating] = useState(false);
+  const [predictionPaper, setPredictionPaper] = useState<1 | 2>(1);
 
   const [persistedOnce] = useState<PersistedAddQuestionsState | null>(() =>
     loadAddQuestionsStateFromStorage()
@@ -266,6 +274,10 @@ export default function AddQuestions() {
     persistedOnce?.subject ?? "maths"
   );
   const [level, setLevel] = useState<LevelId>(persistedOnce?.level ?? "higher");
+  const predictionUsesPastPapers = useMemo(
+    () => resolvePredictionContentType(subject) === "pastpaper",
+    [subject]
+  );
   const [firestoreUploadPath, setFirestoreUploadPath] = useState(
     persistedOnce?.firestoreUploadPath ?? DEFAULT_FIRESTORE_PATH
   );
@@ -665,7 +677,7 @@ export default function AddQuestions() {
   }
 
   return (
-    <div className={`settings-page w-full mx-auto p-6 ${tab === "extract" ? "max-w-none px-4" : "max-w-6xl"}`}>
+    <div className={`settings-page color-bg color-txt-main w-full mx-auto p-6 ${tab === "extract" ? "max-w-none px-4" : "max-w-6xl"}`}>
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
           <button
@@ -736,7 +748,70 @@ export default function AddQuestions() {
       )}
 
       {tab === "predict" && (
-        <GeneratePredictionFlow subject={subject} level={level} />
+        <>
+          <div className="prediction-flow__controls-row mb-5">
+            <div className="prediction-flow__field">
+              <label className="prediction-flow__label color-txt-sub">Subject</label>
+              <select
+                value={subject}
+                onChange={(e) => updateSubject(e.target.value as SubjectId)}
+                className={PREDICTION_SELECT_CLASS}
+              >
+                {SUBJECTS.map((s) => (
+                  <option key={s} value={s}>
+                    {s === "applied-maths" ? "Applied maths" : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="prediction-flow__field">
+              <label className="prediction-flow__label color-txt-sub">Level</label>
+              <select
+                value={level}
+                onChange={(e) => updateLevel(e.target.value as LevelId)}
+                className={PREDICTION_SELECT_CLASS}
+              >
+                {LEVELS.map((l) => (
+                  <option key={l} value={l}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {predictionUsesPastPapers && (
+              <div className="prediction-flow__field">
+                <label className="prediction-flow__label color-txt-sub">Paper</label>
+                <select
+                  value={predictionPaper}
+                  onChange={(e) => setPredictionPaper(Number(e.target.value) as 1 | 2)}
+                  className={PREDICTION_SELECT_CLASS}
+                >
+                  <option value={1}>Paper 1</option>
+                  <option value={2}>Paper 2</option>
+                </select>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => predictionFlowRef.current?.generate()}
+              disabled={predictionGenerating}
+              className="blue-btn prediction-flow__generate-btn"
+            >
+              <LuSparkles size={18} aria-hidden className={predictionGenerating ? "animate-spin" : ""} />
+              {predictionGenerating ? "Generating…" : "Generate prediction"}
+            </button>
+          </div>
+          <GeneratePredictionFlow
+            ref={predictionFlowRef}
+            key={`${subject}-${level}-${predictionPaper}`}
+            subject={subject}
+            level={level}
+            paperNumber={predictionPaper}
+            onPaperNumberChange={setPredictionPaper}
+            embeddedControls
+            onLoadingChange={setPredictionGenerating}
+          />
+        </>
       )}
 
       {tab === "upload" && (
