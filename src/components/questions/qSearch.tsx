@@ -156,6 +156,7 @@ export default function QSearch(props: QSearchProps) {
         >
             <div
                 ref={searchContainerRef}
+                data-tutorial-id="session-question-list-panel"
                 className={`w-[50%] h-[60%] q-search-panel rounded-out p-4
                     transition-transform duration-300
                     ${isVisible ? 'scale-100' : 'scale-95'}`}

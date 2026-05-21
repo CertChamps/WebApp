@@ -97,9 +97,9 @@
 /* ==================== Tooltip Card ==================== */
 .tutorial-tooltip {
   position: fixed;
-  width: 320px;
+  width: 260px;
   max-width: calc(100vw - 48px);
-  padding: 20px;
+  padding: 16px;
   border-radius: 16px;
   z-index: 10;
   display: flex;
@@ -136,18 +136,20 @@
   letter-spacing: 0.5px;
 }
 
-/* ==================== Icon Wrapper ==================== */
-.tutorial-icon-wrapper {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+/* ==================== Title ==================== */
+.tutorial-title-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin: 4px 0;
+  gap: 10px;
 }
 
-/* ==================== Title ==================== */
+.tutorial-title-crown {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .tutorial-title {
   font-size: 1.25rem;
   font-weight: 800;
@@ -285,9 +287,9 @@
     transform: none !important;
   }
 
-  .tutorial-icon-wrapper {
-    width: 48px;
-    height: 48px;
+  .tutorial-title-crown {
+    width: 24px;
+    height: 24px;
   }
 
   .tutorial-title {

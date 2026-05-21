@@ -114,8 +114,18 @@ function getSubjectIcon(subjectId: string): IconType {
 export default function PracticeHub() {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
-  const { tutorialFlow, hubTourPhase, hubSubjectId, showTutorial, signalHubTourAdvance, setHubContentType } =
-    useTutorialContext();
+  const {
+    tutorialFlow,
+    hubTourPhase,
+    showTutorial,
+    signalHubTourAdvance,
+    setHubContentType,
+  } = useTutorialContext();
+  const isPredictionsOnboardingTour =
+    tutorialFlow === "from-onboarding" && showTutorial;
+  const isTutorialModalLocked =
+    isPredictionsOnboardingTour &&
+    (hubTourPhase === "intro" || hubTourPhase === "generate");
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
   const hubTourStartedRef = useRef(false);
   const [papersReloadKey, setPapersReloadKey] = useState(0);
@@ -134,7 +144,7 @@ export default function PracticeHub() {
   const [paperFilter, setPaperFilter] = useState<PaperFilter>("all");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
   const openPredictionModal = useCallback(() => {
-    if (!hasAceAccess(user)) {
+    if (!hasAceAccess(user) && !isPredictionsOnboardingTour) {
       setShowContentGateModal(true);
       return;
     }
@@ -151,7 +161,7 @@ export default function PracticeHub() {
       setPredictionLevel(levelFilter);
     }
     setShowPredictionModal(true);
-  }, [user, subjectFilter, levelFilter]);
+  }, [user, subjectFilter, levelFilter, isPredictionsOnboardingTour]);
   const [yearFilter, setYearFilter] = useState<YearFilterValue>("all");
   const [topicFilter, setTopicFilter] = useState<string[]>([]);
   const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
@@ -176,7 +186,7 @@ export default function PracticeHub() {
   }, []);
 
   useLayoutEffect(() => {
-    if (tutorialFlow === 'from-onboarding' && showTutorial) {
+    if (isPredictionsOnboardingTour) {
       if (!hubTourStartedRef.current) {
         hubTourStartedRef.current = true;
         setSubjectFilter(null);
@@ -184,31 +194,19 @@ export default function PracticeHub() {
     } else {
       hubTourStartedRef.current = false;
     }
-  }, [tutorialFlow, showTutorial]);
-
-  const handleSubjectSelect = useCallback(
-    (subjectId: string) => {
-      setSubjectFilter(subjectId);
-      setHubContentType(null);
-      if (
-        tutorialFlow === 'from-onboarding' &&
-        showTutorial &&
-        hubTourPhase === 'pick-subject'
-      ) {
-        signalHubTourAdvance();
-      }
-    },
-    [tutorialFlow, showTutorial, hubTourPhase, signalHubTourAdvance, setHubContentType]
-  );
+  }, [isPredictionsOnboardingTour]);
 
   useEffect(() => {
-    if (tutorialFlow !== 'from-onboarding' || !showTutorial || subjectFilter == null) {
-      setHubContentType(null);
-      return;
+    if (!isPredictionsOnboardingTour) return;
+    if (hubTourPhase === "intro" || hubTourPhase === "generate") {
+      openPredictionModal();
     }
-    if (papersLoading) return;
-    setHubContentType(papers.length === 0 ? 'topic' : 'paper');
-  }, [tutorialFlow, showTutorial, subjectFilter, papersLoading, papers.length, setHubContentType]);
+  }, [isPredictionsOnboardingTour, hubTourPhase, openPredictionModal]);
+
+  const handleSubjectSelect = useCallback((subjectId: string) => {
+    setSubjectFilter(subjectId);
+    setHubContentType(null);
+  }, [setHubContentType]);
 
   const favouriteSubjects = useMemo(
     () => PRACTICE_HUB_SUBJECTS.filter((s) => hubFavourites.includes(s.id)),
@@ -353,13 +351,6 @@ export default function PracticeHub() {
     [starterImageTopic, storageFolderName, activeImageLevel]
   );
 
-  const hubTutorialPaperIndex = useMemo(() => {
-    if (filteredPapers.length === 0) return 0;
-    if (hasAceAccess(user)) return 0;
-    const freeIdx = filteredPapers.findIndex((p) => canAccessPaper(user, p, freePaperKeys));
-    return freeIdx >= 0 ? freeIdx : 0;
-  }, [filteredPapers, user, freePaperKeys]);
-
   const topicEntries = useMemo(() => {
     const map = new Map<string, { label: string; paperCount: number }>();
     filteredByMeta.forEach((paper) => {
@@ -487,7 +478,12 @@ export default function PracticeHub() {
 
   const goToPaperSession = useCallback(
     (paper: ExamPaper) => {
-      if (!canAccessPaper(user, paper, freePaperKeys)) {
+      const tutorialPredictionClick =
+        isPredictionsOnboardingTour &&
+        hubTourPhase === "click-prediction" &&
+        paper.isPrediction === true;
+
+      if (!tutorialPredictionClick && !canAccessPaper(user, paper, freePaperKeys)) {
         setShowContentGateModal(true);
         return;
       }
@@ -496,16 +492,23 @@ export default function PracticeHub() {
         navigate(
           `/practice/session?mode=imagequestions&predictionId=${encodeURIComponent(paper.id)}&level=${normalizedLevel}&subject=${encodeURIComponent(paper.subject ?? "")}`
         );
-        return;
+      } else {
+        navigate(
+          `/practice/session?mode=pastpaper&paperId=${paper.id}&level=${normalizedLevel}&subject=${paper.subject ?? ""}`
+        );
       }
-      navigate(
-        `/practice/session?mode=pastpaper&paperId=${paper.id}&level=${normalizedLevel}&subject=${paper.subject ?? ""}`
-      );
-      if (tutorialFlow === "from-onboarding" && hubTourPhase === "pick-paper") {
+      if (tutorialPredictionClick) {
         signalHubTourAdvance();
       }
     },
-    [user, freePaperKeys, navigate, tutorialFlow, hubTourPhase, signalHubTourAdvance]
+    [
+      user,
+      freePaperKeys,
+      navigate,
+      isPredictionsOnboardingTour,
+      hubTourPhase,
+      signalHubTourAdvance,
+    ]
   );
 
   const goToSession = useCallback(() => {
@@ -536,11 +539,8 @@ export default function PracticeHub() {
       navigate(
         `/practice/session?mode=imagequestions&subject=${encodeURIComponent(storageFolderName)}&level=${encodeURIComponent(level)}&topic=${encodeURIComponent(topic.name)}`
       );
-      if (tutorialFlow === "from-onboarding" && hubTourPhase === "pick-paper") {
-        signalHubTourAdvance();
-      }
     },
-    [storageFolderName, activeImageLevel, navigate, tutorialFlow, hubTourPhase, signalHubTourAdvance, user, starterImageTopic]
+    [storageFolderName, activeImageLevel, navigate, user, starterImageTopic]
   );
 
   const goToPastPaperTopicSession = useCallback(
@@ -649,12 +649,6 @@ export default function PracticeHub() {
     if (!q) return [];
     return globalSearchIndex.search(q).slice(0, 12).map((r) => r.item);
   }, [globalSearchIndex, globalSearchQuery]);
-
-  const hubTutorialTopicIndex = useMemo(() => {
-    if (!starterImageTopic || imageTopics.length === 0) return 0;
-    const idx = imageTopics.findIndex((t) => t.name === starterImageTopic.name);
-    return idx >= 0 ? idx : 0;
-  }, [imageTopics, starterImageTopic]);
 
   const goToQuestion = useCallback(
     (entry: GlobalSearchEntry) => {
@@ -1065,13 +1059,6 @@ export default function PracticeHub() {
                             }
                           }}
                           className="deck paper-card practice-hub__subject-card flex flex-col"
-                          data-tutorial-id={
-                            tutorialFlow === "from-onboarding" &&
-                            showTutorial &&
-                            hubSubjectId === s.id
-                              ? "hub-subject-card"
-                              : undefined
-                          }
                         >
                           <div className="color-border" />
                           <SubjectIconImage subjectId={s.id} />
@@ -1109,7 +1096,14 @@ export default function PracticeHub() {
                 </div>
               )}
 
-              <section className="practice-hub__predictions mt-8" aria-label="Predictions">
+              <section
+                className="practice-hub__predictions mt-8"
+                aria-label="Predictions"
+                {...(isPredictionsOnboardingTour &&
+                (hubTourPhase === "view-list" || hubTourPhase === "click-prediction")
+                  ? { "data-tutorial-id": "hub-predictions-section" }
+                  : {})}
+              >
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <LuSparkles size={20} className="color-txt-accent shrink-0" aria-hidden />
@@ -1119,6 +1113,9 @@ export default function PracticeHub() {
                     type="button"
                     className="blue-btn !w-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-sm shrink-0"
                     onClick={openPredictionModal}
+                    {...(isPredictionsOnboardingTour && hubTourPhase === "intro"
+                      ? { "data-tutorial-id": "hub-generate-button" }
+                      : {})}
                   >
                     <LuSparkles size={16} aria-hidden />
                     Generate
@@ -1146,6 +1143,11 @@ export default function PracticeHub() {
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
+                        {...(isPredictionsOnboardingTour &&
+                        hubTourPhase === "click-prediction" &&
+                        i === 0
+                          ? { "data-tutorial-id": "hub-first-prediction" }
+                          : {})}
                       >
                         {paper.contentType === "image" ? (
                           <ImagePredictionCard
@@ -1211,23 +1213,7 @@ export default function PracticeHub() {
                               user,
                               isImageTopicContentFree(topic, starterImageTopic, storageFolderName)
                             )}
-                            tutorialTargetId={
-                              tutorialFlow === "from-onboarding" &&
-                              showTutorial &&
-                              subjectFilter != null &&
-                              hubTourPhase === "pick-paper" &&
-                              i === hubTutorialTopicIndex
-                                ? "hub-first-topic"
-                                : undefined
-                            }
                             onSelect={() => {
-                              if (
-                                tutorialFlow === "from-onboarding" &&
-                                hubTourPhase === "pick-paper"
-                              ) {
-                                goToImageTopicSession(topic);
-                                return;
-                              }
                               setSelectedImageTopic(topic);
                             }}
                           />
@@ -1288,23 +1274,7 @@ export default function PracticeHub() {
                           user,
                           canAccessPaper(user, paper, freePaperKeys)
                         )}
-                        tutorialTargetId={
-                          tutorialFlow === "from-onboarding" &&
-                          showTutorial &&
-                          subjectFilter != null &&
-                          hubTourPhase === "pick-paper" &&
-                          i === hubTutorialPaperIndex
-                            ? "hub-first-paper"
-                            : undefined
-                        }
                         onSelect={() => {
-                          if (
-                            tutorialFlow === "from-onboarding" &&
-                            hubTourPhase === "pick-paper"
-                          ) {
-                            goToPaperSession(paper);
-                            return;
-                          }
                           setSelectedPaper(paper);
                           setPanelAnimationDone(false);
                         }}
@@ -1565,7 +1535,10 @@ export default function PracticeHub() {
           <>
             <div
               className="practice-hub__backdrop"
-              onClick={() => setShowPredictionModal(false)}
+              onClick={() => {
+                if (isTutorialModalLocked) return;
+                setShowPredictionModal(false);
+              }}
               aria-hidden
             />
             <div
@@ -1573,11 +1546,17 @@ export default function PracticeHub() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="ph-prediction-modal-title"
-              onClick={() => setShowPredictionModal(false)}
+              onClick={() => {
+                if (isTutorialModalLocked) return;
+                setShowPredictionModal(false);
+              }}
             >
               <div
                 className="practice-hub__prediction-modal color-bg"
                 onClick={(e) => e.stopPropagation()}
+                {...(isTutorialModalLocked
+                  ? { "data-tutorial-id": "hub-prediction-generate" }
+                  : {})}
               >
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <h2 id="ph-prediction-modal-title" className="txt-heading-colour text-xl font-bold">
@@ -1586,7 +1565,10 @@ export default function PracticeHub() {
                   <button
                     type="button"
                     className="practice-hub__panel-close"
-                    onClick={() => setShowPredictionModal(false)}
+                    onClick={() => {
+                      if (isTutorialModalLocked) return;
+                      setShowPredictionModal(false);
+                    }}
                     aria-label="Close"
                   >
                     <LuX size={24} />
@@ -1625,9 +1607,13 @@ export default function PracticeHub() {
                   key={`${predictionSubject}-${predictionLevel}`}
                   subject={predictionSubject}
                   level={predictionLevel}
+                  tutorialAutoSave={isPredictionsOnboardingTour && hubTourPhase === "generate"}
                   onSaved={() => {
                     setPapersReloadKey((k) => k + 1);
                     setShowPredictionModal(false);
+                    if (isPredictionsOnboardingTour && hubTourPhase === "generate") {
+                      signalHubTourAdvance();
+                    }
                   }}
                 />
               </div>

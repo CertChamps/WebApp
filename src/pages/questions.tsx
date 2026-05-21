@@ -37,7 +37,7 @@ import {
 
 // Components
 import { createPortal } from "react-dom";
-import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle } from "react-icons/lu";
+import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle, LuListOrdered } from "react-icons/lu";
 import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
 import QSearch from "../components/questions/qSearch";
@@ -279,6 +279,7 @@ export default function Questions() {
     const [position, setPosition] = useState(0);
     const [questions, setQuestions] = useState<any[]>([]);
     const [showSearch, setShowSearch] = useState(false);
+    const [showImageQuestionList, setShowImageQuestionList] = useState(false);
     const [randomise, setRandomise] = useState(false);
     const [showPastPaperFilter, setShowPastPaperFilter] = useState(false);
     const [showFilter, setShowFilter] = useState(false);
@@ -1890,7 +1891,10 @@ export default function Questions() {
                         onSubjectFilterChange={setSubjectFilter}
                         subjectOptions={certChampsSet?.sections?.map((sec) => ({ value: sec, label: formatSectionLabel(sec) })) ?? []}
                         centerContent={!hideTitleAndArrows ? (
-                            <div className="flex items-center gap-1">
+                            <div
+                                className="flex items-center gap-1"
+                                data-tutorial-id="session-question-nav"
+                            >
                                 <button
                                     type="button"
                                     aria-label={mode === "pastpaper" ? "Previous paper" : "Previous question"}
@@ -2019,10 +2023,24 @@ export default function Questions() {
                                         <span>filter</span>
                                     </button>
                                 )}
+                                {mode === "imagequestions" && imageGroupedList.length > 0 && (
+                                    <button
+                                        type="button"
+                                        aria-label="Question list"
+                                        data-tutorial-id="session-question-list-btn"
+                                        className={`question-selector-button pointer-events-auto ${showImageQuestionList ? "question-selector-button-active" : ""}`}
+                                        onClick={() => setShowImageQuestionList((open) => !open)}
+                                        aria-pressed={showImageQuestionList}
+                                    >
+                                        <LuListOrdered size={18} strokeWidth={2} />
+                                        <span>questions</span>
+                                    </button>
+                                )}
                                 {mode !== "imagequestions" && (
                                     <button
                                         type="button"
                                         aria-label="Search questions"
+                                        data-tutorial-id="session-question-list-btn"
                                         className={`question-selector-button pointer-events-auto ${showSearch ? "question-selector-button-active" : ""}`}
                                         onClick={() => setShowSearch(true)}
                                         aria-pressed={showSearch}
@@ -2617,6 +2635,55 @@ export default function Questions() {
                                 }}
                                 onClose={() => setShowFilter(false)}
                             />
+                        </div>
+                    </div>,
+                    document.body
+                )}
+
+            {showImageQuestionList &&
+                mode === "imagequestions" &&
+                typeof document !== "undefined" &&
+                createPortal(
+                    <div
+                        className="fixed inset-0 z-[1200] flex items-start justify-center pt-20 px-4"
+                        onClick={() => setShowImageQuestionList(false)}
+                    >
+                        <div
+                            className="color-bg color-shadow rounded-2xl w-full max-w-md max-h-[min(70vh,480px)] flex flex-col overflow-hidden pointer-events-auto"
+                            data-tutorial-id="session-question-list-panel"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between px-4 py-3 border-b color-border">
+                                <h3 className="txt-heading-colour font-bold text-sm">Questions in this paper</h3>
+                                <button
+                                    type="button"
+                                    className="practice-hub__panel-close"
+                                    onClick={() => setShowImageQuestionList(false)}
+                                    aria-label="Close"
+                                >
+                                    <LuX size={20} />
+                                </button>
+                            </div>
+                            <ul className="flex-1 overflow-y-auto scrollbar-minimal p-2">
+                                {imageGroupedList.map((q, idx) => (
+                                    <li key={q.key}>
+                                        <button
+                                            type="button"
+                                            className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                                                idx === imageQuestionPosition
+                                                    ? "color-bg-accent color-txt-accent"
+                                                    : "color-txt-main hover:color-bg-grey-5"
+                                            }`}
+                                            onClick={() => {
+                                                setImageQuestionPosition(idx);
+                                                setShowImageQuestionList(false);
+                                            }}
+                                        >
+                                            <span className="font-medium">{q.displayName}</span>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                     </div>,
                     document.body

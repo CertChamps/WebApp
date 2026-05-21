@@ -24,7 +24,8 @@ export default function Settings() {
     const { user } = useContext(UserContext)
     const navigate = useNavigate()
     
-    const { triggerTutorial, resetTutorial, hasCompletedTutorial } = useTutorialContext();
+    const { triggerTutorial, triggerTutorialFromOnboarding, resetTutorial, hasCompletedTutorial } =
+      useTutorialContext();
     const { resetOnboarding, hasCompletedOnboarding } = useOnboardingContext();
 
     const isAdmin = isAdminUid(user?.uid, user?.email);
@@ -33,6 +34,7 @@ export default function Settings() {
         setFavouriteSubjectIds([]);
         await resetTutorial();
         await resetOnboarding();
+        triggerTutorialFromOnboarding();
         navigate("/practice");
     };
 

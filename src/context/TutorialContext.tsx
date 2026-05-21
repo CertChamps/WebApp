@@ -5,7 +5,12 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../../firebase';
 
 type TutorialFlow = 'default' | 'from-onboarding';
-export type HubTourPhase = 'pick-subject' | 'pick-paper' | null;
+export type HubTourPhase =
+  | 'intro'
+  | 'generate'
+  | 'view-list'
+  | 'click-prediction'
+  | null;
 export type HubContentType = 'paper' | 'topic' | null;
 
 type TutorialContextType = {
@@ -15,7 +20,7 @@ type TutorialContextType = {
   completeTutorial: () => Promise<void>;
   resetTutorial: () => Promise<void>;
   triggerTutorial: () => void;
-  triggerTutorialFromOnboarding: (subjectId: string) => void;
+  triggerTutorialFromOnboarding: () => void;
   tutorialFlow: TutorialFlow;
   hubSubjectId: string | null;
   hubTourPhase: HubTourPhase;
@@ -183,10 +188,10 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     setShowTutorial(true);
   }, [resetTutorialFlow]);
 
-  const triggerTutorialFromOnboarding = useCallback((subjectId: string) => {
+  const triggerTutorialFromOnboarding = useCallback(() => {
     setTutorialFlow('from-onboarding');
-    setHubSubjectId(subjectId);
-    setHubTourPhase('pick-subject');
+    setHubSubjectId(null);
+    setHubTourPhase('intro');
     setShowTutorial(true);
   }, []);
 

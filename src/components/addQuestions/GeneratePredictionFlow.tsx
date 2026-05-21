@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LuSparkles, LuSave, LuRefreshCw } from "react-icons/lu";
 import { generatePredictedPaper, resolvePredictionContentType } from "../../lib/predictions/api";
 import { savePredictedPaperToFirestore } from "../../lib/predictions/savePredictedPaper";
@@ -9,9 +9,16 @@ type Props = {
   subject: string;
   level: string;
   onSaved?: (paperId: string) => void;
+  /** During onboarding tour: save automatically after a successful generate */
+  tutorialAutoSave?: boolean;
 };
 
-export default function GeneratePredictionFlow({ subject, level, onSaved }: Props) {
+export default function GeneratePredictionFlow({
+  subject,
+  level,
+  onSaved,
+  tutorialAutoSave = false,
+}: Props) {
   const subjectLabel = getSubjectLabel(subject);
   const contentType = useMemo(() => resolvePredictionContentType(subject), [subject]);
   const isImageSubject = contentType === "image";
@@ -22,6 +29,28 @@ export default function GeneratePredictionFlow({ subject, level, onSaved }: Prop
   const [error, setError] = useState<string | null>(null);
   const [blueprint, setBlueprint] = useState<PredictedPaperBlueprint | null>(null);
   const [savedPaperId, setSavedPaperId] = useState<string | null>(null);
+  const tutorialSaveStarted = useRef(false);
+
+  const handleSave = async (blueprintToSave: PredictedPaperBlueprint) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const paperId = await savePredictedPaperToFirestore(subject, level, blueprintToSave);
+      setSavedPaperId(paperId);
+      onSaved?.(paperId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!tutorialAutoSave || !blueprint || tutorialSaveStarted.current) return;
+    tutorialSaveStarted.current = true;
+    void handleSave(blueprint);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per generated blueprint in tour mode
+  }, [tutorialAutoSave, blueprint]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -44,19 +73,9 @@ export default function GeneratePredictionFlow({ subject, level, onSaved }: Prop
     }
   };
 
-  const handleSave = async () => {
+  const handleSaveClick = async () => {
     if (!blueprint) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const paperId = await savePredictedPaperToFirestore(subject, level, blueprint);
-      setSavedPaperId(paperId);
-      onSaved?.(paperId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
+    await handleSave(blueprint);
   };
 
   return (
@@ -175,7 +194,7 @@ export default function GeneratePredictionFlow({ subject, level, onSaved }: Prop
 
           <button
             type="button"
-            onClick={handleSave}
+            onClick={handleSaveClick}
             disabled={saving || !!savedPaperId}
             className="blue-btn !w-auto inline-flex items-center gap-2 px-5 py-2.5 disabled:opacity-50"
           >
