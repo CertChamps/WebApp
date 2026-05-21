@@ -296,15 +296,41 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
     return null;
   }, [step]);
 
-  // Update target rectangle
+  // Update target rectangle, clipped to any scrollable ancestor's visible bounds
+  // so the spotlight cutout never bleeds past a `overflow: auto/scroll/hidden`
+  // container (e.g. the prediction modal that scrolls internally).
   const updateTargetRect = useCallback(() => {
     const element = findTargetElement();
-    if (element) {
-      const rect = element.getBoundingClientRect();
-      setTargetRect(rect);
-    } else {
+    if (!element) {
       setTargetRect(null);
+      return;
     }
+    const rect = element.getBoundingClientRect();
+    let top = rect.top;
+    let left = rect.left;
+    let right = rect.right;
+    let bottom = rect.bottom;
+    let parent = (element as HTMLElement).parentElement;
+    while (parent) {
+      const cs = window.getComputedStyle(parent);
+      const clipsY = cs.overflowY === 'auto' || cs.overflowY === 'scroll' || cs.overflowY === 'hidden';
+      const clipsX = cs.overflowX === 'auto' || cs.overflowX === 'scroll' || cs.overflowX === 'hidden';
+      if (clipsY || clipsX) {
+        const ar = parent.getBoundingClientRect();
+        if (clipsY) {
+          top = Math.max(top, ar.top);
+          bottom = Math.min(bottom, ar.bottom);
+        }
+        if (clipsX) {
+          left = Math.max(left, ar.left);
+          right = Math.min(right, ar.right);
+        }
+      }
+      parent = parent.parentElement;
+    }
+    setTargetRect(
+      new DOMRect(left, top, Math.max(0, right - left), Math.max(0, bottom - top))
+    );
   }, [findTargetElement]);
 
   // Reset only when tutorial opens (not on every re-render while open)
@@ -394,16 +420,13 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
     }
   }, [currentStep, step]);
 
-  // Scroll the review panel into view when the save step becomes active
+  // Scroll the review panel into view once when the save step becomes active.
+  // No interval — the user must be free to scroll within the review section
+  // without the tutorial fighting them.
   useEffect(() => {
     if (!isOpen || step?.id !== 'hub-generate-prediction') return;
-    const scrollToReview = () => {
-      const el = document.querySelector('[data-tutorial-id="hub-prediction-review"]');
-      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    };
-    scrollToReview();
-    const interval = setInterval(scrollToReview, 600);
-    return () => clearInterval(interval);
+    const el = document.querySelector('[data-tutorial-id="hub-prediction-review"]');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [isOpen, currentStep, step?.id]);
 
   // Handle click on target elements for waitForClick steps
@@ -561,8 +584,10 @@ export default function Tutorial({ isOpen, onClose, onComplete }: TutorialProps)
       const width = Math.max(0, gutterEnd - gutterStart);
       return gutterStart + Math.max(0, (width - tooltipWidth) / 2);
     };
+    // Side-placed tooltips lock to the viewport's vertical center so they stay
+    // put even when the spotlighted content (e.g. a scrollable modal) is scrolled.
     const sideTop = clamp(
-      r.top + r.height / 2 - tooltipHeight / 2,
+      window.innerHeight / 2 - tooltipHeight / 2,
       pad,
       window.innerHeight - tooltipHeight - pad
     );

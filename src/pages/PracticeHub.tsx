@@ -221,6 +221,17 @@ export default function PracticeHub() {
     }
   }, [isPredictionsOnboardingTour, showOnboarding, hubTourPhase, openPredictionModal]);
 
+  // The "Your predictions" / "Open a prediction" steps live on the Practice Hub
+  // home view (subjectFilter == null). If the tour put the user on a subject
+  // view earlier (via hubSubjectId), bounce them back to home so the
+  // Predictions section is visible to spotlight.
+  useEffect(() => {
+    if (!isPredictionsOnboardingTour) return;
+    if (hubTourPhase === "view-list" || hubTourPhase === "click-prediction") {
+      setSubjectFilter(null);
+    }
+  }, [isPredictionsOnboardingTour, hubTourPhase]);
+
   const handleSubjectSelect = useCallback((subjectId: string) => {
     setSubjectFilter(subjectId);
     setHubContentType(null);
@@ -1588,6 +1599,9 @@ export default function PracticeHub() {
               <div
                 className="practice-hub__prediction-modal color-bg"
                 onClick={(e) => e.stopPropagation()}
+                {...(isPredictionsOnboardingTour && hubTourPhase === "intro"
+                  ? { "data-tutorial-id": "hub-prediction-setup" }
+                  : {})}
               >
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <h2 id="ph-prediction-modal-title" className="txt-heading-colour text-xl font-bold">
@@ -1606,12 +1620,7 @@ export default function PracticeHub() {
                   </button>
                 </div>
 
-                <div
-                  className="prediction-flow__controls-row prediction-flow__controls-row--modal mb-5"
-                  {...(isPredictionsOnboardingTour && hubTourPhase === "intro"
-                    ? { "data-tutorial-id": "hub-prediction-setup" }
-                    : {})}
-                >
+                <div className="prediction-flow__controls-row prediction-flow__controls-row--modal mb-5">
                   <div className="prediction-flow__field">
                     <label className="prediction-flow__label color-txt-sub">Subject</label>
                     <select
