@@ -565,11 +565,17 @@
 }
 
 /* Step 3 – card spotlight callout (above prediction card, arrow points down) */
-.prediction-card-tutorial-callout {
+.prediction-card-tutorial-callout-anchor {
   position: fixed;
   z-index: 1003;
   pointer-events: none;
   transform: translate(-50%, -100%);
+  width: min(300px, calc(100vw - 2rem));
+}
+
+.prediction-card-tutorial-callout {
+  width: 100%;
+  pointer-events: none;
 }
 
 .prediction-card-tutorial-callout__panel {
@@ -611,26 +617,10 @@
   line-height: 1.45;
 }
 
-.practice-hub__prediction-card-spotlight {
+.practice-hub__card-tutorial-scrim-panel,
+.tutorial-hole-scrim-panel {
+  position: fixed;
   pointer-events: auto;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.practice-hub__prediction-card-spotlight .deck {
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  margin: 0;
-}
-
-.practice-hub__prediction-card-spotlight-placeholder {
-  pointer-events: none;
-  visibility: hidden;
-  flex-shrink: 0;
-  margin: 0;
-  padding: 0;
 }
 
 .practice-hub__prediction-modal {

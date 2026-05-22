@@ -40,12 +40,17 @@ import GeneratePredictionFlow, {
 } from "../components/addQuestions/GeneratePredictionFlow";
 import PredictionTutorialCallout from "../components/tutorial/PredictionTutorialCallout";
 import PredictionCardTutorialCallout from "../components/tutorial/PredictionCardTutorialCallout";
+import PredictionCardTutorialScrim from "../components/tutorial/PredictionCardTutorialScrim";
 import {
   consumePendingPredictionTutorial,
   shouldStartPredictionTutorial,
   stripPredictionTutorialQuery,
   type PredictionTutorialStep,
 } from "../lib/predictionTutorial";
+import {
+  consumePendingPracticeSessionTutorial,
+  markPendingPracticeSessionTutorial,
+} from "../lib/practiceSessionTutorial";
 import { resolvePredictionContentType } from "../lib/predictions/api";
 import { getThemedPortalTarget } from "../utils/themedPortal";
 import "../styles/decks.css";
@@ -556,6 +561,7 @@ export default function PracticeHub() {
         tutorialHighlightPaper &&
         paper.id === tutorialHighlightPaper.id
       ) {
+        markPendingPracticeSessionTutorial();
         finishCardTutorial();
       }
       goToPaperSession(paper);
@@ -1264,73 +1270,6 @@ export default function PracticeHub() {
                     {predictionPapers.map((paper, i) => {
                       const isHighlightTarget =
                         highlightPaperReady && paper.id === tutorialHighlightPaper?.id;
-                      const cardNode =
-                        paper.contentType === "image" ? (
-                          <ImagePredictionCard
-                            paper={paper}
-                            accessLabel={getContentAccessLabel(
-                              user,
-                              canAccessPaper(user, paper, freePaperKeys)
-                            )}
-                            onSelect={() => handlePredictionSelect(paper)}
-                          />
-                        ) : (
-                          <PaperCard
-                            paper={paper}
-                            getPaperBlob={getPredictionPaperPreviewBlob}
-                            accessLabel={getContentAccessLabel(
-                              user,
-                              canAccessPaper(user, paper, freePaperKeys)
-                            )}
-                            onSelect={() => handlePredictionSelect(paper)}
-                          />
-                        );
-                      const captionNode = (
-                        <p className="txt-sub color-txt-sub text-xs mt-1.5 px-1 truncate">
-                          {getSubjectLabel(paper.subject ?? "")} · {formatLevelDisplay(paper.level)}
-                        </p>
-                      );
-
-                      if (isHighlightTarget && cardSpotlightRect) {
-                        const portalTarget = getThemedPortalTarget();
-                        return (
-                          <motion.div
-                            key={getExamPaperKey(paper)}
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
-                          >
-                            <div
-                              ref={assignTutorialCardAnchorRef}
-                              className="practice-hub__prediction-card-spotlight-placeholder"
-                              style={{
-                                width: cardSpotlightRect.width,
-                                height: cardSpotlightRect.height,
-                              }}
-                              aria-hidden
-                            />
-                            {portalTarget
-                              ? createPortal(
-                                  <div
-                                    className="practice-hub__prediction-card-spotlight"
-                                    style={{
-                                      position: "fixed",
-                                      top: cardSpotlightRect.top,
-                                      left: cardSpotlightRect.left,
-                                      width: cardSpotlightRect.width,
-                                      height: cardSpotlightRect.height,
-                                      zIndex: 1002,
-                                    }}
-                                  >
-                                    {cardNode}
-                                  </div>,
-                                  portalTarget
-                                )
-                              : null}
-                            {captionNode}
-                          </motion.div>
-                        );
-                      }
 
                       return (
                         <motion.div
@@ -1340,8 +1279,29 @@ export default function PracticeHub() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
                         >
-                          {cardNode}
-                          {captionNode}
+                          {paper.contentType === "image" ? (
+                            <ImagePredictionCard
+                              paper={paper}
+                              accessLabel={getContentAccessLabel(
+                                user,
+                                canAccessPaper(user, paper, freePaperKeys)
+                              )}
+                              onSelect={() => handlePredictionSelect(paper)}
+                            />
+                          ) : (
+                            <PaperCard
+                              paper={paper}
+                              getPaperBlob={getPredictionPaperPreviewBlob}
+                              accessLabel={getContentAccessLabel(
+                                user,
+                                canAccessPaper(user, paper, freePaperKeys)
+                              )}
+                              onSelect={() => handlePredictionSelect(paper)}
+                            />
+                          )}
+                          <p className="txt-sub color-txt-sub text-xs mt-1.5 px-1 truncate">
+                            {getSubjectLabel(paper.subject ?? "")} · {formatLevelDisplay(paper.level)}
+                          </p>
                         </motion.div>
                       );
                     })}
@@ -1817,26 +1777,11 @@ export default function PracticeHub() {
           getThemedPortalTarget()
         )}
 
-      {getThemedPortalTarget() &&
-        createPortal(
-          <AnimatePresence>
-            {cardTutorialUiReady ? (
-              <motion.div
-                key="prediction-card-tutorial-backdrop"
-                className="practice-hub__backdrop practice-hub__backdrop--tutorial practice-hub__backdrop--card-tutorial"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                aria-hidden
-              />
-            ) : null}
-          </AnimatePresence>,
-          getThemedPortalTarget()!
-        )}
-
-      {cardTutorialUiReady ? (
-        <PredictionCardTutorialCallout anchorRect={cardSpotlightRect} />
+      {cardTutorialUiReady && cardSpotlightRect ? (
+        <>
+          <PredictionCardTutorialScrim anchorRect={cardSpotlightRect} />
+          <PredictionCardTutorialCallout anchorRect={cardSpotlightRect} />
+        </>
       ) : null}
 
     </div>

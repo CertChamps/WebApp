@@ -1,5 +1,5 @@
 // Hooks
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import useQuestions from "../hooks/useQuestions";
 import { OptionsContext } from "../context/OptionsContext";
@@ -57,6 +57,14 @@ import { TimerFloatingWidget } from "../components/TimerFloatingWidget";
 import PastPaperFilterPanel from "../components/questions/PastPaperFilterPanel";
 import ContentProGate from "../components/ContentProGate";
 import Filter from "../components/filter";
+import PracticeSessionTutorialIntro from "../components/tutorial/PracticeSessionTutorialIntro";
+import PracticeSessionTutorialCallout from "../components/tutorial/PracticeSessionTutorialCallout";
+import TutorialHoleScrim from "../components/tutorial/TutorialHoleScrim";
+import { useTutorialAnchorRect } from "../components/tutorial/useTutorialAnchorRect";
+import {
+  consumePendingPracticeSessionTutorial,
+  type PracticeSessionTutorialStep,
+} from "../lib/practiceSessionTutorial";
 import { getDocumentCached } from "../utils/pdfDocumentCache";
 import type { InjectedExchange } from "../components/ai/useAI";
 import { runGrading } from "../lib/grading/GradingEngine";
@@ -66,6 +74,7 @@ import { BlankCanvasError } from "../lib/grading/canvasCapture";
 
 // Style Imports
 import "../styles/questions.css";
+import "../styles/practiceHub.css";
 import "../styles/navbar.css";
 import "../styles/sidebar.css";
 
@@ -291,6 +300,13 @@ export default function Questions() {
     );
 
     const [mode, setMode] = useState<QuestionsMode>(initialMode);
+    const practiceSessionTutorialStartedRef = useRef(false);
+    const [practiceSessionTutorialStep, setPracticeSessionTutorialStep] =
+        useState<PracticeSessionTutorialStep | null>(null);
+    const isPracticeSessionTutorialStep1 = practiceSessionTutorialStep === 1;
+    const isPracticeSessionTutorialStep2 = practiceSessionTutorialStep === 2;
+    const isPracticeSessionTutorialStep3 = practiceSessionTutorialStep === 3;
+    const isPracticeSessionTutorialStep4 = practiceSessionTutorialStep === 4;
 
     useEffect(() => {
         const m = urlMode === "certchamps" || urlMode === "pastpaper" || urlMode === "imagequestions" ? urlMode : getStoredMode();
@@ -317,6 +333,13 @@ export default function Questions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    useEffect(() => {
+        if (practiceSessionTutorialStartedRef.current) return;
+        if (!consumePendingPracticeSessionTutorial()) return;
+        practiceSessionTutorialStartedRef.current = true;
+        setPracticeSessionTutorialStep(1);
+    }, []);
+
     const [subjectFilter, setSubjectFilter] = useState<string | null>(urlSubject || null);
     useEffect(() => {
         setSubjectFilter(urlSubject || null);
@@ -327,6 +350,8 @@ export default function Questions() {
 
         const pastPaperFilterRef = useRef<HTMLDivElement>(null);
         const centerTitleRowRef = useRef<HTMLDivElement>(null);
+        const topBarRightActionsRef = useRef<HTMLDivElement>(null);
+        const actionButtonsClusterRef = useRef<HTMLDivElement>(null);
     /** When set, next paperQuestions effect will jump here (used for random across scoped papers). */
     const pendingRandomRef = useRef<{ pos: number } | { questionId: string } | null>(null);
     /** When set, next paperQuestions effect will jump to this index (used when selecting from scoped-paper search). */
@@ -440,6 +465,18 @@ export default function Questions() {
 
     const imageGroupedList = urlPredictionId ? predictionImageGrouped : topicImageGroupedList;
     const imageQuestionsLoading = urlPredictionId ? predictionImageLoading : topicImageQuestionsLoading;
+
+    const navClusterTutorialRect = useTutorialAnchorRect(
+        isPracticeSessionTutorialStep2,
+        centerTitleRowRef,
+        [mode, imageQuestionsLoading, papersLoading]
+    );
+    const topRightTutorialRect = useTutorialAnchorRect(
+        isPracticeSessionTutorialStep3,
+        topBarRightActionsRef,
+        [mode, imageQuestionsLoading, papersLoading]
+    );
+
     const {
         topics: imageAllTopics,
     } = useAllTopicsForSubjectLevel(
@@ -628,6 +665,20 @@ export default function Questions() {
         const activeQ = currentPaperQuestion ?? filteredPaperQuestions[0] ?? paperQuestions[0];
         return activeQ?.pageRegions?.[0]?.page ?? activeQ?.pageRange?.[0] ?? currentPaperPage;
     }, [mode, currentPaperPage, currentPaperQuestion, filteredPaperQuestions, paperQuestions]);
+    const actionButtonsTutorialRect = useTutorialAnchorRect(
+        isPracticeSessionTutorialStep4,
+        actionButtonsClusterRef,
+        [
+            mode,
+            imageQuestionsLoading,
+            papersLoading,
+            currentGroupedQuestion,
+            currentPaperQuestion,
+            themedPortalTarget,
+            navbarActionOffsetPx,
+            options.leftHandMode,
+        ]
+    );
     const paperSnapshot = usePaperSnapshot(paperBlob, aiPaperPage);
     const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
 
@@ -1923,7 +1974,10 @@ export default function Questions() {
                         onSubjectFilterChange={setSubjectFilter}
                         subjectOptions={certChampsSet?.sections?.map((sec) => ({ value: sec, label: formatSectionLabel(sec) })) ?? []}
                         centerContent={!hideTitleAndArrows ? (
-                            <div ref={centerTitleRowRef} className="flex items-center gap-1">
+                            <div
+                                ref={centerTitleRowRef}
+                                className={`questions-top-bar__nav-cluster flex items-center gap-1${navClusterTutorialRect ? " tutorial-highlight-ring rounded-out" : ""}`}
+                            >
                                 <button
                                     type="button"
                                     aria-label={mode === "pastpaper" ? "Previous paper" : "Previous question"}
@@ -1955,7 +2009,10 @@ export default function Questions() {
                             </div>
                         ) : undefined}
                         rightContent={
-                            <div className="flex items-center gap-2">
+                            <div
+                                ref={topBarRightActionsRef}
+                                className={`flex items-center gap-2${topRightTutorialRect ? " tutorial-highlight-ring rounded-out" : ""}`}
+                            >
                                 <button
                                     type="button"
                                     aria-label={randomise ? "Random question (on)" : "Random question (off)"}
@@ -2165,13 +2222,18 @@ export default function Questions() {
                                 {themedPortalTarget &&
                                     createPortal(
                                         <div
-                                            className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
+                                            className={`fixed z-[25] flex flex-row items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
                                             style={{
                                                 bottom: "max(0.5rem, var(--safe-area-bottom, env(safe-area-inset-bottom, 0px)))",
                                                 left: options.leftHandMode ? undefined : `${navbarActionOffsetPx}px`,
                                             }}
                                         >
-                                            {imageActionButtons}
+                                            <div
+                                                ref={actionButtonsClusterRef}
+                                                className={`inline-flex flex-row gap-2 items-center${actionButtonsTutorialRect ? " tutorial-highlight-ring rounded-out" : ""}`}
+                                            >
+                                                {imageActionButtons}
+                                            </div>
                                         </div>,
                                         themedPortalTarget
                                     )}
@@ -2348,13 +2410,18 @@ export default function Questions() {
                                         themedPortalTarget &&
                                         createPortal(
                                             <div
-                                                className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
+                                                className={`fixed z-[25] flex flex-row items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
                                                 style={{
                                                         bottom: "max(0.5rem, var(--safe-area-bottom, env(safe-area-inset-bottom, 0px)))",
                                                     left: options.leftHandMode ? undefined : `${navbarActionOffsetPx}px`,
                                                 }}
                                             >
-                                                {paperActionButtons}
+                                                <div
+                                                    ref={actionButtonsClusterRef}
+                                                    className={`inline-flex flex-row gap-2 items-center${actionButtonsTutorialRect ? " tutorial-highlight-ring rounded-out" : ""}`}
+                                                >
+                                                    {paperActionButtons}
+                                                </div>
                                             </div>,
                                             themedPortalTarget
                                         )}
@@ -2693,6 +2760,46 @@ export default function Questions() {
                 setSidebarOpenPanel("timer");
             }}
         />
+        {isPracticeSessionTutorialStep1 ? (
+            <PracticeSessionTutorialIntro onNext={() => setPracticeSessionTutorialStep(2)} />
+        ) : null}
+        {isPracticeSessionTutorialStep2 && navClusterTutorialRect ? (
+            <>
+                <TutorialHoleScrim anchorRect={navClusterTutorialRect} />
+                <PracticeSessionTutorialCallout
+                    anchorRect={navClusterTutorialRect}
+                    placement="below"
+                    title="Navigate questions"
+                    body="Use the arrows to scroll through questions, or click the title to jump ahead."
+                    onNext={() => setPracticeSessionTutorialStep(3)}
+                />
+            </>
+        ) : null}
+        {isPracticeSessionTutorialStep3 && topRightTutorialRect ? (
+            <>
+                <TutorialHoleScrim anchorRect={topRightTutorialRect} />
+                <PracticeSessionTutorialCallout
+                    anchorRect={topRightTutorialRect}
+                    placement="below"
+                    align="end"
+                    title="Filter and randomize"
+                    body="Choose topics to focus your practice, or turn on randomize to shuffle through questions."
+                    onNext={() => setPracticeSessionTutorialStep(4)}
+                />
+            </>
+        ) : null}
+        {isPracticeSessionTutorialStep4 && actionButtonsTutorialRect ? (
+            <>
+                <TutorialHoleScrim anchorRect={actionButtonsTutorialRect} />
+                <PracticeSessionTutorialCallout
+                    anchorRect={actionButtonsTutorialRect}
+                    placement="above"
+                    title="Practice tools"
+                    body="Open log tables or the calculator from here, or switch to the full paper view."
+                    onNext={() => setPracticeSessionTutorialStep(null)}
+                />
+            </>
+        ) : null}
         </TimerProvider>
     )
 }
