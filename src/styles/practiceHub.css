@@ -547,6 +547,9 @@
 .prediction-tutorial-callout__content {
   min-height: 5.5rem;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .prediction-tutorial-callout__step {
@@ -562,6 +565,31 @@
 .prediction-tutorial-callout__body {
   margin-top: 0.5rem;
   line-height: 1.45;
+}
+
+.prediction-tutorial-callout__step,
+.prediction-card-tutorial-callout__content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.prediction-tutorial-callout__icon,
+.prediction-card-tutorial-callout__icon {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.prediction-tutorial-callout__text,
+.prediction-card-tutorial-callout__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
 }
 
 /* Step 3 – card spotlight callout (above prediction card, arrow points down) */

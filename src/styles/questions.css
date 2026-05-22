@@ -576,6 +576,14 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   pointer-events: auto;
 }
 
+.practice-session-tutorial-intro__icon {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: contain;
+  margin: 0 auto 0.75rem;
+}
+
 .practice-session-tutorial-intro__title {
   font-size: 1.125rem;
   line-height: 1.35;
@@ -591,6 +599,9 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   width: auto;
   min-width: 7rem;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .practice-session-tutorial-callout-anchor {
@@ -659,6 +670,48 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   @apply color-bg border-2 color-shadow shadow-none;
 }
 
+/* Side placements (callout to the left/right of an anchor; arrow on the
+   side facing the anchor). */
+.practice-session-tutorial-callout--left .practice-session-tutorial-callout__arrow,
+.practice-session-tutorial-callout--right .practice-session-tutorial-callout__arrow {
+  top: 50%;
+  left: auto;
+  width: 0.625rem;
+  height: 1.25rem;
+  transform: translateY(-50%);
+}
+
+.practice-session-tutorial-callout--left .practice-session-tutorial-callout__arrow {
+  right: -0.625rem;
+}
+
+.practice-session-tutorial-callout--left .practice-session-tutorial-callout__arrow::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  transform: translateY(-50%) translateX(-35%) rotate(45deg);
+  @apply color-bg border-2 color-shadow shadow-none;
+}
+
+.practice-session-tutorial-callout--right .practice-session-tutorial-callout__arrow {
+  left: -0.625rem;
+  right: auto;
+}
+
+.practice-session-tutorial-callout--right .practice-session-tutorial-callout__arrow::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  transform: translateY(-50%) translateX(35%) rotate(45deg);
+  @apply color-bg border-2 color-shadow shadow-none;
+}
+
 .practice-session-tutorial-callout__title {
   font-size: 1rem;
   line-height: 1.35;
@@ -674,4 +727,7 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   width: auto;
   min-width: 7rem;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }

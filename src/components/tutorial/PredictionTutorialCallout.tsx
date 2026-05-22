@@ -3,15 +3,13 @@ import type { PredictionModalTutorialStep } from "../../lib/predictionTutorial";
 
 const STEP_CONTENT: Record<
   PredictionModalTutorialStep,
-  { emoji: string; title: string; body: string }
+  { title: string; body: string }
 > = {
   1: {
-    emoji: "🎯",
     title: "Get your prediction",
     body: "Select a Subject and Level, then hit Generate.",
   },
   2: {
-    emoji: "✅",
     title: "Almost done!",
     body: "Scroll down and click Save to keep your prediction.",
   },
@@ -56,46 +54,69 @@ export default function PredictionTutorialCallout({ step }: Props) {
                 },
               }}
             >
-              <motion.p
-                className="prediction-tutorial-callout__title txt-heading-colour font-bold"
+              <motion.img
+                src="/crown-icon.png"
+                alt=""
+                aria-hidden
+                className="prediction-tutorial-callout__icon"
                 variants={{
-                  hidden: { opacity: 0, y: 10, filter: "blur(4px)" },
+                  hidden: { opacity: 0, x: -8, filter: "blur(4px)" },
                   visible: {
                     opacity: 1,
-                    y: 0,
+                    x: 0,
                     filter: "blur(0px)",
                     transition: { duration: 0.28, ease: textEase },
                   },
                   exit: {
                     opacity: 0,
-                    y: -8,
+                    x: -8,
                     filter: "blur(3px)",
                     transition: { duration: 0.18, ease: textEase },
                   },
                 }}
-              >
-                <span aria-hidden>{content.emoji}</span> {content.title}
-              </motion.p>
-              <motion.p
-                className="prediction-tutorial-callout__body txt-sub color-txt-sub"
-                variants={{
-                  hidden: { opacity: 0, y: 12, filter: "blur(4px)" },
-                  visible: {
-                    opacity: 1,
-                    y: 0,
-                    filter: "blur(0px)",
-                    transition: { duration: 0.32, ease: textEase },
-                  },
-                  exit: {
-                    opacity: 0,
-                    y: -6,
-                    filter: "blur(3px)",
-                    transition: { duration: 0.16, ease: textEase },
-                  },
-                }}
-              >
-                {content.body}
-              </motion.p>
+              />
+              <div className="prediction-tutorial-callout__text">
+                <motion.p
+                  className="prediction-tutorial-callout__title txt-heading-colour font-bold"
+                  variants={{
+                    hidden: { opacity: 0, y: 10, filter: "blur(4px)" },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      filter: "blur(0px)",
+                      transition: { duration: 0.28, ease: textEase },
+                    },
+                    exit: {
+                      opacity: 0,
+                      y: -8,
+                      filter: "blur(3px)",
+                      transition: { duration: 0.18, ease: textEase },
+                    },
+                  }}
+                >
+                  {content.title}
+                </motion.p>
+                <motion.p
+                  className="prediction-tutorial-callout__body txt-sub color-txt-sub"
+                  variants={{
+                    hidden: { opacity: 0, y: 12, filter: "blur(4px)" },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      filter: "blur(0px)",
+                      transition: { duration: 0.32, ease: textEase },
+                    },
+                    exit: {
+                      opacity: 0,
+                      y: -6,
+                      filter: "blur(3px)",
+                      transition: { duration: 0.16, ease: textEase },
+                    },
+                  }}
+                >
+                  {content.body}
+                </motion.p>
+              </div>
             </motion.div>
           </AnimatePresence>
         </div>

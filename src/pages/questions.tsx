@@ -307,6 +307,8 @@ export default function Questions() {
     const isPracticeSessionTutorialStep2 = practiceSessionTutorialStep === 2;
     const isPracticeSessionTutorialStep3 = practiceSessionTutorialStep === 3;
     const isPracticeSessionTutorialStep4 = practiceSessionTutorialStep === 4;
+    const isPracticeSessionTutorialStep5 = practiceSessionTutorialStep === 5;
+    const isPracticeSessionTutorialStep6 = practiceSessionTutorialStep === 6;
 
     useEffect(() => {
         const m = urlMode === "certchamps" || urlMode === "pastpaper" || urlMode === "imagequestions" ? urlMode : getStoredMode();
@@ -340,6 +342,13 @@ export default function Questions() {
         setPracticeSessionTutorialStep(1);
     }, []);
 
+    /** Step 5 highlights the AI sidebar – make sure it's open with the AI tab selected. */
+    useEffect(() => {
+        if (!isPracticeSessionTutorialStep5) return;
+        setSidebarOpen(true);
+        setSidebarOpenPanel("ai");
+    }, [isPracticeSessionTutorialStep5]);
+
     const [subjectFilter, setSubjectFilter] = useState<string | null>(urlSubject || null);
     useEffect(() => {
         setSubjectFilter(urlSubject || null);
@@ -352,6 +361,7 @@ export default function Questions() {
         const centerTitleRowRef = useRef<HTMLDivElement>(null);
         const topBarRightActionsRef = useRef<HTMLDivElement>(null);
         const actionButtonsClusterRef = useRef<HTMLDivElement>(null);
+        const sidebarTutorialRef = useRef<HTMLDivElement>(null);
     /** When set, next paperQuestions effect will jump here (used for random across scoped papers). */
     const pendingRandomRef = useRef<{ pos: number } | { questionId: string } | null>(null);
     /** When set, next paperQuestions effect will jump to this index (used when selecting from scoped-paper search). */
@@ -678,6 +688,11 @@ export default function Questions() {
             navbarActionOffsetPx,
             options.leftHandMode,
         ]
+    );
+    const sidebarTutorialRect = useTutorialAnchorRect(
+        isPracticeSessionTutorialStep5,
+        sidebarTutorialRef,
+        [mode, imageQuestionsLoading, papersLoading, options.leftHandMode]
     );
     const paperSnapshot = usePaperSnapshot(paperBlob, aiPaperPage);
     const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
@@ -1702,6 +1717,7 @@ export default function Questions() {
 
             {/* Sidebar: left or right depending on left-hand mode */}
             <div
+                ref={sidebarTutorialRef}
                 className={`absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-none ${options.leftHandMode ? "left-0" : "right-0"} w-[35%]`}
                 style={{
                     transition: "clip-path 300ms cubic-bezier(0.25,0.1,0.25,1)",
@@ -2796,9 +2812,30 @@ export default function Questions() {
                     placement="above"
                     title="Practice tools"
                     body="Open log tables or the calculator from here, or switch to the full paper view."
-                    onNext={() => setPracticeSessionTutorialStep(null)}
+                    onNext={() => setPracticeSessionTutorialStep(5)}
                 />
             </>
+        ) : null}
+        {isPracticeSessionTutorialStep5 && sidebarTutorialRect ? (
+            <>
+                <TutorialHoleScrim anchorRect={sidebarTutorialRect} />
+                <PracticeSessionTutorialCallout
+                    anchorRect={sidebarTutorialRect}
+                    placement={options.leftHandMode ? "right" : "left"}
+                    title="Ask the AI tutor"
+                    body="It has full context over the marking scheme, the question, and your handwriting, so it can give targeted hints and feedback."
+                    onNext={() => setPracticeSessionTutorialStep(6)}
+                    nextLabel="Got it"
+                />
+            </>
+        ) : null}
+        {isPracticeSessionTutorialStep6 ? (
+            <PracticeSessionTutorialIntro
+                title="You're all good to go!"
+                body="Best of luck in your Leaving Cert, you've got this."
+                nextLabel="Let's go"
+                onNext={() => setPracticeSessionTutorialStep(null)}
+            />
         ) : null}
         </TimerProvider>
     )

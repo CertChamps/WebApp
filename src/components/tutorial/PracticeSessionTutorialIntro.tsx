@@ -6,9 +6,17 @@ const textEase = [0.25, 0.4, 0.25, 1] as const;
 
 type Props = {
   onNext: () => void;
+  title?: string;
+  body?: string;
+  nextLabel?: string;
 };
 
-export default function PracticeSessionTutorialIntro({ onNext }: Props) {
+export default function PracticeSessionTutorialIntro({
+  onNext,
+  title = "This is the practice page",
+  body = "Here you'll work through questions, draw on the whiteboard, and track your progress.",
+  nextLabel = "Next",
+}: Props) {
   const portalTarget = getThemedPortalTarget();
   if (!portalTarget) return null;
 
@@ -25,14 +33,20 @@ export default function PracticeSessionTutorialIntro({ onNext }: Props) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.35, ease: textEase }}
         >
+          <img
+            src="/crown-icon.png"
+            alt=""
+            aria-hidden
+            className="practice-session-tutorial-intro__icon"
+          />
           <p className="practice-session-tutorial-intro__title txt-heading-colour font-bold">
-            <span aria-hidden>📝</span> This is the practice page
+            {title}
           </p>
           <p className="practice-session-tutorial-intro__body txt-sub color-txt-sub">
-            Here you&apos;ll work through questions, draw on the whiteboard, and track your progress.
+            {body}
           </p>
           <button type="button" className="blue-btn practice-session-tutorial-intro__next" onClick={onNext}>
-            Next
+            {nextLabel}
           </button>
         </motion.div>
       </div>

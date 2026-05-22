@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { getThemedPortalTarget } from "../../utils/themedPortal";
@@ -7,7 +8,7 @@ const textEase = [0.25, 0.4, 0.25, 1] as const;
 
 type Props = {
   anchorRect: TutorialAnchorRect | null;
-  placement: "below" | "above";
+  placement: "below" | "above" | "left" | "right";
   align?: "center" | "end";
   title: string;
   body: string;
@@ -31,19 +32,24 @@ export default function PracticeSessionTutorialCallout({
   }
 
   const centerX = anchorRect.left + anchorRect.width / 2;
-  const anchorStyle =
-    placement === "below"
-      ? align === "end"
+  const centerY = anchorRect.top + anchorRect.height / 2;
+  const rightX = anchorRect.left + anchorRect.width;
+  let anchorStyle: CSSProperties;
+  if (placement === "below") {
+    anchorStyle =
+      align === "end"
         ? {
             top: anchorRect.top + anchorRect.height + 16,
-            left: anchorRect.right,
+            left: rightX,
             transform: "translateX(-100%)",
           }
-        : { top: anchorRect.top + anchorRect.height + 16, left: centerX, transform: "translateX(-50%)" }
-      : align === "end"
+        : { top: anchorRect.top + anchorRect.height + 16, left: centerX, transform: "translateX(-50%)" };
+  } else if (placement === "above") {
+    anchorStyle =
+      align === "end"
         ? {
             top: anchorRect.top - 16,
-            left: anchorRect.right,
+            left: rightX,
             transform: "translate(-100%, -100%)",
           }
         : {
@@ -51,18 +57,40 @@ export default function PracticeSessionTutorialCallout({
             left: centerX,
             transform: "translate(-50%, -100%)",
           };
+  } else if (placement === "left") {
+    anchorStyle = {
+      top: centerY,
+      left: anchorRect.left - 16,
+      transform: "translate(-100%, -50%)",
+    };
+  } else {
+    anchorStyle = {
+      top: centerY,
+      left: rightX + 16,
+      transform: "translateY(-50%)",
+    };
+  }
+
+  const initialOffset =
+    placement === "below"
+      ? { x: 0, y: -8 }
+      : placement === "above"
+        ? { x: 0, y: 8 }
+        : placement === "left"
+          ? { x: 8, y: 0 }
+          : { x: -8, y: 0 };
 
   return createPortal(
     <div
-      className={`practice-session-tutorial-callout-anchor practice-session-tutorial-callout-anchor--align-${align}`}
+      className={`practice-session-tutorial-callout-anchor practice-session-tutorial-callout-anchor--align-${align} practice-session-tutorial-callout-anchor--${placement}`}
       style={anchorStyle}
     >
       <motion.aside
         className={`practice-session-tutorial-callout practice-session-tutorial-callout--${placement}`}
         aria-live="polite"
         aria-label="Practice page tutorial"
-        initial={{ opacity: 0, y: placement === "below" ? -8 : 8 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, x: initialOffset.x, y: initialOffset.y }}
+        animate={{ opacity: 1, x: 0, y: 0 }}
         transition={{ duration: 0.35, ease: textEase }}
       >
         <div className="practice-session-tutorial-callout__panel color-bg color-shadow border-2 rounded-out shadow-none">

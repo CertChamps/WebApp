@@ -41,22 +41,33 @@ export default function PredictionCardTutorialCallout({ anchorRect }: Props) {
         <div className="prediction-card-tutorial-callout__panel color-bg color-shadow border-2 rounded-out shadow-none">
           <span className="prediction-card-tutorial-callout__arrow" aria-hidden />
           <div className="prediction-card-tutorial-callout__content">
-            <motion.p
-              className="prediction-card-tutorial-callout__title txt-heading-colour font-bold"
-              initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.28, ease: textEase, delay: 0.05 }}
-            >
-              <span aria-hidden>👆</span> Open your prediction
-            </motion.p>
-            <motion.p
-              className="prediction-card-tutorial-callout__body txt-sub color-txt-sub"
-              initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.32, ease: textEase, delay: 0.12 }}
-            >
-              Click the prediction card below to load it and start practicing.
-            </motion.p>
+            <motion.img
+              src="/crown-icon.png"
+              alt=""
+              aria-hidden
+              className="prediction-card-tutorial-callout__icon"
+              initial={{ opacity: 0, x: -8, filter: "blur(4px)" }}
+              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+              transition={{ duration: 0.28, ease: textEase, delay: 0.02 }}
+            />
+            <div className="prediction-card-tutorial-callout__text">
+              <motion.p
+                className="prediction-card-tutorial-callout__title txt-heading-colour font-bold"
+                initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ duration: 0.28, ease: textEase, delay: 0.05 }}
+              >
+                Open your prediction
+              </motion.p>
+              <motion.p
+                className="prediction-card-tutorial-callout__body txt-sub color-txt-sub"
+                initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{ duration: 0.32, ease: textEase, delay: 0.12 }}
+              >
+                Click the prediction card below to load it and start practicing.
+              </motion.p>
+            </div>
           </div>
         </div>
       </motion.aside>

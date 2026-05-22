@@ -1,4 +1,4 @@
-export type PracticeSessionTutorialStep = 1 | 2 | 3 | 4;
+export type PracticeSessionTutorialStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 export const PENDING_PRACTICE_SESSION_TUTORIAL_KEY = "pending-practice-session-tutorial";
 
