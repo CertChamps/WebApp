@@ -2,8 +2,6 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { arrayUnion, doc, getDoc, setDoc } from "firebase/firestore";
 import { db, auth } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
-import { useTutorialContext } from "../../context/TutorialContext";
-
 export const OPEN_RELEASE_NOTES_EVENT = "open-release-notes";
 
 const RELEASE_VERSION = "0.10.0";
@@ -38,7 +36,6 @@ function getLocalSeenKey(uid: string) {
 
 export default function ReleaseNotesPrompt() {
   const { user, setUser } = useContext(UserContext);
-  const { hasCompletedTutorial, triggerTutorial, showTutorial, setShowTutorial } = useTutorialContext();
   const [showPrompt, setShowPrompt] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -108,9 +105,6 @@ export default function ReleaseNotesPrompt() {
           }));
           setShowPrompt(false);
         } else {
-          if (showTutorial) {
-            setShowTutorial(false);
-          }
           setShowPrompt(true);
         }
       } catch (error) {
@@ -122,14 +116,11 @@ export default function ReleaseNotesPrompt() {
     };
 
     checkReleaseNotesStatus();
-  }, [canCheck, user?.uid, user?.username, user?.releaseNotesSeenVersions, setShowTutorial, showTutorial, setUser]);
+  }, [canCheck, user?.uid, user?.username, user?.releaseNotesSeenVersions, setUser]);
 
   useEffect(() => {
     const handleOpenReleaseNotes = () => {
       setCheckingStatus(false);
-      if (showTutorial) {
-        setShowTutorial(false);
-      }
       setShowPrompt(true);
     };
 
@@ -137,7 +128,7 @@ export default function ReleaseNotesPrompt() {
     return () => {
       window.removeEventListener(OPEN_RELEASE_NOTES_EVENT, handleOpenReleaseNotes);
     };
-  }, [setShowTutorial, showTutorial]);
+  }, []);
 
   const dismissReleaseNotes = async () => {
     if (!user?.uid || isSaving) return;
@@ -168,15 +159,6 @@ export default function ReleaseNotesPrompt() {
       });
 
       setShowPrompt(false);
-
-      const localTutorialCompleted = localStorage.getItem(`tutorial_completed_${user.uid}`) === "true";
-      const userMarkedComplete = user?.hasCompletedTutorial === true;
-
-      if (!hasCompletedTutorial && !userMarkedComplete && !localTutorialCompleted) {
-        setTimeout(() => {
-          triggerTutorial();
-        }, 250);
-      }
     } catch (error) {
       console.error("Error saving release notes state:", error);
     } finally {

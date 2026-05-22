@@ -83,20 +83,6 @@ export const PRACTICE_HUB_SUBJECTS: SubjectOption[] = LABELS.map((label) => ({
   label,
 }));
 
-/** Shown first on first-time subject picker (Leaving Cert core subjects). */
-export const POPULAR_ONBOARDING_SUBJECT_IDS = [
-  "mathematics",
-  "english",
-  "irish",
-  "biology",
-  "chemistry",
-  "physics",
-  "business",
-  "geography",
-  "history-later-modern",
-  "applied-mathematics",
-] as const;
-
 /** Map our subject id (slug) or Firestore subject doc id to possible backend values for filtering papers. */
 export const SUBJECT_ID_TO_BACKEND: Record<string, string[]> = {
   mathematics: ["maths", "mathematics"],

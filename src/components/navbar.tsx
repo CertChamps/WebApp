@@ -84,7 +84,6 @@ export default function Navbar () {
             <button
                 key={key}
                 type="button"
-                data-tutorial-id={key}
                 className={isSelected ? selectedClass : baseClass}
                 onClick={() => {pageNaviagte(targetPage)}}
                 aria-label={label}

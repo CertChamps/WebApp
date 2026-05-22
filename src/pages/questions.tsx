@@ -497,12 +497,11 @@ export default function Questions() {
 
     const imageTopicBlocked = useMemo(() => {
         if (mode !== "imagequestions" || hasAceAccess(user)) return false;
-        if (urlPredictionId) return true;
         if (!normalizedUrlSubject || !imageQuestionTopic || imageAllTopics.length === 0) return false;
         const topic = imageAllTopics.find((t) => t.name === imageQuestionTopic);
         if (!topic) return false;
         return !canAccessImageTopic(user, topic, starterImageTopic, normalizedUrlSubject);
-    }, [mode, user, urlPredictionId, normalizedUrlSubject, imageQuestionTopic, imageAllTopics, starterImageTopic]);
+    }, [mode, user, normalizedUrlSubject, imageQuestionTopic, imageAllTopics, starterImageTopic]);
 
     const paperContentBlocked = useMemo(() => {
         if (mode !== "pastpaper" || !selectedPaper) return false;
@@ -565,11 +564,6 @@ export default function Questions() {
             navbar.removeEventListener("mouseleave", updateOffset);
             navbar.removeEventListener("transitionend", updateOffset);
         };
-    }, []);
-    useEffect(() => {
-        const onCloseLogTables = () => setShowLogTables(false);
-        window.addEventListener("tutorial-close-logtables", onCloseLogTables);
-        return () => window.removeEventListener("tutorial-close-logtables", onCloseLogTables);
     }, []);
     const paperScrollRef = useRef<HTMLDivElement | null>(null);
     const panelsScrollRef = useRef<HTMLDivElement | null>(null);
@@ -1949,7 +1943,6 @@ export default function Questions() {
                                     isCompleted={isQuestionCompleted}
                                     showCompletion={mode === "pastpaper" || mode === "imagequestions"}
                                     disabled={pickerDisabled}
-                                    tutorialId={mode === "imagequestions" ? "session-question-list-btn" : undefined}
                                 />
                                 <button
                                     type="button"
@@ -2054,7 +2047,6 @@ export default function Questions() {
                                     <button
                                         type="button"
                                         aria-label="Search questions"
-                                        data-tutorial-id="session-question-list-btn"
                                         className={`question-selector-button pointer-events-auto ${showSearch ? "question-selector-button-active" : ""}`}
                                         onClick={() => setShowSearch(true)}
                                         aria-pressed={showSearch}
@@ -2306,7 +2298,6 @@ export default function Questions() {
                                     {currentPaperQuestion && (
                                         <button
                                             type="button"
-                                            data-tutorial-id="sidebar-logtables"
                                             onClick={() => {
                                                 if (showLogTables) {
                                                     setShowLogTables(false);

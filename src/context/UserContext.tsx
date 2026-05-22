@@ -18,7 +18,6 @@ export type UserContextType = {
     decks: any[],
     streak: number,
     highestStreak: number,
-    hasCompletedTutorial: boolean,
     isAdmin?: boolean,
     emailVerified: boolean,
     isPro?: boolean,
@@ -35,6 +34,8 @@ export type UserContextType = {
      *  Apple subscription across renewals. */
     appleOriginalTransactionId?: string,
     releaseNotesSeenVersions?: string[],
+    hasCompletedOnboarding?: boolean,
+    studyingSubjects?: string[],
     },
     setUser: React.Dispatch<React.SetStateAction<any>>
 }
@@ -56,7 +57,6 @@ export const UserContext = createContext<UserContextType>({
     decks: [],
     streak: 0,
     highestStreak: 0,
-    hasCompletedTutorial: false,
     isAdmin: false,
     emailVerified: false,
     isPro: false,
@@ -65,6 +65,8 @@ export const UserContext = createContext<UserContextType>({
     stripeCustomerId: undefined,
     appleOriginalTransactionId: undefined,
     releaseNotesSeenVersions: [],
+    hasCompletedOnboarding: undefined,
+    studyingSubjects: [],
     },
     setUser: () => {}
 })

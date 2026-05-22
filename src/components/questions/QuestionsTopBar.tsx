@@ -52,7 +52,6 @@ export default function QuestionsTopBar({
             title={whiteboardOn ? "Whiteboard on (Tablet Mode)" : "Whiteboard off (Laptop Mode)"}
             aria-label={whiteboardOn ? "Turn whiteboard off and switch to laptop mode" : "Turn whiteboard on and switch to tablet mode"}
             aria-pressed={whiteboardOn}
-            data-tutorial-id="laptop-tablet-toggle"
           >
             <LuPenTool size={20} strokeWidth={2} className="shrink-0" />
             <span>Whiteboard</span>

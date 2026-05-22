@@ -130,7 +130,6 @@ export default function FloatingLogTables({ pgNumber, onClose, file }: FloatingL
   const panel = (
     <div data-theme={options.theme}>
       <div
-        data-tutorial-id="sideview-logtables"
         className="fixed flex flex-col rounded-xl overflow-hidden border-2 color-shadow color-bg"
         style={{
           left: pos.left,

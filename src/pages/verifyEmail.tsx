@@ -2,8 +2,9 @@ import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../../firebase";
 import { sendEmailVerification, signOut } from "firebase/auth";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { UserContext } from "../context/UserContext";
+import { getPostAuthPath } from "../lib/onboarding";
 import crown from "../assets/logo.png";
 import { MdEmail, MdRefresh, MdLogout, MdCheckCircle } from "react-icons/md";
 
@@ -24,6 +25,14 @@ export default function VerifyEmail() {
         await auth.currentUser.reload();
 
         if (auth.currentUser.emailVerified) {
+          const userDoc = await getDoc(doc(db, "user-data", auth.currentUser.uid));
+          const hasCompletedOnboarding =
+            userDoc.data()?.hasCompletedOnboarding === true
+              ? true
+              : userDoc.data()?.hasCompletedOnboarding === false
+                ? false
+                : undefined;
+
           // Update Firestore with verified status
           await updateDoc(doc(db, "user-data", auth.currentUser.uid), {
             emailVerified: true,
@@ -33,13 +42,13 @@ export default function VerifyEmail() {
           setUser((prev: any) => ({
             ...prev,
             emailVerified: true,
+            hasCompletedOnboarding,
           }));
 
           setMessage("Email verified! Redirecting...");
 
-          // Redirect to main app after a short delay
           setTimeout(() => {
-            navigate("/practice");
+            navigate(getPostAuthPath({ hasCompletedOnboarding }));
           }, 1500);
         }
       } catch (err) {

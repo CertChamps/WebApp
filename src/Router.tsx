@@ -19,15 +19,12 @@ import { ProtectedRoute } from "./components/protectedRoute";
 import Progress from "./pages/progress/progress_main";
 import SubjectProgressPage from "./pages/progress/SubjectProgressPage";
 import Feedback from "./pages/feedback";
-import Tutorial from "./components/tutorial/Tutorial";
-import { useTutorialContext } from "./context/TutorialContext";
-import { useOnboardingContext } from "./context/OnboardingContext";
 import MobileRedirect from "./pages/mobileRedirect";
 import PhoneRedirect from "./components/PhoneRedirect";
 import SessionTracker from "./components/SessionTracker";
 import UsernamePrompt from "./components/prompts/username_prompt";
-import OnboardingPrompt from "./components/prompts/onboarding_prompt";
 import ReleaseNotesPrompt from "./components/prompts/release_notes_prompt";
+import OnboardingRoute from "./components/onboarding/OnboardingRoute";
 
 /** Redirects /practice/:id (deck links from social) to /decks/:id */
 function PracticeToDeckRedirect() {
@@ -35,24 +32,14 @@ function PracticeToDeckRedirect() {
   return <Navigate to={`/decks/${id}`} replace />;
 }
 
-// Layout component that includes the Tutorial overlay
 function RootLayout() {
-  const { showTutorial, setShowTutorial, completeTutorial } = useTutorialContext();
-  const { showOnboarding } = useOnboardingContext();
-
   return (
     <>
       <SessionTracker />
       <PhoneRedirect />
       <Outlet />
       <UsernamePrompt />
-      <OnboardingPrompt />
       <ReleaseNotesPrompt />
-      <Tutorial
-        isOpen={showTutorial && !showOnboarding}
-        onClose={() => setShowTutorial(false)}
-        onComplete={completeTutorial}
-      />
     </>
   );
 }
@@ -65,6 +52,14 @@ const router = createHashRouter([
       { path: "/", element: <SignUp /> },
       { path: "/login", element: <Login /> },
       { path: "/verify-email", element: <VerifyEmail /> },
+      {
+        path: "/onboarding",
+        element: (
+          <ProtectedRoute allowOnboardingIncomplete>
+            <OnboardingRoute />
+          </ProtectedRoute>
+        ),
+      },
 
       // Protected routes
       {

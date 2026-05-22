@@ -20,8 +20,6 @@ type QuestionTitlePickerProps = {
   disabled?: boolean;
   /** When set, dropdown aligns to this element (e.g. the full prev/title/next row). */
   anchorRef?: RefObject<HTMLElement | null>;
-  /** Optional tutorial anchor for onboarding (e.g. session-question-list-btn). */
-  tutorialId?: string;
 };
 
 type PanelPosition = {
@@ -46,7 +44,6 @@ export default function QuestionTitlePicker({
   showCompletion = false,
   disabled = false,
   anchorRef,
-  tutorialId,
 }: QuestionTitlePickerProps) {
   const [open, setOpen] = useState(false);
   const [panelPosition, setPanelPosition] = useState<PanelPosition | null>(null);
@@ -130,7 +127,6 @@ export default function QuestionTitlePicker({
               <motion.div
                 key="question-title-picker-panel"
                 className="question-title-picker__panel pointer-events-auto fixed z-[60] overflow-hidden rounded-lg color-bg border-2 color-shadow"
-                data-tutorial-id={tutorialId ? "session-question-list-panel" : undefined}
                 style={{
                   top: panelPosition.top,
                   left: panelPosition.left,
@@ -201,7 +197,6 @@ export default function QuestionTitlePicker({
             aria-expanded={open}
             aria-haspopup="listbox"
             aria-label={`${title}. Show question list`}
-            {...(tutorialId ? { "data-tutorial-id": tutorialId } : {})}
           >
             <AnimatePresence mode="wait">
               <motion.span

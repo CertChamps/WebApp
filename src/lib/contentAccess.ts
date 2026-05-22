@@ -92,7 +92,7 @@ export function canAccessPaper(
   paper: ExamPaper,
   freePaperKeys: Set<string>
 ): boolean {
-  if (paper.isPrediction === true) return hasAceAccess(user);
+  if (paper.isPrediction === true) return true;
   if (hasAceAccess(user)) return true;
   return freePaperKeys.has(getExamPaperKey(paper));
 }

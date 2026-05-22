@@ -1,19 +1,28 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { Capacitor } from "@capacitor/core";
 import { UserContext } from "./context/UserContext";
 import { OptionsContext } from "./context/OptionsContext";
-import { TutorialProvider } from "./context/TutorialContext";
-import { OnboardingProvider } from "./context/OnboardingContext";
 import AppRouter from "./Router";
 import { initPayments } from "./lib/payments";
+import { markPendingPredictionTutorial } from "./lib/predictionTutorial";
 //import CustomCursor from "./components/CustomCursor"
 
 export default function App() {
   // =================== CONTEXT SETUP ===================== //
-  const [user, setUser] = useState<any>(() => {
+  const [user, setUserState] = useState<any>(() => {
     const storedUser = localStorage.getItem("USER");
     return storedUser ? JSON.parse(storedUser) : {}; // default empty object
   });
+
+  const setUser = useCallback<Dispatch<SetStateAction<any>>>((action) => {
+    setUserState((prev) => {
+      const next = typeof action === "function" ? action(prev) : action;
+      if (prev?.hasCompletedOnboarding !== true && next?.hasCompletedOnboarding === true) {
+        markPendingPredictionTutorial();
+      }
+      return next;
+    });
+  }, []);
 
   const [options, setOptions] = useState<any>(() => {
     const storedOptions = localStorage.getItem("OPTIONS");
@@ -93,8 +102,6 @@ export default function App() {
     // ================ CONTEXT PROVIDERS ===================== //
     <OptionsContext.Provider value={{ options, setOptions }}>
       <UserContext.Provider value={{ user, setUser }}>
-        <OnboardingProvider>
-        <TutorialProvider>
           {/* // ================ DIV THEME WRAPPER ===================== // */}
           <div id="themed-root" data-theme={options.theme}>
             <div className="app-viewport color-bg flex flex-row overflow-hidden">
@@ -102,8 +109,6 @@ export default function App() {
               <AppRouter />
             </div>
           </div>
-        </TutorialProvider>
-        </OnboardingProvider>
       </UserContext.Provider>
     </OptionsContext.Provider>
   );

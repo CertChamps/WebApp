@@ -2070,7 +2070,6 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				{!readOnly && (
 				<div
 					className="drawing-canvas-toolbar absolute bottom-4 left-1/2 -translate-x-1/2 z-[2000] flex items-center justify-center gap-1 py-1.5 px-2 rounded-[var(--radius-out)] color-shadow"
-					data-tutorial-id="drawing-toolbar"
 					style={{
 						background: "rgba(128, 128, 128, 0.05)",
 						backdropFilter: "blur(6px)",
