@@ -27,14 +27,21 @@ function isAdmin() {
 }
 
 match /questions/leavingcert/predictions/{predictionId} {
-  allow read: if request.auth != null;
-  allow create: if request.auth != null;
+  allow read: if request.auth != null && (
+    resource.data.generatedBy == request.auth.uid || isAdmin()
+  );
+  allow create: if request.auth != null
+    && request.resource.data.generatedBy == request.auth.uid;
   allow update, delete: if isAdmin();
 
   match /questions/{questionId} {
-    allow read: if request.auth != null;
-    allow create: if request.auth != null;
-  allow update, delete: if isAdmin();
+    allow read: if request.auth != null && (
+      get(/databases/$(database)/documents/questions/leavingcert/predictions/$(predictionId)).data.generatedBy == request.auth.uid
+      || isAdmin()
+    );
+    allow create: if request.auth != null
+      && get(/databases/$(database)/documents/questions/leavingcert/predictions/$(predictionId)).data.generatedBy == request.auth.uid;
+    allow update, delete: if isAdmin();
   }
 }
 ```

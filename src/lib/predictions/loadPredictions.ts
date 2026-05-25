@@ -1,5 +1,6 @@
 import { getDocs, query, where } from "firebase/firestore";
 import type { ExamPaper } from "../../hooks/useExamPapers";
+import { getCurrentPredictionOwner } from "./predictionOwner";
 import type { PredictionContentType } from "./types";
 import { predictionsCollectionRef } from "./firestorePaths";
 
@@ -13,16 +14,18 @@ function deriveLabel(docId: string, year?: number, label?: string): string {
   return part || docId;
 }
 
-/** Load prediction papers from the dedicated Firestore collection. */
+/** Load prediction papers saved by the signed-in user. */
 export async function loadPredictionPapers(subjectFilter?: string | null): Promise<ExamPaper[]> {
+  const owner = await getCurrentPredictionOwner();
+  if (!owner) return [];
+
   const col = predictionsCollectionRef();
-  const snap = subjectFilter
-    ? await getDocs(query(col, where("subject", "==", subjectFilter)))
-    : await getDocs(col);
+  const snap = await getDocs(query(col, where("generatedBy", "==", owner.uid)));
 
   const papers: ExamPaper[] = [];
   snap.docs.forEach((d) => {
     const data = d.data();
+    if (subjectFilter && data.subject !== subjectFilter) return;
     const subject = typeof data.subject === "string" ? data.subject : undefined;
     const level = typeof data.level === "string" ? data.level : undefined;
     const year = typeof data.year === "number" ? data.year : undefined;
