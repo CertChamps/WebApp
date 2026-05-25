@@ -18,6 +18,7 @@ import { Capacitor } from "@capacitor/core";
 import type { PaymentProvider, PaymentProviderName } from "./types";
 import { stripeProvider } from "./stripePayment";
 import { appleProvider } from "./applePayment";
+import { iapDebug } from "./paymentsDebug";
 
 export type { PaymentProvider, PaymentProviderName, PriceDetails, PurchaseResult } from "./types";
 export { ACE_ENTITLEMENT_ID, ACE_PRODUCT_IDENTIFIER, isAppleIapAvailable } from "./applePayment";
@@ -31,10 +32,15 @@ export { initPayments, setPaymentsUser, clearPaymentsUser } from "./initPayments
  * the up-to-date answer.
  */
 export function getPaymentProvider(): PaymentProvider {
-    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") {
-        return appleProvider;
-    }
-    return stripeProvider;
+    const useApple =
+        Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+    const provider = useApple ? appleProvider : stripeProvider;
+    iapDebug("getPaymentProvider", {
+        provider: provider.name,
+        isNativePlatform: Capacitor.isNativePlatform(),
+        platform: Capacitor.getPlatform(),
+    });
+    return provider;
 }
 
 /** Provider name that's currently active. Handy for analytics / debug. */

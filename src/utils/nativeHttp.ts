@@ -34,12 +34,27 @@ export async function nativeHttpRequest(options: NativeRequestOptions): Promise<
     responseType: options.responseType ?? "text",
   });
 
-  const body =
-    options.responseType === "arraybuffer" && nativeResponse.data != null
-      ? new Uint8Array(nativeResponse.data as ArrayBuffer)
-      : typeof nativeResponse.data === "string"
-      ? nativeResponse.data
-      : JSON.stringify(nativeResponse.data ?? {});
+  let body: BodyInit;
+  if (options.responseType === "arraybuffer" && nativeResponse.data != null) {
+    const data = nativeResponse.data;
+    if (data instanceof ArrayBuffer) {
+      body = new Uint8Array(data);
+    } else if (ArrayBuffer.isView(data)) {
+      body = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+    } else if (typeof data === "string") {
+      // Capacitor often returns base64 for binary responses
+      const binary = atob(data);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      body = bytes;
+    } else {
+      body = JSON.stringify(data ?? {});
+    }
+  } else if (typeof nativeResponse.data === "string") {
+    body = nativeResponse.data;
+  } else {
+    body = JSON.stringify(nativeResponse.data ?? {});
+  }
 
   return new Response(body, {
     status: nativeResponse.status,
