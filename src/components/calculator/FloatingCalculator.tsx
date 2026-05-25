@@ -142,6 +142,37 @@ export default function FloatingCalculator({ onClose }: Props) {
 const KATEX_CACHE_LIMIT = 512;
 const katexCache = new Map<string, string>();
 const CURSOR_HTML = '<span class="calc-input-cursor" aria-hidden="true"></span>';
+/** Must match useCalcEngine CURSOR_MARK — used only when split render would break \\frac/\\sqrt */
+const CURSOR_MARK = "\\smash{\\rule{0.045em}{1.05em}}";
+
+function latexBraceBalanced(tex: string): boolean {
+  let depth = 0;
+  for (const ch of tex) {
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth < 0) return false;
+    }
+  }
+  return depth === 0;
+}
+
+function latexLeftRightSplitSafe(before: string, after: string): boolean {
+  const count = (s: string, cmd: "\\left" | "\\right") =>
+    (s.match(cmd === "\\left" ? /\\left\b/g : /\\right\b/g) || []).length;
+  const leftBefore = count(before, "\\left");
+  const rightBefore = count(before, "\\right");
+  const leftAfter = count(after, "\\left");
+  const rightAfter = count(after, "\\right");
+  if (rightBefore > leftBefore) return false;
+  if (leftAfter > rightAfter) return false;
+  if (leftBefore > rightBefore && leftBefore - rightBefore > rightAfter - leftAfter) return false;
+  return true;
+}
+
+function katexHtmlHasError(html: string): boolean {
+  return html.includes("katex-error");
+}
 
 function renderKatex(tex: string): string {
   if (!tex) return "";
@@ -154,24 +185,44 @@ function renderKatex(tex: string): string {
       .replace(/−/g, "-")
       .replace(/·/g, ".");
     const html = katex.renderToString(safe, { throwOnError: false, displayMode: false });
-    if (katexCache.size >= KATEX_CACHE_LIMIT) {
-      const firstKey = katexCache.keys().next().value;
-      if (firstKey) katexCache.delete(firstKey);
+    if (!katexHtmlHasError(html)) {
+      if (katexCache.size >= KATEX_CACHE_LIMIT) {
+        const firstKey = katexCache.keys().next().value;
+        if (firstKey) katexCache.delete(firstKey);
+      }
+      katexCache.set(tex, html);
     }
-    katexCache.set(tex, html);
     return html;
   } catch {
     return tex;
   }
 }
 
-function renderInputLatex(before: string, after: string, showCursor: boolean): string {
+function trySplitInputRender(before: string, after: string): string | null {
+  if (!latexBraceBalanced(before) || !latexBraceBalanced(after)) return null;
+  if (!latexLeftRightSplitSafe(before, after)) return null;
+
   const htmlBefore = renderKatex(before || "\\;");
-  if (!showCursor) {
-    return after ? htmlBefore + renderKatex(after) : htmlBefore;
-  }
   const htmlAfter = after ? renderKatex(after) : "";
+  if (katexHtmlHasError(htmlBefore) || katexHtmlHasError(htmlAfter)) return null;
+
   return htmlBefore + CURSOR_HTML + htmlAfter;
+}
+
+function renderInputLatex(before: string, after: string, showCursor: boolean): string {
+  const body = before + after;
+  if (!showCursor) {
+    return renderKatex(body || "\\;");
+  }
+
+  if (!body) {
+    return renderKatex("\\;") + CURSOR_HTML;
+  }
+
+  const split = trySplitInputRender(before, after);
+  if (split) return split;
+
+  return renderKatex(before + CURSOR_MARK + after);
 }
 
 const CalcDisplay = memo(function CalcDisplay({ state }: { state: CalcState }) {
