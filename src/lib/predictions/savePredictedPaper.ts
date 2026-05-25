@@ -2,6 +2,7 @@ import { doc, writeBatch } from "firebase/firestore";
 import { auth, db } from "../../../firebase";
 import { buildPredictionSavePayload } from "./buildPredictionSavePayload";
 import { predictionDocRef, predictionQuestionsRef } from "./firestorePaths";
+import { getCurrentPredictionOwner } from "./predictionOwner";
 import type { PredictedPaperBlueprint } from "./types";
 
 const SAVE_PREDICTION_URL =
@@ -82,15 +83,14 @@ export async function savePredictedPaperToFirestore(
   level: string,
   blueprint: PredictedPaperBlueprint
 ): Promise<string> {
-  if (!auth.currentUser) {
+  const owner = await getCurrentPredictionOwner();
+  if (!owner) {
     throw new Error("You must be signed in to save a prediction.");
   }
 
   const payload = await buildPredictionSavePayload(subject, level, blueprint);
-  const uid = auth.currentUser?.uid;
-  if (uid) {
-    payload.predictionDoc.generatedBy = uid;
-  }
+  payload.predictionDoc.generatedBy = owner.uid;
+  payload.predictionDoc.generatedByName = owner.name;
 
   try {
     return await saveViaFirestore(payload);
