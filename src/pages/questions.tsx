@@ -66,6 +66,7 @@ import {
   type PracticeSessionTutorialStep,
 } from "../lib/practiceSessionTutorial";
 import { getDocumentCached } from "../utils/pdfDocumentCache";
+import { getLogTablesPdfBlob } from "../utils/logTablesPdf";
 import type { InjectedExchange } from "../components/ai/useAI";
 import { runGrading } from "../lib/grading/GradingEngine";
 import type { CanvasAnnotation, CanvasCapturePayload, GradingStatus, Pass1Result } from "../lib/grading/GradingTypes";
@@ -594,7 +595,7 @@ export default function Questions() {
     const [paperDocumentLoaded, setPaperDocumentLoaded] = useState(false);
     const [paperNumPages, setPaperNumPages] = useState(0);
     const [logTablesBlob, setLogTablesBlob] = useState<Blob | null>(null);
-    const [logTablesPreloaded, setLogTablesPreloaded] = useState(false);
+    const [snippetPdfLoaded, setSnippetPdfLoaded] = useState(false);
     const [viewportWidth, setViewportWidth] = useState(
         typeof window !== "undefined" ? window.innerWidth : 1024
     );
@@ -1123,7 +1124,18 @@ export default function Questions() {
         setPosition(1);
     }, [collectionPaths]);
 
-    // Load paper as Blob when selected (avoids CORS; react-pdf accepts Blob). Cache in useExamPapers makes revisits instant.
+    // Preload log tables PDF into state (blob avoids Capacitor relative-path crash in PDF.js).
+    useEffect(() => {
+        let cancelled = false;
+        getLogTablesPdfBlob().then((blob) => {
+            if (!cancelled && blob) setLogTablesBlob(blob);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    // Load paper as Blob when selected. IndexedDB + memory cache in useExamPapers; keep prior blob visible while fetching next.
     useEffect(() => {
         if (!selectedPaper) {
             setPaperBlob(null);
@@ -1134,7 +1146,6 @@ export default function Questions() {
             paperQuestions[paperQuestionPosition - 1] ??
             filteredPaperQuestions[paperQuestionPosition - 1];
         let cancelled = false;
-        setPaperBlob(null);
         setPaperLoadError(null);
         const loadBlob = activeQuestion
             ? getPaperBlobForQuestion(selectedPaper, activeQuestion)
@@ -1449,28 +1460,21 @@ export default function Questions() {
     // Reset PDF document loaded and page count when paper blob changes (new paper)
     useEffect(() => {
         setPaperDocumentLoaded(false);
+        setSnippetPdfLoaded(false);
         setPaperNumPages(0);
     }, [paperBlob]);
 
-    // Preload log tables PDF so modal opens instantly
+    // If modal opens before preload finishes, fetch again.
     useEffect(() => {
+        if (!showLogTables || logTablesBlob) return;
         let cancelled = false;
-        setLogTablesPreloaded(false);
-        fetch("/assets/log_tables.pdf")
-            .then((res) => (res.ok ? res.blob() : null))
-            .then((blob) => {
-                if (!cancelled && blob) {
-                    setLogTablesBlob(blob);
-                }
-            })
-            .catch(() => {})
-            .finally(() => {
-                if (!cancelled) setLogTablesPreloaded(true);
-            });
+        getLogTablesPdfBlob().then((blob) => {
+            if (!cancelled && blob) setLogTablesBlob(blob);
+        });
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [showLogTables, logTablesBlob]);
 
     // When landing with paperId + questionId/indexInPaper (e.g. shared link or Practice Hub search), set pending so we jump to that question when paper questions load
     useEffect(() => {
@@ -2383,8 +2387,12 @@ export default function Questions() {
                             // When hasPageRegions we preload full paper off-screen, so view "uses" Document whenever we might show it
                             const viewUsesDocument = !hasPageRegions || isFullPaperExpanded;
                             const fullPaperPreloaded = !hasPageRegions || paperDocumentLoaded;
+                            const snippetReady = !hasPageRegions || isFullPaperExpanded || snippetPdfLoaded;
                             const showPdfLoadingOverlay =
-                                (!viewUsesDocument ? false : !fullPaperPreloaded) || !logTablesPreloaded;
+                                !paperBlob || paperLoadError
+                                    ? false
+                                    : (viewUsesDocument && !fullPaperPreloaded) ||
+                                      (showSnippetView && !snippetReady);
 
                             const paperActionButtons = (
                                 <>
@@ -2502,6 +2510,11 @@ export default function Questions() {
                                                                 height: r.height ?? 150,
                                                             }))}
                                                             pageWidth={snippetWidth}
+                                                            onDocumentLoadSuccess={() => setSnippetPdfLoaded(true)}
+                                                            onDocumentLoadError={(err) => {
+                                                                setPaperLoadError(err.message ?? "Failed to display PDF");
+                                                                setSnippetPdfLoaded(true);
+                                                            }}
                                                         />
                                                         {markingSchemeBlob && currentPaperQuestion?.markingSchemePageRange && (
                                                             <div className="pt-2 flex justify-center" style={{ width: snippetWidth }}>
@@ -2522,8 +2535,9 @@ export default function Questions() {
                                                         )}
                                                     </div>
                                                 </motion.div>
-                                                {/* Full paper: PDF viewbox (left) + panels (right); wrapped and centered */}
-                                                {(() => {
+                                                {/* Full paper: only mount when expanded (avoids parsing entire PDF off-screen on iPad). */}
+                                                {isFullPaperExpanded &&
+                                                (() => {
                                                     const panelWidthPx = 176;
                                                     const isTablet = !options.laptopMode;
                                                     const fullPaperTotalWidth = isTablet ? snippetWidth : snippetWidth + panelWidthPx;
@@ -2744,7 +2758,7 @@ export default function Questions() {
                             setShowLogTables(false);
                             setLogTablesQuestionIndex(null);
                         }}
-                        file={logTablesBlob}
+                        file={logTablesBlob ?? null}
                     />,
                     document.body
                 )}

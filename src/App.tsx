@@ -5,6 +5,7 @@ import { OptionsContext } from "./context/OptionsContext";
 import AppRouter from "./Router";
 import { initPayments } from "./lib/payments";
 import { markPendingPredictionTutorial } from "./lib/predictionTutorial";
+import { iapDebug } from "./lib/payments/paymentsDebug";
 //import CustomCursor from "./components/CustomCursor"
 
 export default function App() {
@@ -45,7 +46,43 @@ export default function App() {
   // we know their Firebase UID.
   useEffect(() => {
     const cachedUid: string | undefined = user?.uid;
-    void initPayments(cachedUid);
+    iapDebug("App:initPayments on boot", {
+      cachedUid: cachedUid ?? null,
+      isNative: Capacitor.isNativePlatform(),
+      platform: Capacitor.getPlatform(),
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "n/a",
+    });
+
+    const bootStarted = Date.now();
+    let configureSettled = false;
+    initPayments(cachedUid)
+      .then(() => {
+        configureSettled = true;
+        iapDebug("App:initPayments resolved", {
+          elapsedMs: Date.now() - bootStarted,
+        });
+      })
+      .catch((err) => {
+        configureSettled = true;
+        iapDebug("App:initPayments rejected", {
+          elapsedMs: Date.now() - bootStarted,
+          message: (err as Error)?.message ?? String(err),
+        });
+      });
+
+    // Heartbeat: while configure hasn't returned, log every 3s so we can
+    // SEE the hang in real time instead of staring at silence.
+    const heartbeat = window.setInterval(() => {
+      if (configureSettled) {
+        window.clearInterval(heartbeat);
+        return;
+      }
+      iapDebug("App:initPayments still pending…", {
+        elapsedMs: Date.now() - bootStarted,
+      });
+    }, 3000);
+
+    return () => window.clearInterval(heartbeat);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

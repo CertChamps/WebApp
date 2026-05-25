@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { usePayments, refetchSubscriptionState } from "../hooks/usePayments";
+import { iapDebug } from "../lib/payments/paymentsDebug";
 import { signOutSession } from "../lib/authSession";
 import { deleteAccount as deleteAccountRequest } from "../lib/deleteAccount";
 import { prepareProfileImagePreview, revokeProfileImagePreview } from "../lib/profileImage";
@@ -332,7 +333,15 @@ const ManageAccount = () => {
     // of the app sees `isPro: true` immediately. Stripe path bails out
     // before this because `window.location.href` already navigated away.
     const handleUpgradeToPro = async () => {
+        iapDebug("manageAccount.handleUpgradeToPro:tap", {
+            activeProvider: payments.activeProvider,
+            priceLoading: payments.priceLoading,
+            priceFormatted: payments.price?.formatted ?? null,
+            purchaseLoading: payments.purchaseLoading,
+            isPro: user?.isPro === true,
+        });
         const ok = await payments.purchase();
+        iapDebug("manageAccount.handleUpgradeToPro:done", { ok });
         if (ok) {
             setPaymentSuccess(true);
             await refetchSubscriptionState(setUser);

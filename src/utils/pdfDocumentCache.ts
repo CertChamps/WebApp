@@ -1,6 +1,6 @@
 import { getDocument } from "pdfjs-dist";
 
-const MAX_DOCUMENTS = 10;
+const MAX_DOCUMENTS = 16;
 
 type PDFDoc = Awaited<ReturnType<typeof getDocument>["promise"]>;
 type CacheEntry = { blob: Blob; promise: Promise<PDFDoc> };
