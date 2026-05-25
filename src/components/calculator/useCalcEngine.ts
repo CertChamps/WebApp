@@ -170,7 +170,7 @@ const DECIMAL_SIG_FIGS = 10;
    ═══════════════════════════════════════════════════════════ */
 
 const PLACEHOLDER = "\\square ";
-const CURSOR_MARK = "\\textcolor{#ff00ff}{\\smash{\\rule{0.045em}{1.05em}}}";
+const CURSOR_MARK = "\\smash{\\rule{0.045em}{1.05em}}";
 
 function cursorMark(showCursor: boolean): string {
   return showCursor ? CURSOR_MARK : "";
