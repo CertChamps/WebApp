@@ -3,10 +3,13 @@ import { UserContext } from '../context/UserContext'
 import { isAdminUid } from '../constants/adminUids'
 import { useNavigate, useLocation } from "react-router-dom";
 import '../styles/navbar.css'
+import { isIPad } from '../utils/isIPad'
 
 // ======================= ICON IMPORTS ======================== // 
 import { LuPencil, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText } from "react-icons/lu";
 import type { IconType } from 'react-icons';
+
+const showNavTooltips = !isIPad();
 
 export default function Navbar () {
 
@@ -94,9 +97,11 @@ export default function Navbar () {
                     className={isSelected ? 'nav-icon-selected' : 'nav-icon'}
                     fill={isSelected ? 'currentColor' : 'none'}
                 />
-                <span className="nav-tooltip" role="tooltip">
-                    <span className="nav-tooltip-txt">{label}</span>
-                </span>
+                {showNavTooltips && (
+                    <span className="nav-tooltip" role="tooltip">
+                        <span className="nav-tooltip-txt">{label}</span>
+                    </span>
+                )}
             </button>
         )
     }

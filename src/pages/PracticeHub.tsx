@@ -47,10 +47,7 @@ import {
   stripPredictionTutorialQuery,
   type PredictionTutorialStep,
 } from "../lib/predictionTutorial";
-import {
-  consumePendingPracticeSessionTutorial,
-  markPendingPracticeSessionTutorial,
-} from "../lib/practiceSessionTutorial";
+import { markPendingPracticeSessionTutorial } from "../lib/practiceSessionTutorial";
 import { resolvePredictionContentType } from "../lib/predictions/api";
 import { getThemedPortalTarget } from "../utils/themedPortal";
 import "../styles/decks.css";

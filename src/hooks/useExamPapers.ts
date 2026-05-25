@@ -183,36 +183,45 @@ export function useExamPapers(
     setLoading(true);
     setError(null);
 
-    async function loadPapersForSubject(subId: string): Promise<ExamPaper[]> {
-      const subjRef = doc(db, "questions", "leavingcert", "subjects", subId);
-      const subjSnap = await getDoc(subjRef);
-      if (!subjSnap.exists()) return [];
+    async function load() {
+      try {
+        const idsToLoad = shouldLoadAll
+          ? subjectIds
+          : getFirestoreSubjectIds(subjectId!);
 
-      let levelIds = (subjSnap.data()?.sections as string[] | undefined) ?? [];
-      const usingFallbackLevels =
-        levelIds.length === 0 && (subId === "maths" || subId === "applied-maths");
-      if (usingFallbackLevels) {
-        levelIds = ["higher", "ordinary"];
-      }
+        const allPapers: ExamPaper[] = [];
 
-      const levelPaperLists = await Promise.all(
-        levelIds.map(async (level) => {
-          const levelRef = doc(
-            db,
-            "questions",
-            "leavingcert",
-            "subjects",
-            subId,
-            "levels",
-            level
-          );
-          const levelSnap = await getDoc(levelRef);
-          if (!usingFallbackLevels) {
-            if (!levelSnap.exists()) return [] as ExamPaper[];
-            const levelSections =
-              (levelSnap.data()?.sections as string[] | undefined) ?? [];
-            if (!levelSections.includes("papers")) return [] as ExamPaper[];
+        for (const subId of idsToLoad) {
+          if (cancelled) return;
+          const subjRef = doc(db, "questions", "leavingcert", "subjects", subId);
+          const subjSnap = await getDoc(subjRef);
+          if (!subjSnap.exists()) continue;
+
+          let levelIds = (subjSnap.data()?.sections as string[] | undefined) ?? [];
+          const usingFallbackLevels =
+            levelIds.length === 0 && (subId === "maths" || subId === "applied-maths");
+          if (usingFallbackLevels) {
+            levelIds = ["higher", "ordinary"];
           }
+
+          for (const level of levelIds) {
+            if (cancelled) return;
+            const levelRef = doc(
+              db,
+              "questions",
+              "leavingcert",
+              "subjects",
+              subId,
+              "levels",
+              level
+            );
+            const levelSnap = await getDoc(levelRef);
+            if (!usingFallbackLevels) {
+              if (!levelSnap.exists()) continue;
+              const levelSections =
+                (levelSnap.data()?.sections as string[] | undefined) ?? [];
+              if (!levelSections.includes("papers")) continue;
+            }
 
             const papersRef = collection(
               db,
@@ -236,12 +245,12 @@ export function useExamPapers(
               if (isPrediction || isComposite) return;
               if (!storagePath) return;
 
-            const year = typeof data.year === "number" ? data.year : undefined;
-            const label =
-              typeof data.label === "string" && data.label.trim()
-                ? data.label.trim()
-                : deriveLabel(d.id, year);
-            const isFree = data.isFree === true;
+              const year = typeof data.year === "number" ? data.year : undefined;
+              const label =
+                typeof data.label === "string" && data.label.trim()
+                  ? data.label.trim()
+                  : deriveLabel(d.id, year);
+              const isFree = data.isFree === true;
 
               allPapers.push({
                 id: d.id,
@@ -293,22 +302,6 @@ export function useExamPapers(
   const paperBlobCache = useRef<Map<string, Blob>>(new Map());
   const paperBlobCacheOrder = useRef<string[]>([]);
   const MAX_BLOB_CACHE = 10;
-
-  const getPaperBlob = useCallback(async (paper: ExamPaper): Promise<Blob> => {
-    const key = paper.storagePath;
-    if (!key) {
-      throw new Error("This paper has no PDF — open questions individually.");
-    }
-    const cached = paperBlobCache.current.get(key);
-    if (cached) {
-      // Move to end (most recently used)
-      paperBlobCacheOrder.current = paperBlobCacheOrder.current.filter((k) => k !== key);
-      paperBlobCacheOrder.current.push(key);
-      return cached;
-    }
-    const pathRef = ref(storage, paper.storagePath);
-    const blob = await getBlob(pathRef);
-  
   const inflightDownloads = useRef<Map<string, Promise<Blob>>>(new Map());
 
   const rememberBlob = useCallback((key: string, blob: Blob) => {
@@ -321,23 +314,11 @@ export function useExamPapers(
     }
   }, []);
 
-  /** Load PDF blob for a question, resolving composite prediction source paths. */
-  const getPaperBlobForQuestion = useCallback(
-    async (paper: ExamPaper, question: PaperQuestion): Promise<Blob> => {
-      const path = question.sourceStoragePath?.trim() || paper.storagePath;
-      if (!path) {
-        throw new Error("No PDF path for this question");
-      }
-      if (path === paper.storagePath && paper.storagePath) {
-        return getPaperBlob(paper);
-      }
-      return getPaperBlob({ ...paper, storagePath: path });
-    },
-    [getPaperBlob]
-  );
-
   const getPaperBlob = useCallback(async (paper: ExamPaper): Promise<Blob> => {
     const key = paper.storagePath;
+    if (!key) {
+      throw new Error("This paper has no PDF — open questions individually.");
+    }
     const mem = paperBlobCache.current.get(key);
     if (mem) {
       if (await isValidPdfBlob(mem)) {
@@ -378,6 +359,21 @@ export function useExamPapers(
       inflightDownloads.current.delete(key);
     }
   }, [rememberBlob]);
+
+  /** Load PDF blob for a question, resolving composite prediction source paths. */
+  const getPaperBlobForQuestion = useCallback(
+    async (paper: ExamPaper, question: PaperQuestion): Promise<Blob> => {
+      const path = question.sourceStoragePath?.trim() || paper.storagePath;
+      if (!path) {
+        throw new Error("No PDF path for this question");
+      }
+      if (path === paper.storagePath && paper.storagePath) {
+        return getPaperBlob(paper);
+      }
+      return getPaperBlob({ ...paper, storagePath: path });
+    },
+    [getPaperBlob]
+  );
 
   /** Storage path for marking scheme: marking-schemes/leaving-cert/{subject}/{level}-level/{year}ms.pdf */
   const getMarkingSchemeStoragePath = useCallback((paper: ExamPaper): string => {

@@ -1,5 +1,5 @@
 // Hooks
-import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import useQuestions from "../hooks/useQuestions";
 import { OptionsContext } from "../context/OptionsContext";

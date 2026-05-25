@@ -16,7 +16,7 @@ export default function App() {
   });
 
   const setUser = useCallback<Dispatch<SetStateAction<any>>>((action) => {
-    setUserState((prev) => {
+    setUserState((prev: any) => {
       const next = typeof action === "function" ? action(prev) : action;
       if (prev?.hasCompletedOnboarding !== true && next?.hasCompletedOnboarding === true) {
         markPendingPredictionTutorial();

@@ -108,7 +108,7 @@ export default function QuestionTitlePicker({
 
   const showPortal = Boolean(portalTarget && canOpen && panelPosition);
 
-  const dropdownPortal = showPortal
+  const dropdownPortal = showPortal && portalTarget
     ? createPortal(
         <AnimatePresence onExitComplete={handleExitComplete}>
           {open && panelPosition && (
