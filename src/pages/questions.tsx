@@ -37,7 +37,7 @@ import {
 
 // Components
 import { createPortal } from "react-dom";
-import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle } from "react-icons/lu";
+import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle, LuEye, LuEyeOff } from "react-icons/lu";
 import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
 import QuestionTitlePicker, { type QuestionPickerItem } from "../components/questions/QuestionTitlePicker";
@@ -98,6 +98,29 @@ function isSavedGradingAnnotations(value: unknown): value is CanvasAnnotation[] 
         }
         return false;
     });
+}
+
+function PaperPanelToggle({
+    visible,
+    onToggle,
+    className = "",
+}: {
+    visible: boolean;
+    onToggle: () => void;
+    className?: string;
+}) {
+    return (
+        <button
+            type="button"
+            className={`questions-paper-toggle ${className}`}
+            onClick={onToggle}
+            aria-label={visible ? "Hide question paper" : "Show question paper"}
+            aria-pressed={visible}
+            title={visible ? "Hide question paper" : "Show question paper"}
+        >
+            {visible ? <LuEyeOff size={16} strokeWidth={2} /> : <LuEye size={16} strokeWidth={2} />}
+        </button>
+    );
 }
 
 function gradingStatusLabel(status: GradingStatus): string {
@@ -561,6 +584,7 @@ export default function Questions() {
     const [paperQuestionPosition, setPaperQuestionPosition] = useState(1);
     const [scrollToPage, setScrollToPage] = useState<number | null>(null);
     const [isFullPaperExpanded, setIsFullPaperExpanded] = useState(false);
+    const [paperPanelVisible, setPaperPanelVisible] = useState(true);
     const [markingSchemeBlob, setMarkingSchemeBlob] = useState<Blob | null>(null);
     const [sidebarOpenPanel, setSidebarOpenPanel] = useState<"ai" | "threads" | "timer" | "markingscheme" | null>(null);
     const [markingSchemeQuestionIndex, setMarkingSchemeQuestionIndex] = useState<number | null>(null);
@@ -2295,11 +2319,24 @@ export default function Questions() {
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        <div className={`flex h-auto max-h-full min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}>
+                    ) : paperPanelVisible ? (
+                        <div className={`relative flex h-auto max-h-full min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}>
+                            <PaperPanelToggle
+                                visible
+                                onToggle={() => setPaperPanelVisible(false)}
+                                className="absolute top-3 right-3 z-40"
+                            />
                             <div className="min-h-0 min-w-0 h-auto max-h-full flex flex-col pl-2 overflow-hidden pointer-events-none">
                                 {renderImageContent()}
                             </div>
+                        </div>
+                    ) : (
+                        <div className={`shrink-0 pt-3 pointer-events-auto self-start ${options.leftHandMode ? "ml-auto pr-2" : "pl-2"}`}>
+                            <PaperPanelToggle
+                                visible={false}
+                                onToggle={() => setPaperPanelVisible(true)}
+                                className="questions-paper-toggle--active"
+                            />
                         </div>
                     );
                 })()}
@@ -2661,9 +2698,9 @@ export default function Questions() {
                                     </div>
                                 </div>
                             </div>
-                        ) : (
+                        ) : paperPanelVisible ? (
                             <div
-                                className={`flex h-auto max-h-[calc(100dvh-7rem)] min-h-[360px] w-full max-w-sm shrink-0 flex-col overflow-hidden self-start pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}
+                                className={`relative flex h-auto max-h-[calc(100dvh-7rem)] min-h-[360px] w-full max-w-sm shrink-0 flex-col overflow-hidden self-start pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}
                                 style={{
                                     height:
                                         !isFullPaperExpanded && currentPaperQuestion?.pageRegions?.length
@@ -2671,9 +2708,22 @@ export default function Questions() {
                                             : "calc(100dvh - 7rem)",
                                 }}
                             >
+                                <PaperPanelToggle
+                                    visible
+                                    onToggle={() => setPaperPanelVisible(false)}
+                                    className="absolute top-3 right-3 z-40"
+                                />
                                 <div className="min-h-0 min-w-0 h-full max-h-full flex flex-col overflow-hidden p-2 pointer-events-none">
                                     {renderPdfContent()}
                                 </div>
+                            </div>
+                        ) : (
+                            <div className={`shrink-0 pt-3 pointer-events-auto self-start ${options.leftHandMode ? "ml-auto pr-2" : "pl-2"}`}>
+                                <PaperPanelToggle
+                                    visible={false}
+                                    onToggle={() => setPaperPanelVisible(true)}
+                                    className="questions-paper-toggle--active"
+                                />
                             </div>
                         );
                     })()

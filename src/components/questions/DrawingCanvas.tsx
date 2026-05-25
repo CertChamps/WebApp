@@ -115,13 +115,12 @@ function drawEssayGrid(
 	}
 	ctx.restore();
 }
-const ERASER_WIDTH = 24;
-const ERASER_PREVIEW_WIDTH = 3;
+const ERASER_SIZE_LEVELS = [12, 18, 24, 32, 48];
+const DEFAULT_ERASER_SIZE_INDEX = 2;
 const PEN_THICKNESS_LEVELS = [1.2, 2, 3.2, 4.6, 6.2];
 const DEFAULT_PEN_THICKNESS_INDEX = 1;
 const FIXED_SAMPLE_HZ = 240;
 const FIXED_SAMPLE_INTERVAL_MS = 1000 / FIXED_SAMPLE_HZ;
-const STROKE_ERASER_HIT_RADIUS = ERASER_WIDTH / 2 + 3;
 const ERASE_TARGET_STROKE_COLOR = "rgba(128, 128, 128, 0.7)";
 const TOOL_LONG_PRESS_MS = 420;
 /** Hold still for this long (ms) to snap stroke to straight line */
@@ -389,8 +388,8 @@ function transformSelectedStrokes(
 	});
 }
 
-function eraseStrokesAtPoint(source: Stroke[], point: Point): Stroke[] {
-	const radius = STROKE_ERASER_HIT_RADIUS;
+function eraseStrokesAtPoint(source: Stroke[], point: Point, hitRadius: number): Stroke[] {
+	const radius = hitRadius;
 	const radiusSq = radius * radius;
 	let changed = false;
 	const next: Stroke[] = [];
@@ -845,6 +844,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	const [isEraserPopoverOpen, setIsEraserPopoverOpen] = useState(false);
 	const [isGridPopoverOpen, setIsGridPopoverOpen] = useState(false);
 	const [eraserMode, setEraserMode] = useState<"point" | "stroke">("stroke");
+	const [activeEraserSizeIndex, setActiveEraserSizeIndex] = useState(DEFAULT_ERASER_SIZE_INDEX);
 	const [gridOpacity, setGridOpacity] = useState(0.7);
 	const [lassoPath, setLassoPath] = useState<Point[] | null>(null);
 	const [selectedStrokeIndexes, setSelectedStrokeIndexes] = useState<number[]>([]);
@@ -867,6 +867,11 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	selectedStrokeIndexesRef.current = selectedStrokeIndexes;
 	const transformSessionRef = useRef<TransformSession | null>(null);
 	transformSessionRef.current = transformSession;
+	const eraserWidth = ERASER_SIZE_LEVELS[activeEraserSizeIndex] ?? ERASER_SIZE_LEVELS[DEFAULT_ERASER_SIZE_INDEX];
+	const eraserHitRadius = eraserWidth / 2 + 3;
+	const eraserPreviewWidth = Math.max(2, eraserWidth * 0.125);
+	const eraserHitRadiusRef = useRef(eraserHitRadius);
+	eraserHitRadiusRef.current = eraserHitRadius;
 
 	const commitStrokeChange = useCallback((updater: (previous: Stroke[]) => Stroke[]) => {
 		setStrokes((previous) => {
@@ -960,7 +965,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		if (tool === "eraser" && eraserMode === "stroke" && currentStroke) {
 			for (let index = 0; index < strokes.length; index++) {
 				const stroke = strokes[index];
-				if (stroke.tool === "pen" && strokeIntersectsEraser(stroke, currentStroke, STROKE_ERASER_HIT_RADIUS)) {
+				if (stroke.tool === "pen" && strokeIntersectsEraser(stroke, currentStroke, eraserHitRadius)) {
 					targetedStrokeIndexes.add(index);
 				}
 			}
@@ -1187,7 +1192,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		}
 
 		ctx.restore();
-	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool, lineAnchors, gradingAnnotations, accentColor, fontReady, lassoPath, selectedStrokeIndexes, transformSession, eraserMode, penPalette, activePenColorIndex, gridOpacity]);
+	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool, lineAnchors, gradingAnnotations, accentColor, fontReady, lassoPath, selectedStrokeIndexes, transformSession, eraserMode, eraserHitRadius, penPalette, activePenColorIndex, gridOpacity]);
 
 	useEffect(() => {
 		draw();
@@ -1498,7 +1503,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				ctx.globalAlpha = 1;
 				ctx.fillStyle = "rgba(128, 128, 128, 0.5)";
 				ctx.beginPath();
-				ctx.arc(stroke.points[0].x, stroke.points[0].y, ERASER_PREVIEW_WIDTH / 2, 0, Math.PI * 2);
+				ctx.arc(stroke.points[0].x, stroke.points[0].y, eraserPreviewWidth / 2, 0, Math.PI * 2);
 				ctx.fill();
 			}
 			return;
@@ -1511,7 +1516,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				ctx.setLineDash([]);
 				ctx.lineCap = "round";
 				ctx.lineJoin = "round";
-				ctx.lineWidth = ERASER_PREVIEW_WIDTH;
+				ctx.lineWidth = eraserPreviewWidth;
 				ctx.beginPath();
 				ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
 				for (let i = 1; i < stroke.points.length; i++) {
@@ -1526,7 +1531,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			ctx.strokeStyle = "rgba(0,0,0,1)";
 			ctx.lineCap = "round";
 			ctx.lineJoin = "round";
-			ctx.lineWidth = ERASER_WIDTH;
+			ctx.lineWidth = eraserWidth;
 			ctx.beginPath();
 			ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
 			for (let i = 1; i < stroke.points.length; i++) {
@@ -1741,7 +1746,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 						pointEraseBaseRef.current = strokesRef.current;
 						pointEraseChangedRef.current = false;
 						setStrokes((previous) => {
-							const next = eraseStrokesAtPoint(previous, world);
+							const next = eraseStrokesAtPoint(previous, world, eraserHitRadiusRef.current);
 							if (next !== previous) pointEraseChangedRef.current = true;
 							return next;
 						});
@@ -1823,7 +1828,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			if (tool === "eraser" && eraserMode === "point" && isDrawingRef.current) {
 				const world = screenToWorld(e.clientX, e.clientY);
 				setStrokes((previous) => {
-					const next = eraseStrokesAtPoint(previous, world);
+					const next = eraseStrokesAtPoint(previous, world, eraserHitRadiusRef.current);
 					if (next !== previous) pointEraseChangedRef.current = true;
 					return next;
 				});
@@ -1899,7 +1904,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 						if (eraserMode === "stroke") {
 							commitStrokeChange((previous) => {
 								const next = previous.filter(
-									(stroke) => stroke.tool !== "pen" || !strokeIntersectsEraser(stroke, currentStroke, STROKE_ERASER_HIT_RADIUS)
+									(stroke) => stroke.tool !== "pen" || !strokeIntersectsEraser(stroke, currentStroke, eraserHitRadiusRef.current)
 								);
 								return next.length === previous.length ? previous : next;
 							});
@@ -1949,6 +1954,15 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		onStrokesChangeRef.current?.([]);
 	}, [commitStrokeChange]);
 
+	const deleteSelectedStrokes = useCallback(() => {
+		const selectedSet = new Set(selectedStrokeIndexesRef.current);
+		if (selectedSet.size === 0) return;
+		commitStrokeChange((previous) => previous.filter((_, index) => !selectedSet.has(index)));
+		setSelectedStrokeIndexes([]);
+		setTransformSession(null);
+		setLassoPath(null);
+	}, [commitStrokeChange]);
+
 	const undo = useCallback(() => {
 		if (undoStackRef.current.length === 0) return;
 		onEditInteraction?.();
@@ -1992,6 +2006,16 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	const penButtonRect = penButtonRef.current?.getBoundingClientRect() ?? null;
 	const eraserButtonRect = eraserButtonRef.current?.getBoundingClientRect() ?? null;
 	const gridButtonRect = gridButtonRef.current?.getBoundingClientRect() ?? null;
+	const selectionDeleteAnchor = (() => {
+		if (tool !== "lasso" || selectedStrokeIndexes.length === 0) return null;
+		const bounds = getSelectionBounds(strokes, selectedStrokeIndexes);
+		if (!bounds) return null;
+		const topCenter = { x: (bounds.minX + bounds.maxX) / 2, y: bounds.minY };
+		return {
+			screenX: topCenter.x * scale + pan.x,
+			screenY: topCenter.y * scale + pan.y - 28,
+		};
+	})();
 	const overlayBubbles = badgeLayoutsRef.current.map((badge) => {
 		const expanded = expandedCommentId === badge.id;
 		
@@ -2066,6 +2090,27 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 						WebkitTapHighlightColor: "transparent",
 					}}
 				/>
+				{!readOnly && selectionDeleteAnchor && (
+					<button
+						type="button"
+						onPointerDown={(e) => e.stopPropagation()}
+						onClick={(e) => {
+							e.stopPropagation();
+							deleteSelectedStrokes();
+						}}
+						className="absolute z-[2100] flex items-center justify-center w-7 h-7 rounded-full color-bg color-shadow border color-txt-main hover:color-bg-grey-10 transition-colors pointer-events-auto"
+						style={{
+							left: selectionDeleteAnchor.screenX,
+							top: selectionDeleteAnchor.screenY,
+							transform: "translate(-50%, -100%)",
+							borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
+						}}
+						title="Delete selection"
+						aria-label="Delete selection"
+					>
+						<Trash2 size={14} strokeWidth={2} />
+					</button>
+				)}
 				{/* Floating bar - mostly transparent with blur (hidden in readOnly) */}
 				{!readOnly && (
 				<div
@@ -2258,7 +2303,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				{eraserButtonRect && createPortal(
 					<div
 						ref={eraserPopoverRef}
-						className={`fixed flex items-center gap-1 px-2 py-1 rounded-[var(--radius-in)] color-bg transition-all duration-180 ease-out ${isEraserPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
+						className={`fixed flex flex-col items-stretch gap-2 px-3 py-2 rounded-[var(--radius-in)] color-bg transition-all duration-180 ease-out ${isEraserPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
 						style={{
 							left: eraserButtonRect.left + eraserButtonRect.width / 2,
 							top: eraserButtonRect.top - 10,
@@ -2268,32 +2313,51 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 							zIndex: 2147483646,
 						}}
 					>
-						<button
-							type="button"
-							onClick={() => {
-								setEraserMode("point");
-							}}
-							className="px-3 py-1 rounded-md text-sm"
-							style={{
-								backgroundColor: eraserMode === "point" ? accentBgColor || undefined : mutedBgColor || undefined,
-								color: eraserMode === "point" ? accentColor || strokeColor || undefined : strokeColor || undefined,
-							}}
-						>
-							Point
-						</button>
-						<button
-							type="button"
-							onClick={() => {
-								setEraserMode("stroke");
-							}}
-							className="px-3 py-1 rounded-md text-sm"
-							style={{
-								backgroundColor: eraserMode === "stroke" ? accentBgColor || undefined : mutedBgColor || undefined,
-								color: eraserMode === "stroke" ? accentColor || strokeColor || undefined : strokeColor || undefined,
-							}}
-						>
-							Stroke
-						</button>
+						<div className="flex items-center gap-1">
+							<button
+								type="button"
+								onClick={() => {
+									setEraserMode("point");
+								}}
+								className="px-3 py-1 rounded-md text-sm"
+								style={{
+									backgroundColor: eraserMode === "point" ? accentBgColor || undefined : mutedBgColor || undefined,
+									color: eraserMode === "point" ? accentColor || strokeColor || undefined : strokeColor || undefined,
+								}}
+							>
+								Point
+							</button>
+							<button
+								type="button"
+								onClick={() => {
+									setEraserMode("stroke");
+								}}
+								className="px-3 py-1 rounded-md text-sm"
+								style={{
+									backgroundColor: eraserMode === "stroke" ? accentBgColor || undefined : mutedBgColor || undefined,
+									color: eraserMode === "stroke" ? accentColor || strokeColor || undefined : strokeColor || undefined,
+								}}
+							>
+								Stroke
+							</button>
+						</div>
+						<div className="w-[7.5rem] flex justify-center">
+							<input
+								type="range"
+								min={0}
+								max={ERASER_SIZE_LEVELS.length - 1}
+								step={1}
+								value={activeEraserSizeIndex}
+								onChange={(e) => setActiveEraserSizeIndex(Number(e.target.value))}
+								className="pen-thickness-slider w-full"
+								style={{
+									["--slider-track-color" as string]: mutedBgColor || "rgba(128, 128, 128, 0.3)",
+									["--slider-thumb-color" as string]: accentColor || strokeColor || "#2563EB",
+									["--slider-thumb-size" as string]: `${10 + activeEraserSizeIndex * 3}px`,
+								}}
+								aria-label="Eraser size"
+							/>
+						</div>
 					</div>,
 					document.body
 				)}

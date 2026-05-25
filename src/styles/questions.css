@@ -140,6 +140,32 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
 /* Shared action buttons in question/paper panes */
 /* .questions-action-button intentionally shares the exact same rules as top-bar buttons above */
 
+/* Whiteboard mode: show/hide question paper overlay (no shadow) */
+.questions-paper-toggle {
+  @apply inline-flex items-center justify-center rounded-md border border-transparent p-1.5 text-sm! font-medium! cursor-pointer select-none pointer-events-auto;
+  @apply color-bg border color-txt-sub shadow-none;
+  transform: translateZ(0);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+  will-change: transform, opacity;
+}
+.questions-paper-toggle:hover {
+  @apply color-bg-grey-10 opacity-95;
+}
+.questions-paper-toggle:active {
+  transform: scale(0.965);
+  opacity: 0.9;
+}
+.questions-paper-toggle:focus-visible {
+  @apply outline-none ring-2 ring-offset-2 ring-blue/40;
+}
+.questions-paper-toggle--active {
+  @apply color-bg-accent color-txt-accent;
+}
+
 /* Reveal button is intentionally decoupled from shared action-button tweaks. */
 .questions-marking-scheme-button {
   @apply inline-flex items-center justify-center gap-2 rounded-xl border border-transparent px-8 py-4 text-base! font-medium! cursor-pointer select-none;
