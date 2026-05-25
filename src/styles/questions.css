@@ -34,9 +34,17 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
 }
 .questions-top-bar__center {
   @apply flex items-center justify-center min-w-0 justify-self-center;
+  position: relative;
+  z-index: 2;
+}
+.questions-top-bar__nav-cluster {
+  position: relative;
+  z-index: 2;
 }
 .questions-top-bar__right {
   @apply flex items-center gap-2 justify-self-end min-w-0;
+  position: relative;
+  z-index: 1;
 }
 .questions-top-bar__btn,
 .question-selector-button,
@@ -130,7 +138,9 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
 .questions-advance {
   @apply color-bg-grey-5 color-txt-sub flex h-6 w-6 min-h-[2.5rem] min-w-[2.5rem] 
   shrink-0 items-center justify-center rounded-full border border-transparent transition-all 
-  cursor-pointer hover:opacity-85 duration-250 
+  cursor-pointer hover:opacity-85 duration-250;
+  position: relative;
+  z-index: 1;
 }
 
 .question-selector-button-active {
