@@ -15,8 +15,22 @@ import { auth } from "../../firebase";
 import { signInWithGoogle } from "../lib/nativeGoogleLogin";
 import { signInWithApple } from "../lib/nativeAppleLogin";
 import { setPaymentsUser } from "../lib/payments";
+import { getPostAuthPath } from "../lib/onboarding";
+import { setFavouriteSubjectIds } from "../data/practiceHubSubjects";
 
 type authprops = { prevRoute?: string };
+
+function getCurrentAppPath(): string {
+  const hashPath = window.location.hash.replace(/^#/, "");
+  if (hashPath) return hashPath.split("?")[0];
+  return window.location.pathname;
+}
+
+function parseOnboardingStatus(value: unknown): boolean | undefined {
+  if (value === true) return true;
+  if (value === false) return false;
+  return undefined;
+}
 
 export default function useAuthentication(props?: authprops) {
   const { setUser } = useContext(UserContext);
@@ -53,13 +67,22 @@ export default function useAuthentication(props?: authprops) {
       highestStreak: 0,
       savedQuestions: [],
       emailVerified,
-      isAdmin: isAdminUid(uid),
+      isAdmin: isAdminUid(uid, email),
       isPro: false,
       releaseNotesSeenVersions: [],
+      hasCompletedOnboarding: false,
+      studyingSubjects: [],
     };
 
     // 1. Set Context
-    setUser({ ...userData, picture: imageUrl, decks: [], isPro: false });
+    setUser({
+      ...userData,
+      picture: imageUrl,
+      decks: [],
+      isPro: false,
+      hasCompletedOnboarding: false,
+      studyingSubjects: [],
+    });
 
     // 2. Write to DB
     await setDoc(doc(db, "user-data", uid), userData);
@@ -68,13 +91,13 @@ export default function useAuthentication(props?: authprops) {
     if (!emailVerified) {
       navigate("/verify-email");
     } else {
-      props?.prevRoute ? navigate(props.prevRoute) : navigate("/practice");
+      navigate(getPostAuthPath({ hasCompletedOnboarding: false }, props?.prevRoute));
     }
   };
 
 /** ==================== SETUP EXISTING / NEW USER ==================== */
 const userSetup = async (uid: string, username: string, email: string) => {
-  const currentPath = window.location.pathname;
+  const currentPath = getCurrentAppPath();
   console.log("1. Starting userSetup. Current Path:", currentPath);
 
   try {
@@ -99,6 +122,26 @@ const userSetup = async (uid: string, username: string, email: string) => {
       // const deckSnapshot = await getDocs(decksRef);
       // const decks = deckSnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
+      const studyingSubjects = Array.isArray(userData.studyingSubjects)
+        ? userData.studyingSubjects.filter((x): x is string => typeof x === "string")
+        : [];
+      let hasCompletedOnboarding = parseOnboardingStatus(userData.hasCompletedOnboarding);
+      try {
+        const cachedRaw = localStorage.getItem("USER");
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (cached?.uid === userDoc.id && cached?.hasCompletedOnboarding === true) {
+            hasCompletedOnboarding = true;
+          }
+        }
+      } catch {
+        // ignore cache read errors
+      }
+
+      if (studyingSubjects.length > 0) {
+        setFavouriteSubjectIds(studyingSubjects);
+      }
+
       setUser({
         uid: userDoc.id,
         username: userData.username || username,
@@ -114,7 +157,7 @@ const userSetup = async (uid: string, username: string, email: string) => {
         savedQuestions: userData.savedQuestions || [],
         //decks,
         emailVerified: isEmailVerified,
-        isAdmin: userData.isAdmin === true || isAdminUid(userDoc.id),
+        isAdmin: userData.isAdmin === true || isAdminUid(userDoc.id, userData.email || email),
         isPro: userData.isPro === true,
         subscriptionPeriodEnd: typeof userData.subscriptionPeriodEnd === "number" ? userData.subscriptionPeriodEnd : undefined,
         paymentProvider:
@@ -129,6 +172,8 @@ const userSetup = async (uid: string, username: string, email: string) => {
         releaseNotesSeenVersions: Array.isArray(userData.releaseNotesSeenVersions)
           ? userData.releaseNotesSeenVersions
           : [],
+        hasCompletedOnboarding,
+        studyingSubjects,
       });
 
       console.log("2. Context Set. Verified:", isEmailVerified);
@@ -152,26 +197,34 @@ const userSetup = async (uid: string, username: string, email: string) => {
       if (!isEmailVerified) {
         console.log("3. Redirecting to verify-email");
         navigate("/verify-email");
-      } else {
-        // Broaden the check: If we are on ANY auth-related page, move to app
-        const authPages = ['/login', '/signup', '/']; 
-        const isAuthPage = authPages.some(path => currentPath === path || currentPath === path + '/');
-
-        if (isAuthPage) {
-          console.log("3. Redirecting to practice");
-          props?.prevRoute ? navigate(props.prevRoute) : navigate("/practice");
-        } else {
-          console.log("3. Already on a protected page, no redirect needed.");
-        }
+        return { hasCompletedOnboarding };
       }
+
+      const authPages = ["/login", "/signup", "/"];
+      const isAuthPage = authPages.some(
+        (path) => currentPath === path || currentPath === `${path}/`
+      );
+
+      if (isAuthPage) {
+        const destination = getPostAuthPath({ hasCompletedOnboarding }, props?.prevRoute);
+        console.log("3. Redirecting to", destination);
+        navigate(destination);
+      } else {
+        console.log("3. Already on a protected page, no redirect needed.");
+      }
+
+      return { hasCompletedOnboarding };
 
     } else {
       console.log("2. New user detected, creating profile...");
       await createUser(uid, username, email, isEmailVerified);
+      return { hasCompletedOnboarding: false as const };
     }
   } catch (err) {
     console.error("CRITICAL ERROR in userSetup:", err);
   }
+
+  return undefined;
 };
 
 /** ==================== AUTH LISTENER ==================== */
@@ -331,7 +384,6 @@ useEffect(() => {
           navigate("/verify-email");
         } else {
           await userSetup(user.uid, "", email);
-          props?.prevRoute ? navigate(props.prevRoute) : navigate("/practice");
         }
       }
     } catch (err: any) {

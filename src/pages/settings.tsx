@@ -6,14 +6,10 @@ import { useNavigate } from "react-router-dom";
 import { OptionsContext } from "../context/OptionsContext"
 import { UserContext } from "../context/UserContext";
 
-// Tutorial
-import { useTutorialContext } from "../context/TutorialContext";
-import { TutorialTriggerButton } from "../components/tutorial/Tutorial";
-import { OPEN_RELEASE_NOTES_EVENT } from "../components/prompts/release_notes_prompt";
-
 // Styles & Icons
-import { LuChevronRight, LuNotebookText, LuRotateCcw, LuUserCog } from "react-icons/lu";
+import { LuRotateCcw, LuSparkles, LuUserCog } from "react-icons/lu";
 import '../styles/settings.css'
+import { getFullTutorialReplayPath } from "../lib/onboarding";
 
 export default function Settings() {
 
@@ -21,9 +17,6 @@ export default function Settings() {
     const { user } = useContext(UserContext)
     const navigate = useNavigate()
     
-    // Tutorial context
-    const { triggerTutorial, resetTutorial, hasCompletedTutorial } = useTutorialContext();
-
     const setTheme = (theme: string) => {
         setOptions(( opts : any ) => ({
             ...opts,
@@ -135,53 +128,26 @@ export default function Settings() {
                     />
                 </button>
             </div>
-        </div>
-        {/* ======================================================================================== */}
-
-        {/* ====================================== HELP & TUTORIAL ========================================= */}
-        <div className="flex w-full items-center mt-6">
-            <h1 className="profile-heading">Help & Tutorial</h1>
-            <div className="line-break"></div>
-        </div>
-
-        <div className="mx-6 my-4 max-w-md">
-            <div className="flex flex-col md:flex-row gap-3 md:items-center">
-                <TutorialTriggerButton onClick={triggerTutorial} />
+            <div className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full color-bg-grey-5 flex items-center justify-center">
+                        <LuSparkles size={20} className="color-txt-sub" />
+                    </div>
+                    <div>
+                        <p className="txt-bold">View onboarding flow</p>
+                        <p className="txt-sub">Replay welcome screens and the prediction tutorial</p>
+                    </div>
+                </div>
                 <button
-                    className="tutorial-trigger-btn color-bg-accent"
-                    onClick={() => window.dispatchEvent(new CustomEvent(OPEN_RELEASE_NOTES_EVENT))}
+                    type="button"
+                    className="settings-manage-account-btn shrink-0"
+                    onClick={() => navigate(getFullTutorialReplayPath())}
                 >
-                    <LuNotebookText size={20} className="color-txt-accent" />
-                    <span className="txt-bold color-txt-accent">View Release Notes</span>
-                    <LuChevronRight size={18} className="color-txt-accent" />
+                    View
                 </button>
             </div>
-            
-            {/* Admin option to reset tutorial */}
-            {user?.isAdmin && (
-                <button 
-                    className="flex items-center gap-2 mt-3 px-4 py-2 text-sm color-txt-sub 
-                               hover:color-txt-accent transition-colors cursor-pointer"
-                    onClick={async () => {
-                        await resetTutorial();
-                        triggerTutorial();
-                    }}
-                >
-                    <LuRotateCcw size={16} />
-                    <span>Reset & Replay Tutorial (Admin)</span>
-                </button>
-            )}
-            
-            {/* Show tutorial status for debugging/admin */}
-            {user?.isAdmin && (
-                <p className="text-xs color-txt-sub mt-2">
-                    Tutorial completed: {hasCompletedTutorial ? 'Yes' : 'No'}
-                </p>
-            )}
         </div>
         {/* ======================================================================================== */}
-
-   
 
         {/* ====================================== THEMES ========================================= */}
         <div className="flex w-full items-center mt-4">

@@ -89,7 +89,7 @@ export default function DeckViewer () {
             }
 
             if (deckData?.createdBy === 'CertChamps') {
-                setIsOwner(isAdminUid(user?.uid))
+                setIsOwner(isAdminUid(user?.uid, user?.email))
             } else {
                 setIsOwner(user?.uid === deckData?.createdBy)
             }

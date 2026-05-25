@@ -16,7 +16,7 @@ export default function Navbar () {
 
     // Context and State and Hooks
     const { user } = useContext(UserContext)
-    const isAdmin = isAdminUid(user?.uid)
+    const isAdmin = isAdminUid(user?.uid, user?.email)
     const navigate = useNavigate()
     const location = useLocation()
 
@@ -84,7 +84,6 @@ export default function Navbar () {
             <button
                 key={key}
                 type="button"
-                data-tutorial-id={key}
                 className={isSelected ? selectedClass : baseClass}
                 onClick={() => {pageNaviagte(targetPage)}}
                 aria-label={label}

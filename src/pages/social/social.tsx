@@ -19,6 +19,7 @@ import FriendsSearch from "../../components/social/friendsSearch";
 import { LuImage } from "react-icons/lu";
 import "../../styles/social.css"
 import ProGate from "../../components/ProGate"
+import { canUseAceFeature } from "../../lib/contentAccess";
 
 export default function Social() { 
 
@@ -290,7 +291,7 @@ export default function Social() {
     //=======================================================================
 
 
-    if (!user?.isPro) {
+    if (!canUseAceFeature(user, "social")) {
         return (
             <div className="relative flex w-full h-full overflow-hidden">
                 <div className="flex w-full h-full filter blur-[2px] pointer-events-none select-none opacity-85">

@@ -1,38 +1,51 @@
 // Hooks
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import useQuestions from "../hooks/useQuestions";
 import { OptionsContext } from "../context/OptionsContext";
 import { UserContext } from "../context/UserContext";
 import {
     useExamPapers,
-    isPaperFree,
     normalizePaperLevel,
+    formatLevelDisplay,
     type ExamPaper,
     type PaperQuestion,
 } from "../hooks/useExamPapers";
+import {
+    buildFreeImageSample,
+    canAccessImageTopic,
+    canAccessPaper,
+    computeFreePaperKeys,
+    hasAceAccess,
+    pickStarterImageTopic,
+} from "../lib/contentAccess";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
-import { buildImageTopicExamPaper, usePaperProgress } from "../hooks/usePaperProgress";
+import { buildImageTopicExamPaper, buildImagePredictionExamPaper, usePaperProgress } from "../hooks/usePaperProgress";
+import { loadPredictionImageSession } from "../lib/predictions/loadPredictionImages";
 import useFilters from "../hooks/useFilters";
 import { getPastPaperTopicScope } from "../data/mathsHigherTopics";
 import { useQuestionSessionLog, type QuestionMeta } from "../hooks/useQuestionSessionLog";
 import {
   useImageQuestionsForTopic,
+  useImageMarkingSchemesForTopic,
+  useMarkingSchemeUrls,
   useAllTopicsForSubjectLevel,
+  getMarkingSchemeFilesForGroupedQuestion,
   type GroupedImageQuestion,
   type ImageTopic,
 } from "../hooks/useImageQuestions";
 
 // Components
 import { createPortal } from "react-dom";
-import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle } from "react-icons/lu";
+import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle, LuEye, LuEyeOff } from "react-icons/lu";
 import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
+import QuestionTitlePicker, { type QuestionPickerItem } from "../components/questions/QuestionTitlePicker";
 import QSearch from "../components/questions/qSearch";
 import DrawingCanvas, { type RegisterDrawingSnapshot, type RegisterGetGradingCapture, type RegisterGetStaveAnalysis } from "../components/questions/DrawingCanvas";
 import { useCanvasStorage } from "../hooks/useCanvasStorage";
 import RenderMath from "../components/math/mathdisplay";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import PaperPdfPlaceholder, { getQuestionScrollOffset } from "../components/questions/PaperPdfPlaceholder";
 import PaperQuestionRegionPanel from "../components/questions/PaperQuestionRegionPanel";
 import CroppedPdfRegions from "../components/questions/CroppedPdfRegions";
@@ -42,8 +55,16 @@ import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
 import { TimerProvider, useTimerOptional } from "../context/TimerContext";
 import { TimerFloatingWidget } from "../components/TimerFloatingWidget";
 import PastPaperFilterPanel from "../components/questions/PastPaperFilterPanel";
-import PaperProGate from "../components/PaperProGate";
+import ContentProGate from "../components/ContentProGate";
 import Filter from "../components/filter";
+import PracticeSessionTutorialIntro from "../components/tutorial/PracticeSessionTutorialIntro";
+import PracticeSessionTutorialCallout from "../components/tutorial/PracticeSessionTutorialCallout";
+import TutorialHoleScrim from "../components/tutorial/TutorialHoleScrim";
+import { useTutorialAnchorRect } from "../components/tutorial/useTutorialAnchorRect";
+import {
+  consumePendingPracticeSessionTutorial,
+  type PracticeSessionTutorialStep,
+} from "../lib/practiceSessionTutorial";
 import { getDocumentCached } from "../utils/pdfDocumentCache";
 import { getLogTablesPdfBlob } from "../utils/logTablesPdf";
 import type { InjectedExchange } from "../components/ai/useAI";
@@ -54,6 +75,7 @@ import { BlankCanvasError } from "../lib/grading/canvasCapture";
 
 // Style Imports
 import "../styles/questions.css";
+import "../styles/practiceHub.css";
 import "../styles/navbar.css";
 import "../styles/sidebar.css";
 
@@ -77,6 +99,29 @@ function isSavedGradingAnnotations(value: unknown): value is CanvasAnnotation[] 
         }
         return false;
     });
+}
+
+function PaperPanelToggle({
+    visible,
+    onToggle,
+    className = "",
+}: {
+    visible: boolean;
+    onToggle: () => void;
+    className?: string;
+}) {
+    return (
+        <button
+            type="button"
+            className={`questions-paper-toggle ${className}`}
+            onClick={onToggle}
+            aria-label={visible ? "Hide question paper" : "Show question paper"}
+            aria-pressed={visible}
+            title={visible ? "Hide question paper" : "Show question paper"}
+        >
+            {visible ? <LuEyeOff size={16} strokeWidth={2} /> : <LuEye size={16} strokeWidth={2} />}
+        </button>
+    );
 }
 
 function gradingStatusLabel(status: GradingStatus): string {
@@ -250,12 +295,17 @@ export default function Questions() {
     const urlIndexInPaper = searchParams.get("indexInPaper");
     const urlQuestionId = searchParams.get("questionId");
     const urlImageKey = searchParams.get("imageKey");
+    const urlPredictionId = searchParams.get("predictionId");
     /** When stepping through an AI-curated set of questions saved by Practice Hub. */
     const normalizedUrlLevel = normalizePaperLevel(urlLevel);
     const normalizedUrlSubject = (urlSubject ?? "").trim().toLowerCase();
 
     const initialMode: QuestionsMode =
-        urlMode === "certchamps" || urlMode === "pastpaper" || urlMode === "imagequestions" ? urlMode : getStoredMode();
+        urlPredictionId
+            ? "imagequestions"
+            : urlMode === "certchamps" || urlMode === "pastpaper" || urlMode === "imagequestions"
+              ? urlMode
+              : getStoredMode();
     const initialPaths = getPathsForMode(initialMode, urlSubject || null);
 
     //==============================================> State <========================================//
@@ -274,6 +324,15 @@ export default function Questions() {
     );
 
     const [mode, setMode] = useState<QuestionsMode>(initialMode);
+    const practiceSessionTutorialStartedRef = useRef(false);
+    const [practiceSessionTutorialStep, setPracticeSessionTutorialStep] =
+        useState<PracticeSessionTutorialStep | null>(null);
+    const isPracticeSessionTutorialStep1 = practiceSessionTutorialStep === 1;
+    const isPracticeSessionTutorialStep2 = practiceSessionTutorialStep === 2;
+    const isPracticeSessionTutorialStep3 = practiceSessionTutorialStep === 3;
+    const isPracticeSessionTutorialStep4 = practiceSessionTutorialStep === 4;
+    const isPracticeSessionTutorialStep5 = practiceSessionTutorialStep === 5;
+    const isPracticeSessionTutorialStep6 = practiceSessionTutorialStep === 6;
 
     useEffect(() => {
         const m = urlMode === "certchamps" || urlMode === "pastpaper" || urlMode === "imagequestions" ? urlMode : getStoredMode();
@@ -300,6 +359,20 @@ export default function Questions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    useEffect(() => {
+        if (practiceSessionTutorialStartedRef.current) return;
+        if (!consumePendingPracticeSessionTutorial()) return;
+        practiceSessionTutorialStartedRef.current = true;
+        setPracticeSessionTutorialStep(1);
+    }, []);
+
+    /** Step 5 highlights the AI sidebar – make sure it's open with the AI tab selected. */
+    useEffect(() => {
+        if (!isPracticeSessionTutorialStep5) return;
+        setSidebarOpen(true);
+        setSidebarOpenPanel("ai");
+    }, [isPracticeSessionTutorialStep5]);
+
     const [subjectFilter, setSubjectFilter] = useState<string | null>(urlSubject || null);
     useEffect(() => {
         setSubjectFilter(urlSubject || null);
@@ -309,6 +382,10 @@ export default function Questions() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
         const pastPaperFilterRef = useRef<HTMLDivElement>(null);
+        const centerTitleRowRef = useRef<HTMLDivElement>(null);
+        const topBarRightActionsRef = useRef<HTMLDivElement>(null);
+        const actionButtonsClusterRef = useRef<HTMLDivElement>(null);
+        const sidebarTutorialRef = useRef<HTMLDivElement>(null);
     /** When set, next paperQuestions effect will jump here (used for random across scoped papers). */
     const pendingRandomRef = useRef<{ pos: number } | { questionId: string } | null>(null);
     /** When set, next paperQuestions effect will jump to this index (used when selecting from scoped-paper search). */
@@ -357,10 +434,11 @@ export default function Questions() {
         loading: papersLoading,
         error: papersError,
         getPaperBlob,
+        getPaperBlobForQuestion,
         getPaperQuestions,
         getMarkingSchemeBlob,
         firstFreePaper,
-    } = useExamPapers(null, { loadAllWhenNull: true });
+    } = useExamPapers(null, { loadAllWhenNull: true, includePredictions: true });
     const { availableSets } = useFilters();
     const { completedForPaper, loadPaperProgress, toggleQuestion, isQuestionCompleted, touchImageTopicProgress } =
         usePaperProgress();
@@ -378,13 +456,61 @@ export default function Questions() {
         setSelectedSubTopics(next);
     }, [mode, urlTopics]);
     const {
-        grouped: imageGroupedList,
-        loading: imageQuestionsLoading,
+        grouped: topicImageGroupedList,
+        loading: topicImageQuestionsLoading,
     } = useImageQuestionsForTopic(
-        mode === "imagequestions" ? normalizedUrlSubject || null : null,
-        mode === "imagequestions" ? normalizedUrlLevel || null : null,
-        mode === "imagequestions" ? imageQuestionTopic : null
+        mode === "imagequestions" && !urlPredictionId ? normalizedUrlSubject || null : null,
+        mode === "imagequestions" && !urlPredictionId ? normalizedUrlLevel || null : null,
+        mode === "imagequestions" && !urlPredictionId ? imageQuestionTopic : null
     );
+    const {
+        files: topicMarkingSchemeFiles,
+        loading: topicMarkingSchemesLoading,
+    } = useImageMarkingSchemesForTopic(
+        mode === "imagequestions" && !urlPredictionId ? normalizedUrlSubject || null : null,
+        mode === "imagequestions" && !urlPredictionId ? normalizedUrlLevel || null : null,
+        mode === "imagequestions" && !urlPredictionId ? imageQuestionTopic : null
+    );
+    const [predictionImageGrouped, setPredictionImageGrouped] = useState<GroupedImageQuestion[]>([]);
+    const [predictionImageLoading, setPredictionImageLoading] = useState(false);
+
+    useEffect(() => {
+        if (!urlPredictionId) {
+            setPredictionImageGrouped([]);
+            setPredictionImageLoading(false);
+            return;
+        }
+        let cancelled = false;
+        setPredictionImageLoading(true);
+        loadPredictionImageSession(urlPredictionId)
+            .then((list) => {
+                if (!cancelled) setPredictionImageGrouped(list);
+            })
+            .catch(() => {
+                if (!cancelled) setPredictionImageGrouped([]);
+            })
+            .finally(() => {
+                if (!cancelled) setPredictionImageLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [urlPredictionId]);
+
+    const imageGroupedList = urlPredictionId ? predictionImageGrouped : topicImageGroupedList;
+    const imageQuestionsLoading = urlPredictionId ? predictionImageLoading : topicImageQuestionsLoading;
+
+    const navClusterTutorialRect = useTutorialAnchorRect(
+        isPracticeSessionTutorialStep2,
+        centerTitleRowRef,
+        [mode, imageQuestionsLoading, papersLoading]
+    );
+    const topRightTutorialRect = useTutorialAnchorRect(
+        isPracticeSessionTutorialStep3,
+        topBarRightActionsRef,
+        [mode, imageQuestionsLoading, papersLoading]
+    );
+
     const {
         topics: imageAllTopics,
     } = useAllTopicsForSubjectLevel(
@@ -396,16 +522,62 @@ export default function Questions() {
     }, [urlTopic]);
     const [imageQuestionPosition, setImageQuestionPosition] = useState(0);
     const currentGroupedQuestion: GroupedImageQuestion | undefined = imageGroupedList[imageQuestionPosition];
+    const currentMarkingSchemeFiles = useMemo(() => {
+        if (mode !== "imagequestions" || !currentGroupedQuestion || urlPredictionId) return [];
+        return getMarkingSchemeFilesForGroupedQuestion(topicMarkingSchemeFiles, currentGroupedQuestion);
+    }, [mode, currentGroupedQuestion, topicMarkingSchemeFiles, urlPredictionId]);
+    const {
+        images: currentImageMarkingSchemes,
+        loading: currentMarkingSchemeUrlsLoading,
+    } = useMarkingSchemeUrls(currentMarkingSchemeFiles);
     const [showComingSoonToast, setShowComingSoonToast] = useState(false);
 
     const imageProgressPaper = useMemo(() => {
+        if (urlPredictionId && normalizedUrlSubject && normalizedUrlLevel) {
+            return buildImagePredictionExamPaper(
+                urlPredictionId,
+                normalizedUrlSubject,
+                normalizedUrlLevel,
+                "Prediction"
+            );
+        }
         if (mode !== "imagequestions" || !normalizedUrlSubject || !normalizedUrlLevel || !imageQuestionTopic) {
             return null;
         }
         return buildImageTopicExamPaper(normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic);
-    }, [mode, normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic]);
+    }, [urlPredictionId, mode, normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic]);
 
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
+
+    const freePaperKeys = useMemo(() => computeFreePaperKeys(papers), [papers]);
+
+    const starterImageTopic = useMemo(
+        () => pickStarterImageTopic(imageAllTopics, normalizedUrlSubject),
+        [imageAllTopics, normalizedUrlSubject]
+    );
+
+    const freeImageSample = useMemo(
+        () =>
+            buildFreeImageSample(
+                starterImageTopic,
+                normalizedUrlSubject,
+                normalizedUrlLevel ?? "higher"
+            ),
+        [starterImageTopic, normalizedUrlSubject, normalizedUrlLevel]
+    );
+
+    const imageTopicBlocked = useMemo(() => {
+        if (mode !== "imagequestions" || hasAceAccess(user)) return false;
+        if (!normalizedUrlSubject || !imageQuestionTopic || imageAllTopics.length === 0) return false;
+        const topic = imageAllTopics.find((t) => t.name === imageQuestionTopic);
+        if (!topic) return false;
+        return !canAccessImageTopic(user, topic, starterImageTopic, normalizedUrlSubject);
+    }, [mode, user, normalizedUrlSubject, imageQuestionTopic, imageAllTopics, starterImageTopic]);
+
+    const paperContentBlocked = useMemo(() => {
+        if (mode !== "pastpaper" || !selectedPaper) return false;
+        return !canAccessPaper(user, selectedPaper, freePaperKeys);
+    }, [mode, selectedPaper, user, freePaperKeys]);
     const [paperBlob, setPaperBlob] = useState<Blob | null>(null);
     const [paperLoadError, setPaperLoadError] = useState<string | null>(null);
     const [currentPaperPage, setCurrentPaperPage] = useState(1);
@@ -413,6 +585,7 @@ export default function Questions() {
     const [paperQuestionPosition, setPaperQuestionPosition] = useState(1);
     const [scrollToPage, setScrollToPage] = useState<number | null>(null);
     const [isFullPaperExpanded, setIsFullPaperExpanded] = useState(false);
+    const [paperPanelVisible, setPaperPanelVisible] = useState(true);
     const [markingSchemeBlob, setMarkingSchemeBlob] = useState<Blob | null>(null);
     const [sidebarOpenPanel, setSidebarOpenPanel] = useState<"ai" | "threads" | "timer" | "markingscheme" | null>(null);
     const [markingSchemeQuestionIndex, setMarkingSchemeQuestionIndex] = useState<number | null>(null);
@@ -464,11 +637,6 @@ export default function Questions() {
             navbar.removeEventListener("transitionend", updateOffset);
         };
     }, []);
-    useEffect(() => {
-        const onCloseLogTables = () => setShowLogTables(false);
-        window.addEventListener("tutorial-close-logtables", onCloseLogTables);
-        return () => window.removeEventListener("tutorial-close-logtables", onCloseLogTables);
-    }, []);
     const paperScrollRef = useRef<HTMLDivElement | null>(null);
     const panelsScrollRef = useRef<HTMLDivElement | null>(null);
     const scrollSyncRafRef = useRef<number | null>(null);
@@ -514,6 +682,17 @@ export default function Questions() {
         markingSchemeQuestionIndex != null
             ? paperQuestions[markingSchemeQuestionIndex]
             : currentPaperQuestion;
+
+    /** For composite predictions, marking schemes come from the source paper's year. */
+    const markingSchemeSourcePaper = useMemo((): ExamPaper | null => {
+        if (!selectedPaper) return null;
+        const q = questionForMarkingScheme ?? currentPaperQuestion;
+        if (selectedPaper.isComposite && q?.sourceYear) {
+            return { ...selectedPaper, year: q.sourceYear };
+        }
+        return selectedPaper;
+    }, [selectedPaper, questionForMarkingScheme, currentPaperQuestion]);
+
     const questionForLogTables =
         logTablesQuestionIndex != null ? paperQuestions[logTablesQuestionIndex] : currentPaperQuestion;
     const aiPaperPage = useMemo(() => {
@@ -521,6 +700,25 @@ export default function Questions() {
         const activeQ = currentPaperQuestion ?? filteredPaperQuestions[0] ?? paperQuestions[0];
         return activeQ?.pageRegions?.[0]?.page ?? activeQ?.pageRange?.[0] ?? currentPaperPage;
     }, [mode, currentPaperPage, currentPaperQuestion, filteredPaperQuestions, paperQuestions]);
+    const actionButtonsTutorialRect = useTutorialAnchorRect(
+        isPracticeSessionTutorialStep4,
+        actionButtonsClusterRef,
+        [
+            mode,
+            imageQuestionsLoading,
+            papersLoading,
+            currentGroupedQuestion,
+            currentPaperQuestion,
+            themedPortalTarget,
+            navbarActionOffsetPx,
+            options.leftHandMode,
+        ]
+    );
+    const sidebarTutorialRect = useTutorialAnchorRect(
+        isPracticeSessionTutorialStep5,
+        sidebarTutorialRef,
+        [mode, imageQuestionsLoading, papersLoading, options.leftHandMode]
+    );
     const paperSnapshot = usePaperSnapshot(paperBlob, aiPaperPage);
     const getPaperSnapshot = useCallback(() => paperSnapshot ?? null, [paperSnapshot]);
 
@@ -790,7 +988,7 @@ export default function Questions() {
             let markingSchemeText = "";
             if (mode === "pastpaper") {
                 if (!selectedPaper || !currentPaperQuestion?.markingSchemePageRange) throw new Error("Something went wrong - try again");
-                const msBlob = markingSchemeBlob ?? (await getMarkingSchemeBlob(selectedPaper));
+                const msBlob = markingSchemeBlob ?? (await getMarkingSchemeBlob(markingSchemeSourcePaper ?? selectedPaper));
                 if (!msBlob) throw new Error("Something went wrong - try again");
                 const start = Math.max(1, Math.min(currentPaperQuestion.markingSchemePageRange.start, currentPaperQuestion.markingSchemePageRange.end));
                 const end = Math.max(start, Math.max(currentPaperQuestion.markingSchemePageRange.start, currentPaperQuestion.markingSchemePageRange.end));
@@ -944,15 +1142,24 @@ export default function Questions() {
             setPaperLoadError(null);
             return;
         }
+        const activeQuestion =
+            paperQuestions[paperQuestionPosition - 1] ??
+            filteredPaperQuestions[paperQuestionPosition - 1];
         let cancelled = false;
         setPaperLoadError(null);
-        getPaperBlob(selectedPaper)
+        const loadBlob = activeQuestion
+            ? getPaperBlobForQuestion(selectedPaper, activeQuestion)
+            : selectedPaper.isComposite
+              ? Promise.reject(new Error("Select a question to view its source paper."))
+              : getPaperBlob(selectedPaper);
+        loadBlob
             .then((blob) => {
                 if (!cancelled) setPaperBlob(blob);
-                // Preload next paper so "Next" is instant
-                const idx = scopedPapers.findIndex((p: ExamPaper) => p.storagePath === selectedPaper.storagePath);
-                if (idx >= 0 && idx < scopedPapers.length - 1) {
-                    getPaperBlob(scopedPapers[idx + 1]!).catch(() => {});
+                if (!selectedPaper.isComposite) {
+                    const idx = scopedPapers.findIndex((p: ExamPaper) => p.storagePath === selectedPaper.storagePath);
+                    if (idx >= 0 && idx < scopedPapers.length - 1) {
+                        getPaperBlob(scopedPapers[idx + 1]!).catch(() => {});
+                    }
                 }
             })
             .catch((err) => {
@@ -965,7 +1172,7 @@ export default function Questions() {
         return () => {
             cancelled = true;
         };
-    }, [selectedPaper, getPaperBlob, scopedPapers]);
+    }, [selectedPaper, getPaperBlob, getPaperBlobForQuestion, scopedPapers, paperQuestions, filteredPaperQuestions, paperQuestionPosition]);
 
     // Reset "current page" when user selects a different paper
     useEffect(() => {
@@ -1238,7 +1445,7 @@ export default function Questions() {
             return;
         }
         let cancelled = false;
-        getMarkingSchemeBlob(selectedPaper)
+        getMarkingSchemeBlob(markingSchemeSourcePaper ?? selectedPaper)
             .then((blob) => {
                 if (!cancelled) setMarkingSchemeBlob(blob ?? null);
             })
@@ -1248,7 +1455,7 @@ export default function Questions() {
         return () => {
             cancelled = true;
         };
-    }, [selectedPaper, getMarkingSchemeBlob, questionForMarkingScheme?.markingSchemePageRange]);
+    }, [selectedPaper, markingSchemeSourcePaper, getMarkingSchemeBlob, questionForMarkingScheme?.markingSchemePageRange]);
 
     // Reset PDF document loaded and page count when paper blob changes (new paper)
     useEffect(() => {
@@ -1354,16 +1561,29 @@ export default function Questions() {
             );
         } else if (mode === "imagequestions") {
             if (!currentGroupedQuestion) return;
-            setSearchParams(
-                {
-                    mode: "imagequestions",
-                    subject: normalizedUrlSubject,
-                    level: normalizedUrlLevel,
-                    topic: imageQuestionTopic ?? "",
-                    imageKey: currentGroupedQuestion.key,
-                },
-                { replace: true }
-            );
+            if (urlPredictionId) {
+                setSearchParams(
+                    {
+                        mode: "imagequestions",
+                        predictionId: urlPredictionId,
+                        subject: normalizedUrlSubject,
+                        level: normalizedUrlLevel,
+                        imageKey: currentGroupedQuestion.key,
+                    },
+                    { replace: true }
+                );
+            } else {
+                setSearchParams(
+                    {
+                        mode: "imagequestions",
+                        subject: normalizedUrlSubject,
+                        level: normalizedUrlLevel,
+                        topic: imageQuestionTopic ?? "",
+                        imageKey: currentGroupedQuestion.key,
+                    },
+                    { replace: true }
+                );
+            }
         } else {
             if (!currentQuestion?.id) return;
             const params: Record<string, string> = {
@@ -1374,7 +1594,7 @@ export default function Questions() {
             setSearchParams(params, { replace: true });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mode, selectedPaper?.storagePath, currentPaperQuestion?.id, currentQuestion?.id, subjectFilter, currentGroupedQuestion?.key, imageQuestionTopic, paperQuestionIndexInFullList, selectedSubTopics]);
+    }, [mode, selectedPaper?.storagePath, currentPaperQuestion?.id, currentQuestion?.id, subjectFilter, currentGroupedQuestion?.key, imageQuestionTopic, urlPredictionId, normalizedUrlSubject, normalizedUrlLevel, paperQuestionIndexInFullList, selectedSubTopics]);
 
     useEffect(() => {
         try {
@@ -1525,6 +1745,7 @@ export default function Questions() {
 
             {/* Sidebar: left or right depending on left-hand mode */}
             <div
+                ref={sidebarTutorialRef}
                 className={`absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-none ${options.leftHandMode ? "left-0" : "right-0"} w-[35%]`}
                 style={{
                     transition: "clip-path 300ms cubic-bezier(0.25,0.1,0.25,1)",
@@ -1581,7 +1802,19 @@ export default function Questions() {
                     }}
                     markingSchemeBlob={mode === "pastpaper" ? markingSchemeBlob : undefined}
                     markingSchemePageRange={mode === "pastpaper" ? questionForMarkingScheme?.markingSchemePageRange : undefined}
-                    markingSchemeQuestionName={mode === "pastpaper" ? questionForMarkingScheme?.questionName : undefined}
+                    markingSchemeQuestionName={
+                        mode === "pastpaper"
+                            ? questionForMarkingScheme?.questionName
+                            : mode === "imagequestions"
+                                ? currentGroupedQuestion?.displayName
+                                : undefined
+                    }
+                    markingSchemeImages={mode === "imagequestions" ? currentImageMarkingSchemes : undefined}
+                    markingSchemeLoading={
+                        mode === "imagequestions" && !urlPredictionId
+                            ? topicMarkingSchemesLoading || currentMarkingSchemeUrlsLoading
+                            : undefined
+                    }
                     aiInjectedExchange={aiInjectedExchange}
                     onMarkCompleteFromGrading={handleToggleQuestionCompleted}
                 />
@@ -1612,7 +1845,7 @@ export default function Questions() {
                 const centerLabel = overrideTitle ?? currentQuestion?.properties?.name ?? "...";
                 const overrideTags = mode === "pastpaper" ? (currentPaperQuestion?.tags ?? []) : undefined;
                 const imageTagsDisplay = mode === "imagequestions" && imageQuestionTopic
-                    ? `${imageQuestionPosition + 1} / ${imageGroupedList.length}`
+                    ? `${formatLevelDisplay(normalizedUrlLevel)} · ${imageQuestionPosition + 1} / ${imageGroupedList.length}`
                     : undefined;
                 const tagsDisplay = imageTagsDisplay ?? (overrideTags != null
                     ? formatTags(overrideTags)
@@ -1738,6 +1971,43 @@ export default function Questions() {
 
                 const hideTitleAndArrows = mode === "pastpaper" && isFullPaperExpanded;
 
+                const pickerItems: QuestionPickerItem[] = mode === "pastpaper"
+                    ? filteredPaperQuestions.map((q) => ({ id: q.id, label: q.questionName }))
+                    : mode === "imagequestions"
+                        ? imageGroupedList.map((q) => ({ id: q.key, label: q.displayName }))
+                        : questions.map((q: { id?: string; properties?: { name?: string } }, idx: number) => ({
+                            id: String(q.id ?? idx),
+                            label: q.properties?.name ?? `Question ${idx + 1}`,
+                        }));
+
+                const pickerCurrentIndex = mode === "pastpaper"
+                    ? paperQuestionPosition - 1
+                    : mode === "imagequestions"
+                        ? imageQuestionPosition
+                        : position - 1;
+
+                const pickerDisabled = mode === "pastpaper"
+                    ? papersLoading || papersError != null || filteredPaperQuestions.length === 0
+                    : mode === "imagequestions"
+                        ? imageQuestionsLoading || imageGroupedList.length === 0
+                        : questions.length === 0;
+
+                const pickerTitleKey = mode === "pastpaper"
+                    ? currentPaperQuestion?.id
+                    : mode === "imagequestions"
+                        ? currentGroupedQuestion?.key
+                        : currentQuestion?.id;
+
+                const onPickerSelect = mode === "pastpaper"
+                    ? (index: number) => {
+                        setPaperQuestionPosition(index + 1);
+                        const q = filteredPaperQuestions[index];
+                        setScrollToPage(q?.pageRegions?.[0]?.page ?? q?.pageRange?.[0] ?? null);
+                    }
+                    : mode === "imagequestions"
+                        ? (index: number) => setImageQuestionPosition(index)
+                        : (index: number) => setPosition(index + 1);
+
                 return (
                     <QuestionsTopBar
                         onBack={() => navigate("/practice")}
@@ -1748,7 +2018,10 @@ export default function Questions() {
                         onSubjectFilterChange={setSubjectFilter}
                         subjectOptions={certChampsSet?.sections?.map((sec) => ({ value: sec, label: formatSectionLabel(sec) })) ?? []}
                         centerContent={!hideTitleAndArrows ? (
-                            <div className="flex items-center gap-1">
+                            <div
+                                ref={centerTitleRowRef}
+                                className={`questions-top-bar__nav-cluster flex items-center gap-1${navClusterTutorialRect ? " tutorial-highlight-ring rounded-out" : ""}`}
+                            >
                                 <button
                                     type="button"
                                     aria-label={mode === "pastpaper" ? "Previous paper" : "Previous question"}
@@ -1757,27 +2030,18 @@ export default function Questions() {
                                 >
                                     <LuChevronLeft size={16} strokeWidth={2.5} />
                                 </button>
-                                <div className="flex min-w-0 flex-col overflow-hidden px-2">
-                                    <AnimatePresence mode="wait">
-                                        <motion.div
-                                            key={overrideTitle ?? currentQuestion?.id ?? "empty"}
-                                            initial={{ opacity: 0, x: 8 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: -8 }}
-                                            transition={{ duration: 0.15, ease: [0.25, 0.4, 0.25, 1] }}
-                                            className="flex min-w-0 flex-col"
-                                        >
-                                            <h2 className="question-selector-title question-selector-truncate color-txt-accent text-sm font-bold leading-tight">
-                                                {centerLabel}
-                                            </h2>
-                                            {tagsDisplay && (
-                                                <p className="question-selector-truncate color-txt-sub mt-0.5 text-xs font-normal">
-                                                    {tagsDisplay}
-                                                </p>
-                                            )}
-                                        </motion.div>
-                                    </AnimatePresence>
-                                </div>
+                                <QuestionTitlePicker
+                                    anchorRef={centerTitleRowRef}
+                                    title={centerLabel}
+                                    titleKey={pickerTitleKey ?? centerLabel}
+                                    tagsDisplay={tagsDisplay}
+                                    items={pickerItems}
+                                    currentIndex={pickerCurrentIndex}
+                                    onSelect={onPickerSelect}
+                                    isCompleted={isQuestionCompleted}
+                                    showCompletion={mode === "pastpaper" || mode === "imagequestions"}
+                                    disabled={pickerDisabled}
+                                />
                                 <button
                                     type="button"
                                     aria-label={mode === "pastpaper" ? "Next paper" : "Next question"}
@@ -1789,7 +2053,10 @@ export default function Questions() {
                             </div>
                         ) : undefined}
                         rightContent={
-                            <div className="flex items-center gap-2">
+                            <div
+                                ref={topBarRightActionsRef}
+                                className={`flex items-center gap-2${topRightTutorialRect ? " tutorial-highlight-ring rounded-out" : ""}`}
+                            >
                                 <button
                                     type="button"
                                     aria-label={randomise ? "Random question (on)" : "Random question (off)"}
@@ -1999,13 +2266,18 @@ export default function Questions() {
                                 {themedPortalTarget &&
                                     createPortal(
                                         <div
-                                            className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
+                                            className={`fixed z-[25] flex flex-row items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
                                             style={{
                                                 bottom: "max(0.5rem, var(--safe-area-bottom, env(safe-area-inset-bottom, 0px)))",
                                                 left: options.leftHandMode ? undefined : `${navbarActionOffsetPx}px`,
                                             }}
                                         >
-                                            {imageActionButtons}
+                                            <div
+                                                ref={actionButtonsClusterRef}
+                                                className={`inline-flex flex-row gap-2 items-center${actionButtonsTutorialRect ? " tutorial-highlight-ring rounded-out" : ""}`}
+                                            >
+                                                {imageActionButtons}
+                                            </div>
                                         </div>,
                                         themedPortalTarget
                                     )}
@@ -2051,11 +2323,24 @@ export default function Questions() {
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        <div className={`flex h-auto max-h-full min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}>
+                    ) : paperPanelVisible ? (
+                        <div className={`relative flex h-auto max-h-full min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}>
+                            <PaperPanelToggle
+                                visible
+                                onToggle={() => setPaperPanelVisible(false)}
+                                className="absolute top-3 right-3 z-40"
+                            />
                             <div className="min-h-0 min-w-0 h-auto max-h-full flex flex-col pl-2 overflow-hidden pointer-events-none">
                                 {renderImageContent()}
                             </div>
+                        </div>
+                    ) : (
+                        <div className={`shrink-0 pt-3 pointer-events-auto self-start ${options.leftHandMode ? "ml-auto pr-2" : "pl-2"}`}>
+                            <PaperPanelToggle
+                                visible={false}
+                                onToggle={() => setPaperPanelVisible(true)}
+                                className="questions-paper-toggle--active"
+                            />
                         </div>
                     );
                 })()}
@@ -2136,7 +2421,6 @@ export default function Questions() {
                                     {currentPaperQuestion && (
                                         <button
                                             type="button"
-                                            data-tutorial-id="sidebar-logtables"
                                             onClick={() => {
                                                 if (showLogTables) {
                                                     setShowLogTables(false);
@@ -2187,13 +2471,18 @@ export default function Questions() {
                                         themedPortalTarget &&
                                         createPortal(
                                             <div
-                                                className={`fixed z-[25] flex flex-row gap-2 items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
+                                                className={`fixed z-[25] flex flex-row items-center py-3 pointer-events-auto bg-transparent ${options.leftHandMode ? "justify-end right-2" : "justify-start"}`}
                                                 style={{
                                                         bottom: "max(0.5rem, var(--safe-area-bottom, env(safe-area-inset-bottom, 0px)))",
                                                     left: options.leftHandMode ? undefined : `${navbarActionOffsetPx}px`,
                                                 }}
                                             >
-                                                {paperActionButtons}
+                                                <div
+                                                    ref={actionButtonsClusterRef}
+                                                    className={`inline-flex flex-row gap-2 items-center${actionButtonsTutorialRect ? " tutorial-highlight-ring rounded-out" : ""}`}
+                                                >
+                                                    {paperActionButtons}
+                                                </div>
                                             </div>,
                                             themedPortalTarget
                                         )}
@@ -2423,9 +2712,9 @@ export default function Questions() {
                                     </div>
                                 </div>
                             </div>
-                        ) : (
+                        ) : paperPanelVisible ? (
                             <div
-                                className={`flex h-auto max-h-[calc(100dvh-7rem)] min-h-[360px] w-full max-w-sm shrink-0 flex-col overflow-hidden self-start pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}
+                                className={`relative flex h-auto max-h-[calc(100dvh-7rem)] min-h-[360px] w-full max-w-sm shrink-0 flex-col overflow-hidden self-start pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}
                                 style={{
                                     height:
                                         !isFullPaperExpanded && currentPaperQuestion?.pageRegions?.length
@@ -2433,9 +2722,22 @@ export default function Questions() {
                                             : "calc(100dvh - 7rem)",
                                 }}
                             >
+                                <PaperPanelToggle
+                                    visible
+                                    onToggle={() => setPaperPanelVisible(false)}
+                                    className="absolute top-3 right-3 z-40"
+                                />
                                 <div className="min-h-0 min-w-0 h-full max-h-full flex flex-col overflow-hidden p-2 pointer-events-none">
                                     {renderPdfContent()}
                                 </div>
+                            </div>
+                        ) : (
+                            <div className={`shrink-0 pt-3 pointer-events-auto self-start ${options.leftHandMode ? "ml-auto pr-2" : "pl-2"}`}>
+                                <PaperPanelToggle
+                                    visible={false}
+                                    onToggle={() => setPaperPanelVisible(true)}
+                                    className="questions-paper-toggle--active"
+                                />
                             </div>
                         );
                     })()
@@ -2521,8 +2823,8 @@ export default function Questions() {
             {/*===============================================================================================*/}
 
             {/* Paper pro gate: when non-pro loads a locked past paper */}
-            {mode === "pastpaper" && selectedPaper && !user?.isPro && !isPaperFree(selectedPaper) && (
-                <PaperProGate firstFreePaper={firstFreePaper} />
+            {(paperContentBlocked || imageTopicBlocked) && (
+                <ContentProGate freePaper={firstFreePaper} freeImageSample={freeImageSample} />
             )}
         </div>
         <TimerFloatingWidget
@@ -2538,6 +2840,67 @@ export default function Questions() {
                 setSidebarOpenPanel("timer");
             }}
         />
+        {isPracticeSessionTutorialStep1 ? (
+            <PracticeSessionTutorialIntro onNext={() => setPracticeSessionTutorialStep(2)} />
+        ) : null}
+        {isPracticeSessionTutorialStep2 && navClusterTutorialRect ? (
+            <>
+                <TutorialHoleScrim anchorRect={navClusterTutorialRect} />
+                <PracticeSessionTutorialCallout
+                    anchorRect={navClusterTutorialRect}
+                    placement="below"
+                    title="Navigate questions"
+                    body="Use the arrows to scroll through questions, or click the title to jump ahead."
+                    onNext={() => setPracticeSessionTutorialStep(3)}
+                />
+            </>
+        ) : null}
+        {isPracticeSessionTutorialStep3 && topRightTutorialRect ? (
+            <>
+                <TutorialHoleScrim anchorRect={topRightTutorialRect} />
+                <PracticeSessionTutorialCallout
+                    anchorRect={topRightTutorialRect}
+                    placement="below"
+                    align="end"
+                    title="Filter and randomize"
+                    body="Choose topics to focus your practice, or turn on randomize to shuffle through questions."
+                    onNext={() => setPracticeSessionTutorialStep(4)}
+                />
+            </>
+        ) : null}
+        {isPracticeSessionTutorialStep4 && actionButtonsTutorialRect ? (
+            <>
+                <TutorialHoleScrim anchorRect={actionButtonsTutorialRect} />
+                <PracticeSessionTutorialCallout
+                    anchorRect={actionButtonsTutorialRect}
+                    placement="above"
+                    title="Practice tools"
+                    body="Open log tables or the calculator from here, or switch to the full paper view."
+                    onNext={() => setPracticeSessionTutorialStep(5)}
+                />
+            </>
+        ) : null}
+        {isPracticeSessionTutorialStep5 && sidebarTutorialRect ? (
+            <>
+                <TutorialHoleScrim anchorRect={sidebarTutorialRect} />
+                <PracticeSessionTutorialCallout
+                    anchorRect={sidebarTutorialRect}
+                    placement={options.leftHandMode ? "right" : "left"}
+                    title="Ask the AI tutor"
+                    body="It has full context over the marking scheme, the question, and your handwriting, so it can give targeted hints and feedback."
+                    onNext={() => setPracticeSessionTutorialStep(6)}
+                    nextLabel="Got it"
+                />
+            </>
+        ) : null}
+        {isPracticeSessionTutorialStep6 ? (
+            <PracticeSessionTutorialIntro
+                title="You're all good to go!"
+                body="Best of luck in your Leaving Cert, you've got this."
+                nextLabel="Let's go"
+                onNext={() => setPracticeSessionTutorialStep(null)}
+            />
+        ) : null}
         </TimerProvider>
     )
 }

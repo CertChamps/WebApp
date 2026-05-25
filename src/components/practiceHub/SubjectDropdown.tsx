@@ -164,7 +164,7 @@ export default function SubjectDropdown({ value, onChange, subjects, id = "ph-su
                         aria-label={favourites.includes(s.id) ? `Unfavourite ${s.label}` : `Favourite ${s.label}`}
                         title={favourites.includes(s.id) ? "Remove from favourites" : "Add to favourites"}
                       >
-                        <LuStar size={14} />
+                      <LuStar size={14} fill={favourites.includes(s.id) ? "currentColor" : "none"} />
                       </button>
                     </button>
                   ))

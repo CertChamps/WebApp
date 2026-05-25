@@ -7,6 +7,35 @@
   min-height: 100dvh;
 }
 
+.practice-hub__subject-wrap {
+  position: relative;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.practice-hub__back-btn {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem;
+  border: none;
+  border-radius: var(--radius-out, 10px);
+  background: transparent;
+  color: var(--theme-txt-sub, var(--color-txt-sub, #6b7280));
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.practice-hub__back-btn:hover {
+  color: var(--theme-txt-main, var(--color-txt-main, #111));
+  background: var(--color-bg-grey-5, #f3f4f6);
+}
+
 .practice-hub__inner {
   width: 100%;
   min-height: 0;
@@ -140,6 +169,7 @@
   margin-right: 0;
   padding-left: 0;
   padding-right: 0;
+  overflow: visible;
 }
 
 /* Top bar: subject (oval) + search (icon right) */
@@ -443,12 +473,295 @@
 
 .practice-hub__subject-fav:hover {
   @apply color-bg-grey-10;
+}
 
+.practice-hub__subject-fav--on {
+  @apply color-txt-accent;
 }
 
 .practice-hub__subject-empty {
   padding-left: 0.75rem;
   padding-right: 0.75rem;
+}
+
+.practice-hub__prediction-modal-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.practice-hub__prediction-modal-wrap--tutorial {
+  isolation: isolate;
+}
+
+.practice-hub__prediction-modal-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: calc(42rem + 17.5rem + 1.25rem);
+  gap: 1.25rem;
+}
+
+.prediction-tutorial-callout {
+  width: 17.5rem;
+  flex-shrink: 0;
+  pointer-events: none;
+  position: relative;
+  z-index: 2;
+}
+
+.prediction-tutorial-callout__panel {
+  position: relative;
+  padding: 1rem 1.125rem;
+  overflow: visible;
+  box-shadow: none;
+}
+
+.prediction-tutorial-callout__arrow {
+  position: absolute;
+  top: 50%;
+  right: -0.625rem;
+  transform: translateY(-50%);
+  width: 0.625rem;
+  height: 1.25rem;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.prediction-tutorial-callout__arrow::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 0.875rem;
+  height: 0.875rem;
+  transform: translateY(-50%) translateX(-35%) rotate(45deg);
+  @apply color-bg border-2 color-shadow shadow-none;
+}
+
+.prediction-tutorial-callout__content {
+  min-height: 5.5rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.prediction-tutorial-callout__step {
+  display: flex;
+  flex-direction: column;
+}
+
+.prediction-tutorial-callout__title {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.prediction-tutorial-callout__body {
+  margin-top: 0.5rem;
+  line-height: 1.45;
+}
+
+.prediction-tutorial-callout__step,
+.prediction-card-tutorial-callout__content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.prediction-tutorial-callout__icon,
+.prediction-card-tutorial-callout__icon {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.prediction-tutorial-callout__text,
+.prediction-card-tutorial-callout__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Step 3 – card spotlight callout (above prediction card, arrow points down) */
+.prediction-card-tutorial-callout-anchor {
+  position: fixed;
+  z-index: 1003;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  width: min(300px, calc(100vw - 2rem));
+}
+
+.prediction-card-tutorial-callout {
+  width: 100%;
+  pointer-events: none;
+}
+
+.prediction-card-tutorial-callout__panel {
+  position: relative;
+  padding: 1rem 1.125rem;
+  overflow: visible;
+  box-shadow: none;
+}
+
+.prediction-card-tutorial-callout__arrow {
+  position: absolute;
+  left: 50%;
+  bottom: -0.625rem;
+  transform: translateX(-50%);
+  width: 1.25rem;
+  height: 0.625rem;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.prediction-card-tutorial-callout__arrow::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 0.875rem;
+  height: 0.875rem;
+  transform: translateX(-50%) translateY(-35%) rotate(45deg);
+  @apply color-bg border-2 color-shadow shadow-none;
+}
+
+.prediction-card-tutorial-callout__title {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.prediction-card-tutorial-callout__body {
+  margin-top: 0.5rem;
+  line-height: 1.45;
+}
+
+.practice-hub__card-tutorial-scrim-panel,
+.tutorial-hole-scrim-panel {
+  position: fixed;
+  pointer-events: auto;
+}
+
+.practice-hub__prediction-modal {
+  width: 100%;
+  max-width: 42rem;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  flex: 1 1 42rem;
+  @apply border-2 color-shadow;
+}
+
+.practice-hub__prediction-modal .blue-btn {
+  width: auto;
+  display: inline-flex;
+}
+
+/* Prediction generator (Practice Hub modal + add questions) */
+.prediction-flow__meta {
+  margin-bottom: 0.25rem;
+}
+
+.prediction-flow__desc {
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.prediction-flow__controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.prediction-flow__controls-row--modal {
+  margin-bottom: 1rem;
+}
+
+.prediction-flow__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.prediction-flow__label {
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.prediction-flow__generate-btn,
+.prediction-flow__save-btn {
+  width: auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  white-space: nowrap;
+}
+
+.prediction-flow__section-title {
+  margin: 0 0 0.75rem;
+}
+
+.prediction-flow__forecast-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.prediction-flow__forecast-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.prediction-flow__forecast-track {
+  height: 0.5rem;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.prediction-flow__forecast-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease-out;
+  min-width: 2px;
+}
+
+.prediction-flow__selection-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.prediction-flow__selection-item {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+}
+
+.practice-hub__predictions .blue-btn {
+  width: auto;
+  display: inline-flex;
 }
 
 /* Content filter row: State Exam Papers + Year, Pills, Level, Topics */
@@ -739,6 +1052,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Paper/topic previews only — subject icon tiles use .color-bg on .image */
+.practice-hub .deck.paper-card:not(.practice-hub__subject-card) .image {
   background: var(--color-white, #fff);
 }
 
@@ -772,6 +1089,55 @@
 
 .practice-hub .deck.paper-card .practice-hub__paper-card-body .txt {
   font-size: 0.75rem;
+}
+
+.practice-hub__access-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.practice-hub__access-badge--free {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-accent);
+}
+
+.practice-hub__access-badge--locked {
+  background: color-mix(in srgb, var(--color-grey) 12%, transparent);
+  color: var(--color-txt-sub);
+}
+
+/* Favourite-subject tiles: compact — icons only, not full paper previews.
+   Must come after the generic .paper-card .image rules above so the fixed
+   icon slot isn't overridden by flex: 1 1 0 (which collapses when the
+   card has no aspect-ratio). */
+.practice-hub .deck.paper-card.practice-hub__subject-card {
+  width: 11rem;
+  min-width: 11rem;
+  height: auto;
+  aspect-ratio: unset;
+}
+
+.practice-hub .deck.paper-card.practice-hub__subject-card .image {
+  flex: 0 0 6rem;
+  min-height: 6rem;
+  height: 6rem;
+  /* Do not set background here — .color-bg on the element must win over any deck rules */
+}
+
+.practice-hub .deck.paper-card.practice-hub__subject-card .practice-hub__paper-card-body {
+  padding: 0.5625rem 0.75rem 0.6875rem;
+}
+
+.practice-hub .deck.paper-card.practice-hub__subject-card .practice-hub__paper-card-body .txt-heading-colour {
+  font-size: 0.875rem;
 }
 
 .practice-hub .deck.paper-card .practice-hub__paper-card-body .blue-btn {
@@ -878,6 +1244,18 @@
   z-index: 900;
   background: color-mix(in srgb, var(--color-black, #353535) 0.4);
   backdrop-filter: blur(0.5px);
+  transition:
+    background 0.35s ease,
+    backdrop-filter 0.35s ease;
+}
+
+.practice-hub__backdrop--tutorial {
+  background: color-mix(in srgb, var(--color-black, #353535) 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.practice-hub__backdrop--card-tutorial {
+  z-index: 1001;
 }
 
 .practice-hub__panel {

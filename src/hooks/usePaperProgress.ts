@@ -26,6 +26,26 @@ export function buildImageTopicExamPaper(
   };
 }
 
+/** Virtual paper for an image-based exam prediction saved in Firestore. */
+export function buildImagePredictionExamPaper(
+  predictionId: string,
+  subject: string,
+  level: string,
+  label: string
+): ExamPaper {
+  const sub = subject.trim().toLowerCase();
+  const lev = normalizePaperLevel(level.trim()) || "unknown";
+  return {
+    id: predictionId,
+    label: label.trim() || "Prediction",
+    storagePath: `virtual://imageprediction/${predictionId}`,
+    subject: sub,
+    level: lev,
+    isPrediction: true,
+    contentType: "image",
+  };
+}
+
 export type PaperProgressEntry = {
   paperId: string;
   subject: string;
@@ -43,7 +63,11 @@ function progressDocId(paper: ExamPaper): string {
 }
 
 function isVirtualImagePaper(paper: ExamPaper): boolean {
-  return typeof paper.storagePath === "string" && paper.storagePath.startsWith("virtual://imagequestions/");
+  return (
+    typeof paper.storagePath === "string" &&
+    (paper.storagePath.startsWith("virtual://imagequestions/") ||
+      paper.storagePath.startsWith("virtual://imageprediction/"))
+  );
 }
 
 export function usePaperProgress() {

@@ -56,7 +56,7 @@ export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPape
   const displayName = user?.username?.trim() || "there";
   const emptyMessage = hasQuestion
     ? "Ask about this question. I can explain concepts, give hints, or walk through steps. If you draw maths, music notation, or handwriting on the canvas, I can see it too. If you have a past paper open, I can see it as well."
-    : "How can I help? I can explain concepts, hints, or steps. Draw on the canvas (maths, music notation, handwriting) and I’ll recognise it. If you have a past paper open, I can see it too.";
+    : "How can I help? I can explain concepts, hints, or steps. Draw on the canvas (maths, music notation, handwriting) and I’ll recognise it. If you have a past paper open, I can see it as well.";
   const showMarkCompleteAction = Boolean(
     injectedExchange?.action?.type === "markComplete" &&
       injectedExchange.nonce &&

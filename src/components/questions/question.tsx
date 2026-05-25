@@ -524,7 +524,6 @@ export default function Question(props: questionsProps) {
     props.questions[props.position]? ( 
     <div 
         ref={cardContainerRef}
-        data-tutorial-id="question-card"
         className={`card-container h-full items-end justify-start ${ (sideView == '') ? 'w-full' : 'w-7/12'}  
         transition-all duration-250 shrink-0 self-start justify-self-start origin-left relative`}>
                 {/* ================================= DRAWING CANVAS OVERLAY ================================ */}
@@ -557,7 +556,7 @@ export default function Question(props: questionsProps) {
                           <p className="txt-bold color-txt-accent">{properties?.name}
                               <span className="txt-sub mx-2">{properties?.tags?.join?.(", ")}</span>
 
-                              {isAdminUid(user?.uid) ? (
+                              {isAdminUid(user?.uid, user?.email) ? (
                                 Array.isArray(content?.[part]?.inputs) && content[part].inputs.length ? (
                                   content[part].inputs.map((input: any, idx: number) => (
                                     Array.isArray(input.answer) ? input.answer.map((ans: any, aidx: number) => (
@@ -775,7 +774,7 @@ export default function Question(props: questionsProps) {
         <div className="flex-1"></div>  
         {/* =================================== QUESTION SIDEVIEWS ================================= */}
         {sideView === 'thread' ? (
-            <div className="h-full w-5/12" data-tutorial-id="sideview-threads">
+            <div className="h-full w-5/12">
                 <QThread
                     questionId={properties?.id ?? props.questions[props.position]?.id}
                     part={part} 
@@ -791,7 +790,7 @@ export default function Question(props: questionsProps) {
         ) : null}
 
         {sideView === 'timer' ? (
-            <div className="h-full w-5/12" data-tutorial-id="sideview-timer">
+            <div className="h-full w-5/12">
                 <Timer/>
             </div>
         ) : null}
@@ -803,7 +802,7 @@ export default function Question(props: questionsProps) {
         ) : null}
 
         {sideView === 'decks' ? (
-            <div className="h-full w-5/12" data-tutorial-id="sideview-decks">
+            <div className="h-full w-5/12">
                 <ViewDecks question={properties?.id}/>
             </div>
         ) : null}
@@ -841,7 +840,7 @@ export default function Question(props: questionsProps) {
         ) : null}
 
         {sideView === 'filters' ? (
-              <div className="h-full w-5/12 overflow-hidden" data-tutorial-id="sideview-filters">
+              <div className="h-full w-5/12 overflow-hidden">
                   <Filter 
                       onApply={(tags, paths) => {
                           props.setFilters(tags);
@@ -907,10 +906,8 @@ export default function Question(props: questionsProps) {
         <div className="flex w-full justify-center items-start pt-2 z">
             <div
               className="question-sidebar-strip flex items-center justify-center gap-1 py-1"
-              data-tutorial-id="question-sidebar"
             >
             <div
-                data-tutorial-id="sidebar-threads"
                 className={sideView == 'thread' ? "sidebar-selected group" : "sidebar group"}
                 onClick={() => setSideView((prev: any) => prev != 'thread' ? 'thread' : '')}
             >
@@ -920,7 +917,6 @@ export default function Question(props: questionsProps) {
             </div>
 
             <div
-                data-tutorial-id="sidebar-logtables"
                 className={sideView == 'logtables' ? 'sidebar-selected group' : 'sidebar group'}
                 onClick={() => setSideView((prev: any) => prev != 'logtables' ? 'logtables' : '')}
             >
@@ -949,7 +945,6 @@ export default function Question(props: questionsProps) {
             </div>
             ) : (
             <div
-                data-tutorial-id="sidebar-decks"
                 className={sideView == 'decks' ? 'sidebar-selected group' : 'sidebar group'}
                 onClick={() => setSideView((prev: any) => prev != 'decks' ? 'decks' : '')}
             >
@@ -960,7 +955,6 @@ export default function Question(props: questionsProps) {
             )}
 
             <div
-                data-tutorial-id="sidebar-timer"
                 className={sideView == 'timer' ? 'sidebar-selected group' : 'sidebar group'}
                 onClick={() => setSideView((prev: any) => prev != 'timer' ? 'timer' : '')}
             >
@@ -970,7 +964,6 @@ export default function Question(props: questionsProps) {
             </div>
 
             <div
-                data-tutorial-id="sidebar-filter"
                 className={sideView === 'filters' ? 'sidebar-selected group' : 'sidebar group'}
                 onClick={() => { setSideView(prev => prev === 'filters' ? '' : 'filters'); setShowSearch(false); }}
             >

@@ -88,14 +88,6 @@ export default function OverallStatsBanner({ entries, subject, level }: Props) {
             <span className="stats-banner__stat-label">Total correct</span>
             <span className="stats-banner__stat-value">{totalCorrect}</span>
           </div>
-          <div className="stats-banner__stat">
-            <span className="stats-banner__stat-label">Placeholder 1</span>
-            <span className="stats-banner__stat-value stats-banner__stat-value--muted">—</span>
-          </div>
-          <div className="stats-banner__stat">
-            <span className="stats-banner__stat-label">Placeholder 2</span>
-            <span className="stats-banner__stat-value stats-banner__stat-value--muted">—</span>
-          </div>
         </div>
       </div>
 

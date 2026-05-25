@@ -6,8 +6,11 @@ import type { InjectedExchange } from "../ai/useAI";
 import QThread from "../questions/q_thread";
 import Timer from "../timer";
 import PastPaperMarkingScheme from "../questions/PastPaperMarkingScheme";
+import ImageMarkingScheme from "../questions/ImageMarkingScheme";
+import type { ImageQuestion } from "../../hooks/useImageQuestions";
 import ProGate from "../ProGate";
 import { UserContext } from "../../context/UserContext";
+import { canUseAceFeature } from "../../lib/contentAccess";
 
 const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const };
 
@@ -45,6 +48,9 @@ export type SidebarTileManagerProps = {
   markingSchemeBlob?: Blob | null;
   markingSchemePageRange?: MarkingSchemePageRange | null;
   markingSchemeQuestionName?: string;
+  /** Topic-based image marking scheme pages (imagequestions mode). */
+  markingSchemeImages?: ImageQuestion[] | null;
+  markingSchemeLoading?: boolean;
   /** When true, always show the marking scheme tab even without a blob (shows placeholder). */
   forceShowMarkingSchemeTab?: boolean;
   /** Optional externally injected chat exchange (e.g. check-answer feedback). */
@@ -64,6 +70,8 @@ export function SidebarTileManager({
   markingSchemeBlob,
   markingSchemePageRange,
   markingSchemeQuestionName,
+  markingSchemeImages,
+  markingSchemeLoading,
   forceShowMarkingSchemeTab,
   aiInjectedExchange,
   onMarkCompleteFromGrading,
@@ -72,7 +80,11 @@ export function SidebarTileManager({
   const isControlled = controlledPanel !== undefined;
   const openPanelId = isControlled ? controlledPanel : internalPanel;
 
-  const showMarkingScheme = !!(markingSchemeBlob && markingSchemePageRange) || !!forceShowMarkingSchemeTab;
+  const showMarkingScheme =
+    !!(markingSchemeBlob && markingSchemePageRange) ||
+    !!(markingSchemeImages && markingSchemeImages.length > 0) ||
+    !!markingSchemeLoading ||
+    !!forceShowMarkingSchemeTab;
   const visiblePanels = PANELS.filter((p) => p.id !== "markingscheme" || showMarkingScheme);
 
   const setOpenPanel = useCallback(
@@ -91,7 +103,7 @@ export function SidebarTileManager({
   )
 
   return (
-    <div className="sidebar-tile-manager flex h-full flex-col overflow-hidden rounded-xl border border-grey/25 backdrop-blur-xl color-bg" data-tutorial-id="sidebar">
+    <div className="sidebar-tile-manager flex h-full flex-col overflow-hidden rounded-xl border border-grey/25 backdrop-blur-xl color-bg">
       {/* Tab bar: separated “window” tabs + collapse */}
       <div className="sidebar-tile-manager__tabs flex shrink-0 items-center justify-center gap-1 py-2">
         <div className="flex items-center gap-1">
@@ -103,7 +115,6 @@ export function SidebarTileManager({
                 type="button"
                 onClick={() => togglePanel(p.id)}
                 title={p.label}
-                data-tutorial-id={`sidebar-${p.id}`}
                 className={`sidebar-tile-manager__tab flex items-center justify-center p-2 transition-all duration-200 ${
                   isOpen ? "color-txt-accent" : "color-txt-sub hover:color-txt-main"
                 }`}
@@ -137,7 +148,6 @@ export function SidebarTileManager({
             <motion.div
               key={openPanelId}
               layout
-              data-tutorial-id={`sideview-${openPanelId}`}
               className="sidebar-tile-manager__tile flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg color-bg"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -154,6 +164,8 @@ export function SidebarTileManager({
                   markingSchemeBlob={markingSchemeBlob}
                   markingSchemePageRange={markingSchemePageRange}
                   markingSchemeQuestionName={markingSchemeQuestionName}
+                  markingSchemeImages={markingSchemeImages}
+                  markingSchemeLoading={markingSchemeLoading}
                   aiInjectedExchange={aiInjectedExchange}
                   onMarkCompleteFromGrading={onMarkCompleteFromGrading}
                   onClosePanel={() => setOpenPanel(null)}
@@ -187,6 +199,8 @@ function TileContent({
   markingSchemeBlob,
   markingSchemePageRange,
   markingSchemeQuestionName,
+  markingSchemeImages,
+  markingSchemeLoading,
   aiInjectedExchange,
   onMarkCompleteFromGrading,
   onClosePanel: _onClosePanel,
@@ -199,6 +213,8 @@ function TileContent({
   markingSchemeBlob?: Blob | null;
   markingSchemePageRange?: MarkingSchemePageRange | null;
   markingSchemeQuestionName?: string;
+  markingSchemeImages?: ImageQuestion[] | null;
+  markingSchemeLoading?: boolean;
   aiInjectedExchange?: InjectedExchange | null;
   onMarkCompleteFromGrading?: (() => void) | null;
   onClosePanel?: () => void;
@@ -229,27 +245,49 @@ function TileContent({
         </div>
       );
     case "markingscheme":
-      return markingSchemeBlob && markingSchemePageRange ? (
-        <div className="h-full overflow-hidden flex flex-col">
-          {markingSchemeQuestionName && (
-            <div className="shrink-0 px-3 py-2 text-center text-sm font-bold color-txt-sub truncate ">
-              {markingSchemeQuestionName}
+      if (markingSchemeBlob && markingSchemePageRange) {
+        return (
+          <div className="h-full overflow-hidden flex flex-col">
+            {markingSchemeQuestionName && (
+              <div className="shrink-0 px-3 py-2 text-center text-sm font-bold color-txt-sub truncate ">
+                {markingSchemeQuestionName}
+              </div>
+            )}
+            <div className="flex-1 min-h-0 overflow-auto p-2 w-full">
+              <PastPaperMarkingScheme
+                file={markingSchemeBlob}
+                pageRange={markingSchemePageRange}
+                fillWidth
+                className="w-full"
+              />
             </div>
-          )}
-          <div className="flex-1 min-h-0 overflow-auto p-2 w-full">
-            <PastPaperMarkingScheme
-              file={markingSchemeBlob}
-              pageRange={markingSchemePageRange}
-              fillWidth
-              className="w-full"
+          </div>
+        );
+      }
+      if (markingSchemeLoading) {
+        return (
+          <div className="flex h-full flex-col items-center justify-center p-4 text-center color-txt-sub">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--grey-10)] border-t-[var(--grey-5)] mb-3" />
+            <p className="text-sm font-medium">Loading marking scheme…</p>
+          </div>
+        );
+      }
+      if (markingSchemeImages && markingSchemeImages.length > 0) {
+        return (
+          <div className="h-full overflow-hidden flex flex-col">
+            <ImageMarkingScheme
+              images={markingSchemeImages}
+              questionName={markingSchemeQuestionName}
+              className="h-full"
             />
           </div>
-        </div>
-      ) : (
+        );
+      }
+      return (
         <div className="flex h-full flex-col items-center justify-center p-4 text-center color-txt-sub">
           <LuClipboardList size={32} strokeWidth={1.5} className="mb-3 opacity-40" />
-          <p className="text-sm font-medium">Coming soon</p>
-          <p className="text-xs mt-1 opacity-70">Marking schemes will be available here.</p>
+          <p className="text-sm font-medium">No marking scheme</p>
+          <p className="text-xs mt-1 opacity-70">No marking scheme is available for this question yet.</p>
         </div>
       );
     default:
@@ -260,7 +298,7 @@ function TileContent({
 function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionId: string; part: number; isPaperThread: boolean; question?: any }) {
   const { user } = useContext(UserContext);
 
-  if (!user?.isPro) {
+  if (!canUseAceFeature(user, "threads")) {
     return (
       <div className="relative h-full overflow-hidden color-bg">
         <div className="h-full filter blur-[2px] pointer-events-none select-none opacity-85 p-4 space-y-4">

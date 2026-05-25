@@ -2,8 +2,9 @@ import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../../firebase";
 import { sendEmailVerification, signOut } from "firebase/auth";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { UserContext } from "../context/UserContext";
+import { getPostAuthPath } from "../lib/onboarding";
 import crown from "../assets/logo.png";
 import { MdEmail, MdRefresh, MdLogout, MdCheckCircle } from "react-icons/md";
 
@@ -13,7 +14,6 @@ export default function VerifyEmail() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [isChecking, setIsChecking] = useState(false);
 
   // Auto-check verification status every 3 seconds
   useEffect(() => {
@@ -21,11 +21,18 @@ export default function VerifyEmail() {
       if (!auth.currentUser) return;
 
       try {
-        setIsChecking(true);
         // Reload the user to get the latest emailVerified status from Firebase Auth
         await auth.currentUser.reload();
 
         if (auth.currentUser.emailVerified) {
+          const userDoc = await getDoc(doc(db, "user-data", auth.currentUser.uid));
+          const hasCompletedOnboarding =
+            userDoc.data()?.hasCompletedOnboarding === true
+              ? true
+              : userDoc.data()?.hasCompletedOnboarding === false
+                ? false
+                : undefined;
+
           // Update Firestore with verified status
           await updateDoc(doc(db, "user-data", auth.currentUser.uid), {
             emailVerified: true,
@@ -35,19 +42,17 @@ export default function VerifyEmail() {
           setUser((prev: any) => ({
             ...prev,
             emailVerified: true,
+            hasCompletedOnboarding,
           }));
 
           setMessage("Email verified! Redirecting...");
 
-          // Redirect to main app after a short delay
           setTimeout(() => {
-            navigate("/practice");
+            navigate(getPostAuthPath({ hasCompletedOnboarding }));
           }, 1500);
         }
       } catch (err) {
         console.error("Error checking verification status:", err);
-      } finally {
-        setIsChecking(false);
       }
     };
 
@@ -142,14 +147,6 @@ export default function VerifyEmail() {
           </div>
         )}
         {error && <p className="text-red text-center text-sm mb-4">{error}</p>}
-
-        {/* Checking indicator */}
-        {isChecking && (
-          <div className="flex items-center justify-center gap-2 txt-sub mb-4">
-            <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full"></div>
-            <p className="text-sm">Checking verification status...</p>
-          </div>
-        )}
 
         {/* Resend Button */}
         <button

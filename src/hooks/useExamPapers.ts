@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { db } from "../../firebase";
 import { getFirestoreSubjectIds } from "../data/practiceHubSubjects";
+import { computeFreePaperKeys } from "../lib/contentAccess";
+import { loadPredictionPapers } from "../lib/predictions/loadPredictions";
+import { predictionQuestionsRef } from "../lib/predictions/firestorePaths";
+
+export { isPaperFree, isLegacyFreePaper, canAccessPaper, computeFreePaperKeys } from "../lib/contentAccess";
 import { fetchStorageBlob } from "../utils/fetchStorageBlob";
 import {
   loadPaperBlobFromCache,
@@ -25,6 +30,23 @@ export function normalizePaperLevel(level: string | undefined | null): string {
   return raw;
 }
 
+export function formatLevelDisplay(level: string | undefined | null): string {
+  const normalized = normalizePaperLevel(level);
+  if (!normalized) return "—";
+  if (normalized === "higher") return "Higher";
+  if (normalized === "ordinary") return "Ordinary";
+  if (normalized === "foundation") return "Foundation";
+  return normalized;
+}
+
+export function formatLevelCode(level: string | undefined | null): string {
+  const normalized = normalizePaperLevel(level);
+  if (normalized === "higher") return "HL";
+  if (normalized === "ordinary") return "OL";
+  if (normalized === "foundation") return "FD";
+  return normalized ? normalized.toUpperCase() : "—";
+}
+
 /** Derive paper number (1 or 2) from label or id. */
 function getPaperNumber(docId: string, label?: string): number | null {
   const s = `${label ?? ""} ${docId ?? ""}`.toLowerCase();
@@ -40,8 +62,14 @@ export type ExamPaper = {
   year?: number;
   subject?: string;
   level?: string;
-  /** If true, paper is free for non-pro users. From Firestore or derived for 2024 Paper 1 & 2 maths. */
+  /** If true, paper is free for non-pro users. From Firestore or derived for 2024 Maths HL/OL Paper 1 & 2. */
   isFree?: boolean;
+  /** Curated exam prediction paper shown on Practice Hub home. */
+  isPrediction?: boolean;
+  /** AI-assembled paper referencing questions from multiple source PDFs. */
+  isComposite?: boolean;
+  /** pastpaper = PDF composite; image = curated image question set. */
+  contentType?: "pastpaper" | "image";
 };
 
 export function getExamPaperKey(paper: Pick<ExamPaper, "id" | "subject" | "level">): string {
@@ -50,17 +78,6 @@ export function getExamPaperKey(paper: Pick<ExamPaper, "id" | "subject" | "level
   return `${subject}::${level}::${paper.id}`;
 }
 
-/** Returns true if paper is free (2024 Paper 1 or 2, maths higher). */
-export function isPaperFree(paper: ExamPaper): boolean {
-  if (paper.isFree === true) return true;
-  const num = getPaperNumber(paper.id, paper.label);
-  return (
-    paper.year === 2024 &&
-    (num === 1 || num === 2) &&
-    (paper.subject ?? "").toLowerCase() === "maths" &&
-    (paper.level ?? "").toLowerCase() === "higher"
-  );
-}
 
 /** One page region defining a snippet of the question on a PDF page. */
 export type PaperPageRegion = {
@@ -85,6 +102,14 @@ export type PaperQuestion = {
   tags?: string[];
   /** Optional log table page for past papers. */
   log_table_page?: number | string;
+  /** For composite prediction papers: original paper the PDF snippet comes from. */
+  sourcePaperId?: string;
+  sourceQuestionId?: string;
+  sourceSubject?: string;
+  sourceLevel?: string;
+  sourceStoragePath?: string;
+  sourceYear?: number;
+  predictionReason?: string;
 };
 
 function deriveLabel(docId: string, year?: number): string {
@@ -99,6 +124,10 @@ function deriveLabel(docId: string, year?: number): string {
 export type UseExamPapersOptions = {
   /** When true and subjectId is null, load papers for all subjects (e.g. questions page). Default false = load no papers when null (practice tab). */
   loadAllWhenNull?: boolean;
+  /** Include papers from questions/leavingcert/predictions (needed for practice session deep links). */
+  includePredictions?: boolean;
+  /** Bump to re-fetch papers (e.g. after saving a new prediction). */
+  reloadKey?: number;
 };
 
 /** Load papers for the given subject. When subjectId is null: if loadAllWhenNull, load all subjects; otherwise load none. */
@@ -106,7 +135,7 @@ export function useExamPapers(
   subjectId: string | null,
   options: UseExamPapersOptions = {}
 ) {
-  const { loadAllWhenNull = false } = options;
+  const { loadAllWhenNull = false, includePredictions = false, reloadKey = 0 } = options;
   const [subjectIds, setSubjectIds] = useState<string[]>([]);
   const [subjectIdsLoading, setSubjectIdsLoading] = useState(true);
   const [papers, setPapers] = useState<ExamPaper[]>([]);
@@ -185,23 +214,27 @@ export function useExamPapers(
             if (!levelSections.includes("papers")) return [] as ExamPaper[];
           }
 
-          const papersRef = collection(
-            db,
-            "questions",
-            "leavingcert",
-            "subjects",
-            subId,
-            "levels",
-            level,
-            "papers"
-          );
-          const papersSnap = await getDocs(papersRef);
-          const papers: ExamPaper[] = [];
-          papersSnap.docs.forEach((d) => {
-            const data = d.data();
-            const storagePath =
-              typeof data.storagePath === "string" ? data.storagePath : "";
-            if (!storagePath) return;
+            const papersRef = collection(
+              db,
+              "questions",
+              "leavingcert",
+              "subjects",
+              subId,
+              "levels",
+              level,
+              "papers"
+            );
+            const papersSnap = await getDocs(papersRef);
+
+            papersSnap.docs.forEach((d) => {
+              const data = d.data();
+              const storagePath =
+                typeof data.storagePath === "string" ? data.storagePath : "";
+              const isComposite = data.isComposite === true;
+              const isPrediction = data.isPrediction === true;
+              // Legacy: skip predictions stored under real papers (now live in /predictions).
+              if (isPrediction || isComposite) return;
+              if (!storagePath) return;
 
             const year = typeof data.year === "number" ? data.year : undefined;
             const label =
@@ -210,33 +243,25 @@ export function useExamPapers(
                 : deriveLabel(d.id, year);
             const isFree = data.isFree === true;
 
-            papers.push({
-              id: d.id,
-              label,
-              storagePath,
-              year,
-              subject: subId,
-              level,
-              isFree,
+              allPapers.push({
+                id: d.id,
+                label,
+                storagePath,
+                year,
+                subject: subId,
+                level,
+                isFree,
+              });
             });
-          });
-          return papers;
-        })
-      );
+          }
+        }
 
-      return levelPaperLists.flat();
-    }
-
-    async function load() {
-      try {
-        const idsToLoad = shouldLoadAll
-          ? subjectIds
-          : getFirestoreSubjectIds(subjectId!);
-
-        const paperLists = await Promise.all(
-          idsToLoad.map((subId) => loadPapersForSubject(subId))
-        );
-        const allPapers = paperLists.flat();
+        if (includePredictions) {
+          const predictions = await loadPredictionPapers(
+            shouldLoadAll ? null : subjectId
+          );
+          allPapers.push(...predictions);
+        }
 
         if (cancelled) return;
         allPapers.sort((a, b) => {
@@ -262,12 +287,28 @@ export function useExamPapers(
     return () => {
       cancelled = true;
     };
-  }, [subjectId, loadAllWhenNull, subjectIds]);
+  }, [subjectId, loadAllWhenNull, includePredictions, subjectIds, reloadKey]);
 
   // In-memory blob cache (LRU) — instant when revisiting in the same session
   const paperBlobCache = useRef<Map<string, Blob>>(new Map());
   const paperBlobCacheOrder = useRef<string[]>([]);
-  const MAX_BLOB_CACHE = 20;
+  const MAX_BLOB_CACHE = 10;
+
+  const getPaperBlob = useCallback(async (paper: ExamPaper): Promise<Blob> => {
+    const key = paper.storagePath;
+    if (!key) {
+      throw new Error("This paper has no PDF — open questions individually.");
+    }
+    const cached = paperBlobCache.current.get(key);
+    if (cached) {
+      // Move to end (most recently used)
+      paperBlobCacheOrder.current = paperBlobCacheOrder.current.filter((k) => k !== key);
+      paperBlobCacheOrder.current.push(key);
+      return cached;
+    }
+    const pathRef = ref(storage, paper.storagePath);
+    const blob = await getBlob(pathRef);
+  
   const inflightDownloads = useRef<Map<string, Promise<Blob>>>(new Map());
 
   const rememberBlob = useCallback((key: string, blob: Blob) => {
@@ -279,6 +320,21 @@ export function useExamPapers(
       if (oldest) paperBlobCache.current.delete(oldest);
     }
   }, []);
+
+  /** Load PDF blob for a question, resolving composite prediction source paths. */
+  const getPaperBlobForQuestion = useCallback(
+    async (paper: ExamPaper, question: PaperQuestion): Promise<Blob> => {
+      const path = question.sourceStoragePath?.trim() || paper.storagePath;
+      if (!path) {
+        throw new Error("No PDF path for this question");
+      }
+      if (path === paper.storagePath && paper.storagePath) {
+        return getPaperBlob(paper);
+      }
+      return getPaperBlob({ ...paper, storagePath: path });
+    },
+    [getPaperBlob]
+  );
 
   const getPaperBlob = useCallback(async (paper: ExamPaper): Promise<Blob> => {
     const key = paper.storagePath;
@@ -361,20 +417,20 @@ export function useExamPapers(
 
   const getPaperQuestions = useCallback(
     async (paper: ExamPaper): Promise<PaperQuestion[]> => {
-      const subject = paper.subject ?? "maths";
-      const level = paper.level ?? "higher";
-      const questionsRef = collection(
-        db,
-        "questions",
-        "leavingcert",
-        "subjects",
-        subject,
-        "levels",
-        level,
-        "papers",
-        paper.id,
-        "questions"
-      );
+      const questionsRef = paper.isPrediction
+        ? predictionQuestionsRef(paper.id)
+        : collection(
+            db,
+            "questions",
+            "leavingcert",
+            "subjects",
+            paper.subject ?? "maths",
+            "levels",
+            paper.level ?? "higher",
+            "papers",
+            paper.id,
+            "questions"
+          );
       const snap = await getDocs(questionsRef);
       const list: PaperQuestion[] = [];
       snap.docs
@@ -431,6 +487,20 @@ export function useExamPapers(
                 ? rawLogPage
                 : String(rawLogPage)
               : undefined;
+          const sourcePaperId =
+            typeof data.sourcePaperId === "string" ? data.sourcePaperId : undefined;
+          const sourceQuestionId =
+            typeof data.sourceQuestionId === "string" ? data.sourceQuestionId : undefined;
+          const sourceSubject =
+            typeof data.sourceSubject === "string" ? data.sourceSubject : undefined;
+          const sourceLevel =
+            typeof data.sourceLevel === "string" ? data.sourceLevel : undefined;
+          const sourceStoragePath =
+            typeof data.sourceStoragePath === "string" ? data.sourceStoragePath : undefined;
+          const sourceYear =
+            typeof data.sourceYear === "number" ? data.sourceYear : undefined;
+          const predictionReason =
+            typeof data.predictionReason === "string" ? data.predictionReason : undefined;
           list.push({
             id: d.id,
             questionName:
@@ -442,6 +512,13 @@ export function useExamPapers(
             markingSchemePageRange,
             tags: tags?.length ? tags : undefined,
             log_table_page,
+            sourcePaperId,
+            sourceQuestionId,
+            sourceSubject,
+            sourceLevel,
+            sourceStoragePath,
+            sourceYear,
+            predictionReason,
           });
         });
       return list;
@@ -449,10 +526,14 @@ export function useExamPapers(
     []
   );
 
-  const firstFreePaper =
-    papers.find((p) => isPaperFree(p) && getPaperNumber(p.id, p.label) === 1) ??
-    papers.find((p) => isPaperFree(p)) ??
-    null;
+  const firstFreePaper = (() => {
+    const freeKeys = computeFreePaperKeys(papers);
+    return (
+      papers.find((p) => freeKeys.has(getExamPaperKey(p)) && getPaperNumber(p.id, p.label) === 1) ??
+      papers.find((p) => freeKeys.has(getExamPaperKey(p))) ??
+      null
+    );
+  })();
 
   return {
     papers,
@@ -461,6 +542,7 @@ export function useExamPapers(
     subjectIds,
     subjectIdsLoading,
     getPaperBlob,
+    getPaperBlobForQuestion,
     getPaperQuestions,
     getMarkingSchemeBlob,
     firstFreePaper,

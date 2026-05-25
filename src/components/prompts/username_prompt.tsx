@@ -6,8 +6,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { LuPen } from "react-icons/lu";
 import Cropper from "react-easy-crop";
 import Rank1 from "../../assets/Rank2-CCOkr3g2.png"
-import { useTutorialContext } from "../../context/TutorialContext";
-
+import { prepareProfileImagePreview, revokeProfileImagePreview } from "../../lib/profileImage";
 export default function UsernamePrompt() {
     const { user, setUser } = useContext(UserContext); 
     const [showPrompt, setShowPrompt] = useState<boolean>(false); 
@@ -23,21 +22,24 @@ export default function UsernamePrompt() {
     const [showCropper, setShowCropper] = useState(false);
     const [croppedAvatarUrl, setCroppedAvatarUrl] = useState<string>('');
 
-    const {showTutorial} = useTutorialContext();
-
     useEffect(() => {
-        
-        if(user?.username?.length < 1 && !showTutorial) 
-            setShowPrompt(true); 
-        else 
-            setShowPrompt(false); 
-    }, [user, showTutorial])
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (user?.username?.length < 1) setShowPrompt(true);
+        else setShowPrompt(false);
+    }, [user]);
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
+        e.target.value = "";
+        if (!file) return;
+        setError("");
+        try {
             setSelectedFile(file);
-            setPreviewUrl(URL.createObjectURL(file));
+            const preview = await prepareProfileImagePreview(file);
+            revokeProfileImagePreview(previewUrl);
+            setPreviewUrl(preview);
             setShowCropper(true);
+        } catch (err) {
+            console.error("Profile image failed:", err);
+            setError("Could not load that image. Try another photo.");
         }
     };
 
@@ -83,6 +85,7 @@ export default function UsernamePrompt() {
         const croppedUrl = URL.createObjectURL(croppedBlob);
         setCroppedAvatarUrl(croppedUrl);
         
+        revokeProfileImagePreview(previewUrl);
         setShowCropper(false);
         setPreviewUrl(null);
     };
@@ -158,7 +161,11 @@ export default function UsernamePrompt() {
                         />
                     </div>
                     <div className="flex justify-between mt-4">
-                        <button className="px-4 py-2 color-bg-grey-5 rounded-out" onClick={() => setShowCropper(false)}>Cancel</button>
+                        <button className="px-4 py-2 color-bg-grey-5 rounded-out" onClick={() => {
+                            revokeProfileImagePreview(previewUrl);
+                            setShowCropper(false);
+                            setPreviewUrl(null);
+                        }}>Cancel</button>
                         <button className="px-4 py-2 bg-blue-500 text-white rounded-out" onClick={handleCropComplete}>Save</button>
                     </div>
                 </div>

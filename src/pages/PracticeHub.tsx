@@ -1,24 +1,58 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { getDownloadURL, ref as storageRef } from "firebase/storage";
+import { storage } from "../../firebase";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Fuse from "fuse.js";
 import {
   useExamPapers,
-  isPaperFree,
   normalizePaperLevel,
+  formatLevelDisplay,
   getExamPaperKey,
   type ExamPaper,
   type PaperQuestion,
 } from "../hooks/useExamPapers";
+import { usePredictionPapers } from "../hooks/usePredictionPapers";
+import {
+  buildFreeImageSample,
+  canAccessImageTopic,
+  canAccessPaper,
+  computeFreePaperKeys,
+  getContentAccessLabel,
+  hasAceAccess,
+  isImageTopicContentFree,
+  pickStarterImageTopic,
+  type ContentAccessLabel,
+} from "../lib/contentAccess";
 import { UserContext } from "../context/UserContext";
-import PaperProGate from "../components/PaperProGate";
+import ContentProGate from "../components/ContentProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { useImageTopics, listQuestionsForTopic, groupImageQuestions, type ImageTopic } from "../hooks/useImageQuestions";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart, LuHouse } from "react-icons/lu";
+import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuSparkles, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart, LuArrowLeft, LuLock } from "react-icons/lu";
 import type { IconType } from "react-icons";
-import { subjectMatchesPaper, getStorageFolderName, getFavouriteSubjectIds, PRACTICE_HUB_SUBJECTS } from "../data/practiceHubSubjects";
+import { subjectMatchesPaper, getStorageFolderName, getFavouriteSubjectIds, FAVOURITES_CHANGED_EVENT, PRACTICE_HUB_SUBJECTS, getSubjectLabel } from "../data/practiceHubSubjects";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
+import IrishHarpIcon from "../components/practiceHub/IrishHarpIcon";
+import GeneratePredictionFlow, {
+  PREDICTION_SELECT_CLASS,
+  type GeneratePredictionFlowHandle,
+} from "../components/addQuestions/GeneratePredictionFlow";
+import PredictionTutorialCallout from "../components/tutorial/PredictionTutorialCallout";
+import PredictionCardTutorialCallout from "../components/tutorial/PredictionCardTutorialCallout";
+import PredictionCardTutorialScrim from "../components/tutorial/PredictionCardTutorialScrim";
+import {
+  consumePendingPredictionTutorial,
+  shouldStartPredictionTutorial,
+  stripPredictionTutorialQuery,
+  type PredictionTutorialStep,
+} from "../lib/predictionTutorial";
+import {
+  consumePendingPracticeSessionTutorial,
+  markPendingPracticeSessionTutorial,
+} from "../lib/practiceSessionTutorial";
+import { resolvePredictionContentType } from "../lib/predictions/api";
+import { getThemedPortalTarget } from "../utils/themedPortal";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
 
@@ -43,19 +77,6 @@ function getPaperNumber(paper: ExamPaper): number | null {
   if (/\bpaper\s*1\b|paper-1/.test(s)) return 1;
   if (/\bpaper\s*2\b|paper-2/.test(s)) return 2;
   return null;
-}
-
-/** Format level for display */
-function formatLevel(level: string | undefined): string {
-  const normalized = normalizePaperLevel(level);
-  if (!normalized) return "—";
-  return normalized === "higher"
-    ? "Higher"
-    : normalized === "ordinary"
-      ? "Ordinary"
-      : normalized === "foundation"
-        ? "Foundation"
-        : normalized;
 }
 
 type PaperFilter = "1" | "2" | "all";
@@ -109,13 +130,115 @@ function getSubjectIcon(subjectId: string): IconType {
 
 export default function PracticeHub() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useContext(UserContext);
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
+  const [papersReloadKey, setPapersReloadKey] = useState(0);
   const { papers, loading: papersLoading, getPaperBlob, getPaperQuestions, firstFreePaper } =
-    useExamPapers(subjectFilter);
-  const [showPaperGateModal, setShowPaperGateModal] = useState(false);
+    useExamPapers(subjectFilter, { loadAllWhenNull: subjectFilter == null, reloadKey: papersReloadKey });
+  const {
+    predictions: predictionPapers,
+    loading: predictionsLoading,
+  } = usePredictionPapers(subjectFilter, { reloadKey: papersReloadKey });
+  const [showPredictionModal, setShowPredictionModal] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState<PredictionTutorialStep | null>(null);
+  const [tutorialHighlightPaperId, setTutorialHighlightPaperId] = useState<string | null>(null);
+  const tutorialCardAnchorRef = useRef<HTMLDivElement>(null);
+  const [cardSpotlightRect, setCardSpotlightRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const isModalTutorialStep = tutorialStep === 1 || tutorialStep === 2;
+  const isCardTutorialStep = tutorialStep === 3 && tutorialHighlightPaperId !== null;
+  const tutorialHighlightPaper = useMemo(() => {
+    if (!isCardTutorialStep || predictionsLoading) return null;
+    if (tutorialHighlightPaperId) {
+      const matched = predictionPapers.find((paper) => paper.id === tutorialHighlightPaperId);
+      if (matched) return matched;
+    }
+    return predictionPapers[0] ?? null;
+  }, [
+    isCardTutorialStep,
+    predictionsLoading,
+    predictionPapers,
+    tutorialHighlightPaperId,
+  ]);
+  const highlightPaperReady = isCardTutorialStep && tutorialHighlightPaper !== null;
+  const cardTutorialUiReady = highlightPaperReady && cardSpotlightRect !== null;
+  const [predictionSubject, setPredictionSubject] = useState(
+    () => PRACTICE_HUB_SUBJECTS[0]?.id ?? "accounting"
+  );
+  const [predictionLevel, setPredictionLevel] = useState("higher");
+  const [predictionPaper, setPredictionPaper] = useState<1 | 2>(1);
+  const predictionFlowRef = useRef<GeneratePredictionFlowHandle>(null);
+  const [predictionGenerating, setPredictionGenerating] = useState(false);
+  const predictionUsesPastPapers = useMemo(
+    () => resolvePredictionContentType(predictionSubject) === "pastpaper",
+    [predictionSubject]
+  );
+  const [showContentGateModal, setShowContentGateModal] = useState(false);
   const [paperFilter, setPaperFilter] = useState<PaperFilter>("all");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
+  const openPredictionModal = useCallback(() => {
+    if (subjectFilter && PRACTICE_HUB_SUBJECTS.some((s) => s.id === subjectFilter)) {
+      setPredictionSubject(subjectFilter);
+    } else {
+      setPredictionSubject((prev) =>
+        PRACTICE_HUB_SUBJECTS.some((s) => s.id === prev)
+          ? prev
+          : (PRACTICE_HUB_SUBJECTS[0]?.id ?? "accounting")
+      );
+    }
+    if (levelFilter === "higher" || levelFilter === "ordinary") {
+      setPredictionLevel(levelFilter);
+    }
+    setShowPredictionModal(true);
+  }, [subjectFilter, levelFilter]);
+
+  const closePredictionModal = useCallback(() => {
+    setShowPredictionModal(false);
+    setTutorialStep((current) => (current === 1 || current === 2 ? null : current));
+  }, []);
+
+  const finishCardTutorial = useCallback(() => {
+    setTutorialStep(null);
+    setTutorialHighlightPaperId(null);
+    setCardSpotlightRect(null);
+  }, []);
+
+  const startPredictionTutorial = useCallback(() => {
+    setShowPredictionModal(true);
+    setTutorialStep(1);
+  }, []);
+
+  const tutorialStartedRef = useRef(false);
+  const tutorialStepRef = useRef<PredictionTutorialStep | null>(tutorialStep);
+  tutorialStepRef.current = tutorialStep;
+
+  useEffect(() => {
+    if (tutorialStartedRef.current) return;
+
+    const pending = consumePendingPredictionTutorial();
+    const fromQuery = shouldStartPredictionTutorial(`?${searchParams.toString()}`);
+
+    if (!pending && !fromQuery) return;
+
+    tutorialStartedRef.current = true;
+    startPredictionTutorial();
+
+    if (fromQuery) {
+      const nextSearch = stripPredictionTutorialQuery(`?${searchParams.toString()}`);
+      navigate(
+        {
+          pathname: "/practice",
+          search: nextSearch,
+        },
+        { replace: true }
+      );
+    }
+  }, [navigate, searchParams, startPredictionTutorial]);
   const [yearFilter, setYearFilter] = useState<YearFilterValue>("all");
   const [topicFilter, setTopicFilter] = useState<string[]>([]);
   const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
@@ -133,6 +256,16 @@ export default function PracticeHub() {
 
   const [hubFavourites, setHubFavourites] = useState<string[]>(() => getFavouriteSubjectIds());
   const onFavouritesChange = useCallback((ids: string[]) => setHubFavourites(ids), []);
+  useEffect(() => {
+    const syncFavourites = () => setHubFavourites(getFavouriteSubjectIds());
+    window.addEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
+    return () => window.removeEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
+  }, []);
+
+  const handleSubjectSelect = useCallback((subjectId: string) => {
+    setSubjectFilter(subjectId);
+  }, []);
+
   const favouriteSubjects = useMemo(
     () => PRACTICE_HUB_SUBJECTS.filter((s) => hubFavourites.includes(s.id)),
     [hubFavourites]
@@ -157,6 +290,17 @@ export default function PracticeHub() {
     loading: imageTopicsLoading,
     error: imageTopicsError,
   } = useImageTopics(isImageMode ? storageFolderName : null, imageLevelFilter);
+
+  /** Image topics are level-scoped; pick a concrete level when filter is "all" or invalid. */
+  useEffect(() => {
+    if (!isImageMode || imageLevels.length === 0) return;
+    setLevelFilter((current) => {
+      if (current !== "all" && imageLevels.includes(current)) return current;
+      return (imageLevels.includes("higher") ? "higher" : imageLevels[0]) as LevelFilter;
+    });
+  }, [isImageMode, imageLevels]);
+
+  const activeImageLevel = imageLevelFilter ?? imageLevels[0] ?? "higher";
 
   const [selectedImageTopic, setSelectedImageTopic] = useState<ImageTopic | null>(null);
 
@@ -247,6 +391,23 @@ export default function PracticeHub() {
       return tags.some((tag) => set.has(normTag(String(tag))));
     });
   }, [filteredByMeta, topicFilter, paperTagsMap, normTag]);
+
+  const freePaperKeys = useMemo(() => computeFreePaperKeys(papers), [papers]);
+
+  const starterImageTopic = useMemo(
+    () => pickStarterImageTopic(imageTopics, storageFolderName),
+    [imageTopics, storageFolderName]
+  );
+
+  const freeImageSample = useMemo(
+    () =>
+      buildFreeImageSample(
+        starterImageTopic,
+        storageFolderName,
+        activeImageLevel
+      ),
+    [starterImageTopic, storageFolderName, activeImageLevel]
+  );
 
   const topicEntries = useMemo(() => {
     const map = new Map<string, { label: string; paperCount: number }>();
@@ -373,33 +534,142 @@ export default function PracticeHub() {
     setTagsVisibleWhenCollapsed(count > 0 ? count : 1);
   }, [panelTagsExpanded, allTagsInPreview, selectedPaper?.id]);
 
-  const goToSession = useCallback(() => {
-    if (!selectedPaper) return;
-    if (!user?.isPro && !isPaperFree(selectedPaper)) {
-      setShowPaperGateModal(true);
+  const goToPaperSession = useCallback(
+    (paper: ExamPaper) => {
+      if (!canAccessPaper(user, paper, freePaperKeys)) {
+        setShowContentGateModal(true);
+        return;
+      }
+      const normalizedLevel = normalizePaperLevel(paper.level);
+      if (paper.contentType === "image") {
+        navigate(
+          `/practice/session?mode=imagequestions&predictionId=${encodeURIComponent(paper.id)}&level=${normalizedLevel}&subject=${encodeURIComponent(paper.subject ?? "")}`
+        );
+      } else {
+        navigate(
+          `/practice/session?mode=pastpaper&paperId=${paper.id}&level=${normalizedLevel}&subject=${paper.subject ?? ""}`
+        );
+      }
+    },
+    [user, freePaperKeys, navigate]
+  );
+
+  const handlePredictionSelect = useCallback(
+    (paper: ExamPaper) => {
+      if (
+        isCardTutorialStep &&
+        tutorialHighlightPaper &&
+        paper.id === tutorialHighlightPaper.id
+      ) {
+        markPendingPracticeSessionTutorial();
+        finishCardTutorial();
+      }
+      goToPaperSession(paper);
+    },
+    [isCardTutorialStep, tutorialHighlightPaper, finishCardTutorial, goToPaperSession]
+  );
+
+  const updateCardSpotlightRect = useCallback(() => {
+    const el = tutorialCardAnchorRef.current;
+    if (!el) return;
+    const deck = el.querySelector<HTMLElement>(".deck");
+    const target = deck ?? el;
+    const rect = target.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    setCardSpotlightRect({
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+    });
+  }, []);
+
+  const assignTutorialCardAnchorRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      tutorialCardAnchorRef.current = node;
+      if (!node || !highlightPaperReady) return;
+      const deck = node.querySelector<HTMLElement>(".deck");
+      const target = deck ?? node;
+      const rect = target.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      setCardSpotlightRect({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      });
+    },
+    [highlightPaperReady]
+  );
+
+  useEffect(() => {
+    if (!highlightPaperReady) return;
+    tutorialCardAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timer = window.setTimeout(updateCardSpotlightRect, 350);
+    return () => window.clearTimeout(timer);
+  }, [highlightPaperReady, tutorialHighlightPaper?.id, updateCardSpotlightRect]);
+
+  useLayoutEffect(() => {
+    if (!highlightPaperReady) {
+      setCardSpotlightRect(null);
       return;
     }
-    const normalizedLevel = normalizePaperLevel(selectedPaper.level);
-    navigate(`/practice/session?mode=pastpaper&paperId=${selectedPaper.id}&level=${normalizedLevel}&subject=${selectedPaper.subject ?? ""}`);
-  }, [selectedPaper, user?.isPro, navigate]);
+
+    updateCardSpotlightRect();
+    window.addEventListener("resize", updateCardSpotlightRect);
+    window.addEventListener("scroll", updateCardSpotlightRect, true);
+    return () => {
+      window.removeEventListener("resize", updateCardSpotlightRect);
+      window.removeEventListener("scroll", updateCardSpotlightRect, true);
+    };
+  }, [highlightPaperReady, tutorialHighlightPaper?.id, updateCardSpotlightRect]);
+
+  /** Past-paper predictions often have no composite PDF; use first source paper for card preview. */
+  const getPredictionPaperPreviewBlob = useCallback(
+    async (paper: ExamPaper): Promise<Blob> => {
+      if (paper.storagePath?.trim()) {
+        return getPaperBlob(paper);
+      }
+      const questions = await getPaperQuestions(paper);
+      const path = questions.find((q) => q.sourceStoragePath?.trim())?.sourceStoragePath?.trim();
+      if (!path) {
+        throw new Error("No PDF path for prediction preview");
+      }
+      return getPaperBlob({ ...paper, storagePath: path });
+    },
+    [getPaperBlob, getPaperQuestions]
+  );
+
+  const goToSession = useCallback(() => {
+    if (!selectedPaper) return;
+    goToPaperSession(selectedPaper);
+  }, [selectedPaper, goToPaperSession]);
 
   const goToImageSession = useCallback(() => {
     if (!selectedImageTopic || !storageFolderName) return;
-    const level = imageLevelFilter ?? (imageLevels[0] || "higher");
+    if (!canAccessImageTopic(user, selectedImageTopic, starterImageTopic, storageFolderName)) {
+      setShowContentGateModal(true);
+      return;
+    }
+    const level = activeImageLevel;
     navigate(
       `/practice/session?mode=imagequestions&subject=${encodeURIComponent(storageFolderName)}&level=${encodeURIComponent(level)}&topic=${encodeURIComponent(selectedImageTopic.name)}`
     );
-  }, [selectedImageTopic, storageFolderName, imageLevelFilter, imageLevels, navigate]);
+  }, [selectedImageTopic, storageFolderName, activeImageLevel, navigate, user, starterImageTopic]);
 
   const goToImageTopicSession = useCallback(
     (topic: ImageTopic) => {
       if (!storageFolderName) return;
-      const level = imageLevelFilter ?? (imageLevels[0] || "higher");
+      if (!canAccessImageTopic(user, topic, starterImageTopic, storageFolderName)) {
+        setShowContentGateModal(true);
+        return;
+      }
+      const level = activeImageLevel;
       navigate(
         `/practice/session?mode=imagequestions&subject=${encodeURIComponent(storageFolderName)}&level=${encodeURIComponent(level)}&topic=${encodeURIComponent(topic.name)}`
       );
     },
-    [storageFolderName, imageLevelFilter, imageLevels, navigate]
+    [storageFolderName, activeImageLevel, navigate, user, starterImageTopic]
   );
 
   const goToPastPaperTopicSession = useCallback(
@@ -412,10 +682,10 @@ export default function PracticeHub() {
       if (matchingPapers.length === 0) return;
 
       let targetPaper = matchingPapers[0];
-      if (!user?.isPro) {
-        const freePaper = matchingPapers.find((paper) => isPaperFree(paper));
+      if (!hasAceAccess(user)) {
+        const freePaper = matchingPapers.find((paper) => canAccessPaper(user, paper, freePaperKeys));
         if (!freePaper) {
-          setShowPaperGateModal(true);
+          setShowContentGateModal(true);
           return;
         }
         targetPaper = freePaper;
@@ -426,7 +696,7 @@ export default function PracticeHub() {
         `/practice/session?mode=pastpaper&paperId=${targetPaper.id}&level=${encodeURIComponent(normalizedLevel)}&subject=${encodeURIComponent(targetPaper.subject ?? "")}&topics=${encodeURIComponent(topic)}`
       );
     },
-    [filteredByMeta, normTag, paperTagsMap, user?.isPro, navigate]
+    [filteredByMeta, normTag, paperTagsMap, user, freePaperKeys, navigate]
   );
 
   // Build global search index when user opens search (lazy) – supports both paper and image modes
@@ -442,7 +712,7 @@ export default function PracticeHub() {
         const entries: GlobalSearchEntry[] = [];
 
         if (isImageMode && storageFolderName && imageTopics.length > 0) {
-          const level = imageLevelFilter ?? (imageLevels[0] || "higher");
+          const level = activeImageLevel;
           const topicArrays = await Promise.all(
             imageTopics.map(async (topic) => {
               try {
@@ -452,7 +722,7 @@ export default function PracticeHub() {
                   paper: null,
                   question: null,
                   indexInPaper: 0,
-                  paperLabel: topic.displayName,
+                  paperLabel: `${topic.displayName} · ${formatLevelDisplay(level)}`,
                   questionName: g.displayName,
                   tagsStr: topic.displayName,
                   imageMode: true,
@@ -500,7 +770,7 @@ export default function PracticeHub() {
     return () => {
       cancelled = true;
     };
-  }, [papers, getPaperQuestions, globalSearchOpen, isImageMode, imageTopics, storageFolderName, imageLevelFilter, imageLevels]);
+  }, [papers, getPaperQuestions, globalSearchOpen, isImageMode, imageTopics, storageFolderName, activeImageLevel, imageLevels]);
 
   const globalSearchResults = useMemo(() => {
     const q = globalSearchQuery.trim();
@@ -512,6 +782,13 @@ export default function PracticeHub() {
   const goToQuestion = useCallback(
     (entry: GlobalSearchEntry) => {
       if (entry.imageMode) {
+        const topic = imageTopics.find((t) => t.name === entry.imageTopic);
+        if (topic && !canAccessImageTopic(user, topic, starterImageTopic, storageFolderName)) {
+          setShowContentGateModal(true);
+          setGlobalSearchOpen(false);
+          setGlobalSearchQuery("");
+          return;
+        }
         navigate(
           `/practice/session?mode=imagequestions&subject=${encodeURIComponent(entry.imageSubject ?? "")}&level=${encodeURIComponent(entry.imageLevel ?? "")}&topic=${encodeURIComponent(entry.imageTopic ?? "")}&imageKey=${encodeURIComponent(entry.imageKey ?? "")}`
         );
@@ -519,8 +796,8 @@ export default function PracticeHub() {
         setGlobalSearchQuery("");
         return;
       }
-      if (entry.paper && !user?.isPro && !isPaperFree(entry.paper)) {
-        setShowPaperGateModal(true);
+      if (entry.paper && !canAccessPaper(user, entry.paper, freePaperKeys)) {
+        setShowContentGateModal(true);
         setGlobalSearchOpen(false);
         setGlobalSearchQuery("");
         return;
@@ -532,7 +809,7 @@ export default function PracticeHub() {
       setGlobalSearchOpen(false);
       setGlobalSearchQuery("");
     },
-    [navigate, user?.isPro]
+    [navigate, user, freePaperKeys, imageTopics, starterImageTopic, storageFolderName]
   );
 
 
@@ -649,29 +926,40 @@ export default function PracticeHub() {
     [levelTriggerPointerDown]
   );
 
+  const goBackToHome = useCallback(() => {
+    setSubjectFilter(null);
+    setSelectedPaper(null);
+    setSelectedImageTopic(null);
+  }, []);
+
   return (
     <div className="practice-hub w-full min-h-full h-full flex flex-col overflow-x-hidden px-10 pb-3 scrollbar-minimal">
       <div className="practice-hub__inner flex flex-col flex-1 w-full min-h-0">
         {/* Top bar: subject (oval) left, search right */}
         <section className="topBar flex flex-shrink-0 items-center justify-between w-full mb-1">
-          <div className="flex items-center gap-2">
+          <div className="practice-hub__subject-wrap">
+            {subjectFilter != null && (
+              <button
+                type="button"
+                onClick={goBackToHome}
+                className="practice-hub__back-btn"
+                aria-label="Back to home"
+                title="Back"
+              >
+                <LuArrowLeft size={20} aria-hidden />
+              </button>
+            )}
             <div className="practice-hub__subject-field practice-hub__subject-field--oval">
               <SubjectDropdown
                 value={subjectFilter}
-                onChange={setSubjectFilter}
+                onChange={(id) => {
+                  if (id) handleSubjectSelect(id);
+                  else setSubjectFilter(null);
+                }}
                 id="ph-subject"
                 onFavouritesChange={onFavouritesChange}
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setSubjectFilter(null)}
-              className={`flex items-center justify-center p-1.5 rounded-out border-0 cursor-pointer transition-colors duration-150 ${subjectFilter == null ? "color-txt-accent" : "color-txt-sub hover:color-txt-main hover:color-bg-grey-5"}`}
-              aria-label="Home"
-              title="Home"
-            >
-              <LuHouse size={20} />
-            </button>
           </div>
           <div ref={globalSearchContainerRef} className="flex items-center txtbox color-bg w-1/4 max-w-80 rounded-out min-w-0 relative ml-auto">
             <input
@@ -783,7 +1071,7 @@ export default function PracticeHub() {
                 >
                   {(isImageMode
                     ? LEVEL_OPTIONS.filter(
-                        (opt) => opt.value === "all" || imageLevels.includes(opt.value)
+                        (opt) => opt.value !== "all" && imageLevels.includes(opt.value)
                       )
                     : LEVEL_OPTIONS
                   ).map((opt) => (
@@ -860,7 +1148,7 @@ export default function PracticeHub() {
             (paper grid, topic list) own their own vertical scroll. */}
         <div className="flex-1 w-full min-h-0 overflow-hidden">
           <AnimatePresence mode="wait">
-          {papersLoading || (isImageMode && imageTopicsLoading) ? (
+          {(subjectFilter != null && papersLoading) || (isImageMode && imageTopicsLoading) ? (
             <motion.div
               key="skeleton"
               className="deck-grid"
@@ -878,79 +1166,149 @@ export default function PracticeHub() {
               ))}
             </motion.div>
           ) : subjectFilter == null ? (
-            favouriteSubjects.length > 0 ? (
-              <motion.div
-                key="fav-grid"
-                className="w-full"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <h2 className="txt-heading-colour text-xl font-bold mb-3">Your Subjects</h2>
-                <div className="deck-grid">
-                  {favouriteSubjects.map((s, i) => (
-                    <motion.div
-                      key={s.id}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
-                    >
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setSubjectFilter(s.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setSubjectFilter(s.id);
-                          }
-                        }}
-                        className="deck paper-card flex flex-col"
+            <motion.div
+              key="home"
+              className="w-full min-h-0 overflow-y-auto scrollbar-minimal pb-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              {favouriteSubjects.length > 0 ? (
+                <>
+                  <h2 className="txt-heading-colour text-xl font-bold mb-3">Your Subjects</h2>
+                  <div className="deck-grid">
+                    {favouriteSubjects.map((s, i) => (
+                      <motion.div
+                        key={s.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
                       >
-                        <div className="color-border" />
-                        <SubjectIconImage subjectId={s.id} />
-                        <div className="bg-overlay" />
-                        <div className="practice-hub__paper-card-body">
-                          <div className="flex w-full z-50 mt-21 px-2.5 items-center pt-0.5">
-                            <div className="flex flex-col ml-1 min-w-0 flex-1">
-                              <span className="txt-heading-colour truncate">{s.label}</span>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleSubjectSelect(s.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSubjectSelect(s.id);
+                            }
+                          }}
+                          className="deck paper-card practice-hub__subject-card flex flex-col color-bg"
+                        >
+                          <div className="color-border" />
+                          <SubjectIconImage subjectId={s.id} />
+                          <div className="practice-hub__paper-card-body">
+                            <div className="flex w-full z-50 items-center">
+                              <div className="flex flex-col ml-1 min-w-0 flex-1">
+                                <span className="txt-heading-colour truncate">{s.label}</span>
+                              </div>
+                              <LuChevronRight size={18} className="color-txt-sub shrink-0" aria-hidden />
                             </div>
-                            <LuChevronRight size={18} className="color-txt-sub shrink-0" aria-hidden />
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="empty"
-                className="h-full min-h-[360px] w-full flex items-center justify-center px-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                <div className="max-w-xl text-center">
-                  <LuStar size={40} className="color-txt-sub opacity-40 mx-auto mb-3" />
-                  <p className="txt-heading-colour text-2xl font-bold mb-2">No favourite subjects yet</p>
-                  <p className="txt-sub color-txt-sub mb-5">
-                    Star your favourite subjects and they'll appear here for quick access.
-                  </p>
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      className="blue-btn px-5 py-2.5"
-                      onClick={openSubjectPicker}
-                    >
-                      Choose a subject
-                    </button>
+                      </motion.div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="min-h-[280px] w-full flex items-center justify-center px-4 mb-6">
+                  <div className="max-w-xl text-center">
+                    <LuStar size={40} className="color-txt-sub opacity-40 mx-auto mb-3" />
+                    <p className="txt-heading-colour text-2xl font-bold mb-2">No favourite subjects yet</p>
+                    <p className="txt-sub color-txt-sub mb-5">
+                      Star your favourite subjects and they'll appear here for quick access.
+                    </p>
+                    <div className="flex justify-center">
+                      <button
+                        type="button"
+                        className="blue-btn px-5 py-2.5"
+                        onClick={openSubjectPicker}
+                      >
+                        Choose a subject
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </motion.div>
-            )
+              )}
+
+              <section
+                className="practice-hub__predictions mt-8"
+                aria-label="Predictions"
+              >
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <LuSparkles size={20} className="color-txt-accent shrink-0" aria-hidden />
+                    <h2 className="txt-heading-colour text-xl font-bold">Predictions</h2>
+                  </div>
+                  <button
+                    type="button"
+                    className="blue-btn !w-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-sm shrink-0"
+                    onClick={openPredictionModal}
+                  >
+                    <LuSparkles size={16} aria-hidden />
+                    Generate
+                  </button>
+                </div>
+                {predictionsLoading ? (
+                  <div className="deck-grid">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="deck flex flex-col">
+                        <div className="color-border" />
+                        <div className="image color-bg-grey-5 animate-pulse" />
+                        <div className="flex w-full z-50 mt-21 px-3 py-2 items-center color-bg-grey-5 animate-pulse rounded-b-2xl h-14" />
+                      </div>
+                    ))}
+                  </div>
+                ) : predictionPapers.length === 0 ? (
+                  <p className="txt-sub color-txt-sub py-2">
+                    Exam predictions will appear here when available.
+                  </p>
+                ) : (
+                  <div className="deck-grid">
+                    {predictionPapers.map((paper, i) => {
+                      const isHighlightTarget =
+                        highlightPaperReady && paper.id === tutorialHighlightPaper?.id;
+
+                      return (
+                        <motion.div
+                          key={getExamPaperKey(paper)}
+                          ref={isHighlightTarget ? assignTutorialCardAnchorRef : undefined}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
+                        >
+                          {paper.contentType === "image" ? (
+                            <ImagePredictionCard
+                              paper={paper}
+                              accessLabel={getContentAccessLabel(
+                                user,
+                                canAccessPaper(user, paper, freePaperKeys)
+                              )}
+                              onSelect={() => handlePredictionSelect(paper)}
+                            />
+                          ) : (
+                            <PaperCard
+                              paper={paper}
+                              getPaperBlob={getPredictionPaperPreviewBlob}
+                              accessLabel={getContentAccessLabel(
+                                user,
+                                canAccessPaper(user, paper, freePaperKeys)
+                              )}
+                              onSelect={() => handlePredictionSelect(paper)}
+                            />
+                          )}
+                          <p className="txt-sub color-txt-sub text-xs mt-1.5 px-1 truncate">
+                            {getSubjectLabel(paper.subject ?? "")} · {formatLevelDisplay(paper.level)}
+                          </p>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </motion.div>
           ) : isImageMode ? (
             imageTopicsError ? (
               <motion.p key="error" className="txt-sub color-txt-sub py-4 ml-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
@@ -981,7 +1339,14 @@ export default function PracticeHub() {
                         >
                           <TopicCard
                             topic={topic}
-                            onSelect={() => setSelectedImageTopic(topic)}
+                            levelLabel={formatLevelDisplay(activeImageLevel)}
+                            accessLabel={getContentAccessLabel(
+                              user,
+                              isImageTopicContentFree(topic, starterImageTopic, storageFolderName)
+                            )}
+                            onSelect={() => {
+                              setSelectedImageTopic(topic);
+                            }}
                           />
                         </motion.div>
                       ))}
@@ -998,7 +1363,9 @@ export default function PracticeHub() {
                           onClick={() => goToImageTopicSession(entry.topic)}
                         >
                           <span className="txt color-txt-main">{entry.label}</span>
-                          <span className="txt-sub color-txt-sub">{entry.questionCount} question{entry.questionCount !== 1 ? "s" : ""}</span>
+                          <span className="txt-sub color-txt-sub">
+                            {formatLevelDisplay(activeImageLevel)} · {entry.questionCount} question{entry.questionCount !== 1 ? "s" : ""}
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -1034,6 +1401,10 @@ export default function PracticeHub() {
                         getPaperBlob={getPaperBlob}
                         questionCount={paperQuestionCountMap[getExamPaperKey(paper)]}
                         tags={paperTagsMap[getExamPaperKey(paper)] ?? []}
+                        accessLabel={getContentAccessLabel(
+                          user,
+                          canAccessPaper(user, paper, freePaperKeys)
+                        )}
                         onSelect={() => {
                           setSelectedPaper(paper);
                           setPanelAnimationDone(false);
@@ -1070,9 +1441,8 @@ export default function PracticeHub() {
         </div>
       </div>
 
-      {/* Slide-in preview panels — portalled to document.body so they
-          escape any ancestor stacking/transform context (e.g. the
-          sidebar's flex parent) and reliably overlay the navbar. */}
+      {/* Slide-in preview panels — portalled to #themed-root so theme variants apply
+          and they escape ancestor stacking/transform (e.g. sidebar flex). */}
       {createPortal(
       <AnimatePresence>
         {selectedPaper && (
@@ -1130,7 +1500,7 @@ export default function PracticeHub() {
                 <p className="practice-hub__panel-meta color-txt-sub text-sm">
                   <span>{selectedPaper.year ?? "—"}</span>
                   <span className="practice-hub__panel-meta-sep" aria-hidden> · </span>
-                  <span>{formatLevel(selectedPaper.level)}</span>
+                  <span>{formatLevelDisplay(selectedPaper.level)}</span>
                   <span className="practice-hub__panel-meta-sep" aria-hidden> · </span>
                   <span>Paper {getPaperNumber(selectedPaper) ?? "—"}</span>
                 </p>
@@ -1258,7 +1628,7 @@ export default function PracticeHub() {
                   <p className="practice-hub__panel-meta color-txt-sub text-sm">
                     <span>{selectedImageTopic.questionCount} question{selectedImageTopic.questionCount !== 1 ? "s" : ""}</span>
                     <span className="practice-hub__panel-meta-sep" aria-hidden> · </span>
-                    <span>{formatLevel(imageLevelFilter ?? imageLevels[0])}</span>
+                    <span>{formatLevelDisplay(activeImageLevel)}</span>
                   </p>
 
                   <div className="practice-hub__panel-actions-spacer" aria-hidden />
@@ -1277,17 +1647,142 @@ export default function PracticeHub() {
           </>
         )}
       </AnimatePresence>,
-      document.body
+      getThemedPortalTarget()
       )}
 
       {/* Paper pro gate modal – when non-pro tries to open locked paper */}
-      {showPaperGateModal && (
-        <PaperProGate
-          firstFreePaper={firstFreePaper}
+      {showContentGateModal && (
+        <ContentProGate
+          freePaper={isImageMode ? null : firstFreePaper}
+          freeImageSample={isImageMode ? freeImageSample : null}
           asModal
-          onClose={() => setShowPaperGateModal(false)}
+          onClose={() => setShowContentGateModal(false)}
         />
       )}
+
+      {showPredictionModal &&
+        createPortal(
+          <>
+            <div
+              className={`practice-hub__backdrop${isModalTutorialStep ? " practice-hub__backdrop--tutorial" : ""}`}
+              onClick={closePredictionModal}
+              aria-hidden
+            />
+            <div
+              className={`practice-hub__prediction-modal-wrap${isModalTutorialStep ? " practice-hub__prediction-modal-wrap--tutorial" : ""}`}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ph-prediction-modal-title"
+              onClick={closePredictionModal}
+            >
+              <div className="practice-hub__prediction-modal-stage">
+                <AnimatePresence>
+                  {isModalTutorialStep && tutorialStep !== null ? (
+                    <PredictionTutorialCallout key="prediction-tutorial" step={tutorialStep} />
+                  ) : null}
+                </AnimatePresence>
+                <div
+                  className="practice-hub__prediction-modal color-bg"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <h2 id="ph-prediction-modal-title" className="txt-heading-colour text-xl font-bold">
+                    Generate prediction
+                  </h2>
+                  <button
+                    type="button"
+                    className="practice-hub__panel-close"
+                    onClick={closePredictionModal}
+                    aria-label="Close"
+                  >
+                    <LuX size={24} />
+                  </button>
+                </div>
+
+                <div className="prediction-flow__controls-row prediction-flow__controls-row--modal mb-5">
+                  <div className="prediction-flow__field">
+                    <label className="prediction-flow__label color-txt-sub">Subject</label>
+                    <select
+                      value={predictionSubject}
+                      onChange={(e) => setPredictionSubject(e.target.value)}
+                      className={PREDICTION_SELECT_CLASS}
+                    >
+                      {PRACTICE_HUB_SUBJECTS.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="prediction-flow__field">
+                    <label className="prediction-flow__label color-txt-sub">Level</label>
+                    <select
+                      value={predictionLevel}
+                      onChange={(e) => setPredictionLevel(e.target.value)}
+                      className={PREDICTION_SELECT_CLASS}
+                    >
+                      <option value="higher">Higher</option>
+                      <option value="ordinary">Ordinary</option>
+                    </select>
+                  </div>
+                  {predictionUsesPastPapers && (
+                    <div className="prediction-flow__field">
+                      <label className="prediction-flow__label color-txt-sub">Paper</label>
+                      <select
+                        value={predictionPaper}
+                        onChange={(e) => setPredictionPaper(Number(e.target.value) as 1 | 2)}
+                        className={PREDICTION_SELECT_CLASS}
+                      >
+                        <option value={1}>Paper 1</option>
+                        <option value={2}>Paper 2</option>
+                      </select>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => predictionFlowRef.current?.generate()}
+                    disabled={predictionGenerating}
+                    className="blue-btn prediction-flow__generate-btn"
+                  >
+                    <LuSparkles size={18} aria-hidden className={predictionGenerating ? "animate-spin" : ""} />
+                    {predictionGenerating ? "Generating…" : "Generate prediction"}
+                  </button>
+                </div>
+
+                <GeneratePredictionFlow
+                  ref={predictionFlowRef}
+                  key={`${predictionSubject}-${predictionLevel}-${predictionPaper}`}
+                  subject={predictionSubject}
+                  level={predictionLevel}
+                  paperNumber={predictionPaper}
+                  onPaperNumberChange={setPredictionPaper}
+                  embeddedControls
+                  onLoadingChange={setPredictionGenerating}
+                  onBlueprintReady={() => {
+                    setTutorialStep((current) => (current === 1 ? 2 : current));
+                  }}
+                  onSaved={(paperId) => {
+                    setPapersReloadKey((k) => k + 1);
+                    setShowPredictionModal(false);
+                    if (tutorialStepRef.current === 1 || tutorialStepRef.current === 2) {
+                      setTutorialHighlightPaperId(paperId);
+                      setTutorialStep(3);
+                    }
+                  }}
+                />
+                </div>
+              </div>
+            </div>
+          </>,
+          getThemedPortalTarget()
+        )}
+
+      {cardTutorialUiReady && cardSpotlightRect ? (
+        <>
+          <PredictionCardTutorialScrim anchorRect={cardSpotlightRect} />
+          <PredictionCardTutorialCallout anchorRect={cardSpotlightRect} />
+        </>
+      ) : null}
 
     </div>
   );
@@ -1296,6 +1791,91 @@ export default function PracticeHub() {
 /** Tags on card: one line only; show first N then "see more" */
 const TAGS_VISIBLE_ON_CARD = 3;
 
+function ContentAccessBadge({ label }: { label: ContentAccessLabel }) {
+  if (label === "free") {
+    return <span className="practice-hub__access-badge practice-hub__access-badge--free">Free</span>;
+  }
+  return (
+    <span className="practice-hub__access-badge practice-hub__access-badge--locked">
+      <LuLock size={10} aria-hidden />
+      ACE
+    </span>
+  );
+}
+
+/** Prediction card for image-based subjects (thumbnail from Storage, not PDF). */
+function ImagePredictionCard({
+  paper,
+  onSelect,
+  accessLabel,
+}: {
+  paper: ExamPaper;
+  onSelect: () => void;
+  accessLabel?: ContentAccessLabel | null;
+}) {
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const loaded = useRef(false);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || loaded.current || !paper.storagePath) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        loaded.current = true;
+        getDownloadURL(storageRef(storage, paper.storagePath))
+          .then(setThumbUrl)
+          .catch(() => {});
+      },
+      { rootMargin: "100px", threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [paper.storagePath]);
+
+  const levelLabel = formatLevelDisplay(paper.level);
+
+  return (
+    <div
+      ref={cardRef}
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      className="deck paper-card flex flex-col"
+    >
+      <div className="color-border" />
+      <div className="image overflow-hidden relative">
+        {accessLabel && (
+          <div className="absolute top-2 right-2 z-10">
+            <ContentAccessBadge label={accessLabel} />
+          </div>
+        )}
+        {thumbUrl ? (
+          <img src={thumbUrl} alt="" className="w-full h-full object-cover object-center" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center color-txt-sub text-xs">
+            <LuSparkles size={20} className="opacity-50" aria-hidden />
+          </div>
+        )}
+      </div>
+      <div className="bg-overlay" />
+      <div className="flex w-full z-50 mt-21 px-3 py-2 items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="txt-heading-colour font-bold text-sm truncate">{paper.label}</p>
+          <p className="txt-sub color-txt-sub text-xs">{levelLabel} · Image prediction</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Paper card – deck styling (shadow-small, color-border, txt-heading-colour, blue-btn tags) */
 function PaperCard({
   paper,
@@ -1303,12 +1883,14 @@ function PaperCard({
   questionCount = 0,
   tags = [],
   onSelect,
+  accessLabel,
 }: {
   paper: ExamPaper;
   getPaperBlob: (p: ExamPaper) => Promise<Blob>;
   questionCount?: number;
   tags?: string[];
   onSelect: () => void;
+  accessLabel?: ContentAccessLabel | null;
 }) {
   const [blob, setBlob] = useState<Blob | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -1330,7 +1912,7 @@ function PaperCard({
   }, [paper, getPaperBlob]);
 
   const snapshot = usePaperSnapshot(blob, 1);
-  const levelLabel = formatLevel(paper.level);
+  const levelLabel = formatLevelDisplay(paper.level);
   const visibleTags = tags.slice(0, TAGS_VISIBLE_ON_CARD);
   const hasMoreTags = tags.length > TAGS_VISIBLE_ON_CARD;
 
@@ -1350,8 +1932,12 @@ function PaperCard({
     >
 
       <div className="color-border" />
-      {/* Top 75%: PDF title page (same as deck .image) */}
-      <div className="image overflow-hidden">
+      <div className="image overflow-hidden relative">
+        {accessLabel && (
+          <div className="absolute top-2 right-2 z-10">
+            <ContentAccessBadge label={accessLabel} />
+          </div>
+        )}
         {snapshot ? (
           <img src={snapshot} alt="" className="w-full h-full object-cover object-center" />
         ) : (
@@ -1405,10 +1991,14 @@ function PaperCard({
 /** Topic card for image-based subjects */
 function TopicCard({
   topic,
+  levelLabel,
   onSelect,
+  accessLabel,
 }: {
   topic: ImageTopic;
+  levelLabel: string;
   onSelect: () => void;
+  accessLabel?: ContentAccessLabel | null;
 }) {
   return (
     <div
@@ -1424,7 +2014,12 @@ function TopicCard({
       className="deck paper-card flex flex-col"
     >
       <div className="color-border" />
-      <div className="image overflow-hidden flex items-center justify-center">
+      <div className="image overflow-hidden flex items-center justify-center relative">
+        {accessLabel && (
+          <div className="absolute top-2 right-2 z-10">
+            <ContentAccessBadge label={accessLabel} />
+          </div>
+        )}
         {topic.thumbnailUrl ? (
           <img src={topic.thumbnailUrl} alt="" className="w-full h-full object-contain" />
         ) : (
@@ -1439,6 +2034,7 @@ function TopicCard({
           <LuImage size={18} className="color-txt-accent shrink-0" aria-hidden />
           <div className="flex flex-col ml-2 min-w-0 flex-1">
             <span className="txt-heading-colour truncate">{topic.displayName}</span>
+            <span className="txt color-txt-sub">{levelLabel}</span>
           </div>
           <div className="ml-auto flex flex-col items-end justify-end shrink-0">
             <span className="txt color-txt-sub">
@@ -1453,10 +2049,18 @@ function TopicCard({
 
 /** Icon thumbnail for favourite subject cards on the landing page */
 function SubjectIconImage({ subjectId }: { subjectId: string }) {
+  if (subjectId === "irish") {
+    return (
+      <div className="image overflow-hidden flex items-center justify-center color-bg">
+        <IrishHarpIcon size={48} className="color-txt-accent opacity-70" />
+      </div>
+    );
+  }
+
   const Icon = getSubjectIcon(subjectId);
   return (
-    <div className="image overflow-hidden flex items-center justify-center color-bg-grey-5">
-      <Icon size={36} className="color-txt-accent opacity-60" />
+    <div className="image overflow-hidden flex items-center justify-center color-bg">
+      <Icon size={48} className="color-txt-accent opacity-70" />
     </div>
   );
 }
