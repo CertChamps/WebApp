@@ -19,6 +19,7 @@ import {
     type PaymentProviderName,
     type PriceDetails,
 } from "../lib/payments";
+import { iapDebug, iapDebugError, iapDebugWarn, timed } from "../lib/payments/paymentsDebug";
 
 interface UsePaymentsResult {
     /** Which provider will be used for a NEW purchase right now. */
@@ -63,11 +64,27 @@ export function usePayments(): UsePaymentsResult {
     useEffect(() => {
         let cancelled = false;
         (async () => {
+            iapDebug("usePayments:loadPrice:start", { activeProvider });
             try {
                 const provider = getPaymentProvider();
-                const p = await provider.getPrice();
+                const ready = await timed("usePayments:loadPrice:isReady", () =>
+                    provider.isReady()
+                );
+                iapDebug("usePayments:loadPrice:providerReady", {
+                    provider: provider.name,
+                    ready,
+                });
+                const p = await timed("usePayments:loadPrice:getPrice", () =>
+                    provider.getPrice()
+                );
+                iapDebug("usePayments:loadPrice:done", {
+                    provider: provider.name,
+                    hasPrice: !!p,
+                    formatted: p?.formatted ?? null,
+                });
                 if (!cancelled) setPrice(p);
             } catch (err) {
+                iapDebugError("usePayments:loadPrice:failed", err);
                 console.warn("[usePayments] getPrice failed", err);
             } finally {
                 if (!cancelled) setPriceLoading(false);
@@ -76,7 +93,7 @@ export function usePayments(): UsePaymentsResult {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [activeProvider]);
 
     const clearStatus = useCallback(() => {
         setError(null);
@@ -87,9 +104,31 @@ export function usePayments(): UsePaymentsResult {
         setError(null);
         setSuccess(false);
         setPurchaseLoading(true);
+        iapDebug("usePayments.purchase:start", { activeProvider });
         try {
             const provider = getPaymentProvider();
-            const result = await provider.purchase();
+            const ready = await timed("usePayments.purchase:isReady", () =>
+                provider.isReady()
+            );
+            iapDebug("usePayments.purchase:pre-flight", {
+                provider: provider.name,
+                ready,
+            });
+            if (!ready) {
+                iapDebugWarn("usePayments.purchase:providerNotReady", {
+                    provider: provider.name,
+                });
+            }
+            iapDebug("usePayments.purchase:calling provider.purchase");
+            const result = await timed("usePayments.purchase:provider.purchase", () =>
+                provider.purchase()
+            );
+            iapDebug("usePayments.purchase:result", {
+                provider: provider.name,
+                success: result.success,
+                cancelled: result.cancelled ?? false,
+                error: result.error ?? null,
+            });
             if (result.cancelled) {
                 return false;
             }
@@ -101,10 +140,14 @@ export function usePayments(): UsePaymentsResult {
             // Apple. We mark success and let the caller refetch the user.
             setSuccess(true);
             return true;
+        } catch (err) {
+            iapDebugError("usePayments.purchase:threw", err);
+            setError(err instanceof Error ? err.message : "Purchase failed.");
+            return false;
         } finally {
             setPurchaseLoading(false);
         }
-    }, []);
+    }, [activeProvider]);
 
     const openManagement = useCallback(async (): Promise<void> => {
         setError(null);

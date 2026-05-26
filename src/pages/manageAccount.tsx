@@ -8,8 +8,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { usePayments, refetchSubscriptionState } from "../hooks/usePayments";
+import { iapDebug } from "../lib/payments/paymentsDebug";
 import { signOutSession } from "../lib/authSession";
 import { deleteAccount as deleteAccountRequest } from "../lib/deleteAccount";
+import { prepareProfileImagePreview, revokeProfileImagePreview } from "../lib/profileImage";
 import "../styles/settings.css";
 
 type TabId = "home" | "payments";
@@ -206,6 +208,7 @@ const ManageAccount = () => {
     const [zoom, setZoom] = useState(1);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
     const [showCropper, setShowCropper] = useState(false);
+    const [avatarError, setAvatarError] = useState("");
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [paymentCancel, setPaymentCancel] = useState(false);
     const [logoutLoading, setLogoutLoading] = useState(false);
@@ -224,11 +227,19 @@ const ManageAccount = () => {
         }
     }, []);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setPreviewUrl(URL.createObjectURL(file));
+        e.target.value = "";
+        if (!file) return;
+        setAvatarError("");
+        try {
+            const preview = await prepareProfileImagePreview(file);
+            revokeProfileImagePreview(previewUrl);
+            setPreviewUrl(preview);
             setShowCropper(true);
+        } catch (err) {
+            console.error("Profile image failed:", err);
+            setAvatarError("Could not load that image. Try another photo.");
         }
     };
 
@@ -270,6 +281,7 @@ const ManageAccount = () => {
         await updateDoc(userRef, { picture: path });
         user.picture = downloadURL;
         setUser({ ...user, picture: downloadURL });
+        revokeProfileImagePreview(previewUrl);
         setShowCropper(false);
         setPreviewUrl(null);
     };
@@ -321,7 +333,15 @@ const ManageAccount = () => {
     // of the app sees `isPro: true` immediately. Stripe path bails out
     // before this because `window.location.href` already navigated away.
     const handleUpgradeToPro = async () => {
+        iapDebug("manageAccount.handleUpgradeToPro:tap", {
+            activeProvider: payments.activeProvider,
+            priceLoading: payments.priceLoading,
+            priceFormatted: payments.price?.formatted ?? null,
+            purchaseLoading: payments.purchaseLoading,
+            isPro: user?.isPro === true,
+        });
         const ok = await payments.purchase();
+        iapDebug("manageAccount.handleUpgradeToPro:done", { ok });
         if (ok) {
             setPaymentSuccess(true);
             await refetchSubscriptionState(setUser);
@@ -417,6 +437,9 @@ const ManageAccount = () => {
                                     className="hidden"
                                     onChange={handleFileChange}
                                 />
+                                {avatarError && (
+                                    <p className="text-red-500 text-sm mt-2">{avatarError}</p>
+                                )}
                             </div>
 
                             {/* Username */}
@@ -590,6 +613,7 @@ const ManageAccount = () => {
                                 type="button"
                                 className="px-4 py-2 color-txt-sub hover:color-txt-main"
                                 onClick={() => {
+                                    revokeProfileImagePreview(previewUrl);
                                     setShowCropper(false);
                                     setPreviewUrl(null);
                                 }}

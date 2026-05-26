@@ -47,10 +47,7 @@ import {
   stripPredictionTutorialQuery,
   type PredictionTutorialStep,
 } from "../lib/predictionTutorial";
-import {
-  consumePendingPracticeSessionTutorial,
-  markPendingPracticeSessionTutorial,
-} from "../lib/practiceSessionTutorial";
+import { markPendingPracticeSessionTutorial } from "../lib/practiceSessionTutorial";
 import { resolvePredictionContentType } from "../lib/predictions/api";
 import {
   loadStoredImagePredictionQuestions,
@@ -1114,8 +1111,8 @@ export default function PracticeHub() {
         {subjectFilter != null && (
         <section className="practice-hub__filter-section pb-2 w-full flex-shrink-0 mb-2" aria-label="Filters">
             <div className="practice-hub__filter-toolbar flex items-center flex-wrap gap-2 min-w-0">
-            <h2 className="txt-heading-colour text-xl font-bold mr-1 shrink-0">
-              {isImageMode ? "Practice Questions" : "State Exam Papers"}
+            <h2 className="txt-heading-colour text-md font-bold mr-1 shrink-0">
+              {isImageMode ? "Practice Questions" : "Exam Papers"}
             </h2>
 
             {!isImageMode && (
@@ -1214,7 +1211,7 @@ export default function PracticeHub() {
             </div>
 
             <div className="practice-hub__filter-aside flex items-center justify-between gap-2 min-w-0 pl-3">
-              <h3 className="txt-heading-colour text-xl font-bold shrink-0">Topic</h3>
+              <h3 className="txt-heading-colour text-md font-bold shrink-0">Topic</h3> 
               <button
                 type="button"
                 onClick={resetAllFilters}

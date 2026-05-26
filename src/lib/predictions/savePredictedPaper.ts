@@ -2,6 +2,7 @@ import { doc, writeBatch } from "firebase/firestore";
 import { auth, db } from "../../../firebase";
 import { buildPredictionSavePayload } from "./buildPredictionSavePayload";
 import { predictionDocRef, predictionQuestionsRef } from "./firestorePaths";
+import { getCurrentPredictionOwner } from "./predictionOwner";
 import type { PredictedPaperBlueprint } from "./types";
 
 const SAVE_PREDICTION_URL =
@@ -52,7 +53,7 @@ async function saveViaCloudFunction(
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error(
-        "Save service is not deployed yet. Ask an admin to run: firebase deploy --only functions:savePredictedPaper — or add Firestore rules for questions/leavingcert/predictions (see FIRESTORE_PREDICTIONS_RULES.md)."
+        "Save service is not deployed yet. Ask an admin to run: firebase deploy --only functions:savePredictedPaper — or add Firestore rules for user-data/{uid}/predictions (see FIRESTORE_PREDICTIONS_RULES.md)."
       );
     }
     throw new Error(data.error || `Failed to save prediction (${response.status}).`);
@@ -86,17 +87,17 @@ export async function savePredictedPaperToFirestore(
   level: string,
   blueprint: PredictedPaperBlueprint
 ): Promise<string> {
-  const currentUser = auth.currentUser;
-  if (!currentUser) {
+  const owner = await getCurrentPredictionOwner();
+  if (!owner) {
     throw new Error("You must be signed in to save a prediction.");
   }
-  const uid = currentUser.uid;
 
   const payload = await buildPredictionSavePayload(subject, level, blueprint);
-  payload.predictionDoc.generatedBy = uid;
+  payload.predictionDoc.generatedBy = owner.uid;
+  payload.predictionDoc.generatedByName = owner.name;
 
   try {
-    return await saveViaFirestore(uid, payload);
+    return await saveViaFirestore(owner.uid, payload);
   } catch (err) {
     if (!isPermissionError(err)) {
       if (isFetchError(err)) {
@@ -110,7 +111,7 @@ export async function savePredictedPaperToFirestore(
     } catch (cloudErr) {
       if (isFetchError(cloudErr)) {
         throw new Error(
-          "Could not save: Firestore denied the write and the cloud save service is unreachable. Add admin write rules for questions/leavingcert/predictions in Firebase (see FIRESTORE_PREDICTIONS_RULES.md), or deploy functions:savePredictedPaper."
+          "Could not save: Firestore denied the write and the cloud save service is unreachable. Add Firestore rules for user-data/{uid}/predictions in Firebase (see FIRESTORE_PREDICTIONS_RULES.md), or deploy functions:savePredictedPaper."
         );
       }
       throw cloudErr;

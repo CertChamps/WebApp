@@ -15,6 +15,8 @@ type CroppedPdfRegionsProps = {
   regions: PdfRegion[];
   pageWidth: number;
   className?: string;
+  onDocumentLoadSuccess?: () => void;
+  onDocumentLoadError?: (error: Error) => void;
 };
 
 /**
@@ -27,6 +29,8 @@ function CroppedPdfRegions({
   regions,
   pageWidth,
   className = "",
+  onDocumentLoadSuccess,
+  onDocumentLoadError,
 }: CroppedPdfRegionsProps) {
   if (!file || regions.length === 0) {
     return (
@@ -39,7 +43,11 @@ function CroppedPdfRegions({
   return (
     <Document
       file={file}
-      onLoadError={(err) => console.error("CroppedPdfRegions PDF load error:", err)}
+      onLoadSuccess={() => onDocumentLoadSuccess?.()}
+      onLoadError={(err) => {
+        console.error("CroppedPdfRegions PDF load error:", err);
+        onDocumentLoadError?.(err instanceof Error ? err : new Error(String(err)));
+      }}
     >
       {regions.map((region, i) => {
         const scale = pageWidth / 595;

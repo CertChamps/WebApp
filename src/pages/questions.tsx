@@ -1,5 +1,5 @@
 // Hooks
-import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import useQuestions from "../hooks/useQuestions";
 import { OptionsContext } from "../context/OptionsContext";
@@ -37,7 +37,7 @@ import {
 
 // Components
 import { createPortal } from "react-dom";
-import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle } from "react-icons/lu";
+import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle, LuEye, LuEyeOff } from "react-icons/lu";
 import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
 import QuestionTitlePicker, { type QuestionPickerItem } from "../components/questions/QuestionTitlePicker";
@@ -66,6 +66,7 @@ import {
   type PracticeSessionTutorialStep,
 } from "../lib/practiceSessionTutorial";
 import { getDocumentCached } from "../utils/pdfDocumentCache";
+import { getLogTablesPdfBlob } from "../utils/logTablesPdf";
 import type { InjectedExchange } from "../components/ai/useAI";
 import { runGrading } from "../lib/grading/GradingEngine";
 import type { CanvasAnnotation, CanvasCapturePayload, GradingStatus, Pass1Result } from "../lib/grading/GradingTypes";
@@ -98,6 +99,29 @@ function isSavedGradingAnnotations(value: unknown): value is CanvasAnnotation[] 
         }
         return false;
     });
+}
+
+function PaperPanelToggle({
+    visible,
+    onToggle,
+    className = "",
+}: {
+    visible: boolean;
+    onToggle: () => void;
+    className?: string;
+}) {
+    return (
+        <button
+            type="button"
+            className={`questions-paper-toggle ${className}`}
+            onClick={onToggle}
+            aria-label={visible ? "Hide question paper" : "Show question paper"}
+            aria-pressed={visible}
+            title={visible ? "Hide question paper" : "Show question paper"}
+        >
+            {visible ? <LuEyeOff size={16} strokeWidth={2} /> : <LuEye size={16} strokeWidth={2} />}
+        </button>
+    );
 }
 
 function gradingStatusLabel(status: GradingStatus): string {
@@ -561,6 +585,7 @@ export default function Questions() {
     const [paperQuestionPosition, setPaperQuestionPosition] = useState(1);
     const [scrollToPage, setScrollToPage] = useState<number | null>(null);
     const [isFullPaperExpanded, setIsFullPaperExpanded] = useState(false);
+    const [paperPanelVisible, setPaperPanelVisible] = useState(true);
     const [markingSchemeBlob, setMarkingSchemeBlob] = useState<Blob | null>(null);
     const [sidebarOpenPanel, setSidebarOpenPanel] = useState<"ai" | "threads" | "timer" | "markingscheme" | null>(null);
     const [markingSchemeQuestionIndex, setMarkingSchemeQuestionIndex] = useState<number | null>(null);
@@ -570,7 +595,7 @@ export default function Questions() {
     const [paperDocumentLoaded, setPaperDocumentLoaded] = useState(false);
     const [paperNumPages, setPaperNumPages] = useState(0);
     const [logTablesBlob, setLogTablesBlob] = useState<Blob | null>(null);
-    const [logTablesPreloaded, setLogTablesPreloaded] = useState(false);
+    const [snippetPdfLoaded, setSnippetPdfLoaded] = useState(false);
     const [viewportWidth, setViewportWidth] = useState(
         typeof window !== "undefined" ? window.innerWidth : 1024
     );
@@ -1099,7 +1124,18 @@ export default function Questions() {
         setPosition(1);
     }, [collectionPaths]);
 
-    // Load paper as Blob when selected (avoids CORS; react-pdf accepts Blob). Cache in useExamPapers makes revisits instant.
+    // Preload log tables PDF into state (blob avoids Capacitor relative-path crash in PDF.js).
+    useEffect(() => {
+        let cancelled = false;
+        getLogTablesPdfBlob().then((blob) => {
+            if (!cancelled && blob) setLogTablesBlob(blob);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    // Load paper as Blob when selected. IndexedDB + memory cache in useExamPapers; keep prior blob visible while fetching next.
     useEffect(() => {
         if (!selectedPaper) {
             setPaperBlob(null);
@@ -1110,7 +1146,6 @@ export default function Questions() {
             paperQuestions[paperQuestionPosition - 1] ??
             filteredPaperQuestions[paperQuestionPosition - 1];
         let cancelled = false;
-        setPaperBlob(null);
         setPaperLoadError(null);
         const loadBlob = activeQuestion
             ? getPaperBlobForQuestion(selectedPaper, activeQuestion)
@@ -1425,28 +1460,21 @@ export default function Questions() {
     // Reset PDF document loaded and page count when paper blob changes (new paper)
     useEffect(() => {
         setPaperDocumentLoaded(false);
+        setSnippetPdfLoaded(false);
         setPaperNumPages(0);
     }, [paperBlob]);
 
-    // Preload log tables PDF so modal opens instantly
+    // If modal opens before preload finishes, fetch again.
     useEffect(() => {
+        if (!showLogTables || logTablesBlob) return;
         let cancelled = false;
-        setLogTablesPreloaded(false);
-        fetch("/assets/log_tables.pdf")
-            .then((res) => (res.ok ? res.blob() : null))
-            .then((blob) => {
-                if (!cancelled && blob) {
-                    setLogTablesBlob(blob);
-                }
-            })
-            .catch(() => {})
-            .finally(() => {
-                if (!cancelled) setLogTablesPreloaded(true);
-            });
+        getLogTablesPdfBlob().then((blob) => {
+            if (!cancelled && blob) setLogTablesBlob(blob);
+        });
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [showLogTables, logTablesBlob]);
 
     // When landing with paperId + questionId/indexInPaper (e.g. shared link or Practice Hub search), set pending so we jump to that question when paper questions load
     useEffect(() => {
@@ -2295,11 +2323,24 @@ export default function Questions() {
                                 </div>
                             </div>
                         </div>
-                    ) : (
-                        <div className={`flex h-auto max-h-full min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}>
+                    ) : paperPanelVisible ? (
+                        <div className={`relative flex h-auto max-h-full min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}>
+                            <PaperPanelToggle
+                                visible
+                                onToggle={() => setPaperPanelVisible(false)}
+                                className="absolute top-3 right-3 z-40"
+                            />
                             <div className="min-h-0 min-w-0 h-auto max-h-full flex flex-col pl-2 overflow-hidden pointer-events-none">
                                 {renderImageContent()}
                             </div>
+                        </div>
+                    ) : (
+                        <div className={`shrink-0 pt-3 pointer-events-auto self-start ${options.leftHandMode ? "ml-auto pr-2" : "pl-2"}`}>
+                            <PaperPanelToggle
+                                visible={false}
+                                onToggle={() => setPaperPanelVisible(true)}
+                                className="questions-paper-toggle--active"
+                            />
                         </div>
                     );
                 })()}
@@ -2346,8 +2387,12 @@ export default function Questions() {
                             // When hasPageRegions we preload full paper off-screen, so view "uses" Document whenever we might show it
                             const viewUsesDocument = !hasPageRegions || isFullPaperExpanded;
                             const fullPaperPreloaded = !hasPageRegions || paperDocumentLoaded;
+                            const snippetReady = !hasPageRegions || isFullPaperExpanded || snippetPdfLoaded;
                             const showPdfLoadingOverlay =
-                                (!viewUsesDocument ? false : !fullPaperPreloaded) || !logTablesPreloaded;
+                                !paperBlob || paperLoadError
+                                    ? false
+                                    : (viewUsesDocument && !fullPaperPreloaded) ||
+                                      (showSnippetView && !snippetReady);
 
                             const paperActionButtons = (
                                 <>
@@ -2465,6 +2510,11 @@ export default function Questions() {
                                                                 height: r.height ?? 150,
                                                             }))}
                                                             pageWidth={snippetWidth}
+                                                            onDocumentLoadSuccess={() => setSnippetPdfLoaded(true)}
+                                                            onDocumentLoadError={(err) => {
+                                                                setPaperLoadError(err.message ?? "Failed to display PDF");
+                                                                setSnippetPdfLoaded(true);
+                                                            }}
                                                         />
                                                         {markingSchemeBlob && currentPaperQuestion?.markingSchemePageRange && (
                                                             <div className="pt-2 flex justify-center" style={{ width: snippetWidth }}>
@@ -2485,8 +2535,9 @@ export default function Questions() {
                                                         )}
                                                     </div>
                                                 </motion.div>
-                                                {/* Full paper: PDF viewbox (left) + panels (right); wrapped and centered */}
-                                                {(() => {
+                                                {/* Full paper: only mount when expanded (avoids parsing entire PDF off-screen on iPad). */}
+                                                {isFullPaperExpanded &&
+                                                (() => {
                                                     const panelWidthPx = 176;
                                                     const isTablet = !options.laptopMode;
                                                     const fullPaperTotalWidth = isTablet ? snippetWidth : snippetWidth + panelWidthPx;
@@ -2661,9 +2712,9 @@ export default function Questions() {
                                     </div>
                                 </div>
                             </div>
-                        ) : (
+                        ) : paperPanelVisible ? (
                             <div
-                                className={`flex h-auto max-h-[calc(100dvh-7rem)] min-h-[360px] w-full max-w-sm shrink-0 flex-col overflow-hidden self-start pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}
+                                className={`relative flex h-auto max-h-[calc(100dvh-7rem)] min-h-[360px] w-full max-w-sm shrink-0 flex-col overflow-hidden self-start pointer-events-none ${options.leftHandMode ? "ml-auto" : ""}`}
                                 style={{
                                     height:
                                         !isFullPaperExpanded && currentPaperQuestion?.pageRegions?.length
@@ -2671,9 +2722,22 @@ export default function Questions() {
                                             : "calc(100dvh - 7rem)",
                                 }}
                             >
+                                <PaperPanelToggle
+                                    visible
+                                    onToggle={() => setPaperPanelVisible(false)}
+                                    className="absolute top-3 right-3 z-40"
+                                />
                                 <div className="min-h-0 min-w-0 h-full max-h-full flex flex-col overflow-hidden p-2 pointer-events-none">
                                     {renderPdfContent()}
                                 </div>
+                            </div>
+                        ) : (
+                            <div className={`shrink-0 pt-3 pointer-events-auto self-start ${options.leftHandMode ? "ml-auto pr-2" : "pl-2"}`}>
+                                <PaperPanelToggle
+                                    visible={false}
+                                    onToggle={() => setPaperPanelVisible(true)}
+                                    className="questions-paper-toggle--active"
+                                />
                             </div>
                         );
                     })()
@@ -2694,7 +2758,7 @@ export default function Questions() {
                             setShowLogTables(false);
                             setLogTablesQuestionIndex(null);
                         }}
-                        file={logTablesBlob}
+                        file={logTablesBlob ?? null}
                     />,
                     document.body
                 )}

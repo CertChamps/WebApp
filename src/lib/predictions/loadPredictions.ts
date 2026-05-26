@@ -27,6 +27,7 @@ export async function loadPredictionPapers(
   const papers: ExamPaper[] = [];
   snap.docs.forEach((d) => {
     const data = d.data();
+    if (subjectFilter && data.subject !== subjectFilter) return;
     const subject = typeof data.subject === "string" ? data.subject : undefined;
     const level = typeof data.level === "string" ? data.level : undefined;
     const year = typeof data.year === "number" ? data.year : undefined;

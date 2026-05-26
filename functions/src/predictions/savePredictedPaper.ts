@@ -50,12 +50,25 @@ export const savePredictedPaper = functions.https.onRequest(
         }
 
         const db = admin.firestore();
-        // Predictions are personal: store under the signed-in user's user-data namespace.
+
+        let generatedByName =
+          typeof predictionDoc.generatedByName === "string"
+            ? predictionDoc.generatedByName.trim()
+            : "";
+        if (!generatedByName) {
+          const userSnap = await db.doc(`user-data/${decoded.uid}`).get();
+          const username = userSnap.data()?.username;
+          if (typeof username === "string" && username.trim()) {
+            generatedByName = username.trim();
+          }
+        }
+
         const paperRef = db.doc(`user-data/${decoded.uid}/predictions/${predictionId}`);
         const batch = db.batch();
         batch.set(paperRef, {
           ...predictionDoc,
           generatedBy: decoded.uid,
+          ...(generatedByName ? { generatedByName } : {}),
         });
 
         for (const question of questions) {

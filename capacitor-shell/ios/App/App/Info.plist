@@ -56,5 +56,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>CertChamps needs camera access so you can take a profile photo.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>CertChamps needs photo library access so you can choose a profile picture.</string>
 </dict>
 </plist>

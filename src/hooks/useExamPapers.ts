@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getBlob, ref } from "firebase/storage";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
-import { storage, db } from "../../firebase";
+import { db } from "../../firebase";
 import { getFirestoreSubjectIds } from "../data/practiceHubSubjects";
 import { computeFreePaperKeys } from "../lib/contentAccess";
 import { loadPredictionPapers } from "../lib/predictions/loadPredictions";
 import { predictionQuestionsRef } from "../lib/predictions/firestorePaths";
 
 export { isPaperFree, isLegacyFreePaper, canAccessPaper, computeFreePaperKeys } from "../lib/contentAccess";
+import { fetchStorageBlob } from "../utils/fetchStorageBlob";
+import {
+  loadPaperBlobFromCache,
+  removePaperBlobFromCache,
+  savePaperBlobToCache,
+} from "../utils/paperBlobStorage";
+import { isValidPdfBlob } from "../utils/pdfBlobUtils";
 
 export function normalizePaperLevel(level: string | undefined | null): string {
   const raw = String(level ?? "").trim().toLowerCase();
@@ -194,7 +200,6 @@ export function useExamPapers(
           if (!subjSnap.exists()) continue;
 
           let levelIds = (subjSnap.data()?.sections as string[] | undefined) ?? [];
-          // Fallback when subject doc has no sections: try common level ids (e.g. applied-maths same structure as maths)
           const usingFallbackLevels =
             levelIds.length === 0 && (subId === "maths" || subId === "applied-maths");
           if (usingFallbackLevels) {
@@ -213,7 +218,6 @@ export function useExamPapers(
               level
             );
             const levelSnap = await getDoc(levelRef);
-            // When using fallback level ids, still try the papers collection even if level doc is missing or has no "papers" in sections
             if (!usingFallbackLevels) {
               if (!levelSnap.exists()) continue;
               const levelSections =
@@ -243,8 +247,7 @@ export function useExamPapers(
               if (isPrediction || isComposite) return;
               if (!storagePath) return;
 
-              const year =
-                typeof data.year === "number" ? data.year : undefined;
+              const year = typeof data.year === "number" ? data.year : undefined;
               const label =
                 typeof data.label === "string" && data.label.trim()
                   ? data.label.trim()
@@ -298,25 +301,13 @@ export function useExamPapers(
     };
   }, [subjectId, loadAllWhenNull, includePredictions, subjectIds, reloadKey, uid]);
 
-  // In-memory blob cache (LRU, max 10) so switching papers is instant when revisiting
+  // In-memory blob cache (LRU) — instant when revisiting in the same session
   const paperBlobCache = useRef<Map<string, Blob>>(new Map());
   const paperBlobCacheOrder = useRef<string[]>([]);
   const MAX_BLOB_CACHE = 10;
+  const inflightDownloads = useRef<Map<string, Promise<Blob>>>(new Map());
 
-  const getPaperBlob = useCallback(async (paper: ExamPaper): Promise<Blob> => {
-    const key = paper.storagePath;
-    if (!key) {
-      throw new Error("This paper has no PDF — open questions individually.");
-    }
-    const cached = paperBlobCache.current.get(key);
-    if (cached) {
-      // Move to end (most recently used)
-      paperBlobCacheOrder.current = paperBlobCacheOrder.current.filter((k) => k !== key);
-      paperBlobCacheOrder.current.push(key);
-      return cached;
-    }
-    const pathRef = ref(storage, paper.storagePath);
-    const blob = await getBlob(pathRef);
+  const rememberBlob = useCallback((key: string, blob: Blob) => {
     paperBlobCache.current.set(key, blob);
     paperBlobCacheOrder.current = paperBlobCacheOrder.current.filter((k) => k !== key);
     paperBlobCacheOrder.current.push(key);
@@ -324,8 +315,53 @@ export function useExamPapers(
       const oldest = paperBlobCacheOrder.current.shift();
       if (oldest) paperBlobCache.current.delete(oldest);
     }
-    return blob;
   }, []);
+
+  const getPaperBlob = useCallback(async (paper: ExamPaper): Promise<Blob> => {
+    const key = paper.storagePath;
+    if (!key) {
+      throw new Error("This paper has no PDF — open questions individually.");
+    }
+    const mem = paperBlobCache.current.get(key);
+    if (mem) {
+      if (await isValidPdfBlob(mem)) {
+        paperBlobCacheOrder.current = paperBlobCacheOrder.current.filter((k) => k !== key);
+        paperBlobCacheOrder.current.push(key);
+        return mem;
+      }
+      paperBlobCache.current.delete(key);
+    }
+
+    const inflight = inflightDownloads.current.get(key);
+    if (inflight) return inflight;
+
+    const task = (async () => {
+      const fromDisk = await loadPaperBlobFromCache(key);
+      if (fromDisk) {
+        if (await isValidPdfBlob(fromDisk)) {
+          rememberBlob(key, fromDisk);
+          return fromDisk;
+        }
+        void removePaperBlobFromCache(key);
+        paperBlobCache.current.delete(key);
+      }
+
+      const blob = await fetchStorageBlob(key);
+      if (!(await isValidPdfBlob(blob))) {
+        throw new Error("Downloaded file is not a valid PDF");
+      }
+      rememberBlob(key, blob);
+      void savePaperBlobToCache(key, blob);
+      return blob;
+    })();
+
+    inflightDownloads.current.set(key, task);
+    try {
+      return await task;
+    } finally {
+      inflightDownloads.current.delete(key);
+    }
+  }, [rememberBlob]);
 
   /** Load PDF blob for a question, resolving composite prediction source paths. */
   const getPaperBlobForQuestion = useCallback(
@@ -357,10 +393,15 @@ export function useExamPapers(
       const cached = msBlobCache.current.get(msPath);
       if (cached !== undefined) return cached;
       try {
-        const pathRef = ref(storage, msPath);
-        const blob = await getBlob(pathRef);
+        const fromDisk = await loadPaperBlobFromCache(`ms:${msPath}`);
+        if (fromDisk) {
+          msBlobCache.current.set(msPath, fromDisk);
+          return fromDisk;
+        }
+        const blob = await fetchStorageBlob(msPath);
         msBlobCache.current.set(msPath, blob);
-        if (msBlobCache.current.size > 5) {
+        void savePaperBlobToCache(`ms:${msPath}`, blob);
+        if (msBlobCache.current.size > 8) {
           const firstKey = msBlobCache.current.keys().next().value;
           if (firstKey != null) msBlobCache.current.delete(firstKey);
         }

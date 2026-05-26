@@ -86,9 +86,18 @@ export interface CursorPos {
 
 /* ─── Public interfaces ──────────────────────────────────── */
 
+export interface HistoryLine {
+  exprLatex: string;
+  resultLatex: string;
+}
+
 export interface CalcState {
-  /** The LaTeX string for the input line (includes cursor) */
-  displayExpr: string;
+  /** LaTeX before the editing cursor (for cached KaTeX rendering) */
+  displayBefore: string;
+  /** LaTeX after the editing cursor */
+  displayAfter: string;
+  /** Show the blinking cursor between before/after segments */
+  showInputCursor: boolean;
   /** The result line text */
   result: string;
   resultIsError: boolean;
@@ -96,6 +105,14 @@ export interface CalcState {
   ansValue: string;
   shiftActive: boolean;
   isRadians: boolean;
+  /** Viewing a past entry in the main display lines (not the live input) */
+  browsingHistory: boolean;
+}
+
+interface HistoryEntry {
+  exprLatex: string;
+  resultLatex: string;
+  nodes: CalcNode[];
 }
 
 export interface CalcActions {
@@ -153,7 +170,7 @@ const DECIMAL_SIG_FIGS = 10;
    ═══════════════════════════════════════════════════════════ */
 
 const PLACEHOLDER = "\\square ";
-const CURSOR_MARK = "\\textcolor{#ff00ff}{\\smash{\\rule{0.045em}{1.05em}}}";
+const CURSOR_MARK = "\\smash{\\rule{0.045em}{1.05em}}";
 
 function cursorMark(showCursor: boolean): string {
   return showCursor ? CURSOR_MARK : "";
@@ -162,6 +179,19 @@ function cursorMark(showCursor: boolean): string {
 function isCursorOnly(inner: string): boolean {
   const trimmed = inner.trim();
   return trimmed === CURSOR_MARK.trim();
+}
+
+function splitLatexAtCursor(
+  root: CalcNode[],
+  cur: CursorPos,
+): { before: string; after: string } {
+  const full = nodesToLatex(root, cur.list, cur.index, true);
+  const idx = full.indexOf(CURSOR_MARK);
+  if (idx < 0) return { before: full, after: "" };
+  return {
+    before: full.slice(0, idx),
+    after: full.slice(idx + CURSOR_MARK.length),
+  };
 }
 
 /** All slot-like child arrays for a node */
@@ -631,6 +661,83 @@ function lastSlot(node: CalcNode): CalcNode[] | null {
   return slots.length > 0 ? slots[slots.length - 1] : null;
 }
 
+/** Structures whose slots are stacked vertically on the keypad (↑/↓ between slots). */
+function isVerticalSlotStructure(node: CalcNode): boolean {
+  return node.type === "fraction" || node.type === "sqrt" || node.type === "log";
+}
+
+interface SlotFrame {
+  slots: CalcNode[][];
+  slotIdx: number;
+  structNode: CalcNode;
+}
+
+function buildSlotAncestry(root: CalcNode[], list: CalcNode[]): SlotFrame[] {
+  const chain: SlotFrame[] = [];
+  let currentList = list;
+  while (true) {
+    const parent = findParent(root, currentList);
+    if (!parent) break;
+    const structNode = parent.parentList[parent.nodeIndex];
+    const slots = getSlots(structNode);
+    if (slots.length <= 1) {
+      currentList = parent.parentList;
+      continue;
+    }
+    const slotIdx = slots.indexOf(currentList);
+    if (slotIdx < 0) break;
+    chain.push({ slots, slotIdx, structNode });
+    currentList = parent.parentList;
+  }
+  return chain;
+}
+
+/**
+ * Move cursor between sibling slots. Down prefers the outermost vertical move
+ * (e.g. √ in a numerator → denominator, not index → radicand). Up prefers the
+ * innermost move first (e.g. radicand → index before leaving the fraction).
+ */
+function tryMoveVerticalSlot(
+  root: CalcNode[],
+  cur: CursorPos,
+  dir: "up" | "down",
+): boolean {
+  const chain = buildSlotAncestry(root, cur.list);
+  if (chain.length === 0) return false;
+
+  const tryFrame = (frame: SlotFrame, targetIdx: number): boolean => {
+    const targetSlot = frame.slots[targetIdx];
+    cur.list = targetSlot;
+    cur.index = Math.min(cur.index, targetSlot.length);
+    return true;
+  };
+
+  if (dir === "down") {
+    for (let i = chain.length - 1; i >= 0; i--) {
+      const frame = chain[i];
+      if (!isVerticalSlotStructure(frame.structNode)) continue;
+      if (frame.slotIdx < frame.slots.length - 1) {
+        return tryFrame(frame, frame.slotIdx + 1);
+      }
+    }
+    for (let i = chain.length - 1; i >= 0; i--) {
+      const frame = chain[i];
+      if (frame.slotIdx < frame.slots.length - 1) {
+        return tryFrame(frame, frame.slotIdx + 1);
+      }
+    }
+    return false;
+  }
+
+  for (let i = 0; i < chain.length; i++) {
+    const frame = chain[i];
+    if (frame.slotIdx > 0) {
+      return tryFrame(frame, frame.slotIdx - 1);
+    }
+  }
+  return false;
+}
+
 function isNumericLeaf(node: CalcNode): node is LeafNode {
   return node.type === "leaf" && /[0-9.]/.test(node.value);
 }
@@ -731,6 +838,50 @@ function insertStructuredRootAtCursor(
   return node;
 }
 
+function cloneCalcNode(node: CalcNode): CalcNode {
+  switch (node.type) {
+    case "leaf":
+      return { type: "leaf", value: node.value, display: node.display };
+    case "ans":
+      return { type: "ans" };
+    case "fraction":
+      return { type: "fraction", num: cloneCalcNodes(node.num), den: cloneCalcNodes(node.den) };
+    case "sqrt":
+      return {
+        type: "sqrt",
+        index: cloneCalcNodes(node.index),
+        radicand: cloneCalcNodes(node.radicand),
+        hideDefaultIndex: node.hideDefaultIndex,
+      };
+    case "power":
+      return { type: "power", base: cloneCalcNodes(node.base), exponent: cloneCalcNodes(node.exponent) };
+    case "sci":
+      return { type: "sci", exponent: cloneCalcNodes(node.exponent) };
+    case "log":
+      return { type: "log", base: cloneCalcNodes(node.base), arg: cloneCalcNodes(node.arg) };
+    case "fn":
+      return { type: "fn", fn: node.fn, arg: cloneCalcNodes(node.arg) };
+  }
+}
+
+function cloneCalcNodes(nodes: CalcNode[]): CalcNode[] {
+  return nodes.map(cloneCalcNode);
+}
+
+function exprLatexFromNodes(nodes: CalcNode[]): string {
+  return nodesToLatex(nodes, [], -1, false);
+}
+
+function getHistoryView(
+  history: HistoryEntry[],
+  viewIndex: number,
+): HistoryLine | null {
+  if (history.length === 0) return null;
+  const idx = Math.min(Math.max(0, viewIndex), history.length - 1);
+  const entry = history[idx];
+  return { exprLatex: entry.exprLatex, resultLatex: entry.resultLatex };
+}
+
 /* ═══════════════════════════════════════════════════════════
    React hook
    ═══════════════════════════════════════════════════════════ */
@@ -739,7 +890,7 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
   // The root node list — mutated in place, then spread to trigger render
   const rootRef = useRef<CalcNode[]>([]);
   const cursorRef = useRef<CursorPos>({ list: rootRef.current, index: 0 });
-  const [, forceRender] = useState(0);
+  const [displaySplit, setDisplaySplit] = useState({ before: "", after: "" });
 
   const [result, setResult] = useState("");
   const [symbolicResult, setSymbolicResult] = useState("");
@@ -751,24 +902,27 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
   const [ansValue, setAnsValue] = useState("0");
   const [shiftActive, setShiftActive] = useState(false);
   const [isRadians, setIsRadians] = useState(false);
-  const [cursorVisible, setCursorVisible] = useState(true);
+  const [calcHistory, setCalcHistory] = useState<HistoryEntry[]>([]);
+  const [historyViewIndex, setHistoryViewIndex] = useState(0);
 
   const ansRef = useRef(ansValue);
   ansRef.current = ansValue;
 
-  // Cursor blink is handled with CSS animation on the cursor glyph itself.
-  const cursorTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
-  const resetCursorBlink = useCallback(() => {
-    setCursorVisible(true);
-    if (cursorTimerRef.current) clearInterval(cursorTimerRef.current);
-    cursorTimerRef.current = undefined;
+  const clearCalcHistory = useCallback(() => {
+    setCalcHistory([]);
+    setHistoryViewIndex(0);
   }, []);
 
-  // Convenience to update after mutations
+  const snapHistoryToLive = useCallback(() => {
+    setHistoryViewIndex((prev) => {
+      const live = Math.max(0, calcHistory.length - 1);
+      return prev === live ? prev : live;
+    });
+  }, [calcHistory.length]);
+
   const commit = useCallback(() => {
-    resetCursorBlink();
-    forceRender(n => n + 1);
-  }, [resetCursorBlink]);
+    setDisplaySplit(splitLatexAtCursor(rootRef.current, cursorRef.current));
+  }, []);
 
   const clearShift = useCallback(() => setShiftActive(false), []);
 
@@ -831,22 +985,25 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
   /* ── Actions ───────────────────────────────────────────── */
 
   const pressDigit = useCallback((d: string) => {
+    snapHistoryToLive();
     if (maybeResetAfterError()) { /* cleared */ }
     else { maybeResetAfterExe(false); }
     const leaf: LeafNode = { type: "leaf", value: d, display: d };
     insertNode(leaf);
     commit();
-  }, [maybeResetAfterError, maybeResetAfterExe, insertNode, commit]);
+  }, [maybeResetAfterError, maybeResetAfterExe, insertNode, commit, snapHistoryToLive]);
 
   const pressDecimal = useCallback(() => {
+    snapHistoryToLive();
     if (maybeResetAfterError()) { /* cleared */ }
     else { maybeResetAfterExe(false); }
     const leaf: LeafNode = { type: "leaf", value: ".", display: "." };
     insertNode(leaf);
     commit();
-  }, [maybeResetAfterError, maybeResetAfterExe, insertNode, commit]);
+  }, [maybeResetAfterError, maybeResetAfterExe, insertNode, commit, snapHistoryToLive]);
 
   const pressOperator = useCallback((op: string, display: string) => {
+    snapHistoryToLive();
     if (maybeResetAfterError()) return;
     maybeResetAfterExe(true);
 
@@ -953,8 +1110,9 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     setResultMode("symbolic");
     setResultIsError(false);
     setJustExecuted(false);
+    clearCalcHistory();
     commit();
-  }, [commit]);
+  }, [commit, clearCalcHistory]);
 
   const pressEXE = useCallback(() => {
     if (rootRef.current.length === 0) return;
@@ -991,6 +1149,13 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
       setResultIsError(false);
       setAnsValue(ansStored);
       ansRef.current = ansStored;
+      const executedNodes = cloneCalcNodes(rootRef.current);
+      const exprLatex = exprLatexFromNodes(executedNodes);
+      setCalcHistory((prev) => {
+        const next = [...prev, { exprLatex, resultLatex: displayValue, nodes: executedNodes }];
+        setHistoryViewIndex(next.length - 1);
+        return next;
+      });
       setJustExecuted(true);
     } catch {
       setResult("Math ERROR");
@@ -999,6 +1164,13 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
       setDecimalResult("");
       setResultMode("symbolic");
       setResultIsError(true);
+      const executedNodes = cloneCalcNodes(rootRef.current);
+      const exprLatex = exprLatexFromNodes(executedNodes);
+      setCalcHistory((prev) => {
+        const next = [...prev, { exprLatex, resultLatex: "Math ERROR", nodes: executedNodes }];
+        setHistoryViewIndex(next.length - 1);
+        return next;
+      });
       setJustExecuted(true);
     }
     commit();
@@ -1007,21 +1179,32 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
   const pressSD = useCallback(() => {
     if (!symbolicResult && !decimalResult) return;
 
+    let nextResult = result;
     if (resultMode === "symbolic") {
       setResultMode("decimal");
-      setResult(decimalResult || result);
+      nextResult = decimalResult || result;
+      setResult(nextResult);
     } else {
       setResultMode("symbolic");
       if (!symbolicResult || shouldUseDecimalFallback(symbolicAns)) {
         if (decimalResult && decimalResult !== "∞" && decimalResult !== "-∞" && decimalResult !== "undefined") {
-          setResult(`\\approx ${decimalResult}`);
+          nextResult = `\\approx ${decimalResult}`;
         } else {
-          setResult(decimalResult || result);
+          nextResult = decimalResult || result;
         }
       } else {
-        setResult(symbolicResult);
+        nextResult = symbolicResult;
       }
+      setResult(nextResult);
     }
+
+    setCalcHistory((prev) => {
+      if (prev.length === 0) return prev;
+      const next = [...prev];
+      const last = next[next.length - 1];
+      next[next.length - 1] = { ...last, resultLatex: nextResult };
+      return next;
+    });
 
     commit();
   }, [symbolicResult, symbolicAns, decimalResult, resultMode, result, commit]);
@@ -1152,8 +1335,9 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
 
   const pressAngleToggle = useCallback(() => {
     setIsRadians(v => !v);
+    clearCalcHistory();
     commit();
-  }, [commit]);
+  }, [commit, clearCalcHistory]);
 
   const pressSci = useCallback(() => {
     if (maybeResetAfterError()) return;
@@ -1175,7 +1359,58 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
 
   /* ── Arrow navigation ──────────────────────────────────── */
 
+  const loadReplay = useCallback((cursorAtEnd: boolean) => {
+    const entry = calcHistory[historyViewIndex];
+    if (!entry?.nodes.length) return;
+    const cloned = cloneCalcNodes(entry.nodes);
+    rootRef.current.length = 0;
+    rootRef.current.push(...cloned);
+    cursorRef.current = {
+      list: rootRef.current,
+      index: cursorAtEnd ? rootRef.current.length : 0,
+    };
+    setJustExecuted(false);
+    setResult("");
+    setSymbolicResult("");
+    setSymbolicAns("");
+    setDecimalResult("");
+    setResultMode("symbolic");
+    setResultIsError(false);
+    setHistoryViewIndex(Math.max(0, calcHistory.length - 1));
+    commit();
+  }, [calcHistory, historyViewIndex, commit]);
+
   const pressArrow = useCallback((dir: "up" | "down" | "left" | "right") => {
+    if (dir === "up" || dir === "down") {
+      const browsingHistory =
+        calcHistory.length > 0 && historyViewIndex < calcHistory.length - 1;
+
+      if (!justExecuted && !browsingHistory) {
+        const root = rootRef.current;
+        const cur = cursorRef.current;
+        if (tryMoveVerticalSlot(root, cur, dir)) {
+          commit();
+          return;
+        }
+      }
+
+      if (calcHistory.length === 0) return;
+      setHistoryViewIndex((prev) => {
+        if (dir === "up") return Math.max(0, prev - 1);
+        return Math.min(calcHistory.length - 1, prev + 1);
+      });
+      commit();
+      return;
+    }
+
+    const browsingHistory =
+      calcHistory.length > 0 && historyViewIndex < calcHistory.length - 1;
+    const canReplay = calcHistory.length > 0 && (justExecuted || browsingHistory);
+    if (canReplay && (dir === "left" || dir === "right")) {
+      loadReplay(dir === "right");
+      return;
+    }
+
     const cur = cursorRef.current;
     const root = rootRef.current;
 
@@ -1229,48 +1464,36 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
         }
       }
       commit();
-    } else if (dir === "up" || dir === "down") {
-      // Navigate between sibling slots (e.g., fraction numerator ↔ denominator)
-      const parent = findParent(root, cur.list);
-      if (parent) {
-        const structNode = parent.parentList[parent.nodeIndex];
-        const slots = getSlots(structNode);
-        const currentSlotIdx = slots.indexOf(cur.list);
-        if (currentSlotIdx >= 0) {
-          let targetIdx: number;
-          if (dir === "up") {
-            targetIdx = currentSlotIdx > 0 ? currentSlotIdx - 1 : currentSlotIdx;
-          } else {
-            targetIdx = currentSlotIdx < slots.length - 1 ? currentSlotIdx + 1 : currentSlotIdx;
-          }
-          if (targetIdx !== currentSlotIdx) {
-            const targetSlot = slots[targetIdx];
-            cursorRef.current = {
-              list: targetSlot,
-              index: Math.min(cur.index, targetSlot.length),
-            };
-            commit();
-          }
-        }
-      }
     }
-  }, [commit]);
+  }, [calcHistory.length, historyViewIndex, justExecuted, loadReplay, commit]);
 
   /* ── Build display ─────────────────────────────────────── */
 
-  const root = rootRef.current;
-  const cur = cursorRef.current;
-  const displayExpr = nodesToLatex(root, cur.list, cur.index, cursorVisible);
+  const historyView = getHistoryView(calcHistory, historyViewIndex);
+  const browsingHistory =
+    calcHistory.length > 0 && historyViewIndex < calcHistory.length - 1;
+  const showInputCursor = !justExecuted && !browsingHistory;
 
   const state: CalcState = useMemo(() => ({
-    displayExpr,
-    result,
+    displayBefore: browsingHistory && historyView
+      ? historyView.exprLatex
+      : displaySplit.before,
+    displayAfter: browsingHistory ? "" : displaySplit.after,
+    showInputCursor,
+    result: browsingHistory && historyView
+      ? historyView.resultLatex
+      : result,
     resultIsError,
     justExecuted,
     ansValue,
     shiftActive,
     isRadians,
-  }), [displayExpr, result, resultIsError, justExecuted, ansValue, shiftActive, isRadians]);
+    browsingHistory,
+  }), [
+    displaySplit.before, displaySplit.after, showInputCursor,
+    result, resultIsError, justExecuted, ansValue, shiftActive, isRadians,
+    browsingHistory, historyView,
+  ]);
 
   const actions: CalcActions = useMemo(() => ({
     pressDigit, pressDecimal, pressOperator, pressBracket, pressCloseBracket,
