@@ -66,12 +66,16 @@ async function saveViaCloudFunction(
 }
 
 async function saveViaFirestore(
+  uid: string,
   payload: Awaited<ReturnType<typeof buildPredictionSavePayload>>
 ): Promise<string> {
   const batch = writeBatch(db);
-  batch.set(predictionDocRef(payload.predictionId), payload.predictionDoc);
+  batch.set(predictionDocRef(uid, payload.predictionId), payload.predictionDoc);
   for (const question of payload.questions) {
-    batch.set(doc(predictionQuestionsRef(payload.predictionId), question.id), question.data);
+    batch.set(
+      doc(predictionQuestionsRef(uid, payload.predictionId), question.id),
+      question.data
+    );
   }
   await batch.commit();
   return payload.predictionId;
@@ -82,18 +86,17 @@ export async function savePredictedPaperToFirestore(
   level: string,
   blueprint: PredictedPaperBlueprint
 ): Promise<string> {
-  if (!auth.currentUser) {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
     throw new Error("You must be signed in to save a prediction.");
   }
+  const uid = currentUser.uid;
 
   const payload = await buildPredictionSavePayload(subject, level, blueprint);
-  const uid = auth.currentUser?.uid;
-  if (uid) {
-    payload.predictionDoc.generatedBy = uid;
-  }
+  payload.predictionDoc.generatedBy = uid;
 
   try {
-    return await saveViaFirestore(payload);
+    return await saveViaFirestore(uid, payload);
   } catch (err) {
     if (!isPermissionError(err)) {
       if (isFetchError(err)) {

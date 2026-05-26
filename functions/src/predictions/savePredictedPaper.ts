@@ -50,7 +50,8 @@ export const savePredictedPaper = functions.https.onRequest(
         }
 
         const db = admin.firestore();
-        const paperRef = db.doc(`questions/leavingcert/predictions/${predictionId}`);
+        // Predictions are personal: store under the signed-in user's user-data namespace.
+        const paperRef = db.doc(`user-data/${decoded.uid}/predictions/${predictionId}`);
         const batch = db.batch();
         batch.set(paperRef, {
           ...predictionDoc,

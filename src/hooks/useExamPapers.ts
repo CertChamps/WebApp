@@ -118,10 +118,12 @@ function deriveLabel(docId: string, year?: number): string {
 export type UseExamPapersOptions = {
   /** When true and subjectId is null, load papers for all subjects (e.g. questions page). Default false = load no papers when null (practice tab). */
   loadAllWhenNull?: boolean;
-  /** Include papers from questions/leavingcert/predictions (needed for practice session deep links). */
+  /** Include papers from the signed-in user's predictions (needed for practice session deep links). Requires `uid`. */
   includePredictions?: boolean;
   /** Bump to re-fetch papers (e.g. after saving a new prediction). */
   reloadKey?: number;
+  /** Signed-in user's uid; required to load/fetch questions for personal predictions. */
+  uid?: string | null;
 };
 
 /** Load papers for the given subject. When subjectId is null: if loadAllWhenNull, load all subjects; otherwise load none. */
@@ -129,7 +131,7 @@ export function useExamPapers(
   subjectId: string | null,
   options: UseExamPapersOptions = {}
 ) {
-  const { loadAllWhenNull = false, includePredictions = false, reloadKey = 0 } = options;
+  const { loadAllWhenNull = false, includePredictions = false, reloadKey = 0, uid = null } = options;
   const [subjectIds, setSubjectIds] = useState<string[]>([]);
   const [subjectIdsLoading, setSubjectIdsLoading] = useState(true);
   const [papers, setPapers] = useState<ExamPaper[]>([]);
@@ -262,8 +264,9 @@ export function useExamPapers(
           }
         }
 
-        if (includePredictions) {
+        if (includePredictions && uid) {
           const predictions = await loadPredictionPapers(
+            uid,
             shouldLoadAll ? null : subjectId
           );
           allPapers.push(...predictions);
@@ -293,7 +296,7 @@ export function useExamPapers(
     return () => {
       cancelled = true;
     };
-  }, [subjectId, loadAllWhenNull, includePredictions, subjectIds, reloadKey]);
+  }, [subjectId, loadAllWhenNull, includePredictions, subjectIds, reloadKey, uid]);
 
   // In-memory blob cache (LRU, max 10) so switching papers is instant when revisiting
   const paperBlobCache = useRef<Map<string, Blob>>(new Map());
@@ -372,8 +375,11 @@ export function useExamPapers(
 
   const getPaperQuestions = useCallback(
     async (paper: ExamPaper): Promise<PaperQuestion[]> => {
+      if (paper.isPrediction && !uid) {
+        return [];
+      }
       const questionsRef = paper.isPrediction
-        ? predictionQuestionsRef(paper.id)
+        ? predictionQuestionsRef(uid as string, paper.id)
         : collection(
             db,
             "questions",
@@ -478,7 +484,7 @@ export function useExamPapers(
         });
       return list;
     },
-    []
+    [uid]
   );
 
   const firstFreePaper = (() => {

@@ -414,7 +414,7 @@ export default function Questions() {
         getPaperQuestions,
         getMarkingSchemeBlob,
         firstFreePaper,
-    } = useExamPapers(null, { loadAllWhenNull: true, includePredictions: true });
+    } = useExamPapers(null, { loadAllWhenNull: true, includePredictions: true, uid: user?.uid ?? null });
     const { availableSets } = useFilters();
     const { completedForPaper, loadPaperProgress, toggleQuestion, isQuestionCompleted, touchImageTopicProgress } =
         usePaperProgress();
@@ -451,14 +451,14 @@ export default function Questions() {
     const [predictionImageLoading, setPredictionImageLoading] = useState(false);
 
     useEffect(() => {
-        if (!urlPredictionId) {
+        if (!urlPredictionId || !user?.uid) {
             setPredictionImageGrouped([]);
             setPredictionImageLoading(false);
             return;
         }
         let cancelled = false;
         setPredictionImageLoading(true);
-        loadPredictionImageSession(urlPredictionId)
+        loadPredictionImageSession(user.uid, urlPredictionId)
             .then((list) => {
                 if (!cancelled) setPredictionImageGrouped(list);
             })
@@ -471,7 +471,7 @@ export default function Questions() {
         return () => {
             cancelled = true;
         };
-    }, [urlPredictionId]);
+    }, [urlPredictionId, user?.uid]);
 
     const imageGroupedList = urlPredictionId ? predictionImageGrouped : topicImageGroupedList;
     const imageQuestionsLoading = urlPredictionId ? predictionImageLoading : topicImageQuestionsLoading;

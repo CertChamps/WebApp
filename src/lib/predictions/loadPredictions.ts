@@ -13,9 +13,13 @@ function deriveLabel(docId: string, year?: number, label?: string): string {
   return part || docId;
 }
 
-/** Load prediction papers from the dedicated Firestore collection. */
-export async function loadPredictionPapers(subjectFilter?: string | null): Promise<ExamPaper[]> {
-  const col = predictionsCollectionRef();
+/** Load prediction papers from the user's personal Firestore collection. */
+export async function loadPredictionPapers(
+  uid: string | null | undefined,
+  subjectFilter?: string | null
+): Promise<ExamPaper[]> {
+  if (!uid) return [];
+  const col = predictionsCollectionRef(uid);
   const snap = subjectFilter
     ? await getDocs(query(col, where("subject", "==", subjectFilter)))
     : await getDocs(col);

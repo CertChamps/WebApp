@@ -7,19 +7,29 @@ type Options = {
   reloadKey?: number;
 };
 
-/** Load exam prediction papers from the dedicated Firestore collection. */
-export function usePredictionPapers(subjectId: string | null, options: Options = {}) {
+/** Load exam prediction papers from the signed-in user's personal Firestore collection. */
+export function usePredictionPapers(
+  uid: string | null | undefined,
+  subjectId: string | null,
+  options: Options = {}
+) {
   const { reloadKey = 0 } = options;
   const [predictions, setPredictions] = useState<ExamPaper[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!uid) {
+      setPredictions([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    loadPredictionPapers(subjectId)
+    loadPredictionPapers(uid, subjectId)
       .then((papers) => {
         if (!cancelled) {
           setPredictions(papers);
@@ -40,7 +50,7 @@ export function usePredictionPapers(subjectId: string | null, options: Options =
     return () => {
       cancelled = true;
     };
-  }, [subjectId, reloadKey]);
+  }, [uid, subjectId, reloadKey]);
 
   return { predictions, loading, error };
 }

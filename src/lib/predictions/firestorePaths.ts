@@ -1,17 +1,24 @@
 import { collection, doc, type CollectionReference, type DocumentReference } from "firebase/firestore";
 import { db } from "../../../firebase";
 
-/** Top-level collection for generated prediction papers (separate from real exam papers). */
-export const PREDICTIONS_ROOT = ["questions", "leavingcert", "predictions"] as const;
+/** Per-user prediction collection: predictions are personal to the signed-in user. */
+const PREDICTIONS_SEGMENT = "predictions";
 
-export function predictionsCollectionRef(): CollectionReference {
-  return collection(db, ...PREDICTIONS_ROOT);
+function assertUid(uid: string | null | undefined): string {
+  if (!uid) {
+    throw new Error("A signed-in user is required for prediction storage.");
+  }
+  return uid;
 }
 
-export function predictionDocRef(predictionId: string): DocumentReference {
-  return doc(db, ...PREDICTIONS_ROOT, predictionId);
+export function predictionsCollectionRef(uid: string): CollectionReference {
+  return collection(db, "user-data", assertUid(uid), PREDICTIONS_SEGMENT);
 }
 
-export function predictionQuestionsRef(predictionId: string): CollectionReference {
-  return collection(db, ...PREDICTIONS_ROOT, predictionId, "questions");
+export function predictionDocRef(uid: string, predictionId: string): DocumentReference {
+  return doc(db, "user-data", assertUid(uid), PREDICTIONS_SEGMENT, predictionId);
+}
+
+export function predictionQuestionsRef(uid: string, predictionId: string): CollectionReference {
+  return collection(db, "user-data", assertUid(uid), PREDICTIONS_SEGMENT, predictionId, "questions");
 }

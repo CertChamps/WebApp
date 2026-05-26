@@ -22,9 +22,10 @@ export type StoredImagePredictionQuestion = {
 
 /** Resolve grouped image questions saved on a prediction doc. */
 export async function loadStoredImagePredictionQuestions(
+  uid: string,
   predictionId: string
 ): Promise<StoredImagePredictionQuestion[]> {
-  const snap = await getDocs(predictionQuestionsRef(predictionId));
+  const snap = await getDocs(predictionQuestionsRef(uid, predictionId));
   return snap.docs
     .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
     .map((d) => {
@@ -73,9 +74,10 @@ export async function storedImageQuestionsToGrouped(
 }
 
 export async function loadPredictionImageSession(
+  uid: string,
   predictionId: string
 ): Promise<GroupedImageQuestion[]> {
-  const stored = await loadStoredImagePredictionQuestions(predictionId);
+  const stored = await loadStoredImagePredictionQuestions(uid, predictionId);
   return storedImageQuestionsToGrouped(stored);
 }
 

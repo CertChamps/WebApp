@@ -1420,6 +1420,165 @@
   overflow: hidden;
 }
 
+/* Prediction slide-in panel: list of all questions inside the prediction. */
+.practice-hub__prediction-questions {
+  flex-shrink: 0;
+}
+
+.practice-hub__prediction-questions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.practice-hub__prediction-question {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.practice-hub__prediction-question-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.practice-hub__prediction-question-index {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-in, 0.375rem);
+  letter-spacing: 0.02em;
+}
+
+.practice-hub__prediction-question-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.practice-hub__prediction-question-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.practice-hub__prediction-question-reason {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.practice-hub__prediction-question-preview {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  background: var(--color-bg, #fff);
+}
+
+.practice-hub__prediction-question-skeleton {
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius-in, 0.375rem);
+}
+
+.practice-hub__prediction-question-images {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.practice-hub__prediction-question-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  border-radius: var(--radius-in, 0.375rem);
+}
+
+.practice-hub__prediction-question-source {
+  margin: 0;
+}
+
+.practice-hub__panel-delete:hover {
+  color: var(--color-red, #ef4444);
+  background: color-mix(in srgb, var(--color-red, #ef4444) 12%, transparent);
+}
+
+.practice-hub__panel-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.practice-hub__panel-delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  align-items: stretch;
+}
+
+.practice-hub__panel-delete-confirm p {
+  margin: 0;
+  text-align: center;
+}
+
+.practice-hub__panel-delete-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.practice-hub__panel-delete-cancel {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-out, 0.5rem);
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--color-bg-grey-10, #f3f4f6);
+  color: var(--color-txt-main, #111);
+  border: none;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.practice-hub__panel-delete-cancel:hover:not(:disabled) {
+  background: var(--color-bg-grey-20, #e5e7eb);
+}
+
+.practice-hub__panel-delete-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.practice-hub__panel-delete-confirm-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-out, 0.5rem);
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--color-red, #ef4444);
+  color: #fff;
+  border: none;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.practice-hub__panel-delete-confirm-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-red, #ef4444) 90%, #000);
+}
+
+.practice-hub__panel-delete-confirm-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 /* Year clock picker – trigger uses filter-pill styling from page; popover + rotatable dial */
 .year-clock-picker {
   position: relative;

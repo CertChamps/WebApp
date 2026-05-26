@@ -6,6 +6,7 @@ import VerifyEmail from "./pages/verifyEmail";
 import Questions from "./pages/questions";
 import PracticeHub from "./pages/PracticeHub";
 import Social from "./pages/social/social";
+import Discover from "./pages/discover";
 import Games from "./pages/games";
 import Navbar from "./components/navbar";
 import Replies from "./pages/social/replies";
@@ -149,6 +150,17 @@ const router = createHashRouter([
           <Navbar />
           <Replies />
         </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/discover",
+    element: (
+      <ProtectedRoute>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+          <Navbar />
+          <Discover />
+        </div>
       </ProtectedRoute>
     ),
   },
