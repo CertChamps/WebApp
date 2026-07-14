@@ -8,6 +8,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Gabarito:wght@400..900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 /*
   Contenders: 
   Mulish
@@ -46,7 +47,7 @@ html.capacitor-native body {
 }
 
 :root {
-  font-family: "Mulish", sans-serif;
+  font-family: "Plus Jakarta Sans", sans-serif;
   font-size: 16px;
   --temporary-ipad-top-offset: 0px;
   --safe-area-top: env(safe-area-inset-top, 0px);

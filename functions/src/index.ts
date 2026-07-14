@@ -10,9 +10,6 @@ admin.initializeApp();
 // docstring for the full wiring story.
 export { revenueCatWebhook, verifyAppleEntitlement } from "./iap/revenueCatWebhook";
 export { deleteAccount } from "./account/deleteAccount";
-export { generatePredictedPaper } from "./predictions/generatePredictedPaper";
-export { savePredictedPaper } from "./predictions/savePredictedPaper";
-
 const corsMiddleware = cors({ origin: true });
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
