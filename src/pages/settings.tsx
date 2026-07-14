@@ -135,7 +135,7 @@ export default function Settings() {
                     </div>
                     <div>
                         <p className="txt-bold">View onboarding flow</p>
-                        <p className="txt-sub">Replay welcome screens and the prediction tutorial</p>
+                        <p className="txt-sub">Replay welcome screens and subject setup</p>
                     </div>
                 </div>
                 <button

@@ -4,7 +4,6 @@ import { UserContext } from "./context/UserContext";
 import { OptionsContext } from "./context/OptionsContext";
 import AppRouter from "./Router";
 import { initPayments } from "./lib/payments";
-import { markPendingPredictionTutorial } from "./lib/predictionTutorial";
 import { iapDebug } from "./lib/payments/paymentsDebug";
 //import CustomCursor from "./components/CustomCursor"
 
@@ -18,9 +17,6 @@ export default function App() {
   const setUser = useCallback<Dispatch<SetStateAction<any>>>((action) => {
     setUserState((prev: any) => {
       const next = typeof action === "function" ? action(prev) : action;
-      if (prev?.hasCompletedOnboarding !== true && next?.hasCompletedOnboarding === true) {
-        markPendingPredictionTutorial();
-      }
       return next;
     });
   }, []);

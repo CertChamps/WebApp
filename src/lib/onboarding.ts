@@ -28,7 +28,7 @@ export function getOnboardingReplayPath(returnTo = "/user/settings"): string {
   return `/onboarding?${params.toString()}`;
 }
 
-/** Stage 1 onboarding replay, then Practice Hub prediction tutorial (Stage 2). */
+/** Replay onboarding from settings (welcome screens + subject picker). */
 export function getFullTutorialReplayPath(): string {
   const params = new URLSearchParams({
     [ONBOARDING_REPLAY_PARAM]: "1",

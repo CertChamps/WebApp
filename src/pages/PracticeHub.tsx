@@ -1,8 +1,6 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { getDownloadURL, ref as storageRef } from "firebase/storage";
-import { storage } from "../../firebase";
 import { createPortal } from "react-dom";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Fuse from "fuse.js";
 import {
   useExamPapers,
@@ -12,7 +10,6 @@ import {
   type ExamPaper,
   type PaperQuestion,
 } from "../hooks/useExamPapers";
-import { usePredictionPapers } from "../hooks/usePredictionPapers";
 import {
   buildFreeImageSample,
   canAccessImageTopic,
@@ -29,32 +26,11 @@ import ContentProGate from "../components/ContentProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { useImageTopics, listQuestionsForTopic, groupImageQuestions, type ImageTopic } from "../hooks/useImageQuestions";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuSparkles, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart, LuArrowLeft, LuLock } from "react-icons/lu";
+import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart, LuArrowLeft, LuLock } from "react-icons/lu";
 import type { IconType } from "react-icons";
-import { subjectMatchesPaper, getStorageFolderName, getFavouriteSubjectIds, FAVOURITES_CHANGED_EVENT, PRACTICE_HUB_SUBJECTS, getSubjectLabel } from "../data/practiceHubSubjects";
+import { subjectMatchesPaper, getStorageFolderName, getFavouriteSubjectIds, FAVOURITES_CHANGED_EVENT, PRACTICE_HUB_SUBJECTS } from "../data/practiceHubSubjects";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import IrishHarpIcon from "../components/practiceHub/IrishHarpIcon";
-import GeneratePredictionFlow, {
-  PREDICTION_SELECT_CLASS,
-  type GeneratePredictionFlowHandle,
-} from "../components/addQuestions/GeneratePredictionFlow";
-import PredictionTutorialCallout from "../components/tutorial/PredictionTutorialCallout";
-import PredictionCardTutorialCallout from "../components/tutorial/PredictionCardTutorialCallout";
-import PredictionCardTutorialScrim from "../components/tutorial/PredictionCardTutorialScrim";
-import {
-  consumePendingPredictionTutorial,
-  shouldStartPredictionTutorial,
-  stripPredictionTutorialQuery,
-  type PredictionTutorialStep,
-} from "../lib/predictionTutorial";
-import { markPendingPracticeSessionTutorial } from "../lib/practiceSessionTutorial";
-import { resolvePredictionContentType } from "../lib/predictions/api";
-import {
-  loadStoredImagePredictionQuestions,
-  type StoredImagePredictionQuestion,
-} from "../lib/predictions/loadPredictionImages";
-import { deletePredictedPaper } from "../lib/predictions/deletePredictedPaper";
-import CroppedPdfRegions from "../components/questions/CroppedPdfRegions";
 import { getThemedPortalTarget } from "../utils/themedPortal";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
@@ -133,141 +109,26 @@ function getSubjectIcon(subjectId: string): IconType {
 
 export default function PracticeHub() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { user } = useContext(UserContext);
-  const userUid = user?.uid ?? null;
   const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
-  const [papersReloadKey, setPapersReloadKey] = useState(0);
   const {
     papers,
     loading: papersLoading,
     getPaperBlob,
-    getPaperBlobForQuestion,
     getPaperQuestions,
     firstFreePaper,
   } = useExamPapers(subjectFilter, {
     loadAllWhenNull: subjectFilter == null,
-    reloadKey: papersReloadKey,
-    uid: userUid,
   });
-  const {
-    predictions: predictionPapers,
-    loading: predictionsLoading,
-  } = usePredictionPapers(userUid, subjectFilter, { reloadKey: papersReloadKey });
-  const [showPredictionModal, setShowPredictionModal] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState<PredictionTutorialStep | null>(null);
-  const [tutorialHighlightPaperId, setTutorialHighlightPaperId] = useState<string | null>(null);
-  const tutorialCardAnchorRef = useRef<HTMLDivElement>(null);
-  const [cardSpotlightRect, setCardSpotlightRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  const isModalTutorialStep = tutorialStep === 1 || tutorialStep === 2;
-  const isCardTutorialStep = tutorialStep === 3 && tutorialHighlightPaperId !== null;
-  const tutorialHighlightPaper = useMemo(() => {
-    if (!isCardTutorialStep || predictionsLoading) return null;
-    if (tutorialHighlightPaperId) {
-      const matched = predictionPapers.find((paper) => paper.id === tutorialHighlightPaperId);
-      if (matched) return matched;
-    }
-    return predictionPapers[0] ?? null;
-  }, [
-    isCardTutorialStep,
-    predictionsLoading,
-    predictionPapers,
-    tutorialHighlightPaperId,
-  ]);
-  const highlightPaperReady = isCardTutorialStep && tutorialHighlightPaper !== null;
-  const cardTutorialUiReady = highlightPaperReady && cardSpotlightRect !== null;
-  const [predictionSubject, setPredictionSubject] = useState(
-    () => PRACTICE_HUB_SUBJECTS[0]?.id ?? "accounting"
-  );
-  const [predictionLevel, setPredictionLevel] = useState("higher");
-  const [predictionPaper, setPredictionPaper] = useState<1 | 2>(1);
-  const predictionFlowRef = useRef<GeneratePredictionFlowHandle>(null);
-  const [predictionGenerating, setPredictionGenerating] = useState(false);
-  const predictionUsesPastPapers = useMemo(
-    () => resolvePredictionContentType(predictionSubject) === "pastpaper",
-    [predictionSubject]
-  );
   const [showContentGateModal, setShowContentGateModal] = useState(false);
   const [paperFilter, setPaperFilter] = useState<PaperFilter>("all");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
-  const openPredictionModal = useCallback(() => {
-    if (subjectFilter && PRACTICE_HUB_SUBJECTS.some((s) => s.id === subjectFilter)) {
-      setPredictionSubject(subjectFilter);
-    } else {
-      setPredictionSubject((prev) =>
-        PRACTICE_HUB_SUBJECTS.some((s) => s.id === prev)
-          ? prev
-          : (PRACTICE_HUB_SUBJECTS[0]?.id ?? "accounting")
-      );
-    }
-    if (levelFilter === "higher" || levelFilter === "ordinary") {
-      setPredictionLevel(levelFilter);
-    }
-    setShowPredictionModal(true);
-  }, [subjectFilter, levelFilter]);
-
-  const closePredictionModal = useCallback(() => {
-    setShowPredictionModal(false);
-    setTutorialStep((current) => (current === 1 || current === 2 ? null : current));
-  }, []);
-
-  const finishCardTutorial = useCallback(() => {
-    setTutorialStep(null);
-    setTutorialHighlightPaperId(null);
-    setCardSpotlightRect(null);
-  }, []);
-
-  const startPredictionTutorial = useCallback(() => {
-    setShowPredictionModal(true);
-    setTutorialStep(1);
-  }, []);
-
-  const tutorialStartedRef = useRef(false);
-  const tutorialStepRef = useRef<PredictionTutorialStep | null>(tutorialStep);
-  tutorialStepRef.current = tutorialStep;
-
-  useEffect(() => {
-    if (tutorialStartedRef.current) return;
-
-    const pending = consumePendingPredictionTutorial();
-    const fromQuery = shouldStartPredictionTutorial(`?${searchParams.toString()}`);
-
-    if (!pending && !fromQuery) return;
-
-    tutorialStartedRef.current = true;
-    startPredictionTutorial();
-
-    if (fromQuery) {
-      const nextSearch = stripPredictionTutorialQuery(`?${searchParams.toString()}`);
-      navigate(
-        {
-          pathname: "/practice",
-          search: nextSearch,
-        },
-        { replace: true }
-      );
-    }
-  }, [navigate, searchParams, startPredictionTutorial]);
   const [yearFilter, setYearFilter] = useState<YearFilterValue>("all");
   const [topicFilter, setTopicFilter] = useState<string[]>([]);
   const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
   const [panelAnimationDone, setPanelAnimationDone] = useState(false);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [previewQuestions, setPreviewQuestions] = useState<PaperQuestion[]>([]);
-  const [selectedPrediction, setSelectedPrediction] = useState<ExamPaper | null>(null);
-  const [predictionPanelAnimationDone, setPredictionPanelAnimationDone] = useState(false);
-  const [predictionQuestions, setPredictionQuestions] = useState<PaperQuestion[]>([]);
-  const [predictionImageQuestions, setPredictionImageQuestions] = useState<
-    StoredImagePredictionQuestion[]
-  >([]);
-  const [predictionQuestionsLoading, setPredictionQuestionsLoading] = useState(false);
-  const [predictionDeleteConfirm, setPredictionDeleteConfirm] = useState(false);
-  const [predictionDeleting, setPredictionDeleting] = useState(false);
   const [paperTagsMap, setPaperTagsMap] = useState<Record<string, string[]>>({});
   const [paperQuestionCountMap, setPaperQuestionCountMap] = useState<Record<string, number>>({});
 
@@ -532,46 +393,6 @@ export default function PracticeHub() {
     };
   }, [selectedPaper, panelAnimationDone, getPaperBlob, getPaperQuestions]);
 
-  /* Defer prediction question load until after panel slide-in completes. */
-  useEffect(() => {
-    if (!selectedPrediction) {
-      setPredictionPanelAnimationDone(false);
-      setPredictionQuestions([]);
-      setPredictionImageQuestions([]);
-      setPredictionQuestionsLoading(false);
-      setPredictionDeleteConfirm(false);
-      setPredictionDeleting(false);
-      return;
-    }
-    if (!predictionPanelAnimationDone) return;
-    let cancelled = false;
-    setPredictionQuestionsLoading(true);
-    setPredictionQuestions([]);
-    setPredictionImageQuestions([]);
-    const isImage = selectedPrediction.contentType === "image";
-    const loader = isImage
-      ? userUid
-        ? loadStoredImagePredictionQuestions(userUid, selectedPrediction.id).then((qs) => {
-            if (!cancelled) setPredictionImageQuestions(qs);
-          })
-        : Promise.resolve()
-      : getPaperQuestions(selectedPrediction).then((qs) => {
-          if (!cancelled) setPredictionQuestions(qs);
-        });
-    loader
-      .catch((err) => {
-        if (!cancelled) {
-          console.error("Failed to load prediction questions:", err);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setPredictionQuestionsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedPrediction, predictionPanelAnimationDone, getPaperQuestions, userUid]);
-
   const allTagsInPreview = useMemo(() => {
     const set = new Set<string>();
     previewQuestions.forEach((q) => q.tags?.forEach((t) => set.add(String(t))));
@@ -604,121 +425,11 @@ export default function PracticeHub() {
         return;
       }
       const normalizedLevel = normalizePaperLevel(paper.level);
-      if (paper.contentType === "image") {
-        navigate(
-          `/practice/session?mode=imagequestions&predictionId=${encodeURIComponent(paper.id)}&level=${normalizedLevel}&subject=${encodeURIComponent(paper.subject ?? "")}`
-        );
-      } else {
-        navigate(
-          `/practice/session?mode=pastpaper&paperId=${paper.id}&level=${normalizedLevel}&subject=${paper.subject ?? ""}`
-        );
-      }
+      navigate(
+        `/practice/session?mode=pastpaper&paperId=${paper.id}&level=${normalizedLevel}&subject=${paper.subject ?? ""}`
+      );
     },
     [user, freePaperKeys, navigate]
-  );
-
-  const handleDeletePrediction = useCallback(async () => {
-    if (!selectedPrediction || !userUid) return;
-    setPredictionDeleting(true);
-    try {
-      await deletePredictedPaper(userUid, selectedPrediction.id);
-      setSelectedPrediction(null);
-      setPapersReloadKey((k) => k + 1);
-    } catch (err) {
-      console.error("Failed to delete prediction:", err);
-    } finally {
-      setPredictionDeleting(false);
-      setPredictionDeleteConfirm(false);
-    }
-  }, [selectedPrediction, userUid]);
-
-  const handlePredictionSelect = useCallback(
-    (paper: ExamPaper) => {
-      if (
-        isCardTutorialStep &&
-        tutorialHighlightPaper &&
-        paper.id === tutorialHighlightPaper.id
-      ) {
-        markPendingPracticeSessionTutorial();
-        finishCardTutorial();
-        goToPaperSession(paper);
-        return;
-      }
-      setSelectedPrediction(paper);
-      setPredictionPanelAnimationDone(false);
-    },
-    [isCardTutorialStep, tutorialHighlightPaper, finishCardTutorial, goToPaperSession]
-  );
-
-  const updateCardSpotlightRect = useCallback(() => {
-    const el = tutorialCardAnchorRef.current;
-    if (!el) return;
-    const deck = el.querySelector<HTMLElement>(".deck");
-    const target = deck ?? el;
-    const rect = target.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-    setCardSpotlightRect({
-      top: rect.top,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height,
-    });
-  }, []);
-
-  const assignTutorialCardAnchorRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      tutorialCardAnchorRef.current = node;
-      if (!node || !highlightPaperReady) return;
-      const deck = node.querySelector<HTMLElement>(".deck");
-      const target = deck ?? node;
-      const rect = target.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return;
-      setCardSpotlightRect({
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      });
-    },
-    [highlightPaperReady]
-  );
-
-  useEffect(() => {
-    if (!highlightPaperReady) return;
-    tutorialCardAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    const timer = window.setTimeout(updateCardSpotlightRect, 350);
-    return () => window.clearTimeout(timer);
-  }, [highlightPaperReady, tutorialHighlightPaper?.id, updateCardSpotlightRect]);
-
-  useLayoutEffect(() => {
-    if (!highlightPaperReady) {
-      setCardSpotlightRect(null);
-      return;
-    }
-
-    updateCardSpotlightRect();
-    window.addEventListener("resize", updateCardSpotlightRect);
-    window.addEventListener("scroll", updateCardSpotlightRect, true);
-    return () => {
-      window.removeEventListener("resize", updateCardSpotlightRect);
-      window.removeEventListener("scroll", updateCardSpotlightRect, true);
-    };
-  }, [highlightPaperReady, tutorialHighlightPaper?.id, updateCardSpotlightRect]);
-
-  /** Past-paper predictions often have no composite PDF; use first source paper for card preview. */
-  const getPredictionPaperPreviewBlob = useCallback(
-    async (paper: ExamPaper): Promise<Blob> => {
-      if (paper.storagePath?.trim()) {
-        return getPaperBlob(paper);
-      }
-      const questions = await getPaperQuestions(paper);
-      const path = questions.find((q) => q.sourceStoragePath?.trim())?.sourceStoragePath?.trim();
-      if (!path) {
-        throw new Error("No PDF path for prediction preview");
-      }
-      return getPaperBlob({ ...paper, storagePath: path });
-    },
-    [getPaperBlob, getPaperQuestions]
   );
 
   const goToSession = useCallback(() => {
@@ -1314,81 +1025,6 @@ export default function PracticeHub() {
                 </div>
               )}
 
-              <section
-                className="practice-hub__predictions mt-8"
-                aria-label="Predictions"
-              >
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <LuSparkles size={20} className="color-txt-accent shrink-0" aria-hidden />
-                    <h2 className="txt-heading-colour text-xl font-bold">Predictions</h2>
-                  </div>
-                  <button
-                    type="button"
-                    className="blue-btn !w-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-sm shrink-0"
-                    onClick={openPredictionModal}
-                  >
-                    <LuSparkles size={16} aria-hidden />
-                    Generate
-                  </button>
-                </div>
-                {predictionsLoading ? (
-                  <div className="deck-grid">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="deck flex flex-col">
-                        <div className="color-border" />
-                        <div className="image color-bg-grey-5 animate-pulse" />
-                        <div className="flex w-full z-50 mt-21 px-3 py-2 items-center color-bg-grey-5 animate-pulse rounded-b-2xl h-14" />
-                      </div>
-                    ))}
-                  </div>
-                ) : predictionPapers.length === 0 ? (
-                  <p className="txt-sub color-txt-sub py-2">
-                    Exam predictions will appear here when available.
-                  </p>
-                ) : (
-                  <div className="deck-grid">
-                    {predictionPapers.map((paper, i) => {
-                      const isHighlightTarget =
-                        highlightPaperReady && paper.id === tutorialHighlightPaper?.id;
-
-                      return (
-                        <motion.div
-                          key={getExamPaperKey(paper)}
-                          ref={isHighlightTarget ? assignTutorialCardAnchorRef : undefined}
-                          initial={{ opacity: 0, y: 12 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2, delay: i * 0.03, ease: "easeOut" }}
-                        >
-                          {paper.contentType === "image" ? (
-                            <ImagePredictionCard
-                              paper={paper}
-                              accessLabel={getContentAccessLabel(
-                                user,
-                                canAccessPaper(user, paper, freePaperKeys)
-                              )}
-                              onSelect={() => handlePredictionSelect(paper)}
-                            />
-                          ) : (
-                            <PaperCard
-                              paper={paper}
-                              getPaperBlob={getPredictionPaperPreviewBlob}
-                              accessLabel={getContentAccessLabel(
-                                user,
-                                canAccessPaper(user, paper, freePaperKeys)
-                              )}
-                              onSelect={() => handlePredictionSelect(paper)}
-                            />
-                          )}
-                          <p className="txt-sub color-txt-sub text-xs mt-1.5 px-1 truncate">
-                            {getSubjectLabel(paper.subject ?? "")} · {formatLevelDisplay(paper.level)}
-                          </p>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
             </motion.div>
           ) : isImageMode ? (
             imageTopicsError ? (
@@ -1727,152 +1363,6 @@ export default function PracticeHub() {
             </motion.aside>
           </>
         )}
-        {selectedPrediction && (
-          <>
-            <motion.div
-              className="practice-hub__backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-              onClick={() => setSelectedPrediction(null)}
-              aria-hidden
-            />
-            <motion.aside
-              className="practice-hub__panel color-bg"
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{
-                type: "tween",
-                duration: 0.35,
-                ease: [0.32, 0.72, 0, 1],
-              }}
-              onAnimationComplete={() => setPredictionPanelAnimationDone(true)}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="ph-prediction-panel-title"
-            >
-              <div className="absolute top-1 right-1 flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setPredictionDeleteConfirm(true)}
-                  className="practice-hub__panel-close practice-hub__panel-delete"
-                  aria-label="Delete prediction"
-                  disabled={predictionDeleting}
-                >
-                  <LuTrash2 size={20} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPrediction(null)}
-                  className="practice-hub__panel-close"
-                  aria-label="Close"
-                >
-                  <LuX size={24} />
-                </button>
-              </div>
-
-              <div className="practice-hub__panel-inner">
-                <header className="practice-hub__panel-header">
-                  <h2 id="ph-prediction-panel-title" className="practice-hub__panel-title txt-heading-colour flex items-center gap-2">
-                    <LuSparkles size={18} className="color-txt-accent shrink-0" aria-hidden />
-                    {selectedPrediction.label}
-                  </h2>
-                </header>
-
-                <p className="practice-hub__panel-meta color-txt-sub text-sm">
-                  <span>{getSubjectLabel(selectedPrediction.subject ?? "")}</span>
-                  <span className="practice-hub__panel-meta-sep" aria-hidden> · </span>
-                  <span>{formatLevelDisplay(selectedPrediction.level)}</span>
-                  {selectedPrediction.contentType !== "image" && getPaperNumber(selectedPrediction) != null && (
-                    <>
-                      <span className="practice-hub__panel-meta-sep" aria-hidden> · </span>
-                      <span>Paper {getPaperNumber(selectedPrediction)}</span>
-                    </>
-                  )}
-                </p>
-
-                <div className="practice-hub__prediction-questions mt-3">
-                  {predictionQuestionsLoading ? (
-                    <div className="practice-hub__prediction-questions-loading color-txt-sub text-sm py-4">
-                      Loading questions…
-                    </div>
-                  ) : selectedPrediction.contentType === "image" ? (
-                    predictionImageQuestions.length === 0 ? (
-                      <p className="color-txt-sub text-sm py-2">No questions in this prediction.</p>
-                    ) : (
-                      <ul className="practice-hub__prediction-questions-list">
-                        {predictionImageQuestions.map((q, i) => (
-                          <PredictionImageQuestionItem
-                            key={q.id}
-                            question={q}
-                            index={i}
-                          />
-                        ))}
-                      </ul>
-                    )
-                  ) : predictionQuestions.length === 0 ? (
-                    <p className="color-txt-sub text-sm py-2">No questions in this prediction.</p>
-                  ) : (
-                    <ul className="practice-hub__prediction-questions-list">
-                      {predictionQuestions.map((q, i) => (
-                        <PredictionPaperQuestionItem
-                          key={q.id}
-                          paper={selectedPrediction}
-                          question={q}
-                          index={i}
-                          getPaperBlobForQuestion={getPaperBlobForQuestion}
-                        />
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className="practice-hub__panel-actions-spacer" aria-hidden />
-              </div>
-              <div className="practice-hub__panel-actions color-bg">
-                {predictionDeleteConfirm ? (
-                  <div className="practice-hub__panel-delete-confirm">
-                    <p className="txt color-txt-main text-sm">
-                      Delete this prediction? This can&apos;t be undone.
-                    </p>
-                    <div className="practice-hub__panel-delete-actions">
-                      <button
-                        type="button"
-                        onClick={() => setPredictionDeleteConfirm(false)}
-                        className="practice-hub__panel-delete-cancel"
-                        disabled={predictionDeleting}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleDeletePrediction}
-                        className="practice-hub__panel-delete-confirm-btn"
-                        disabled={predictionDeleting}
-                      >
-                        <LuTrash2 size={16} aria-hidden />
-                        {predictionDeleting ? "Deleting…" : "Delete"}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedPrediction) goToPaperSession(selectedPrediction);
-                    }}
-                    className="blue-btn w-full flex items-center justify-center gap-2 py-3"
-                  >
-                    Let&apos;s go
-                    <LuChevronRight size={20} />
-                  </button>
-                )}
-              </div>
-            </motion.aside>
-          </>
-        )}
       </AnimatePresence>,
       getThemedPortalTarget()
       )}
@@ -1886,130 +1376,6 @@ export default function PracticeHub() {
           onClose={() => setShowContentGateModal(false)}
         />
       )}
-
-      {showPredictionModal &&
-        createPortal(
-          <>
-            <div
-              className={`practice-hub__backdrop${isModalTutorialStep ? " practice-hub__backdrop--tutorial" : ""}`}
-              onClick={closePredictionModal}
-              aria-hidden
-            />
-            <div
-              className={`practice-hub__prediction-modal-wrap${isModalTutorialStep ? " practice-hub__prediction-modal-wrap--tutorial" : ""}`}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="ph-prediction-modal-title"
-              onClick={closePredictionModal}
-            >
-              <div className="practice-hub__prediction-modal-stage">
-                <AnimatePresence>
-                  {isModalTutorialStep && tutorialStep !== null ? (
-                    <PredictionTutorialCallout key="prediction-tutorial" step={tutorialStep} />
-                  ) : null}
-                </AnimatePresence>
-                <div
-                  className="practice-hub__prediction-modal color-bg"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <h2 id="ph-prediction-modal-title" className="txt-heading-colour text-xl font-bold">
-                    Generate prediction
-                  </h2>
-                  <button
-                    type="button"
-                    className="practice-hub__panel-close"
-                    onClick={closePredictionModal}
-                    aria-label="Close"
-                  >
-                    <LuX size={24} />
-                  </button>
-                </div>
-
-                <div className="prediction-flow__controls-row prediction-flow__controls-row--modal mb-5">
-                  <div className="prediction-flow__field">
-                    <label className="prediction-flow__label color-txt-sub">Subject</label>
-                    <select
-                      value={predictionSubject}
-                      onChange={(e) => setPredictionSubject(e.target.value)}
-                      className={PREDICTION_SELECT_CLASS}
-                    >
-                      {PRACTICE_HUB_SUBJECTS.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="prediction-flow__field">
-                    <label className="prediction-flow__label color-txt-sub">Level</label>
-                    <select
-                      value={predictionLevel}
-                      onChange={(e) => setPredictionLevel(e.target.value)}
-                      className={PREDICTION_SELECT_CLASS}
-                    >
-                      <option value="higher">Higher</option>
-                      <option value="ordinary">Ordinary</option>
-                    </select>
-                  </div>
-                  {predictionUsesPastPapers && (
-                    <div className="prediction-flow__field">
-                      <label className="prediction-flow__label color-txt-sub">Paper</label>
-                      <select
-                        value={predictionPaper}
-                        onChange={(e) => setPredictionPaper(Number(e.target.value) as 1 | 2)}
-                        className={PREDICTION_SELECT_CLASS}
-                      >
-                        <option value={1}>Paper 1</option>
-                        <option value={2}>Paper 2</option>
-                      </select>
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => predictionFlowRef.current?.generate()}
-                    disabled={predictionGenerating}
-                    className="blue-btn prediction-flow__generate-btn"
-                  >
-                    <LuSparkles size={18} aria-hidden className={predictionGenerating ? "animate-spin" : ""} />
-                    {predictionGenerating ? "Generating…" : "Generate prediction"}
-                  </button>
-                </div>
-
-                <GeneratePredictionFlow
-                  ref={predictionFlowRef}
-                  key={`${predictionSubject}-${predictionLevel}-${predictionPaper}`}
-                  subject={predictionSubject}
-                  level={predictionLevel}
-                  paperNumber={predictionPaper}
-                  onPaperNumberChange={setPredictionPaper}
-                  embeddedControls
-                  onLoadingChange={setPredictionGenerating}
-                  onBlueprintReady={() => {
-                    setTutorialStep((current) => (current === 1 ? 2 : current));
-                  }}
-                  onSaved={(paperId) => {
-                    setPapersReloadKey((k) => k + 1);
-                    setShowPredictionModal(false);
-                    if (tutorialStepRef.current === 1 || tutorialStepRef.current === 2) {
-                      setTutorialHighlightPaperId(paperId);
-                      setTutorialStep(3);
-                    }
-                  }}
-                />
-                </div>
-              </div>
-            </div>
-          </>,
-          getThemedPortalTarget()
-        )}
-
-      {cardTutorialUiReady && cardSpotlightRect ? (
-        <>
-          <PredictionCardTutorialScrim anchorRect={cardSpotlightRect} />
-          <PredictionCardTutorialCallout anchorRect={cardSpotlightRect} />
-        </>
-      ) : null}
 
     </div>
   );
@@ -2027,79 +1393,6 @@ function ContentAccessBadge({ label }: { label: ContentAccessLabel }) {
       <LuLock size={10} aria-hidden />
       ACE
     </span>
-  );
-}
-
-/** Prediction card for image-based subjects (thumbnail from Storage, not PDF). */
-function ImagePredictionCard({
-  paper,
-  onSelect,
-  accessLabel,
-}: {
-  paper: ExamPaper;
-  onSelect: () => void;
-  accessLabel?: ContentAccessLabel | null;
-}) {
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const loaded = useRef(false);
-
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el || loaded.current || !paper.storagePath) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0]?.isIntersecting) return;
-        loaded.current = true;
-        getDownloadURL(storageRef(storage, paper.storagePath))
-          .then(setThumbUrl)
-          .catch(() => {});
-      },
-      { rootMargin: "100px", threshold: 0.1 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [paper.storagePath]);
-
-  const levelLabel = formatLevelDisplay(paper.level);
-
-  return (
-    <div
-      ref={cardRef}
-      role="button"
-      tabIndex={0}
-      onClick={onSelect}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect();
-        }
-      }}
-      className="deck paper-card flex flex-col"
-    >
-      <div className="color-border" />
-      <div className="image overflow-hidden relative">
-        {accessLabel && (
-          <div className="absolute top-2 right-2 z-10">
-            <ContentAccessBadge label={accessLabel} />
-          </div>
-        )}
-        {thumbUrl ? (
-          <img src={thumbUrl} alt="" className="w-full h-full object-cover object-center" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center color-txt-sub text-xs">
-            <LuSparkles size={20} className="opacity-50" aria-hidden />
-          </div>
-        )}
-      </div>
-      <div className="bg-overlay" />
-      <div className="flex w-full z-50 mt-21 px-3 py-2 items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className="txt-heading-colour font-bold text-sm truncate">{paper.label}</p>
-          <p className="txt-sub color-txt-sub text-xs">{levelLabel} · Image prediction</p>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -2271,211 +1564,6 @@ function TopicCard({
         </div>
       </div>
     </div>
-  );
-}
-
-/** One question in the prediction slide-in panel (past-paper style). Lazy-loads source PDF and renders the cropped region. */
-function PredictionPaperQuestionItem({
-  paper,
-  question,
-  index,
-  getPaperBlobForQuestion,
-}: {
-  paper: ExamPaper;
-  question: PaperQuestion;
-  index: number;
-  getPaperBlobForQuestion: (p: ExamPaper, q: PaperQuestion) => Promise<Blob>;
-}) {
-  const [sourceBlob, setSourceBlob] = useState<Blob | null>(null);
-  const itemRef = useRef<HTMLLIElement>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const loaded = useRef(false);
-  const [snippetWidth, setSnippetWidth] = useState(320);
-
-  useEffect(() => {
-    const el = itemRef.current;
-    if (!el || loaded.current) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0]?.isIntersecting) return;
-        loaded.current = true;
-        getPaperBlobForQuestion(paper, question)
-          .then(setSourceBlob)
-          .catch((err) => console.warn("Prediction question PDF load failed:", err));
-      },
-      { rootMargin: "200px", threshold: 0.05 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [paper, question, getPaperBlobForQuestion]);
-
-  useLayoutEffect(() => {
-    const el = previewRef.current;
-    if (!el) return;
-    const update = () => {
-      const w = el.clientWidth;
-      if (w > 0) setSnippetWidth(w);
-    };
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const regions = useMemo(() => {
-    if (question.pageRegions && question.pageRegions.length > 0) {
-      return question.pageRegions.map((r) => ({
-        page: r.page,
-        x: r.x ?? 0,
-        y: r.y ?? 0,
-        width: r.width ?? 595,
-        height: r.height ?? 150,
-      }));
-    }
-    return [
-      {
-        page: question.pageRange?.[0] ?? 1,
-        x: 0,
-        y: 0,
-        width: 595,
-        height: 600,
-      },
-    ];
-  }, [question.pageRegions, question.pageRange]);
-
-  const tags = question.tags ?? [];
-  const sourceLabel = (() => {
-    const year = question.sourceYear;
-    const level = question.sourceLevel ? formatLevelDisplay(question.sourceLevel) : null;
-    const parts = [year, level].filter(Boolean);
-    if (parts.length === 0) return null;
-    return parts.join(" · ");
-  })();
-
-  return (
-    <li
-      ref={itemRef}
-      className="practice-hub__prediction-question color-bg-grey-5 rounded-in"
-    >
-      <div className="practice-hub__prediction-question-header">
-        <span className="practice-hub__prediction-question-index color-bg-accent color-txt-accent">
-          Q{index + 1}
-        </span>
-        <span className="practice-hub__prediction-question-name txt-heading-colour truncate">
-          {question.questionName || `Question ${index + 1}`}
-        </span>
-      </div>
-      {tags.length > 0 && (
-        <div className="practice-hub__prediction-question-tags">
-          {tags.map((t) => (
-            <span
-              key={t}
-              className="color-bg-accent color-txt-accent rounded-in px-1.5 py-0.5 text-xs"
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-      )}
-      {question.predictionReason && (
-        <p className="practice-hub__prediction-question-reason color-txt-sub text-xs">
-          {question.predictionReason}
-        </p>
-      )}
-      <div
-        ref={previewRef}
-        className="practice-hub__prediction-question-preview rounded-in overflow-hidden"
-      >
-        {sourceBlob ? (
-          <CroppedPdfRegions file={sourceBlob} regions={regions} pageWidth={snippetWidth} />
-        ) : (
-          <div className="practice-hub__prediction-question-skeleton color-bg-grey-10 animate-pulse" />
-        )}
-      </div>
-      {sourceLabel && (
-        <p className="practice-hub__prediction-question-source color-txt-sub text-xs">
-          From {sourceLabel}
-        </p>
-      )}
-    </li>
-  );
-}
-
-/** One question in the prediction slide-in panel (image style). */
-function PredictionImageQuestionItem({
-  question,
-  index,
-}: {
-  question: StoredImagePredictionQuestion;
-  index: number;
-}) {
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const itemRef = useRef<HTMLLIElement>(null);
-  const loaded = useRef(false);
-
-  useEffect(() => {
-    const el = itemRef.current;
-    if (!el || loaded.current) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0]?.isIntersecting) return;
-        loaded.current = true;
-        Promise.all(
-          question.imageStoragePaths.map((path) =>
-            getDownloadURL(storageRef(storage, path)).catch(() => null)
-          )
-        ).then((urls) => {
-          setImageUrls(urls.filter((u): u is string => typeof u === "string"));
-        });
-      },
-      { rootMargin: "200px", threshold: 0.05 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [question.imageStoragePaths]);
-
-  const displayName = question.displayName.replace(/^\[Prediction\]\s*/, "");
-
-  return (
-    <li
-      ref={itemRef}
-      className="practice-hub__prediction-question color-bg-grey-5 rounded-in"
-    >
-      <div className="practice-hub__prediction-question-header">
-        <span className="practice-hub__prediction-question-index color-bg-accent color-txt-accent">
-          Q{index + 1}
-        </span>
-        <span className="practice-hub__prediction-question-name txt-heading-colour truncate">
-          {displayName}
-        </span>
-      </div>
-      {question.predictionReason && (
-        <p className="practice-hub__prediction-question-reason color-txt-sub text-xs">
-          {question.predictionReason}
-        </p>
-      )}
-      <div className="practice-hub__prediction-question-preview rounded-in overflow-hidden">
-        {imageUrls.length > 0 ? (
-          <div className="practice-hub__prediction-question-images">
-            {imageUrls.map((url, i) => (
-              <img
-                key={url}
-                src={url}
-                alt={`${displayName} – image ${i + 1}`}
-                className="practice-hub__prediction-question-image"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="practice-hub__prediction-question-skeleton color-bg-grey-10 animate-pulse" />
-        )}
-      </div>
-      {question.sourceTopic && (
-        <p className="practice-hub__prediction-question-source color-txt-sub text-xs">
-          Topic: {question.sourceTopic.replace(/[-_]/g, " ")}
-        </p>
-      )}
-    </li>
   );
 }
 

@@ -277,16 +277,7 @@ function CalculatorBody({ state, actions, onClose }: { state: CalcState; actions
         </button>
       )}
 
-      {/* ── Branding ──────────────────────────────────── */}
-      <div className="casio-emu__brand">
-        <span className="casio-emu__brand-casio">CASIO</span>
-        <span className="casio-emu__brand-model">fx-83GT CW</span>
-      </div>
-
       <CalcDisplay state={state} />
-
-      {/* ── CLASSWIZ ──────────────────────────────────── */}
-      <div className="casio-emu__classwiz">CLASSWIZ</div>
 
       <CalculatorKeys shiftActive={shiftActive} isRadians={isRadians} actions={actions} />
     </div>

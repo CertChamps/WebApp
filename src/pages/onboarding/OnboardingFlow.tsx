@@ -6,23 +6,17 @@ import { UserContext } from "../../context/UserContext";
 import OnboardingShell from "../../components/onboarding/OnboardingShell";
 import OnboardingSubjectPicker from "../../components/onboarding/OnboardingSubjectPicker";
 import { setFavouriteSubjectIds } from "../../data/practiceHubSubjects";
-import {
-  getPracticeHubWithTutorialPath,
-  markPendingPredictionTutorial,
-} from "../../lib/predictionTutorial";
 
 type Step = 1 | 2 | 3;
 
 type Props = {
   isReplay?: boolean;
   returnTo?: string;
-  includePredictionTutorial?: boolean;
 };
 
 export default function OnboardingFlow({
   isReplay = false,
   returnTo = "/user/settings",
-  includePredictionTutorial = true,
 }: Props) {
   const { user, setUser } = useContext(UserContext);
   const navigate = useNavigate();
@@ -58,21 +52,11 @@ export default function OnboardingFlow({
     }
   };
 
-  const finishWithPredictionTutorial = () => {
-    markPendingPredictionTutorial();
-    navigate(getPracticeHubWithTutorialPath(), { replace: true });
-  };
-
   const completeOnboarding = async () => {
     if (!user.uid) return;
 
-    if (isReplay && !includePredictionTutorial) {
+    if (isReplay) {
       exitFlow();
-      return;
-    }
-
-    if (isReplay && includePredictionTutorial) {
-      finishWithPredictionTutorial();
       return;
     }
 
@@ -86,7 +70,7 @@ export default function OnboardingFlow({
         ...prev,
         hasCompletedOnboarding: true,
       }));
-      finishWithPredictionTutorial();
+      navigate("/practice", { replace: true });
     } catch (err) {
       console.error("Failed to complete onboarding:", err);
       setError("Something went wrong. Please try again.");
@@ -169,11 +153,7 @@ export default function OnboardingFlow({
             disabled={saving}
             onClick={() => void completeOnboarding()}
           >
-            {isReplay && !includePredictionTutorial
-              ? "Done"
-              : saving
-                ? "Starting…"
-                : "Start Practicing"}
+            {isReplay ? "Done" : saving ? "Starting…" : "Start Practicing"}
           </button>
           {cancelAction}
         </>
