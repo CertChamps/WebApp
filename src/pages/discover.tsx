@@ -4,7 +4,6 @@ import {
     collection,
     deleteDoc,
     doc,
-    getDocs,
     limit,
     onSnapshot,
     orderBy,
