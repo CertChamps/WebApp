@@ -53,7 +53,7 @@ html.capacitor-native body {
 
 :root {
   font-family: "Inter", sans-serif;
-  font-size: 16px;
+  font-size: 16px; 
   --temporary-ipad-top-offset: 0px;
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
