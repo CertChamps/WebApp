@@ -59,7 +59,6 @@ export function computeFreePaperKeys(papers: ExamPaper[]): Set<string> {
   const bySubjectLevel = new Map<string, ExamPaper[]>();
 
   for (const paper of papers) {
-    if (paper.isPrediction === true) continue;
     if (paper.isFree === true || isLegacyFreePaper(paper)) {
       free.add(getExamPaperKey(paper));
     }
@@ -92,7 +91,6 @@ export function canAccessPaper(
   paper: ExamPaper,
   freePaperKeys: Set<string>
 ): boolean {
-  if (paper.isPrediction === true) return true;
   if (hasAceAccess(user)) return true;
   return freePaperKeys.has(getExamPaperKey(paper));
 }

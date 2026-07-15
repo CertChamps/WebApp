@@ -440,29 +440,6 @@ export default function Social() {
 
                     {/* pinned footer */}
                     <div className="h-16 w-full p-4 shrink-0 flex flex-col items-center justify-center space-y-2 hover:opacity-90 mb-15">
-                        {/* PayPal Donate Button */}
-                        <div
-                            dangerouslySetInnerHTML={{
-                            __html: `
-                                <form action="https://www.paypal.com/donate" method="post" target="_top">
-                                <input type="hidden" name="hosted_button_id" value="LJ8UFQY4LPL3S" />
-                                <input
-                                    type="submit"
-                                    value="Buy us a coffee ☕"
-                                    style="
-                                    background-color: #ffc439;
-                                    border: none;
-                                    color: #111;
-                                    font-weight: 600;
-                                    padding: 10px 20px;
-                                    border-radius: 8px;
-                                    cursor: pointer;
-                                    "
-                                />
-                                </form>
-                            `,
-                            }}
-                        />
 
                         {/* Discord Button */}
                         <a

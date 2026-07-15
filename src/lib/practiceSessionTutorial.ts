@@ -2,7 +2,7 @@ export type PracticeSessionTutorialStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 export const PENDING_PRACTICE_SESSION_TUTORIAL_KEY = "pending-practice-session-tutorial";
 
-/** Set when the user opens a prediction from stage 3 of the onboarding tutorial. */
+/** Set when the practice session tutorial should auto-start on the next session open. */
 export function markPendingPracticeSessionTutorial(): void {
   try {
     sessionStorage.setItem(PENDING_PRACTICE_SESSION_TUTORIAL_KEY, "1");
