@@ -277,6 +277,11 @@ function CalculatorBody({ state, actions, onClose }: { state: CalcState; actions
         </button>
       )}
 
+      <div className="flex flex-col items-start justify-center shrink-0 pt-8 px-5 pb-4 gap-0.5">
+        <p className="color-txt-sub text-[11px] font-semibold tracking-[0.12em]">CERTCHAMPS</p>
+        <p className="color-txt-sub text-[11px] font-semibold tracking-[0.12em] opacity-75">scientific calculator</p>
+      </div>
+
       <CalcDisplay state={state} />
 
       <CalculatorKeys shiftActive={shiftActive} isRadians={isRadians} actions={actions} />

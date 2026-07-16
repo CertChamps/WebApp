@@ -19,8 +19,7 @@ import {
     LuPlus,
     LuLink,
     LuImage,
-    LuTrash2,
-    LuExternalLink,
+    LuTrash2, LuExternalLink,
     LuLoader,
     LuX,
 } from "react-icons/lu";
