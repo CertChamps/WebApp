@@ -16,6 +16,7 @@ import {
   LuClock3,
   LuDatabase,
   LuFileJson,
+  LuImage,
   LuLoaderCircle,
   LuSearch,
   LuUser,
@@ -585,6 +586,14 @@ export default function AdminCanvasViewer() {
             </p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => navigate("/admin/discover-moderation")}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-semibold hover:opacity-90 transition-opacity"
+        >
+          <LuImage size={16} />
+          Discover moderation
+        </button>
       </div>
 
       {pageError && (

@@ -6,7 +6,7 @@ import '../styles/navbar.css'
 import { isIPad } from '../utils/isIPad'
 
 // ======================= ICON IMPORTS ======================== // 
-import { LuPencil, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText, LuCompass } from "react-icons/lu";
+import { LuPencil, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText } from "react-icons/lu";
 import type { IconType } from 'react-icons';
 
 const showNavTooltips = !isIPad();
@@ -25,9 +25,9 @@ export default function Navbar () {
 
     const derivePageFromPath = (path: string) => {
         if (path.startsWith('/decks')) return 'decks'
-        if (path.startsWith('/social')) return 'social/social'
+        if (path.startsWith('/social')) return 'community'
         if (path.startsWith('/progress')) return 'progress'
-        if (path.startsWith('/discover')) return 'discover'
+        if (path.startsWith('/discover')) return 'community'
         if (path.startsWith('/feedback')) return 'feedback'
         if (path.startsWith('/user/settings')) return 'user/settings'
         if (path.startsWith('/admin/add-questions')) return 'admin/add-questions'
@@ -63,6 +63,10 @@ export default function Navbar () {
         // navigate to that page
         if (page === "practice") {
             navigateToPractice();
+            return;
+        }
+        if (page === "community") {
+            navigate("/discover");
             return;
         }
         navigate(`/${page}`) 
@@ -125,13 +129,10 @@ export default function Navbar () {
             {/* ============================= PRACTICE ICON ================================ */}
             {renderNavItem('nav-practice', 'Practice', LuPencil, 'practice')}
             
-            {/* ============================= SOCIAL ICON ================================ */} 
-            {renderNavItem('nav-social', 'Social', LuUsers, 'social/social')}
+            {/* ============================= COMMUNITY ICON ================================ */}
+            {renderNavItem('nav-community', 'Community', LuUsers, 'community')}
 
             {renderNavItem('nav-progress', 'Progress', LuChartSpline, 'progress')}
-
-            {/* ============================= DISCOVER ICON ================================ */}
-            {renderNavItem('nav-discover', 'Discover', LuCompass, 'discover')}
 
             {/* Decks nav temporarily hidden while decks are rebuilt */}
 

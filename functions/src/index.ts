@@ -15,6 +15,138 @@ const corsMiddleware = cors({ origin: true });
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_MODEL = "google/gemini-3-flash-preview";
 
+function normalizePreviewUrl(input: unknown): string | null {
+    if (typeof input !== "string") return null;
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    try {
+        const url = new URL(withScheme);
+        if (!url.hostname.includes(".")) return null;
+        if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+        return url.toString();
+    } catch {
+        return null;
+    }
+}
+
+function decodeHtmlEntities(value: string): string {
+    return value
+        .replace(/&amp;/g, "&")
+        .replace(/&quot;/g, "\"")
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .trim();
+}
+
+function extractMeta(html: string, names: string[]): string | null {
+    for (const name of names) {
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const patterns = [
+            new RegExp(`<meta[^>]+(?:property|name)=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i"),
+            new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${escaped}["'][^>]*>`, "i"),
+        ];
+        for (const pattern of patterns) {
+            const match = html.match(pattern);
+            if (match?.[1]) return decodeHtmlEntities(match[1]);
+        }
+    }
+    return null;
+}
+
+function resolveUrl(value: string | null, baseUrl: string): string | null {
+    if (!value) return null;
+    try {
+        return new URL(value, baseUrl).toString();
+    } catch {
+        return null;
+    }
+}
+
+function extractYoutubeId(url: string): string | null {
+    try {
+        const parsed = new URL(url);
+        if (parsed.hostname.includes("youtu.be")) {
+            return parsed.pathname.split("/").filter(Boolean)[0] ?? null;
+        }
+        if (parsed.hostname.includes("youtube.com")) {
+            return parsed.searchParams.get("v");
+        }
+    } catch {
+        return null;
+    }
+    return null;
+}
+
+export const fetchLinkPreview = functions.https.onRequest({
+    cors: true,
+    timeoutSeconds: 15,
+    memory: "256MiB",
+}, async (req, res) => {
+    if (req.method !== "POST") {
+        res.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+
+    const url = normalizePreviewUrl(req.body?.url);
+    if (!url) {
+        res.status(400).json({ error: "Valid url is required" });
+        return;
+    }
+
+    const youtubeId = extractYoutubeId(url);
+
+    try {
+        const response = await fetch(url, {
+            method: "GET",
+            redirect: "follow",
+            headers: {
+                "User-Agent": "CertChampsBot/1.0 (+https://app.certchamps.ie)",
+                "Accept": "text/html,application/xhtml+xml",
+            },
+            size: 1024 * 1024,
+            timeout: 8000,
+        } as any);
+
+        const finalUrl = response.url || url;
+        const html = await response.text();
+        const title =
+            extractMeta(html, ["og:title", "twitter:title"]) ??
+            decodeHtmlEntities(html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1] ?? "");
+        const description = extractMeta(html, ["og:description", "twitter:description", "description"]);
+        const ogImage = resolveUrl(
+            extractMeta(html, ["og:image", "og:image:secure_url", "twitter:image", "twitter:image:src"]),
+            finalUrl
+        );
+        const iconMatch =
+            html.match(/<link[^>]+rel=["'][^"']*(?:icon|shortcut icon|apple-touch-icon)[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>/i) ??
+            html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*(?:icon|shortcut icon|apple-touch-icon)[^"']*["'][^>]*>/i);
+        const faviconUrl = resolveUrl(iconMatch?.[1] ?? "/favicon.ico", finalUrl);
+        const hostname = new URL(finalUrl).hostname.replace(/^www\./, "");
+
+        res.json({
+            url: finalUrl,
+            title: title || hostname,
+            description: description ?? "",
+            imageUrl: youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : ogImage,
+            faviconUrl,
+            siteName: extractMeta(html, ["og:site_name"]) ?? hostname,
+        });
+    } catch (error) {
+        const parsed = new URL(url);
+        res.json({
+            url,
+            title: parsed.hostname.replace(/^www\./, ""),
+            description: "",
+            imageUrl: youtubeId ? `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg` : null,
+            faviconUrl: `${parsed.origin}/favicon.ico`,
+            siteName: parsed.hostname.replace(/^www\./, ""),
+            warning: "Preview metadata could not be fetched",
+        });
+    }
+});
+
 export const verifyCaptcha = functions.https.onRequest(
     {
         secrets: ["RECAPTCHA_SECRET_KEY"] // Add this!
