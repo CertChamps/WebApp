@@ -2221,16 +2221,19 @@ export default function Questions() {
                                         themedPortalTarget
                                     )}
                                 <div className="flex-1 min-h-0 relative pt-4 pointer-events-none">
-                                    <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-2 items-center pointer-events-auto">
+                                    <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-28 items-center pointer-events-auto">
                                         <div className="flex flex-col items-center w-full" style={{ maxWidth: snippetWidth }}>
-                                            {currentGroupedQuestion.images.map((img, idx) => (
-                                                <ZoomableQuestionImage
-                                                    key={img.storagePath}
-                                                    src={img.downloadUrl}
-                                                    alt={idx === 0 ? currentGroupedQuestion.displayName : `${currentGroupedQuestion.displayName} part ${idx + 1}`}
-                                                    className="w-full h-auto"
-                                                />
-                                            ))}
+                                            <ZoomableQuestionImage
+                                                images={currentGroupedQuestion.images.map((img, idx) => ({
+                                                    key: img.storagePath,
+                                                    src: img.downloadUrl,
+                                                    alt:
+                                                        idx === 0
+                                                            ? currentGroupedQuestion.displayName
+                                                            : `${currentGroupedQuestion.displayName} part ${idx + 1}`,
+                                                }))}
+                                                className="w-full h-auto"
+                                            />
                                         </div>
                                         <div className="pt-4 flex justify-center w-full" style={{ maxWidth: snippetWidth }}>
                                             <button

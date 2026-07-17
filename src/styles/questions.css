@@ -758,89 +758,141 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   line-height: 1.45;
 }
 
-/* Zoomable question images (inline + fullscreen) */
-.zoomable-question-image-anchor {
+/* Zoomable question page (all images share one pinch/pan transform) */
+.zoomable-question-page {
   position: relative;
   width: 100%;
-}
-
-.zoomable-question-image {
-  position: relative;
-  overflow: visible;
-  touch-action: none;
   cursor: zoom-in;
-  width: 100%;
-}
-
-.zoomable-question-image--fullscreen {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  cursor: grab;
-}
-
-.zoomable-question-image__placeholder {
-  display: block;
-  visibility: hidden;
-  pointer-events: none;
+  /* Manual 1-finger scroll + 2-finger pinch; must be none so iOS delivers multi-touch */
+  touch-action: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 
-.zoomable-question-image__inline-portal {
-  position: fixed;
-  z-index: 1;
-  overflow: visible;
-  pointer-events: auto;
-  touch-action: none;
+.zoomable-question-page--zooming {
+  /* Keep layout space while the live layer is portalled above */
 }
 
-.zoomable-question-image__inline-portal--elevated {
-  z-index: 500;
-  isolation: isolate;
+.zoomable-question-page__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  transform-origin: center center;
+  will-change: transform;
 }
 
-.zoomable-question-image__img {
+.zoomable-question-page__content--transition {
+  transition:
+    transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.zoomable-question-page__overlay-content--exiting {
+  transition: opacity 90ms ease-out !important;
+}
+
+.zoomable-question-page__content--placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.zoomable-question-page__img {
   display: block;
   width: 100%;
   height: auto;
   object-fit: contain;
-  transform-origin: center center;
   user-select: none;
   -webkit-user-drag: none;
+  pointer-events: none;
 }
 
-.zoomable-question-image__img--transition {
-  transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1);
+.zoomable-question-page__inline-portal {
+  position: fixed;
+  z-index: 500;
+  isolation: isolate;
+  overflow: visible;
+  /* Visual clone only — touches must keep hitting the stable page surface */
+  pointer-events: none;
+  touch-action: none;
 }
 
-.zoomable-question-image--fullscreen .zoomable-question-image__img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  margin: auto;
-}
-
-.zoomable-question-image__overlay {
+.zoomable-question-page__overlay {
   position: fixed;
   inset: 0;
   z-index: 100000;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.92);
+  background: rgba(0, 0, 0, 0);
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+  transition:
+    background-color 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    backdrop-filter 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    -webkit-backdrop-filter 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.zoomable-question-image__overlay-stage {
+.zoomable-question-page__overlay--visible {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* Exit: clear the scrim early and let the page stack show through while the clone fades home */
+.zoomable-question-page__overlay--closing {
+  pointer-events: none;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition-duration: 90ms !important;
+}
+
+.zoomable-question-page__overlay-stage {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 3rem 1rem 1rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 3.5rem max(1.25rem, 8vw) 1.75rem;
+  pointer-events: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-.zoomable-question-image__close {
+.zoomable-question-page__overlay-stage::-webkit-scrollbar {
+  display: none;
+}
+
+.zoomable-question-page__overlay-stage--interactive {
+  pointer-events: auto;
+}
+
+.zoomable-question-page__overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 640px);
+  margin: auto 0;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.zoomable-question-page__overlay-content--flight {
+  pointer-events: none;
+}
+
+@media (min-width: 900px) {
+  .zoomable-question-page__overlay-content {
+    width: min(100%, 720px);
+  }
+}
+
+.zoomable-question-page__close {
   position: fixed;
   top: max(0.75rem, env(safe-area-inset-top, 0px));
   right: max(0.75rem, env(safe-area-inset-right, 0px));
@@ -855,6 +907,14 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   background: rgba(255, 255, 255, 0.15);
   color: #fff;
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms ease 80ms;
+}
+
+.zoomable-question-page__close--visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .practice-session-tutorial-callout__next {

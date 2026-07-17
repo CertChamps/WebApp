@@ -913,9 +913,10 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     setHistoryViewIndex(0);
   }, []);
 
+  /** Live input sits one past the last history entry (index === length). */
   const snapHistoryToLive = useCallback(() => {
     setHistoryViewIndex((prev) => {
-      const live = Math.max(0, calcHistory.length - 1);
+      const live = calcHistory.length;
       return prev === live ? prev : live;
     });
   }, [calcHistory.length]);
@@ -1110,9 +1111,10 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     setResultMode("symbolic");
     setResultIsError(false);
     setJustExecuted(false);
-    clearCalcHistory();
+    // Keep Ans + calculation history; only clear the current entry.
+    snapHistoryToLive();
     commit();
-  }, [commit, clearCalcHistory]);
+  }, [commit, snapHistoryToLive]);
 
   const pressEXE = useCallback(() => {
     if (rootRef.current.length === 0) return;
@@ -1376,14 +1378,16 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
     setDecimalResult("");
     setResultMode("symbolic");
     setResultIsError(false);
-    setHistoryViewIndex(Math.max(0, calcHistory.length - 1));
+    setHistoryViewIndex(calcHistory.length);
     commit();
   }, [calcHistory, historyViewIndex, commit]);
 
   const pressArrow = useCallback((dir: "up" | "down" | "left" | "right") => {
     if (dir === "up" || dir === "down") {
+      const atLive = historyViewIndex >= calcHistory.length;
       const browsingHistory =
-        calcHistory.length > 0 && historyViewIndex < calcHistory.length - 1;
+        calcHistory.length > 0 && !atLive &&
+        !(justExecuted && historyViewIndex === calcHistory.length - 1);
 
       if (!justExecuted && !browsingHistory) {
         const root = rootRef.current;
@@ -1396,15 +1400,23 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
 
       if (calcHistory.length === 0) return;
       setHistoryViewIndex((prev) => {
-        if (dir === "up") return Math.max(0, prev - 1);
-        return Math.min(calcHistory.length - 1, prev + 1);
+        if (dir === "up") {
+          if (prev >= calcHistory.length) return calcHistory.length - 1;
+          return Math.max(0, prev - 1);
+        }
+        // down: stay on just-executed latest; otherwise return to live input
+        if (justExecuted && prev >= calcHistory.length - 1) return prev;
+        if (prev >= calcHistory.length - 1) return calcHistory.length;
+        return prev + 1;
       });
       commit();
       return;
     }
 
+    const atLive = historyViewIndex >= calcHistory.length;
     const browsingHistory =
-      calcHistory.length > 0 && historyViewIndex < calcHistory.length - 1;
+      calcHistory.length > 0 && !atLive &&
+      !(justExecuted && historyViewIndex === calcHistory.length - 1);
     const canReplay = calcHistory.length > 0 && (justExecuted || browsingHistory);
     if (canReplay && (dir === "left" || dir === "right")) {
       loadReplay(dir === "right");
@@ -1469,9 +1481,13 @@ export default function useCalcEngine(): [CalcState, CalcActions] {
 
   /* ── Build display ─────────────────────────────────────── */
 
-  const historyView = getHistoryView(calcHistory, historyViewIndex);
+  const atLive = historyViewIndex >= calcHistory.length;
   const browsingHistory =
-    calcHistory.length > 0 && historyViewIndex < calcHistory.length - 1;
+    calcHistory.length > 0 && !atLive &&
+    !(justExecuted && historyViewIndex === calcHistory.length - 1);
+  const historyView = browsingHistory
+    ? getHistoryView(calcHistory, historyViewIndex)
+    : null;
   const showInputCursor = !justExecuted && !browsingHistory;
 
   const state: CalcState = useMemo(() => ({
