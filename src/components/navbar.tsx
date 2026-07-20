@@ -6,7 +6,7 @@ import '../styles/navbar.css'
 import { isIPad } from '../utils/isIPad'
 
 // ======================= ICON IMPORTS ======================== // 
-import { LuPencil, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText, LuCompass } from "react-icons/lu";
+import { LuPencil, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText, LuCompass, LuPresentation } from "react-icons/lu";
 import type { IconType } from 'react-icons';
 
 const showNavTooltips = !isIPad();
@@ -33,6 +33,7 @@ export default function Navbar () {
         if (path.startsWith('/admin/add-questions')) return 'admin/add-questions'
         if (path.startsWith('/admin/canvas-viewer')) return 'admin/canvas-viewer'
         if (path.startsWith('/games')) return 'games'
+        if (path.startsWith('/whiteboards')) return 'whiteboards'
         if (path.startsWith('/practice')) return 'practice'
         if (path.startsWith('/post')) return 'social/social'
         if (path.startsWith('/viewProfile')) return 'viewProfile'
@@ -124,6 +125,9 @@ export default function Navbar () {
 
             {/* ============================= PRACTICE ICON ================================ */}
             {renderNavItem('nav-practice', 'Practice', LuPencil, 'practice')}
+
+            {/* ============================= WHITEBOARDS ICON ================================ */}
+            {renderNavItem('nav-whiteboards', 'Whiteboards', LuPresentation, 'whiteboards')}
             
             {/* ============================= SOCIAL ICON ================================ */} 
             {renderNavItem('nav-social', 'Social', LuUsers, 'social/social')}

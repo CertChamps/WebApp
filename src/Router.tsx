@@ -8,6 +8,8 @@ import PracticeHub from "./pages/PracticeHub";
 import Social from "./pages/social/social";
 import Discover from "./pages/discover";
 import Games from "./pages/games";
+import Whiteboards from "./pages/whiteboards";
+import WhiteboardPageView from "./pages/whiteboardPage";
 import Navbar from "./components/navbar";
 import Replies from "./pages/social/replies";
 import Settings from "./pages/settings";
@@ -106,6 +108,28 @@ const router = createHashRouter([
     element: (
       <ProtectedRoute>
         <Navigate to="/practice" replace />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/whiteboards",
+    element: (
+      <ProtectedRoute>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+          <Navbar />
+          <Whiteboards />
+        </div>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/whiteboards/page/:pageId",
+    element: (
+      <ProtectedRoute>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+          <Navbar />
+          <WhiteboardPageView />
+        </div>
       </ProtectedRoute>
     ),
   },

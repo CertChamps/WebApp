@@ -1,6 +1,6 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Fuse from "fuse.js";
 import {
   useExamPapers,
@@ -110,7 +110,11 @@ function getSubjectIcon(subjectId: string): IconType {
 export default function PracticeHub() {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
-  const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
+  // Entry subject filter (e.g. Whiteboards "Find Questions" links to /practice?subject=...).
+  const [searchParams] = useSearchParams();
+  const [subjectFilter, setSubjectFilter] = useState<string | null>(
+    () => searchParams.get("subject")
+  );
   const {
     papers,
     loading: papersLoading,
