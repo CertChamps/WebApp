@@ -79,6 +79,9 @@ export async function beginAuthorization(): Promise<void> {
     code_challenge_method: "S256",
     code_challenge: challenge,
     state,
+    // Force the consent screen so newly-added scopes are actually granted
+    // (Spotify otherwise reuses the previous grant without prompting).
+    show_dialog: "true",
   });
 
   window.location.assign(`${SPOTIFY_AUTH_ENDPOINT}?${params.toString()}`);

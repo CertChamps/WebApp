@@ -14,6 +14,7 @@ import {
   getCurrentUser,
   getMyPlaylists,
   getPlaylistTracks,
+  getRecentlyPlayed,
   isExpired,
   isSpotifyConfigured,
   loadSpotifyPlaybackSdk,
@@ -22,8 +23,10 @@ import {
   saveTokens,
   search as apiSearch,
   SPOTIFY_DEVICE_NAME,
+  SPOTIFY_SCOPES,
   startPlayback,
   transferPlayback,
+  type RecentlyPlayed,
   type SpotifyPlaylist,
   type SpotifySearchResults,
   type SpotifyTokenBundle,
@@ -47,6 +50,8 @@ interface SpotifyContextValue {
   profile: SpotifyUserProfile | null;
   isPremium: boolean;
   error: string | null;
+  /** True when the stored token is missing newly-added scopes (needs reconnect). */
+  needsReauth: boolean;
 
   // Playback
   deviceReady: boolean;
@@ -76,6 +81,7 @@ interface SpotifyContextValue {
   searchCatalog: (query: string) => Promise<SpotifySearchResults>;
   fetchPlaylists: () => Promise<SpotifyPlaylist[]>;
   fetchPlaylistTracks: (playlistId: string) => Promise<SpotifyTrack[]>;
+  fetchRecentlyPlayed: () => Promise<RecentlyPlayed>;
 }
 
 const SpotifyContext = createContext<SpotifyContextValue | null>(null);
@@ -86,6 +92,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<SpotifyStatus>("disconnected");
   const [profile, setProfile] = useState<SpotifyUserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsReauth, setNeedsReauth] = useState(false);
   const [deviceReady, setDeviceReady] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<NowPlaying | null>(null);
   const [paused, setPaused] = useState(true);
@@ -104,7 +111,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     paused: true,
   });
 
-  const isPremium = profile?.product === "premium";
+  const isPremium = !profile || profile.product == null || profile.product === "premium";
   const hasActiveSession = !!nowPlaying;
 
   // ---- Token management ---------------------------------------------------
@@ -147,6 +154,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setStatus("disconnected");
     setError(null);
+    setNeedsReauth(false);
   }, [teardown]);
 
   /** Returns a valid (refreshed if needed) access token, or throws. */
@@ -251,6 +259,10 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       const me = await getCurrentUser(token);
       setProfile(me);
       setStatus("connected");
+      // Flag when the granted token predates newly-added scopes so the UI can
+      // prompt a reconnect (Spotify keeps the original scopes on refresh).
+      const granted = new Set((tokenRef.current?.scope ?? "").split(" ").filter(Boolean));
+      setNeedsReauth(SPOTIFY_SCOPES.some((s) => !granted.has(s)));
       if (tokenRef.current) scheduleRefresh(tokenRef.current);
       if (me.product === "premium") {
         await setupPlayer();
@@ -398,6 +410,11 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     [getValidAccessToken]
   );
 
+  const fetchRecentlyPlayed = useCallback(async () => {
+    const token = await getValidAccessToken();
+    return getRecentlyPlayed(token);
+  }, [getValidAccessToken]);
+
   const value = useMemo<SpotifyContextValue>(
     () => ({
       configured,
@@ -405,6 +422,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       profile,
       isPremium,
       error,
+      needsReauth,
       deviceReady,
       nowPlaying,
       paused,
@@ -425,6 +443,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       searchCatalog,
       fetchPlaylists,
       fetchPlaylistTracks,
+      fetchRecentlyPlayed,
     }),
     [
       configured,
@@ -432,6 +451,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       profile,
       isPremium,
       error,
+      needsReauth,
       deviceReady,
       nowPlaying,
       paused,
@@ -452,6 +472,7 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       searchCatalog,
       fetchPlaylists,
       fetchPlaylistTracks,
+      fetchRecentlyPlayed,
     ]
   );
 

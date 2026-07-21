@@ -29,6 +29,7 @@ import {
 } from "react-icons/lu";
 import DrawingCanvas, {
   type RegisterDrawingSnapshot,
+  type CanvasObject,
 } from "../components/questions/DrawingCanvas";
 import QuestionTitlePicker from "../components/questions/QuestionTitlePicker";
 import ZoomableQuestionImage from "../components/questions/ZoomableQuestionImage";
@@ -361,10 +362,15 @@ function WhiteboardPageViewInner() {
     };
   }, [showLogTables, logTablesBlob]);
 
-  const { saveCanvas, loadCanvas } = useCanvasStorage();
+  const { saveCanvas, loadCanvas, uploadCanvasAsset } = useCanvasStorage();
   const canvasId = pageId ? whiteboardCanvasId(pageId) : null;
   const [canvasStrokes, setCanvasStrokes] = useState<CanvasStroke[]>([]);
+  const [canvasObjects, setCanvasObjects] = useState<CanvasObject[]>([]);
   const [canvasLoading, setCanvasLoading] = useState(true);
+  const canvasStrokesRef = useRef(canvasStrokes);
+  canvasStrokesRef.current = canvasStrokes;
+  const canvasObjectsRef = useRef(canvasObjects);
+  canvasObjectsRef.current = canvasObjects;
   const getDrawingSnapshotRef = useRef<(() => string | null) | null>(null);
   const registerDrawingSnapshot = useCallback<RegisterDrawingSnapshot>((fn) => {
     getDrawingSnapshotRef.current = fn;
@@ -379,11 +385,13 @@ function WhiteboardPageViewInner() {
       .then((loaded) => {
         if (cancelled) return;
         setCanvasStrokes(loaded?.strokes ?? []);
+        setCanvasObjects(loaded?.objects ?? []);
         setCanvasLoading(false);
       })
       .catch(() => {
         if (cancelled) return;
         setCanvasStrokes([]);
+        setCanvasObjects([]);
         setCanvasLoading(false);
       });
     return () => {
@@ -395,9 +403,26 @@ function WhiteboardPageViewInner() {
     (strokes: CanvasStroke[]) => {
       if (!canvasId) return;
       setCanvasStrokes(strokes);
-      saveCanvas(canvasId, strokes, null);
+      saveCanvas(canvasId, strokes, null, canvasObjectsRef.current);
     },
     [canvasId, saveCanvas]
+  );
+
+  const handleObjectsChange = useCallback(
+    (objects: CanvasObject[]) => {
+      if (!canvasId) return;
+      setCanvasObjects(objects);
+      saveCanvas(canvasId, canvasStrokesRef.current, null, objects);
+    },
+    [canvasId, saveCanvas]
+  );
+
+  const handleUploadImage = useCallback(
+    (blob: Blob) => {
+      if (!canvasId) return Promise.reject(new Error("No active canvas"));
+      return uploadCanvasAsset(canvasId, blob);
+    },
+    [canvasId, uploadCanvasAsset]
   );
 
   const touchedRef = useRef<string | null>(null);
@@ -638,6 +663,10 @@ function WhiteboardPageViewInner() {
                 initialStrokes={canvasStrokes}
                 onStrokesChange={handleStrokesChange}
                 registerDrawingSnapshot={registerDrawingSnapshot}
+                enableAttachments
+                initialObjects={canvasObjects}
+                onObjectsChange={handleObjectsChange}
+                onUploadImage={handleUploadImage}
               />
             </div>
           )}

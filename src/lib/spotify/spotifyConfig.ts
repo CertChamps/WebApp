@@ -45,7 +45,9 @@ export const SPOTIFY_SCOPES = [
   "user-read-playback-state",
   "user-modify-playback-state",
   "user-read-currently-playing",
+  "user-read-recently-played",
   "playlist-read-private",
+  "playlist-read-collaborative",
 ] as const;
 
 export const SPOTIFY_AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";

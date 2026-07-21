@@ -26,11 +26,10 @@ import ContentProGate from "../components/ContentProGate";
 import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { useImageTopics, listQuestionsForTopic, groupImageQuestions, type ImageTopic } from "../hooks/useImageQuestions";
 import { motion, AnimatePresence } from "framer-motion";
-import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuCalculator, LuSprout, LuLandmark, LuBraces, LuLanguages, LuPalette, LuDna, LuBriefcase, LuFlaskConical, LuScroll, LuCode, LuHammer, LuRuler, LuTrendingUp, LuWrench, LuBookOpen, LuGlobe, LuChefHat, LuMusic, LuDumbbell, LuAtom, LuScale, LuCpu, LuLink, LuHeart, LuArrowLeft, LuLock } from "react-icons/lu";
-import type { IconType } from "react-icons";
+import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuArrowLeft, LuLock } from "react-icons/lu";
 import { subjectMatchesPaper, getStorageFolderName, getFavouriteSubjectIds, FAVOURITES_CHANGED_EVENT, PRACTICE_HUB_SUBJECTS } from "../data/practiceHubSubjects";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
-import IrishHarpIcon from "../components/practiceHub/IrishHarpIcon";
+import { SubjectGlyph } from "../components/practiceHub/subjectIcons";
 import { getThemedPortalTarget } from "../utils/themedPortal";
 import "../styles/decks.css";
 import "../styles/practiceHub.css";
@@ -71,41 +70,6 @@ const LEVEL_OPTIONS: { value: LevelFilter; code: string; display: string }[] = [
 const LEVEL_ORDER: LevelFilter[] = ["all", "higher", "ordinary", "foundation"];
 const LEVEL_DRAG_THRESHOLD_PX = 8;
 const LEVEL_DRAG_STEP_PX = 20;
-
-const SUBJECT_ICONS: Record<string, IconType> = {
-  accounting: LuCalculator,
-  "agricultural-science": LuSprout,
-  "ancient-greek": LuLandmark,
-  "applied-mathematics": LuBraces,
-  art: LuPalette,
-  biology: LuDna,
-  business: LuBriefcase,
-  chemistry: LuFlaskConical,
-  "classical-studies": LuScroll,
-  "computer-science": LuCode,
-  "construction-studies": LuHammer,
-  "design-communication-graphics": LuRuler,
-  economics: LuTrendingUp,
-  engineering: LuWrench,
-  english: LuBookOpen,
-  geography: LuGlobe,
-  "history-early-modern": LuLandmark,
-  "history-later-modern": LuLandmark,
-  "home-economics": LuChefHat,
-  "link-modules": LuLink,
-  mathematics: LuCalculator,
-  music: LuMusic,
-  "physical-education": LuDumbbell,
-  physics: LuAtom,
-  "physics-and-chemistry": LuFlaskConical,
-  "politics-and-society": LuScale,
-  "religious-education": LuHeart,
-  technology: LuCpu,
-};
-
-function getSubjectIcon(subjectId: string): IconType {
-  return SUBJECT_ICONS[subjectId] ?? LuLanguages;
-}
 
 export default function PracticeHub() {
   const navigate = useNavigate();
@@ -1573,18 +1537,9 @@ function TopicCard({
 
 /** Icon thumbnail for favourite subject cards on the landing page */
 function SubjectIconImage({ subjectId }: { subjectId: string }) {
-  if (subjectId === "irish") {
-    return (
-      <div className="image overflow-hidden flex items-center justify-center color-bg">
-        <IrishHarpIcon size={48} className="color-txt-accent opacity-70" />
-      </div>
-    );
-  }
-
-  const Icon = getSubjectIcon(subjectId);
   return (
     <div className="image overflow-hidden flex items-center justify-center color-bg">
-      <Icon size={48} className="color-txt-accent opacity-70" />
+      <SubjectGlyph subjectId={subjectId} size={48} className="color-txt-accent opacity-70" />
     </div>
   );
 }

@@ -148,7 +148,7 @@ function DragPreview({
     if (!folder) return null;
     const count = countDescendants(folders, pages, folder.id);
     return (
-      <div className="flex items-center gap-1.5 rounded-lg border color-shadow color-bg px-2 py-1.5 text-sm shadow-lg">
+      <div className="flex items-center gap-1.5 rounded-lg border border-grey/20 color-bg px-2 py-1.5 text-sm">
         <FolderGlyph folder={folder} />
         <span className="max-w-[160px] truncate font-semibold color-txt-main">{folder.name}</span>
         {count > 0 && (
@@ -162,7 +162,7 @@ function DragPreview({
   const page = pages.find((p) => p.id === item.id);
   if (!page) return null;
   return (
-    <div className="flex items-center gap-1.5 rounded-lg border color-shadow color-bg px-2 py-1.5 text-sm shadow-lg">
+    <div className="flex items-center gap-1.5 rounded-lg border border-grey/20 color-bg px-2 py-1.5 text-sm">
       <span className="shrink-0 text-sm leading-none" aria-hidden>
         {page.emoji ?? <LuFileText size={14} className="color-txt-sub" />}
       </span>

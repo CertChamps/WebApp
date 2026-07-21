@@ -122,7 +122,7 @@ export default function Whiteboards() {
     <div className="flex h-full w-full flex-1 min-w-0 overflow-y-auto scrollbar-minimal color-bg">
       <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-8 px-6 py-12">
         {/* Subject dropdown */}
-        <motion.div className="w-full max-w-xs" {...fadeUp}>
+        <motion.div className="relative z-20 w-full max-w-sm" {...fadeUp}>
           <SubjectDropdown
             value={subject}
             onChange={handleSubjectChange}
