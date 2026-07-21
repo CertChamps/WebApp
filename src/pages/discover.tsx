@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
     addDoc,
     collection,
@@ -25,10 +25,12 @@ import {
 } from "../data/practiceHubSubjects";
 import { SubjectDropdown } from "../components/practiceHub";
 import {
+    LuArrowRight,
     LuBookOpen,
     LuBookmark,
     LuCompass,
     LuExternalLink,
+    LuFileText,
     LuFilter,
     LuImage,
     LuLayers,
@@ -52,6 +54,9 @@ type DiscoverNote = {
     title: string;
     description: string;
     websiteUrl: string;
+    resourceSource?: ResourceSource;
+    pdfPath?: string | null;
+    pdfFileName?: string | null;
     thumbnailUrl: string;
     thumbnailPath?: string | null;
     uploadedThumbnailUrl?: string | null;
@@ -76,6 +81,7 @@ type DiscoverNote = {
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
+type ResourceSource = "website" | "pdf";
 
 type LinkPreview = {
     url: string;
@@ -112,6 +118,7 @@ type DiscoverResource = {
     ratingAverage?: number;
     ratingCount?: number;
     websiteUrl?: string;
+    resourceSource?: ResourceSource;
     thumbnailUrl?: string;
     userId?: string;
     username?: string;
@@ -124,8 +131,10 @@ const MAX_TITLE = 80;
 const MAX_DESCRIPTION = 240;
 const MAX_COMMENT = 500;
 const MAX_THUMBNAIL_BYTES = 2 * 1024 * 1024;
+const MAX_PDF_BYTES = 25 * 1024 * 1024;
 
 const LINK_PREVIEW_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/fetchLinkPreview";
+const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
 const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
 const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
 
@@ -289,6 +298,78 @@ function inferSubject(note: DiscoverNote): string {
     return match?.label ?? "General";
 }
 
+type DiscoverAIReply = {
+    status: "ok" | "no_match";
+    message: string;
+    resourceIds: string[];
+};
+
+async function requestDiscoverAI(context: string, userPrompt: string): Promise<string> {
+    const response = await fetch(CHAT_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            messages: [{ role: "user", content: userPrompt }],
+            context,
+            temperature: 0.2,
+        }),
+    });
+    if (!response.ok) throw new Error("AI resource search failed");
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("No AI response body");
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let fullText = "";
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const data = line.slice(6);
+            if (data === "[DONE]") continue;
+            try {
+                const parsed = JSON.parse(data) as {
+                    choices?: Array<{ delta?: { content?: string } }>;
+                    error?: { message?: string };
+                };
+                if (parsed.error) throw new Error(parsed.error.message || "AI stream error");
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) fullText += content;
+            } catch (err) {
+                if (err instanceof SyntaxError) continue;
+                throw err;
+            }
+        }
+    }
+
+    return fullText;
+}
+
+function parseDiscoverAIReply(raw: string): DiscoverAIReply | null {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    try {
+        const parsed = JSON.parse(raw.slice(start, end + 1)) as Partial<DiscoverAIReply>;
+        const status = parsed.status === "ok" || parsed.status === "no_match" ? parsed.status : null;
+        if (!status) return null;
+        return {
+            status,
+            message: typeof parsed.message === "string" ? parsed.message : "",
+            resourceIds: Array.isArray(parsed.resourceIds)
+                ? parsed.resourceIds.filter((id): id is string => typeof id === "string")
+                : [],
+        };
+    } catch {
+        return null;
+    }
+}
+
 function noteToResource(note: DiscoverNote): DiscoverResource {
     const types = normalizeResourceTypes(note.resourceTypes, note.resourceType);
     const type = types[0] ?? inferResourceType(note);
@@ -310,6 +391,7 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
         ratingAverage: note.ratingAverage ?? 0,
         ratingCount: note.ratingCount ?? 0,
         websiteUrl: note.websiteUrl,
+        resourceSource: note.resourceSource ?? (note.pdfPath ? "pdf" : "website"),
         thumbnailUrl: note.thumbnailUrl,
         userId: note.userId,
         username: note.username,
@@ -328,6 +410,9 @@ export default function Discover() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
+    const [aiSearching, setAiSearching] = useState(false);
+    const [aiMessage, setAiMessage] = useState<string | null>(null);
+    const [aiResultIds, setAiResultIds] = useState<string[] | null>(null);
     const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
     const [selectedType, setSelectedType] = useState<ResourceType | "All">("All");
     const [favouriteSubjectIds, setFavouriteSubjectIds] = useState<string[]>(() => getFavouriteSubjectIds());
@@ -335,7 +420,9 @@ export default function Discover() {
     const [showForm, setShowForm] = useState(false);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
+    const [resourceSource, setResourceSource] = useState<ResourceSource>("website");
     const [websiteUrl, setWebsiteUrl] = useState("");
+    const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [shareSubjectId, setShareSubjectId] = useState<string | null>(null);
     const [shareTypes, setShareTypes] = useState<ResourceType[]>(["Notes"]);
     const [shareLevels, setShareLevels] = useState<ResourceLevel[]>([]);
@@ -355,6 +442,7 @@ export default function Discover() {
     const [userRating, setUserRating] = useState<number | null>(null);
     const [ratingSubmitting, setRatingSubmitting] = useState(false);
     const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
+    const pdfInputRef = useRef<HTMLInputElement | null>(null);
 
     const [placeholderTitle] = useState(
         () => PLACEHOLDER_TITLES[Math.floor(Math.random() * PLACEHOLDER_TITLES.length)]
@@ -389,6 +477,9 @@ export default function Discover() {
                         title: data.title ?? "",
                         description: data.description ?? "",
                         websiteUrl: data.websiteUrl ?? "",
+                        resourceSource: data.resourceSource === "pdf" ? "pdf" : "website",
+                        pdfPath: data.pdfPath ?? null,
+                        pdfFileName: data.pdfFileName ?? null,
                         thumbnailUrl: data.thumbnailUrl ?? "",
                         thumbnailPath: data.thumbnailPath ?? null,
                         uploadedThumbnailUrl: data.uploadedThumbnailUrl ?? null,
@@ -442,30 +533,93 @@ export default function Discover() {
         return liveResources.length > 0 ? liveResources : STARTER_RESOURCES;
     }, [notes]);
 
-    const filteredResources = useMemo(() => {
-        const selectedSubjectLabel = selectedSubject?.label.toLowerCase();
-        const queryText = searchTerm.trim().toLowerCase();
+    const handleAISearch = useCallback(async () => {
+        const prompt = searchTerm.trim();
+        if (!prompt) {
+            setAiResultIds(null);
+            setAiMessage(null);
+            return;
+        }
 
-        return resources.filter((resource) => {
+        const selectedSubjectLabel = selectedSubject?.label.toLowerCase();
+        const candidateResources = resources.filter((resource) => {
             const matchesSubject = selectedSubjectLabel
                 ? resource.subject.toLowerCase() === selectedSubjectLabel ||
                   resource.tags.some((tag) => tag.toLowerCase() === selectedSubjectLabel)
                 : true;
             const matchesType = selectedType === "All" ? true : (resource.types ?? [resource.type]).includes(selectedType);
-            const searchable = [
-                resource.title,
-                resource.subject,
-                resource.type,
-                resource.description,
-                resource.sourceName,
-                ...resource.tags,
-            ]
-                .join(" ")
-                .toLowerCase();
-            const matchesSearch = queryText ? searchable.includes(queryText) : true;
+            return matchesSubject && matchesType;
+        });
+
+        if (candidateResources.length === 0) {
+            setAiResultIds([]);
+            setAiMessage("No resources are available in the current filters yet.");
+            return;
+        }
+
+        setAiSearching(true);
+        setAiMessage(null);
+        try {
+            const context = [
+                "You are the AI search assistant for CertChamps Discover, a free community library of study resources.",
+                "The student will describe what they need. Choose only resources from the provided JSON list that genuinely match.",
+                "Use title, description, subject, type, source, level, and topic tags. Interpret loose wording generously.",
+                "Prefer a smaller useful set over padding weak matches. Return at most 12 resources.",
+                "Respond with ONLY JSON in this exact shape:",
+                '{"status":"ok"|"no_match","message":string,"resourceIds":string[]}',
+                "resourceIds must be ids from the candidate list, ordered from best to weakest match.",
+                "For no_match, resourceIds must be [] and message should kindly suggest rephrasing or changing filters.",
+                "Candidate resources:",
+                JSON.stringify(
+                    candidateResources.map((resource) => ({
+                        id: resource.id,
+                        title: resource.title,
+                        description: resource.description,
+                        subject: resource.subject,
+                        type: resource.type,
+                        types: resource.types,
+                        levels: resource.levels,
+                        tags: resource.tags,
+                        source: resource.sourceName,
+                    }))
+                ),
+            ].join("\n");
+
+            const raw = await requestDiscoverAI(context, prompt);
+            const reply = parseDiscoverAIReply(raw);
+            if (!reply) throw new Error("Could not parse AI resource search response");
+
+            const allowedIds = new Set(candidateResources.map((resource) => resource.id));
+            const resultIds = reply.resourceIds.filter((id) => allowedIds.has(id)).slice(0, 12);
+            setAiResultIds(resultIds);
+            setAiMessage(reply.message || (resultIds.length ? `${resultIds.length} matching resources found.` : "No matching resources found."));
+        } catch (err) {
+            console.error("Discover AI search error:", err);
+            setAiResultIds(null);
+            setAiMessage("I couldn't search the resources just now. Try again in a moment.");
+        } finally {
+            setAiSearching(false);
+        }
+    }, [resources, searchTerm, selectedSubject, selectedType]);
+
+    const filteredResources = useMemo(() => {
+        const selectedSubjectLabel = selectedSubject?.label.toLowerCase();
+        const aiOrder = aiResultIds ? new Map(aiResultIds.map((id, index) => [id, index])) : null;
+
+        const filtered = resources.filter((resource) => {
+            const matchesSubject = selectedSubjectLabel
+                ? resource.subject.toLowerCase() === selectedSubjectLabel ||
+                  resource.tags.some((tag) => tag.toLowerCase() === selectedSubjectLabel)
+                : true;
+            const matchesType = selectedType === "All" ? true : (resource.types ?? [resource.type]).includes(selectedType);
+            const matchesSearch = aiOrder ? aiOrder.has(resource.id) : true;
             return matchesSubject && matchesType && matchesSearch;
         });
-    }, [resources, searchTerm, selectedSubject, selectedType]);
+
+        return aiOrder
+            ? filtered.sort((a, b) => (aiOrder.get(a.id) ?? 999) - (aiOrder.get(b.id) ?? 999))
+            : filtered;
+    }, [aiResultIds, resources, selectedSubject, selectedType]);
 
     const favouriteSubjectLabels = useMemo(
         () => new Set(favouriteSubjects.map((subject) => subject?.label.toLowerCase()).filter(Boolean)),
@@ -481,14 +635,6 @@ export default function Discover() {
         return (base.length > 0 ? base : filteredResources).slice(0, 6);
     }, [filteredResources, favouriteSubjectLabels, selectedSubject]);
 
-    const popularResources = useMemo(
-        () =>
-            [...filteredResources]
-                .sort((a, b) => b.saves + b.comments - (a.saves + a.comments))
-                .slice(0, 6),
-        [filteredResources]
-    );
-
     const recentResources = useMemo(
         () =>
             [...filteredResources]
@@ -498,6 +644,11 @@ export default function Discover() {
     );
 
     useEffect(() => {
+        if (resourceSource !== "website") {
+            setLinkPreview(null);
+            setPreviewLoading(false);
+            return;
+        }
         const validUrl = normaliseUrl(websiteUrl);
         if (!validUrl) {
             setLinkPreview(null);
@@ -509,7 +660,7 @@ export default function Discover() {
         }, 700);
 
         return () => window.clearTimeout(timeout);
-    }, [websiteUrl]);
+    }, [resourceSource, websiteUrl]);
 
     useEffect(() => {
         if (!selectedResource?.note) {
@@ -590,7 +741,9 @@ export default function Discover() {
     const resetForm = () => {
         setTitle("");
         setDescription("");
+        setResourceSource("website");
         setWebsiteUrl("");
+        setPdfFile(null);
         setShareSubjectId(null);
         setShareTypes(["Notes"]);
         setShareLevels([]);
@@ -602,6 +755,7 @@ export default function Discover() {
             return null;
         });
         if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+        if (pdfInputRef.current) pdfInputRef.current.value = "";
         setLinkPreview(null);
         setPreviewLoading(false);
         setFormError(null);
@@ -619,7 +773,7 @@ export default function Discover() {
         }
         const trimmedTitle = title.trim();
         const trimmedDescription = description.trim();
-        const validUrl = normaliseUrl(websiteUrl);
+        const validUrl = resourceSource === "website" ? normaliseUrl(websiteUrl) ?? "" : "";
         const topics = shareTopics.slice(0, 8);
 
         if (!trimmedTitle) {
@@ -634,8 +788,12 @@ export default function Discover() {
             setFormError(`Description is too long (max ${MAX_DESCRIPTION} characters).`);
             return;
         }
-        if (!validUrl) {
+        if (resourceSource === "website" && !validUrl) {
             setFormError("Add a valid link (https://...) for people to visit.");
+            return;
+        }
+        if (resourceSource === "pdf" && !pdfFile) {
+            setFormError("Choose a PDF to upload.");
             return;
         }
         if (!shareSubject) {
@@ -646,8 +804,19 @@ export default function Discover() {
         setSubmitting(true);
         setFormError(null);
         let uploadedThumbnailPath: string | null = null;
+        let uploadedPdfPath: string | null = null;
         try {
-            const preview = linkPreview?.url === validUrl ? linkPreview : await fetchLinkPreview(validUrl);
+            const preview = resourceSource === "website"
+                ? (linkPreview?.url === validUrl ? linkPreview : await fetchLinkPreview(validUrl))
+                : null;
+            let resourceUrl = preview?.url || validUrl;
+            if (resourceSource === "pdf" && pdfFile) {
+                const safePdfName = pdfFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+                uploadedPdfPath = `discover-pdf-uploads/${user.uid}/${Date.now()}-${safePdfName}`;
+                const pdfRef = storageRef(storage, uploadedPdfPath);
+                await uploadBytes(pdfRef, pdfFile, { contentType: "application/pdf" });
+                resourceUrl = await getDownloadURL(pdfRef);
+            }
             let uploadedThumbnailUrl = "";
             if (thumbnailFile) {
                 const safeName = thumbnailFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -663,14 +832,19 @@ export default function Discover() {
                 userPicture: user.picture ?? null,
                 title: trimmedTitle,
                 description: trimmedDescription,
-                websiteUrl: preview.url || validUrl,
-                thumbnailUrl: preview.imageUrl ?? preview.faviconUrl ?? "",
+                websiteUrl: resourceUrl,
+                resourceSource,
+                pdfPath: uploadedPdfPath,
+                pdfFileName: resourceSource === "pdf" ? pdfFile?.name ?? "" : "",
+                thumbnailUrl: preview?.imageUrl ?? preview?.faviconUrl ?? "",
                 uploadedThumbnailUrl,
                 uploadedThumbnailPath,
                 thumbnailStatus: thumbnailFile ? "pending" : "none",
                 moderationStatus: "pending",
-                faviconUrl: preview.faviconUrl ?? "",
-                siteName: preview.siteName ?? displayHostname(validUrl),
+                faviconUrl: preview?.faviconUrl ?? "",
+                siteName: resourceSource === "pdf"
+                    ? pdfFile?.name ?? "PDF"
+                    : preview?.siteName ?? displayHostname(validUrl),
                 subjectId: shareSubject.id,
                 subjectLabel: shareSubject.label,
                 levels: shareLevels,
@@ -698,6 +872,13 @@ export default function Discover() {
                     // ignore cleanup failure
                 }
             }
+            if (uploadedPdfPath) {
+                try {
+                    await deleteObject(storageRef(storage, uploadedPdfPath));
+                } catch {
+                    // ignore cleanup failure
+                }
+            }
         } finally {
             setSubmitting(false);
         }
@@ -711,6 +892,12 @@ export default function Discover() {
         if (!confirmed) return;
         try {
             await deleteDoc(doc(db, "discover-notes", note.id));
+            const storagePaths = [note.uploadedThumbnailPath, note.pdfPath].filter(Boolean) as string[];
+            await Promise.all(storagePaths.map((path) =>
+                deleteObject(storageRef(storage, path)).catch((err) => {
+                    console.warn("Failed to delete Discover upload:", err);
+                })
+            ));
         } catch (err) {
             console.error("Failed to delete note:", err);
         }
@@ -748,6 +935,40 @@ export default function Discover() {
 
     const removeShareTopic = (topic: string) => {
         setShareTopics((current) => current.filter((item) => item !== topic));
+    };
+
+    const chooseResourceSource = (source: ResourceSource) => {
+        setResourceSource(source);
+        setFormError(null);
+        if (source === "website") {
+            setPdfFile(null);
+            if (pdfInputRef.current) pdfInputRef.current.value = "";
+        } else {
+            setWebsiteUrl("");
+            setLinkPreview(null);
+        }
+    };
+
+    const handlePickPdf = (file: File | undefined | null) => {
+        if (!file) return;
+        const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+        if (!isPdf) {
+            setPdfFile(null);
+            setFormError("Choose a PDF file.");
+            if (pdfInputRef.current) pdfInputRef.current.value = "";
+            return;
+        }
+        if (file.size > MAX_PDF_BYTES) {
+            setPdfFile(null);
+            setFormError("PDF must be under 25 MB.");
+            if (pdfInputRef.current) pdfInputRef.current.value = "";
+            return;
+        }
+        setPdfFile(file);
+        setFormError(null);
+        setTitle((current) => current.trim()
+            ? current
+            : file.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").slice(0, MAX_TITLE));
     };
 
     const handlePickThumbnail = (file: File | undefined | null) => {
@@ -891,7 +1112,7 @@ export default function Discover() {
                     onClick={() => handleVisit(resource.websiteUrl)}
                     disabled={!resource.websiteUrl}
                     className="block w-full aspect-video color-bg-grey-10 overflow-hidden relative cursor-pointer disabled:cursor-default"
-                    aria-label={`Visit ${resource.title}`}
+                    aria-label={`${resource.resourceSource === "pdf" ? "Open" : "Visit"} ${resource.title}`}
                 >
                     {resource.thumbnailUrl && resource.thumbnailUrl !== resource.faviconUrl ? (
                         <img
@@ -909,6 +1130,8 @@ export default function Discover() {
                                     className="w-14 h-14 rounded-2xl object-contain color-bg p-2 shadow-sm"
                                     loading="lazy"
                                 />
+                            ) : resource.resourceSource === "pdf" ? (
+                                <LuFileText size={34} />
                             ) : resource.type === "Videos" ? (
                                 <LuCirclePlay size={34} />
                             ) : resource.type === "Flashcards" ? (
@@ -921,11 +1144,8 @@ export default function Discover() {
                             </span>
                         </div>
                     )}
-                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-black/65 text-white text-xs font-bold">
-                        Free
-                    </span>
                     <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full color-bg color-txt-main text-xs font-bold">
-                        {resource.type}
+                        {resource.resourceSource === "pdf" ? "PDF" : resource.type}
                     </span>
                 </button>
 
@@ -993,10 +1213,14 @@ export default function Discover() {
                             onClick={() => handleVisit(resource.websiteUrl)}
                             disabled={!resource.websiteUrl}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg color-bg-accent color-txt-accent text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer shrink-0 disabled:opacity-70 disabled:cursor-default"
-                            title={resource.websiteUrl ? displayHostname(resource.websiteUrl) : "Preview card"}
+                            title={resource.resourceSource === "pdf"
+                                ? "Open PDF"
+                                : resource.websiteUrl ? displayHostname(resource.websiteUrl) : "Preview card"}
                         >
                             <LuExternalLink size={13} />
-                            {resource.websiteUrl ? "Visit" : "Preview"}
+                            {resource.websiteUrl
+                                ? resource.resourceSource === "pdf" ? "Open PDF" : "Visit"
+                                : "Preview"}
                         </button>
                     </div>
 
@@ -1110,7 +1334,11 @@ export default function Discover() {
 
                 <section className="space-y-4">
                     <div className="flex flex-col lg:flex-row lg:items-center gap-4 rounded-3xl color-bg-grey-5 p-4 sm:p-5">
-                        <label
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                void handleAISearch();
+                            }}
                             className="flex-1 flex items-center gap-3 rounded-2xl color-bg px-4 py-3 transition-shadow"
                             style={{
                                 boxShadow: searchFocused
@@ -1118,17 +1346,44 @@ export default function Discover() {
                                     : "none",
                             }}
                         >
-                            <LuSearch size={20} className="color-txt-sub shrink-0" />
+                            <LuCompass size={20} className="color-txt-accent shrink-0" />
                             <input
                                 type="search"
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setAiResultIds(null);
+                                    setAiMessage(null);
+                                }}
                                 onFocus={() => setSearchFocused(true)}
                                 onBlur={() => setSearchFocused(false)}
-                                placeholder="Search notes, videos, sample answers, topics..."
+                                placeholder="Ask AI for free notes, videos, topics, or study resources..."
                                 className="w-full bg-transparent outline-none color-txt-main placeholder:color-txt-sub text-base"
+                                aria-label="AI search free Discover resources"
                             />
-                        </label>
+                            {aiResultIds && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSearchTerm("");
+                                        setAiResultIds(null);
+                                        setAiMessage(null);
+                                    }}
+                                    className="color-txt-sub hover:color-txt-main cursor-pointer"
+                                    aria-label="Clear AI search"
+                                >
+                                    <LuX size={17} />
+                                </button>
+                            )}
+                            <button
+                                type="submit"
+                                disabled={aiSearching || !searchTerm.trim()}
+                                className="shrink-0 rounded-xl p-2 color-txt-accent hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
+                                aria-label="Search Discover resources with AI"
+                            >
+                                {aiSearching ? <LuLoader size={18} className="animate-spin" /> : <LuArrowRight size={18} />}
+                            </button>
+                        </form>
                         <div className="flex items-center gap-2 overflow-x-auto scrollbar-minimal pb-1 lg:pb-0">
                             <button
                                 type="button"
@@ -1158,6 +1413,12 @@ export default function Discover() {
                             ))}
                         </div>
                     </div>
+
+                    {(aiSearching || aiMessage) && (
+                        <div className="rounded-2xl color-bg px-4 py-3 text-sm color-txt-main">
+                            {aiSearching ? "Searching the free resource library..." : aiMessage}
+                        </div>
+                    )}
 
                     <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
                         <div className="flex flex-wrap items-center gap-2">
@@ -1225,22 +1486,27 @@ export default function Discover() {
                     </div>
                 ) : (
                     <div className="space-y-8">
-                        {renderResourceSection(
-                            selectedSubject ? `${selectedSubject.label} resources` : "Recommended for you",
-                            notes.length === 0
-                                ? "Starter cards show the shape of the free-resource library while you add real links."
-                                : "Based on your Practice Hub subjects and current filters.",
-                            recommendedResources
-                        )}
-                        {renderResourceSection(
-                            "Popular this week",
-                            "Resources with the strongest saves and comment activity.",
-                            popularResources
-                        )}
-                        {renderResourceSection(
-                            "Recently added free resources",
-                            "Fresh links from the community.",
-                            recentResources
+                        {aiResultIds !== null ? (
+                            renderResourceSection(
+                                "AI search results",
+                                aiMessage ?? `Resources matching “${searchTerm.trim()}”.`,
+                                filteredResources
+                            )
+                        ) : (
+                            <>
+                                {renderResourceSection(
+                                    selectedSubject ? `${selectedSubject.label} resources` : "Recommended for you",
+                                    notes.length === 0
+                                        ? "Starter cards show the shape of the free-resource library while you add real links."
+                                        : "Based on your Practice Hub subjects and current filters.",
+                                    recommendedResources
+                                )}
+                                {renderResourceSection(
+                                    "Recently added free resources",
+                                    "Fresh links from the community.",
+                                    recentResources
+                                )}
+                            </>
                         )}
                     </div>
                 )}
@@ -1280,22 +1546,76 @@ export default function Discover() {
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
-                                    Link
+                                    Resource source
                                 </label>
-                                <div className="flex items-center gap-2 rounded-xl color-bg-grey-5 px-4 py-3">
-                                    <LuLink size={16} className="color-txt-sub shrink-0" />
-                                    <input
-                                        type="url"
-                                        value={websiteUrl}
-                                        onChange={(e) => setWebsiteUrl(e.target.value)}
-                                        placeholder="https://free-notes-site.com"
-                                        className="flex-1 bg-transparent color-txt-main text-sm outline-none placeholder:color-txt-sub"
-                                    />
-                                    {previewLoading && <LuLoader size={16} className="animate-spin color-txt-sub" />}
+                                <div className="grid grid-cols-2 gap-1 rounded-xl color-bg-grey-5 p-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => chooseResourceSource("website")}
+                                        className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors cursor-pointer ${
+                                            resourceSource === "website"
+                                                ? "color-bg color-txt-main shadow-sm"
+                                                : "color-txt-sub hover:color-txt-main"
+                                        }`}
+                                    >
+                                        <LuLink size={16} />
+                                        Website
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => chooseResourceSource("pdf")}
+                                        className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors cursor-pointer ${
+                                            resourceSource === "pdf"
+                                                ? "color-bg color-txt-main shadow-sm"
+                                                : "color-txt-sub hover:color-txt-main"
+                                        }`}
+                                    >
+                                        <LuFileText size={16} />
+                                        PDF
+                                    </button>
                                 </div>
                             </div>
 
-                            {linkPreview && (
+                            {resourceSource === "website" ? (
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
+                                        Website link
+                                    </label>
+                                    <div className="flex items-center gap-2 rounded-xl color-bg-grey-5 px-4 py-3">
+                                        <LuLink size={16} className="color-txt-sub shrink-0" />
+                                        <input
+                                            type="url"
+                                            value={websiteUrl}
+                                            onChange={(e) => setWebsiteUrl(e.target.value)}
+                                            placeholder="https://free-notes-site.com"
+                                            className="flex-1 bg-transparent color-txt-main text-sm outline-none placeholder:color-txt-sub"
+                                        />
+                                        {previewLoading && <LuLoader size={16} className="animate-spin color-txt-sub" />}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
+                                        PDF file
+                                    </label>
+                                    <label className="flex min-h-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-color-border color-bg-grey-5 px-4 py-5 text-center hover:opacity-90">
+                                        <LuFileText size={26} className="color-txt-sub" />
+                                        <span className="max-w-full truncate text-sm font-semibold color-txt-main">
+                                            {pdfFile?.name ?? "Choose a PDF"}
+                                        </span>
+                                        <span className="text-xs color-txt-sub">PDF only, up to 25 MB</span>
+                                        <input
+                                            ref={pdfInputRef}
+                                            type="file"
+                                            accept="application/pdf,.pdf"
+                                            className="hidden"
+                                            onChange={(e) => handlePickPdf(e.target.files?.[0])}
+                                        />
+                                    </label>
+                                </div>
+                            )}
+
+                            {resourceSource === "website" && linkPreview && (
                                 <div className="rounded-xl color-bg-grey-5 overflow-hidden">
                                     <div className="aspect-video color-bg-grey-10 flex items-center justify-center overflow-hidden">
                                         {linkPreview.imageUrl ? (
@@ -1562,6 +1882,8 @@ export default function Discover() {
                                                     alt=""
                                                     className="w-16 h-16 rounded-2xl object-contain color-bg p-2 shadow-sm"
                                                 />
+                                            ) : selectedResource.resourceSource === "pdf" ? (
+                                                <LuFileText size={34} />
                                             ) : (
                                                 <LuBookOpen size={34} />
                                             )}
@@ -1614,7 +1936,7 @@ export default function Discover() {
                                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-semibold hover:opacity-90 cursor-pointer"
                                     >
                                         <LuExternalLink size={15} />
-                                        Visit resource
+                                        {selectedResource.resourceSource === "pdf" ? "Open PDF" : "Visit resource"}
                                     </button>
                                     <button
                                         type="button"
