@@ -5,6 +5,8 @@ import { AIChat } from "../ai";
 import type { InjectedExchange } from "../ai/useAI";
 import QThread from "../questions/q_thread";
 import Timer from "../timer";
+import SpotifyPanel from "../spotify/SpotifyPanel";
+import { SpotifyLogo } from "../spotify/SpotifyLogo";
 import PastPaperMarkingScheme from "../questions/PastPaperMarkingScheme";
 import ImageMarkingScheme from "../questions/ImageMarkingScheme";
 import type { ImageQuestion } from "../../hooks/useImageQuestions";
@@ -14,7 +16,7 @@ import { canUseAceFeature } from "../../lib/contentAccess";
 
 const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const };
 
-export type SidebarPanelId = "ai" | "threads" | "timer" | "markingscheme";
+export type SidebarPanelId = "ai" | "threads" | "timer" | "spotify" | "markingscheme";
 
 export type SidebarPanelDef = {
   id: SidebarPanelId;
@@ -26,6 +28,7 @@ const PANELS: SidebarPanelDef[] = [
   { id: "ai", label: "AI", icon: <LuSparkles size={20} strokeWidth={2} /> },
   { id: "threads", label: "Threads", icon: <LuMessageSquare size={20} strokeWidth={2} /> },
   { id: "timer", label: "Timer", icon: <LuTimer size={20} strokeWidth={2} /> },
+  { id: "spotify", label: "Spotify", icon: <SpotifyLogo className="h-5 w-5" /> },
   { id: "markingscheme", label: "Marking scheme", icon: <LuClipboardList size={20} strokeWidth={2} /> },
 ];
 
@@ -242,6 +245,12 @@ function TileContent({
       return (
         <div className="h-full overflow-auto flex justify-center items-start color-bg p-2">
           <Timer />
+        </div>
+      );
+    case "spotify":
+      return (
+        <div className="h-full overflow-hidden color-bg">
+          <SpotifyPanel />
         </div>
       );
     case "markingscheme":

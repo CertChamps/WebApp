@@ -52,8 +52,9 @@ import ZoomableQuestionImage from "../components/questions/ZoomableQuestionImage
 import FloatingLogTables from "../components/FloatingLogTables";
 import FloatingCalculator from "../components/calculator/FloatingCalculator";
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
+import type { SidebarPanelId } from "../components/sidebar/SidebarTileManager";
 import { TimerProvider, useTimerOptional } from "../context/TimerContext";
-import { TimerFloatingWidget } from "../components/TimerFloatingWidget";
+import { FloatingWidgets } from "../components/floating/FloatingWidgets";
 import PastPaperFilterPanel from "../components/questions/PastPaperFilterPanel";
 import ContentProGate from "../components/ContentProGate";
 import Filter from "../components/filter";
@@ -549,7 +550,7 @@ export default function Questions() {
     const [isFullPaperExpanded, setIsFullPaperExpanded] = useState(false);
     const [paperPanelVisible, setPaperPanelVisible] = useState(true);
     const [markingSchemeBlob, setMarkingSchemeBlob] = useState<Blob | null>(null);
-    const [sidebarOpenPanel, setSidebarOpenPanel] = useState<"ai" | "threads" | "timer" | "markingscheme" | null>(null);
+    const [sidebarOpenPanel, setSidebarOpenPanel] = useState<SidebarPanelId | null>("ai");
     const [markingSchemeQuestionIndex, setMarkingSchemeQuestionIndex] = useState<number | null>(null);
     const [logTablesQuestionIndex, setLogTablesQuestionIndex] = useState<number | null>(null);
     const [showLogTables, setShowLogTables] = useState(false);
@@ -1733,7 +1734,7 @@ export default function Questions() {
                         setSidebarOpen(open);
                         if (!open) setMarkingSchemeQuestionIndex(null);
                     }}
-                    openPanel={(mode === "pastpaper" || mode === "imagequestions") ? (sidebarOpenPanel ?? undefined) : undefined}
+                    openPanel={sidebarOpenPanel ?? undefined}
                     forceShowMarkingSchemeTab={mode === "imagequestions"}
                     onOpenPanelChange={(panel) => {
                         setSidebarOpenPanel(panel ?? null);
@@ -2767,11 +2768,16 @@ export default function Questions() {
                 <ContentProGate freePaper={firstFreePaper} freeImageSample={freeImageSample} />
             )}
         </div>
-        <TimerFloatingWidget
+        <FloatingWidgets
             leftHandMode={options.leftHandMode}
-            onClick={() => {
+            spotifyTabVisible={sidebarOpen && sidebarOpenPanel === "spotify"}
+            onOpenTimer={() => {
                 setSidebarOpen(true);
                 setSidebarOpenPanel("timer");
+            }}
+            onOpenSpotify={() => {
+                setSidebarOpen(true);
+                setSidebarOpenPanel("spotify");
             }}
         />
         <TimerTimesUpSync

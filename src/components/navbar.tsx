@@ -6,7 +6,7 @@ import '../styles/navbar.css'
 import { isIPad } from '../utils/isIPad'
 
 // ======================= ICON IMPORTS ======================== // 
-import { LuPencil, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText } from "react-icons/lu";
+import { LuPencil, LuPenTool, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText } from "react-icons/lu";
 import type { IconType } from 'react-icons';
 
 const showNavTooltips = !isIPad();
@@ -129,6 +129,8 @@ export default function Navbar () {
 
             {/* ============================= PRACTICE ICON ================================ */}
             {renderNavItem('nav-practice', 'Practice', LuPencil, 'practice')}
+
+            {renderNavItem('nav-whiteboards', 'Whiteboards', LuPenTool, 'whiteboards')}
         
             {/* ============================= COMMUNITY ICON ================================ */}
             {renderNavItem('nav-community', 'Community', LuUsers, 'community')}

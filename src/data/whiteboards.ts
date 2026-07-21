@@ -56,6 +56,8 @@ export type WhiteboardFolder = {
   parentId: string | null;
   colour: string | null;
   emoji: string | null;
+  /** Manual sort position among siblings (shared space with sibling pages). Unset legacy items sort last (alphabetically). */
+  order: number;
   createdAt: number;
   updatedAt: number;
 };
@@ -67,20 +69,54 @@ export type WhiteboardPage = {
   folderId: string | null;
   emoji: string | null;
   attachedQuestions: AttachedQuestion[];
+  /** Manual sort position among siblings (shared space with sibling folders). Unset legacy items sort last (alphabetically). */
+  order: number;
   createdAt: number;
   updatedAt: number;
   lastOpenedAt: number;
 };
 
+/** A single row in a sibling list — a folder subtree or a page. Ordered by `order`. */
+export type WhiteboardTreeItem =
+  | { kind: "folder"; node: WhiteboardTreeNode }
+  | { kind: "page"; page: WhiteboardPage };
+
 export type WhiteboardTreeNode = {
   folder: WhiteboardFolder;
+  /** Child folders only (ordered). Kept for backwards-compatibility. */
   children: WhiteboardTreeNode[];
+  /** Child pages only (ordered). Kept for backwards-compatibility. */
   pages: WhiteboardPage[];
+  /** Unified, ordered list of child folders + pages — what the sidebar renders. */
+  items: WhiteboardTreeItem[];
 };
 
 export type WhiteboardTree = {
   rootFolders: WhiteboardTreeNode[];
   rootPages: WhiteboardPage[];
+  /** Unified, ordered list of root folders + pages — what the sidebar renders. */
+  rootItems: WhiteboardTreeItem[];
+};
+
+/** Sentinel for legacy items with no explicit `order` — sorts them after ordered items (then alphabetically). */
+export const UNSET_ORDER = Number.MAX_SAFE_INTEGER;
+
+/** Gap between sequential sibling orders, so reindexing leaves room and stays stable. */
+export const ORDER_STEP = 1000;
+
+/** A minimal reference to a draggable item (folder subtree or page). */
+export type SidebarDragItem = { type: "folder" | "page"; id: string };
+
+/** What will happen on drop, derived from pointer position relative to the hovered row. */
+export type SidebarDropIntent =
+  | { kind: "before" | "after"; target: SidebarDragItem }
+  | { kind: "into"; folderId: string }
+  | { kind: "into-root" };
+
+/** A resolved, validated move: the destination parent + the full final order of that sibling list. */
+export type ResolvedMove = {
+  destParentId: string | null;
+  orderedIds: SidebarDragItem[];
 };
 
 /** Build the nested folder/page tree for a subject. Orphaned items fall back to root. */
@@ -90,7 +126,7 @@ export function buildWhiteboardTree(
 ): WhiteboardTree {
   const nodeById = new Map<string, WhiteboardTreeNode>();
   folders.forEach((folder) => {
-    nodeById.set(folder.id, { folder, children: [], pages: [] });
+    nodeById.set(folder.id, { folder, children: [], pages: [], items: [] });
   });
 
   const rootFolders: WhiteboardTreeNode[] = [];
@@ -110,16 +146,176 @@ export function buildWhiteboardTree(
 
   const byName = (a: { name: string }, b: { name: string }) =>
     a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
-  const sortNode = (node: WhiteboardTreeNode) => {
-    node.children.sort((a, b) => byName(a.folder, b.folder));
-    node.pages.sort(byName);
-    node.children.forEach(sortNode);
-  };
-  rootFolders.sort((a, b) => byName(a.folder, b.folder));
-  rootFolders.forEach(sortNode);
-  rootPages.sort(byName);
+  // Manual order first (unset legacy items fall back to alphabetical at the end).
+  const byOrder = (
+    a: { order: number; name: string },
+    b: { order: number; name: string }
+  ) => a.order - b.order || byName(a, b);
 
-  return { rootFolders, rootPages };
+  const buildItems = (node: WhiteboardTreeNode): WhiteboardTreeItem[] => {
+    const items: WhiteboardTreeItem[] = [
+      ...node.children.map((child) => ({ kind: "folder" as const, node: child })),
+      ...node.pages.map((page) => ({ kind: "page" as const, page })),
+    ];
+    items.sort((a, b) =>
+      byOrder(
+        a.kind === "folder" ? a.node.folder : a.page,
+        b.kind === "folder" ? b.node.folder : b.page
+      )
+    );
+    return items;
+  };
+
+  const sortNode = (node: WhiteboardTreeNode) => {
+    node.children.sort((a, b) => byOrder(a.folder, b.folder));
+    node.pages.sort(byOrder);
+    node.children.forEach(sortNode);
+    node.items = buildItems(node);
+  };
+  rootFolders.sort((a, b) => byOrder(a.folder, b.folder));
+  rootFolders.forEach(sortNode);
+  rootPages.sort(byOrder);
+
+  const rootItems: WhiteboardTreeItem[] = [
+    ...rootFolders.map((node) => ({ kind: "folder" as const, node })),
+    ...rootPages.map((page) => ({ kind: "page" as const, page })),
+  ];
+  rootItems.sort((a, b) =>
+    byOrder(
+      a.kind === "folder" ? a.node.folder : a.page,
+      b.kind === "folder" ? b.node.folder : b.page
+    )
+  );
+
+  return { rootFolders, rootPages, rootItems };
+}
+
+/** Count all folders + pages nested anywhere under `folderId` (for the drag-preview badge). */
+export function countDescendants(
+  folders: WhiteboardFolder[],
+  pages: WhiteboardPage[],
+  folderId: string
+): number {
+  const childFolders = new Map<string, WhiteboardFolder[]>();
+  folders.forEach((f) => {
+    if (f.parentId == null) return;
+    const list = childFolders.get(f.parentId) ?? [];
+    list.push(f);
+    childFolders.set(f.parentId, list);
+  });
+  const pageCountByFolder = new Map<string, number>();
+  pages.forEach((p) => {
+    if (p.folderId == null) return;
+    pageCountByFolder.set(p.folderId, (pageCountByFolder.get(p.folderId) ?? 0) + 1);
+  });
+
+  let total = 0;
+  const stack = [folderId];
+  const seen = new Set<string>();
+  while (stack.length) {
+    const current = stack.pop()!;
+    if (seen.has(current)) continue;
+    seen.add(current);
+    total += pageCountByFolder.get(current) ?? 0;
+    for (const child of childFolders.get(current) ?? []) {
+      total += 1;
+      stack.push(child.id);
+    }
+  }
+  return total;
+}
+
+/** The current parent id of a folder/page (its containing folder, or null for root). */
+function parentOf(
+  folders: WhiteboardFolder[],
+  pages: WhiteboardPage[],
+  item: SidebarDragItem
+): string | null {
+  if (item.type === "folder") return folders.find((f) => f.id === item.id)?.parentId ?? null;
+  return pages.find((p) => p.id === item.id)?.folderId ?? null;
+}
+
+/** Ordered sibling list (folders + pages) for a given parent id. */
+function siblingsOf(
+  folders: WhiteboardFolder[],
+  pages: WhiteboardPage[],
+  parentId: string | null
+): SidebarDragItem[] {
+  const byName = (a: { name: string }, b: { name: string }) =>
+    a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+  const byOrder = (a: { order: number; name: string }, b: { order: number; name: string }) =>
+    a.order - b.order || byName(a, b);
+
+  const childFolders = folders.filter((f) => f.parentId === parentId).sort(byOrder);
+  const childPages = pages.filter((p) => p.folderId === parentId).sort(byOrder);
+  return [
+    ...childFolders.map((f) => ({ type: "folder" as const, id: f.id })),
+    ...childPages.map((p) => ({ type: "page" as const, id: p.id })),
+  ].sort((a, b) => {
+    const av = a.type === "folder" ? childFolders.find((f) => f.id === a.id)! : childPages.find((p) => p.id === a.id)!;
+    const bv = b.type === "folder" ? childFolders.find((f) => f.id === b.id)! : childPages.find((p) => p.id === b.id)!;
+    return byOrder(av, bv);
+  });
+}
+
+const sameItem = (a: SidebarDragItem, b: SidebarDragItem) => a.type === b.type && a.id === b.id;
+
+/**
+ * Turn a drop intent into a validated, concrete move — or `null` if the drop is a
+ * no-op or illegal (onto itself, or a folder into its own descendant/subtree).
+ *
+ * Returns the destination parent plus the *entire* final order of that sibling list,
+ * so the caller can persist a stable reindex in one batch.
+ */
+export function resolveDrop(
+  folders: WhiteboardFolder[],
+  pages: WhiteboardPage[],
+  drag: SidebarDragItem,
+  intent: SidebarDropIntent
+): ResolvedMove | null {
+  // 1. Destination parent.
+  let destParentId: string | null;
+  if (intent.kind === "into") destParentId = intent.folderId;
+  else if (intent.kind === "into-root") destParentId = null;
+  else destParentId = parentOf(folders, pages, intent.target);
+
+  // 2. Cycle / self prevention for folders.
+  if (drag.type === "folder") {
+    if (destParentId === drag.id) return null;
+    if (isDescendantFolder(folders, drag.id, destParentId)) return null;
+  }
+  if ((intent.kind === "before" || intent.kind === "after") && sameItem(intent.target, drag)) {
+    return null;
+  }
+
+  // 3. Build the destination sibling list without the dragged item.
+  const base = siblingsOf(folders, pages, destParentId).filter((s) => !sameItem(s, drag));
+
+  // 4. Where to insert.
+  let index: number;
+  if (intent.kind === "into" || intent.kind === "into-root") {
+    index = base.length; // append to the end
+  } else {
+    const targetIdx = base.findIndex((s) => sameItem(s, intent.target));
+    if (targetIdx === -1) index = base.length;
+    else index = intent.kind === "before" ? targetIdx : targetIdx + 1;
+  }
+
+  const orderedIds = [...base.slice(0, index), drag, ...base.slice(index)];
+
+  // 5. No-op detection: same parent + identical final order as it already is.
+  const currentParent = parentOf(folders, pages, drag);
+  if (currentParent === destParentId) {
+    const currentOrder = siblingsOf(folders, pages, destParentId);
+    if (
+      currentOrder.length === orderedIds.length &&
+      currentOrder.every((s, i) => sameItem(s, orderedIds[i]))
+    ) {
+      return null;
+    }
+  }
+
+  return { destParentId, orderedIds };
 }
 
 /** Would moving `folderId` under `candidateParentId` create a cycle? */

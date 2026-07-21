@@ -1,5 +1,6 @@
 // src/AppRouter.tsx
 import { createHashRouter, RouterProvider, Outlet, Navigate, useParams } from "react-router-dom";
+import { useEffect } from "react";
 import Login from "./pages/login";
 import SignUp from "./pages/signup";
 import VerifyEmail from "./pages/verifyEmail";
@@ -29,6 +30,8 @@ import SessionTracker from "./components/SessionTracker";
 import UsernamePrompt from "./components/prompts/username_prompt";
 import ReleaseNotesPrompt from "./components/prompts/release_notes_prompt";
 import OnboardingRoute from "./components/onboarding/OnboardingRoute";
+import { SpotifyProvider } from "./context/SpotifyContext";
+import { SpotifyCallback } from "./components/spotify";
 
 /** Redirects /practice/:id (deck links from social) to /decks/:id */
 function PracticeToDeckRedirect() {
@@ -36,15 +39,39 @@ function PracticeToDeckRedirect() {
   return <Navigate to={`/decks/${id}`} replace />;
 }
 
+/**
+ * Spotify forbids `#` in redirect URIs. OAuth lands on a real path like
+ * `/callback?code=...` or `/spotify/callback?code=...`, which Vite serves as
+ * index.html. Rewrite into the hash route so createHashRouter can run the
+ * token exchange.
+ */
+function SpotifyOAuthPathBridge() {
+  useEffect(() => {
+    const { pathname, search, hash } = window.location;
+    const normalized = pathname.replace(/\/$/, "") || "/";
+    const isCallbackPath =
+      normalized.endsWith("/callback") || normalized.endsWith("/spotify/callback");
+    if (!isCallbackPath || !search) return;
+    // Already on the hash callback — nothing to do.
+    if (hash.startsWith("#/spotify/callback")) return;
+    window.location.replace(`${window.location.origin}/#/spotify/callback${search}`);
+  }, []);
+  return null;
+}
+
 function RootLayout() {
+  // SpotifyProvider is mounted app-wide so playback and auth persist across
+  // navigation (music keeps playing when switching pages) and both the sidebar
+  // tab and the floating mini-player share one session.
   return (
-    <>
+    <SpotifyProvider>
+      <SpotifyOAuthPathBridge />
       <SessionTracker />
       <PhoneRedirect />
       <Outlet />
       <UsernamePrompt />
       <ReleaseNotesPrompt />
-    </>
+    </SpotifyProvider>
   );
 }
 
@@ -56,6 +83,7 @@ const router = createHashRouter([
       { path: "/", element: <SignUp /> },
       { path: "/login", element: <Login /> },
       { path: "/verify-email", element: <VerifyEmail /> },
+      { path: "/spotify/callback", element: <SpotifyCallback /> },
       {
         path: "/onboarding",
         element: (

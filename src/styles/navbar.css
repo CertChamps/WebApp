@@ -7,6 +7,23 @@
 }
 /* ===================================================================================== */ 
 
+/* Smoothly collapse the app navbar when the whiteboard enters full-screen focus mode. */
+#app-navbar {
+  transition: width 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    min-width 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
+  overflow: hidden;
+}
+body.wb-focus-mode #app-navbar {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
 
 /* ====================================== USER STYLES  ================================= */ 
 .user-container {

@@ -23,7 +23,16 @@ export type ZoomablePageImage = {
 type Props = {
   images: ZoomablePageImage[];
   className?: string;
+  /** Round top of first image + bottom of last (all corners when only one). */
+  roundStack?: boolean;
 };
+
+function stackedImageRoundClass(index: number, total: number): string {
+  if (total <= 1) return "rounded-xl";
+  if (index === 0) return "rounded-t-xl";
+  if (index === total - 1) return "rounded-b-xl";
+  return "";
+}
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
@@ -410,9 +419,11 @@ function usePinchPanZoom({
 function PageImages({
   images,
   className = "",
+  roundStack = false,
 }: {
   images: ZoomablePageImage[];
   className?: string;
+  roundStack?: boolean;
 }) {
   return (
     <>
@@ -421,7 +432,7 @@ function PageImages({
           key={img.key ?? `${img.src}-${idx}`}
           src={img.src}
           alt={img.alt}
-          className={`zoomable-question-page__img ${className}`.trim()}
+          className={`zoomable-question-page__img ${roundStack ? stackedImageRoundClass(idx, images.length) : ""} ${className}`.trim()}
           draggable={false}
         />
       ))}
@@ -429,7 +440,7 @@ function PageImages({
   );
 }
 
-export default function ZoomableQuestionImage({ images, className = "" }: Props) {
+export default function ZoomableQuestionImage({ images, className = "", roundStack = false }: Props) {
   const [phase, setPhase] = useState<FullscreenPhase>("closed");
   const [overlayVisible, setOverlayVisible] = useState(false);
   const [flightStyle, setFlightStyle] = useState<CSSProperties | undefined>(undefined);
@@ -627,7 +638,7 @@ export default function ZoomableQuestionImage({ images, className = "" }: Props)
           onTransitionEnd={inline.onTransitionEnd}
           aria-hidden={hideInline || undefined}
         >
-          <PageImages images={images} className={className} />
+          <PageImages images={images} className={className} roundStack={roundStack} />
         </div>
       </div>
 
@@ -649,7 +660,7 @@ export default function ZoomableQuestionImage({ images, className = "" }: Props)
                 style={transformStyle}
                 onTransitionEnd={inline.onTransitionEnd}
               >
-                <PageImages images={images} className={className} />
+                <PageImages images={images} className={className} roundStack={roundStack} />
               </div>
             </div>,
             portalTarget
@@ -709,7 +720,7 @@ export default function ZoomableQuestionImage({ images, className = "" }: Props)
                     overlay.onTransitionEnd(e);
                   }}
                 >
-                  <PageImages images={images} className={className} />
+                  <PageImages images={images} className={className} roundStack={roundStack} />
                 </div>
               </div>
             </div>,

@@ -2,16 +2,16 @@ import { LuTimer, LuClock, LuCoffee } from "react-icons/lu";
 import { useTimer } from "../context/TimerContext";
 
 type TimerFloatingWidgetProps = {
-  /** When true, position on the left (for left-hand layout). */
-  leftHandMode?: boolean;
   /** Optional click handler (e.g. open timer panel in sidebar). */
   onClick?: () => void;
 };
 
-export function TimerFloatingWidget({ leftHandMode = false, onClick }: TimerFloatingWidgetProps) {
+/**
+ * Compact timer bar. Positioning/visibility is owned by the shared
+ * FloatingWidgetStack — this component only renders the bar content.
+ */
+export function TimerFloatingWidget({ onClick }: TimerFloatingWidgetProps) {
   const { state, formatTime } = useTimer();
-
-  if (!state.running) return null;
 
   const modeLabel =
     state.mode === "stopwatch"
@@ -41,7 +41,7 @@ export function TimerFloatingWidget({ leftHandMode = false, onClick }: TimerFloa
     <button
       type="button"
       onClick={onClick}
-      className={`fixed bottom-3 z-10 flex flex-col gap-0.5 w-[220px] rounded-xl color-bg p-2 ${leftHandMode ? "left-20" : "right-3"}`}
+      className="flex w-[220px] flex-col gap-0.5 rounded-xl border border-grey/25 color-bg p-2 backdrop-blur-xl transition-colors hover:border-grey/40"
       aria-live="polite"
       aria-label={`Timer: ${modeLabel}, ${formatTime(state.time)}`}
       title={onClick ? "Open timer panel" : undefined}

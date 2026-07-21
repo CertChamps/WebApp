@@ -1,8 +1,19 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   LuArrowLeft,
+  LuBookOpen,
+  LuCalculator,
   LuChevronLeft,
   LuChevronRight,
   LuClipboardList,
@@ -10,8 +21,11 @@ import {
   LuEyeOff,
   LuFileText,
   LuLoaderCircle,
+  LuMaximize2,
+  LuMinimize2,
   LuPencil,
   LuPlus,
+  LuWrench,
 } from "react-icons/lu";
 import DrawingCanvas, {
   type RegisterDrawingSnapshot,
@@ -22,8 +36,12 @@ import WhiteboardsSidebar from "../components/whiteboards/WhiteboardsSidebar";
 import PageDetailsModal from "../components/whiteboards/PageDetailsModal";
 import FolderModal from "../components/whiteboards/FolderModal";
 import AddQuestionModal from "../components/whiteboards/AddQuestionModal";
+import FloatingCalculator from "../components/calculator/FloatingCalculator";
+import FloatingLogTables from "../components/FloatingLogTables";
+import { getLogTablesPdfBlob } from "../utils/logTablesPdf";
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
 import type { SidebarPanelId } from "../components/sidebar/SidebarTileManager";
+import { FloatingWidgets } from "../components/floating/FloatingWidgets";
 import { useCanvasStorage } from "../hooks/useCanvasStorage";
 import { useWhiteboards, useWhiteboardPage } from "../hooks/useWhiteboards";
 import { useAttachedQuestionMedia } from "../hooks/useAttachedQuestionMedia";
@@ -37,6 +55,7 @@ import {
   type WhiteboardPage,
 } from "../data/whiteboards";
 import type { ImageQuestion } from "../hooks/useImageQuestions";
+import { getThemedPortalTarget } from "../utils/themedPortal";
 import "../styles/questions.css";
 import "../styles/practiceHub.css";
 
@@ -72,6 +91,200 @@ function PaperPanelToggle({
   );
 }
 
+/** Full-screen toggle whose icon animates (rotate + fade) between the two states. */
+function FullscreenToggle({ active, onClick }: { active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={active ? "Exit full screen" : "Full screen"}
+      title={active ? "Exit full screen" : "Full screen"}
+      className={`shrink-0 rounded-lg p-2 transition-colors cursor-pointer ${
+        active ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-bg-grey-5"
+      }`}
+    >
+      <span className="relative block h-4 w-4">
+        <AnimatePresence initial={false} mode="wait">
+          <motion.span
+            key={active ? "min" : "max"}
+            initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+            animate={{ opacity: 1, rotate: 0, scale: 1 }}
+            exit={{ opacity: 0, rotate: 90, scale: 0.5 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            {active ? (
+              <LuMinimize2 size={16} strokeWidth={2} />
+            ) : (
+              <LuMaximize2 size={16} strokeWidth={2} />
+            )}
+          </motion.span>
+        </AnimatePresence>
+      </span>
+    </button>
+  );
+}
+
+/** A pressable square (icon above label) with clear on/off states, for the tools menu. */
+function ToolSquare({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: typeof LuCalculator;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex h-16 w-16 flex-col items-center justify-center gap-1.5 rounded-xl border transition-all cursor-pointer ${
+        active
+          ? "color-bg-accent color-txt-accent border-transparent"
+          : "color-bg-grey-5 color-txt-sub border-transparent hover:color-bg-grey-10"
+      }`}
+    >
+      <Icon size={20} strokeWidth={2} />
+      <span className="text-[10px] font-semibold leading-none">{label}</span>
+    </button>
+  );
+}
+
+type ToolsPanelPosition = { top: number; right: number };
+
+/** Dropdown of floatable tools (calculator, log tables) with on/off tiles. */
+function ToolsMenu({
+  showCalculator,
+  showLogTables,
+  onToggleCalculator,
+  onToggleLogTables,
+}: {
+  showCalculator: boolean;
+  showLogTables: boolean;
+  onToggleCalculator: () => void;
+  onToggleLogTables: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [panelPosition, setPanelPosition] = useState<ToolsPanelPosition | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const anyActive = showCalculator || showLogTables;
+
+  const updatePanelPosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    setPanelPosition({
+      top: rect.bottom + 8,
+      right: Math.max(8, window.innerWidth - rect.right),
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePanelPosition();
+  }, [open, updatePanelPosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("resize", updatePanelPosition);
+    window.addEventListener("scroll", updatePanelPosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePanelPosition);
+      window.removeEventListener("scroll", updatePanelPosition, true);
+    };
+  }, [open, updatePanelPosition]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
+  const handleClose = useCallback(() => setOpen(false), []);
+
+  const portalTarget =
+    typeof document !== "undefined" ? getThemedPortalTarget() : null;
+
+  const dropdownPortal =
+    portalTarget && panelPosition
+      ? createPortal(
+          <AnimatePresence onExitComplete={() => setPanelPosition(null)}>
+            {open && (
+              <>
+                <motion.button
+                  key="tools-menu-backdrop"
+                  type="button"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="fixed inset-0 z-[55] cursor-default border-none bg-transparent p-0"
+                  aria-label="Close tools menu"
+                  onPointerDown={handleClose}
+                />
+                <motion.div
+                  key="tools-menu-panel"
+                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                  transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+                  className="pointer-events-auto fixed z-[60] rounded-2xl border border-grey/20 color-bg p-2"
+                  style={{ top: panelPosition.top, right: panelPosition.right }}
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    <ToolSquare
+                      icon={LuCalculator}
+                      label="Calculator"
+                      active={showCalculator}
+                      onClick={onToggleCalculator}
+                    />
+                    <ToolSquare
+                      icon={LuBookOpen}
+                      label="Log tables"
+                      active={showLogTables}
+                      onClick={onToggleLogTables}
+                    />
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          portalTarget
+        )
+      : null;
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Tools"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        title="Tools"
+        className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+          open || anyActive
+            ? "color-bg-accent color-txt-accent"
+            : "color-txt-main color-bg-grey-5 hover:color-bg-grey-10"
+        }`}
+      >
+        <LuWrench size={13} strokeWidth={2.5} />
+        Tools
+      </button>
+      {dropdownPortal}
+    </>
+  );
+}
+
 function toImageQuestions(
   images: { src: string; alt: string; key?: string }[],
   prefix: string
@@ -87,7 +300,9 @@ function toImageQuestions(
 export default function WhiteboardPageView() {
   return (
     <TimerProvider>
-      <WhiteboardPageViewInner />
+      <div className="relative flex min-h-0 w-full flex-1 h-full overflow-hidden color-bg">
+        <WhiteboardPageViewInner />
+      </div>
     </TimerProvider>
   );
 }
@@ -110,6 +325,7 @@ function WhiteboardPageViewInner() {
 
   const {
     folders,
+    pages,
     tree,
     loading: treeLoading,
     createPage,
@@ -119,7 +335,31 @@ function WhiteboardPageViewInner() {
     createFolder,
     updateFolder,
     deleteFolder,
+    moveItem,
   } = useWhiteboards(sidebarSubject);
+
+  // Full-screen focus mode (collapses the sidebar + app navbar) and floatable tools.
+  const [focusMode, setFocusMode] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [showLogTables, setShowLogTables] = useState(false);
+  const [logTablesBlob, setLogTablesBlob] = useState<Blob | null>(null);
+
+  useEffect(() => {
+    if (focusMode) document.body.classList.add("wb-focus-mode");
+    else document.body.classList.remove("wb-focus-mode");
+    return () => document.body.classList.remove("wb-focus-mode");
+  }, [focusMode]);
+
+  useEffect(() => {
+    if (!showLogTables || logTablesBlob) return;
+    let cancelled = false;
+    void getLogTablesPdfBlob().then((blob) => {
+      if (!cancelled && blob) setLogTablesBlob(blob);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [showLogTables, logTablesBlob]);
 
   const { saveCanvas, loadCanvas } = useCanvasStorage();
   const canvasId = pageId ? whiteboardCanvasId(pageId) : null;
@@ -280,26 +520,33 @@ function WhiteboardPageViewInner() {
   }
 
   return (
-    <div className="flex h-full w-full flex-1 min-w-0 overflow-hidden color-bg">
-      <WhiteboardsSidebar
-        subject={sidebarSubject}
-        onSubjectChange={setSidebarSubject}
-        tree={tree}
-        folders={folders}
-        loading={treeLoading}
-        currentPageId={pageId ?? null}
-        onOpenPage={openPage}
-        onOpenQuestion={openQuestion}
-        onEditPage={(target) => setEditingPage(target)}
-        onEditFolder={(folder) => setEditingFolder(folder)}
-        onCreatePage={() => setCreatingPage(true)}
-        onCreateFolder={() => setCreatingFolder(true)}
-        onHome={() => navigate("/whiteboards")}
-        onMovePage={(pageIdToMove, folderId) => void updatePage(pageIdToMove, { folderId })}
-        onMoveFolder={(folderId, parentId) => void updateFolder(folderId, { parentId })}
-      />
+    <div className="flex min-h-0 h-full w-full">
+      <div
+        className={`flex h-full min-h-0 shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          focusMode ? "w-0 overflow-hidden" : "w-64"
+        }`}
+        aria-hidden={focusMode}
+      >
+        <WhiteboardsSidebar
+          subject={sidebarSubject}
+          onSubjectChange={setSidebarSubject}
+          tree={tree}
+          folders={folders}
+          pages={pages}
+          loading={treeLoading}
+          currentPageId={pageId ?? null}
+          onOpenPage={openPage}
+          onOpenQuestion={openQuestion}
+          onEditPage={(target) => setEditingPage(target)}
+          onEditFolder={(folder) => setEditingFolder(folder)}
+          onCreatePage={() => setCreatingPage(true)}
+          onCreateFolder={() => setCreatingFolder(true)}
+          onHome={() => navigate("/whiteboards")}
+          onMove={(drag, move) => void moveItem(drag, move)}
+        />
+      </div>
 
-      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* ---- Top bar (kept) ---- */}
         <div className="relative z-40 flex h-11 shrink-0 items-center gap-1 px-2">
           <button
@@ -363,7 +610,13 @@ function WhiteboardPageViewInner() {
             </div>
           )}
 
-          <div className={`flex items-center gap-1 ${attachments.length > 0 ? "" : "ml-auto"}`}>
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            <ToolsMenu
+              showCalculator={showCalculator}
+              showLogTables={showLogTables}
+              onToggleCalculator={() => setShowCalculator((v) => !v)}
+              onToggleLogTables={() => setShowLogTables((v) => !v)}
+            />
             <button
               type="button"
               className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold color-txt-main color-bg-grey-5 hover:color-bg-grey-10 transition-colors cursor-pointer"
@@ -372,6 +625,7 @@ function WhiteboardPageViewInner() {
               <LuPlus size={13} strokeWidth={2.5} />
               Add question
             </button>
+            <FullscreenToggle active={focusMode} onClick={() => setFocusMode((f) => !f)} />
           </div>
         </div>
 
@@ -429,7 +683,11 @@ function WhiteboardPageViewInner() {
                               Couldn't load this question — try again in a moment.
                             </p>
                           ) : media.questionImages.length > 0 ? (
-                            <ZoomableQuestionImage images={media.questionImages} className="w-full h-auto" />
+                            <ZoomableQuestionImage
+                              images={media.questionImages}
+                              className="w-full h-auto"
+                              roundStack
+                            />
                           ) : (
                             <p className="py-6 text-center text-sm color-txt-sub px-3">
                               No question image available.
@@ -508,6 +766,19 @@ function WhiteboardPageViewInner() {
         </div>
       </div>
 
+      <FloatingWidgets
+        leftHandMode={options.leftHandMode}
+        spotifyTabVisible={sessionSidebarOpen && sidebarOpenPanel === "spotify"}
+        onOpenTimer={() => {
+          setSessionSidebarOpen(true);
+          setSidebarOpenPanel("timer");
+        }}
+        onOpenSpotify={() => {
+          setSessionSidebarOpen(true);
+          setSidebarOpenPanel("spotify");
+        }}
+      />
+
       {/* ---- Modals ---- */}
       {editingPage && (
         <PageDetailsModal
@@ -566,6 +837,19 @@ function WhiteboardPageViewInner() {
           subject={page.subject}
           onAdd={(added) => void handleAddAttachments(added)}
           onClose={() => setShowAddQuestion(false)}
+        />
+      )}
+
+      {/* ---- Floatable tools (rendered via portal so they float over everything) ---- */}
+      {showCalculator && typeof document !== "undefined" && (
+        <FloatingCalculator onClose={() => setShowCalculator(false)} />
+      )}
+
+      {showLogTables && typeof document !== "undefined" && (
+        <FloatingLogTables
+          pgNumber="1"
+          file={logTablesBlob ?? null}
+          onClose={() => setShowLogTables(false)}
         />
       )}
     </div>

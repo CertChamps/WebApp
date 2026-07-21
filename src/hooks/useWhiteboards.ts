@@ -15,8 +15,12 @@ import { db, storage } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import {
   buildWhiteboardTree,
+  ORDER_STEP,
+  UNSET_ORDER,
   whiteboardCanvasId,
   type AttachedQuestion,
+  type ResolvedMove,
+  type SidebarDragItem,
   type WhiteboardFolder,
   type WhiteboardPage,
 } from "../data/whiteboards";
@@ -36,6 +40,7 @@ function toFolder(id: string, data: Record<string, unknown>): WhiteboardFolder {
     parentId: typeof data.parentId === "string" ? data.parentId : null,
     colour: typeof data.colour === "string" ? data.colour : null,
     emoji: typeof data.emoji === "string" ? data.emoji : null,
+    order: typeof data.order === "number" ? data.order : UNSET_ORDER,
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
   };
@@ -51,6 +56,7 @@ function toPage(id: string, data: Record<string, unknown>): WhiteboardPage {
     attachedQuestions: Array.isArray(data.attachedQuestions)
       ? (data.attachedQuestions as AttachedQuestion[])
       : [],
+    order: typeof data.order === "number" ? data.order : UNSET_ORDER,
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
     lastOpenedAt: typeof data.lastOpenedAt === "number" ? data.lastOpenedAt : 0,
@@ -174,6 +180,7 @@ export function useWhiteboards(subject: string | null) {
         folderId: input.folderId ?? null,
         emoji: input.emoji ?? null,
         attachedQuestions: input.attachedQuestions ?? [],
+        order: UNSET_ORDER,
         createdAt: now,
         updatedAt: now,
         lastOpenedAt: now,
@@ -245,6 +252,7 @@ export function useWhiteboards(subject: string | null) {
         parentId: input.parentId ?? null,
         colour: input.colour ?? null,
         emoji: input.emoji ?? null,
+        order: UNSET_ORDER,
         createdAt: now,
         updatedAt: now,
       };
@@ -297,6 +305,33 @@ export function useWhiteboards(subject: string | null) {
     [uid, folders, pages]
   );
 
+  /**
+   * Persist a drag-and-drop move in one batch: reparents the dragged item and
+   * reindexes the entire destination sibling list to stable `order` values.
+   * `orderedIds` is the final desired order of that sibling list (including the moved item).
+   */
+  const moveItem = useCallback(
+    async (drag: SidebarDragItem, move: ResolvedMove) => {
+      if (!uid) throw new Error("Not signed in");
+      const batch = writeBatch(db);
+      const now = Date.now();
+      move.orderedIds.forEach((item, i) => {
+        const order = i * ORDER_STEP;
+        if (item.type === "folder") {
+          const update: Partial<WhiteboardFolder> = { order, updatedAt: now };
+          if (item.id === drag.id && drag.type === "folder") update.parentId = move.destParentId;
+          batch.update(doc(db, "user-data", uid, FOLDERS_COLLECTION, item.id), update);
+        } else {
+          const update: Partial<WhiteboardPage> = { order, updatedAt: now };
+          if (item.id === drag.id && drag.type === "page") update.folderId = move.destParentId;
+          batch.update(doc(db, "user-data", uid, PAGES_COLLECTION, item.id), update);
+        }
+      });
+      await batch.commit();
+    },
+    [uid]
+  );
+
   return {
     folders,
     pages,
@@ -310,6 +345,7 @@ export function useWhiteboards(subject: string | null) {
     createFolder,
     updateFolder,
     deleteFolder,
+    moveItem,
   };
 }
 
