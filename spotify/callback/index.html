@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Connecting Spotify…</title>
+    <script>
+      // Spotify OAuth lands on a real path (no #). Bounce into the hash router
+      // so the React callback route can exchange the authorization code.
+      (function () {
+        var q = window.location.search || "";
+        window.location.replace(window.location.origin + "/#/spotify/callback" + q);
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Connecting Spotify…</p>
+  </body>
+</html>
