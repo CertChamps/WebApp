@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { LuFileText, LuPlus, LuTrash2, LuX, LuZap } from "react-icons/lu";
+import { LuFileText, LuPlus, LuTrash2, LuX } from "react-icons/lu";
 import WhiteboardModal from "./WhiteboardModal";
 import EmojiPicker from "./EmojiPicker";
 import FolderModal, { type FolderModalResult } from "./FolderModal";
@@ -21,7 +21,6 @@ type Props = {
   folders: WhiteboardFolder[];
   /** Present when editing an existing page. */
   initial?: WhiteboardPage | null;
-  defaultFolderId?: string | null;
   onSave: (result: PageDetailsResult) => Promise<void> | void;
   /** Create-mode only: skip straight to the canvas with defaults. */
   onBlankCanvas?: (result: PageDetailsResult) => Promise<void> | void;
@@ -37,7 +36,6 @@ export default function PageDetailsModal({
   subject,
   folders,
   initial = null,
-  defaultFolderId = null,
   onSave,
   onBlankCanvas,
   onDelete,
@@ -46,7 +44,7 @@ export default function PageDetailsModal({
 }: Props) {
   const isEdit = initial != null;
   const [name, setName] = useState(initial?.name ?? "");
-  const [folderId, setFolderId] = useState<string | null>(initial?.folderId ?? defaultFolderId);
+  const [folderId, setFolderId] = useState<string | null>(initial?.folderId ?? null);
   const [emoji, setEmoji] = useState<string | null>(initial?.emoji ?? null);
   const [attachedQuestions, setAttachedQuestions] = useState<AttachedQuestion[]>(
     initial?.attachedQuestions ?? []
@@ -69,7 +67,7 @@ export default function PageDetailsModal({
 
   const buildResult = (): PageDetailsResult => ({
     name: name.trim(),
-    folderId,
+    folderId: isEdit ? folderId : null,
     emoji,
     attachedQuestions,
   });
@@ -176,7 +174,6 @@ export default function PageDetailsModal({
                   onClick={handleBlankCanvas}
                   disabled={saving}
                 >
-                  <LuZap size={15} />
                   Just give me a blank canvas
                 </button>
               )}
@@ -211,22 +208,24 @@ export default function PageDetailsModal({
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold color-txt-sub">Folder</span>
-            <CustomSelect
-              options={folderOptions}
-              value={folderId ?? ""}
-              onChange={(v) => {
-                if (v === NEW_FOLDER_VALUE) {
-                  setShowFolderModal(true);
-                  return;
-                }
-                setFolderId(v || null);
-              }}
-              placeholder="Subject root (no folder)"
-              aria-label="Folder"
-            />
-          </div>
+          {isEdit && (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-semibold color-txt-sub">Folder</span>
+              <CustomSelect
+                options={folderOptions}
+                value={folderId ?? ""}
+                onChange={(v) => {
+                  if (v === NEW_FOLDER_VALUE) {
+                    setShowFolderModal(true);
+                    return;
+                  }
+                  setFolderId(v || null);
+                }}
+                placeholder="Subject root (no folder)"
+                aria-label="Folder"
+              />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
@@ -277,7 +276,6 @@ export default function PageDetailsModal({
       {showFolderModal && (
         <FolderModal
           folders={folders}
-          defaultParentId={null}
           onSave={async (result) => {
             const folder = await onCreateFolder(result);
             setFolderId(folder.id);

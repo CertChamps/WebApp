@@ -42,19 +42,6 @@ export default function Navbar () {
 
     const [page, setPage ]= useState<string>(() => derivePageFromPath(location.pathname))
 
-    const navigateToPractice = () => {
-        try {
-            const savedSearch = localStorage.getItem("questions-page-resume-search");
-            if (savedSearch && savedSearch.trim().length > 0) {
-                navigate(`/practice/session?${savedSearch}`);
-                return;
-            }
-        } catch {
-            return navigate("/practice");
-        }
-        navigate("/practice");
-    };
-
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //
     const pageNaviagte = (page: string) => {
 
@@ -63,7 +50,7 @@ export default function Navbar () {
 
         // navigate to that page
         if (page === "practice") {
-            navigateToPractice();
+            navigate("/practice");
             return;
         }
         if (page === "community") {

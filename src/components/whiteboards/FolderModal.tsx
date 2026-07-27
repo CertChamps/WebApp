@@ -21,7 +21,6 @@ type Props = {
   folders: WhiteboardFolder[];
   /** Present in edit mode. */
   initial?: WhiteboardFolder | null;
-  defaultParentId?: string | null;
   onSave: (result: FolderModalResult) => Promise<void> | void;
   onDelete?: (folder: WhiteboardFolder) => Promise<void> | void;
   onClose: () => void;
@@ -30,7 +29,6 @@ type Props = {
 export default function FolderModal({
   folders,
   initial = null,
-  defaultParentId = null,
   onSave,
   onDelete,
   onClose,
@@ -38,7 +36,7 @@ export default function FolderModal({
   const [name, setName] = useState(initial?.name ?? "");
   const [colour, setColour] = useState<string | null>(initial?.colour ?? null);
   const [emoji, setEmoji] = useState<string | null>(initial?.emoji ?? null);
-  const [parentId, setParentId] = useState<string | null>(initial?.parentId ?? defaultParentId);
+  const [parentId, setParentId] = useState<string | null>(initial?.parentId ?? null);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -60,7 +58,7 @@ export default function FolderModal({
     if (!canSave) return;
     setSaving(true);
     try {
-      await onSave({ name: name.trim(), colour, emoji, parentId });
+      await onSave({ name: name.trim(), colour, emoji, parentId: initial ? parentId : null });
       onClose();
     } finally {
       setSaving(false);
@@ -193,16 +191,18 @@ export default function FolderModal({
           </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold color-txt-sub">Parent folder</span>
-          <CustomSelect
-            options={parentOptions}
-            value={parentId ?? ""}
-            onChange={(v) => setParentId(v || null)}
-            placeholder="Subject root (no folder)"
-            aria-label="Parent folder"
-          />
-        </div>
+        {initial && (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold color-txt-sub">Parent folder</span>
+            <CustomSelect
+              options={parentOptions}
+              value={parentId ?? ""}
+              onChange={(v) => setParentId(v || null)}
+              placeholder="Subject root (no folder)"
+              aria-label="Parent folder"
+            />
+          </div>
+        )}
       </div>
     </WhiteboardModal>
   );
