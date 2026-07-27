@@ -1,11 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { LuFileText, LuPlus, LuTrash2, LuX, LuZap } from "react-icons/lu";
 import WhiteboardModal from "./WhiteboardModal";
 import EmojiPicker from "./EmojiPicker";
-import FolderModal, { type FolderModalResult } from "./FolderModal";
 import AddQuestionModal from "./AddQuestionModal";
-import CustomSelect from "../practiceHub/CustomSelect";
-import type { AttachedQuestion, WhiteboardFolder, WhiteboardPage } from "../../data/whiteboards";
+import type { AttachedQuestion, WhiteboardPage } from "../../data/whiteboards";
 import "../../styles/practiceHub.css";
 
 export type PageDetailsResult = {
@@ -16,54 +14,40 @@ export type PageDetailsResult = {
 };
 
 type Props = {
-  /** UI subject slug for the page (scopes the folder picker + question bank). */
+  /** UI subject slug for the page (scopes the question bank). */
   subject: string;
-  folders: WhiteboardFolder[];
   /** Present when editing an existing page. */
   initial?: WhiteboardPage | null;
+  /** Optional folder to place a new page in (e.g. created from a folder context). */
   defaultFolderId?: string | null;
   onSave: (result: PageDetailsResult) => Promise<void> | void;
   /** Create-mode only: skip straight to the canvas with defaults. */
   onBlankCanvas?: (result: PageDetailsResult) => Promise<void> | void;
   onDelete?: (page: WhiteboardPage) => Promise<void> | void;
-  /** Creates a folder (from the inline "New folder" option) and returns it so it can be selected. */
-  onCreateFolder: (input: FolderModalResult) => Promise<WhiteboardFolder>;
   onClose: () => void;
 };
 
-const NEW_FOLDER_VALUE = "__new_folder__";
-
 export default function PageDetailsModal({
   subject,
-  folders,
   initial = null,
   defaultFolderId = null,
   onSave,
   onBlankCanvas,
   onDelete,
-  onCreateFolder,
   onClose,
 }: Props) {
   const isEdit = initial != null;
   const [name, setName] = useState(initial?.name ?? "");
-  const [folderId, setFolderId] = useState<string | null>(initial?.folderId ?? defaultFolderId);
   const [emoji, setEmoji] = useState<string | null>(initial?.emoji ?? null);
   const [attachedQuestions, setAttachedQuestions] = useState<AttachedQuestion[]>(
     initial?.attachedQuestions ?? []
   );
   const [saving, setSaving] = useState(false);
-  const [showFolderModal, setShowFolderModal] = useState(false);
   const [showAddQuestion, setShowAddQuestion] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const folderOptions = useMemo(
-    () => [
-      { value: "", label: "Subject root (no folder)" },
-      ...folders.map((f) => ({ value: f.id, label: `${f.emoji ? `${f.emoji} ` : ""}${f.name}` })),
-      { value: NEW_FOLDER_VALUE, label: "+ New folder…" },
-    ],
-    [folders]
-  );
+  /** Preserve existing folder on edit; use default when creating from a folder context. */
+  const folderId = initial?.folderId ?? defaultFolderId ?? null;
 
   const canSave = name.trim().length > 0 && !saving;
 
@@ -114,7 +98,7 @@ export default function PageDetailsModal({
         onClose={onClose}
         footer={
           confirmingDelete && initial ? (
-            <div className="flex flex-col gap-2 rounded-xl color-bg-grey-5 p-3">
+            <div className="flex flex-col gap-2 rounded-lg color-bg-grey-5 p-3">
               <p className="text-sm color-txt-main font-semibold">Delete “{initial.name}”?</p>
               <p className="text-xs color-txt-sub">
                 The page and its whiteboard drawing will be permanently deleted.
@@ -122,7 +106,7 @@ export default function PageDetailsModal({
               <div className="flex gap-2 pt-1">
                 <button
                   type="button"
-                  className="flex-1 py-2 rounded-xl text-sm font-semibold color-bg-grey-10 color-txt-main hover:opacity-80 transition-opacity cursor-pointer"
+                  className="flex-1 py-2 rounded-lg text-sm font-semibold color-bg-grey-10 color-txt-main hover:opacity-80 transition-opacity cursor-pointer"
                   onClick={() => setConfirmingDelete(false)}
                   disabled={saving}
                 >
@@ -130,7 +114,7 @@ export default function PageDetailsModal({
                 </button>
                 <button
                   type="button"
-                  className="flex-1 py-2 rounded-xl text-sm font-semibold red-btn cursor-pointer"
+                  className="flex-1 py-2 rounded-lg text-sm font-semibold red-btn cursor-pointer"
                   onClick={handleDelete}
                   disabled={saving}
                 >
@@ -144,7 +128,7 @@ export default function PageDetailsModal({
                 {isEdit && onDelete && (
                   <button
                     type="button"
-                    className="p-2.5 rounded-xl color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
+                    className="p-2.5 rounded-lg color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
                     onClick={() => setConfirmingDelete(true)}
                     aria-label="Delete page"
                     title="Delete page"
@@ -154,7 +138,7 @@ export default function PageDetailsModal({
                 )}
                 <button
                   type="button"
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold color-bg-grey-5 color-txt-main hover:color-bg-grey-10 transition-colors cursor-pointer"
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold color-bg-grey-5 color-txt-main hover:color-bg-grey-10 transition-colors cursor-pointer"
                   onClick={onClose}
                   disabled={saving}
                 >
@@ -162,7 +146,7 @@ export default function PageDetailsModal({
                 </button>
                 <button
                   type="button"
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
                   onClick={handleSave}
                   disabled={!canSave}
                 >
@@ -172,7 +156,7 @@ export default function PageDetailsModal({
               {!isEdit && onBlankCanvas && (
                 <button
                   type="button"
-                  className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
+                  className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
                   onClick={handleBlankCanvas}
                   disabled={saving}
                 >
@@ -202,30 +186,13 @@ export default function PageDetailsModal({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Differentiation practice"
-                className="w-full px-3 py-2 rounded-xl text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none"
+                className="w-full px-3 py-2 rounded-lg text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none"
                 autoFocus={!isEdit}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSave();
                 }}
               />
             </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold color-txt-sub">Folder</span>
-            <CustomSelect
-              options={folderOptions}
-              value={folderId ?? ""}
-              onChange={(v) => {
-                if (v === NEW_FOLDER_VALUE) {
-                  setShowFolderModal(true);
-                  return;
-                }
-                setFolderId(v || null);
-              }}
-              placeholder="Subject root (no folder)"
-              aria-label="Folder"
-            />
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -242,7 +209,7 @@ export default function PageDetailsModal({
             </div>
 
             {attachedQuestions.length === 0 ? (
-              <p className="rounded-xl color-bg-grey-5 px-3 py-3 text-sm color-txt-sub">
+              <p className="rounded-lg color-bg-grey-5 px-3 py-3 text-sm color-txt-sub">
                 No questions attached yet — you can add some now or later from the page itself.
               </p>
             ) : (
@@ -250,7 +217,7 @@ export default function PageDetailsModal({
                 {attachedQuestions.map((attachment) => (
                   <div
                     key={attachment.id}
-                    className="flex items-center gap-2 rounded-xl color-bg-grey-5 px-3 py-2 text-sm color-txt-main"
+                    className="flex items-center gap-2 rounded-lg color-bg-grey-5 px-3 py-2 text-sm color-txt-main"
                   >
                     <span className="shrink-0 rounded-md color-bg-grey-10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide color-txt-sub">
                       {attachment.source === "bank" ? "Bank" : "Yours"}
@@ -273,18 +240,6 @@ export default function PageDetailsModal({
           </div>
         </div>
       </WhiteboardModal>
-
-      {showFolderModal && (
-        <FolderModal
-          folders={folders}
-          defaultParentId={null}
-          onSave={async (result) => {
-            const folder = await onCreateFolder(result);
-            setFolderId(folder.id);
-          }}
-          onClose={() => setShowFolderModal(false)}
-        />
-      )}
 
       {showAddQuestion && (
         <AddQuestionModal

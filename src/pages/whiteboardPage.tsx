@@ -812,14 +812,12 @@ function WhiteboardPageViewInner() {
       {editingPage && (
         <PageDetailsModal
           subject={editingPage.subject}
-          folders={folders}
           initial={editingPage}
           onSave={(result) => updatePage(editingPage.id, result)}
           onDelete={async (target) => {
             await deletePage(target);
             if (target.id === pageId) navigate("/whiteboards");
           }}
-          onCreateFolder={(input) => createFolder({ ...input, subject: editingPage.subject })}
           onClose={() => setEditingPage(null)}
         />
       )}
@@ -827,7 +825,6 @@ function WhiteboardPageViewInner() {
       {creatingPage && sidebarSubject && (
         <PageDetailsModal
           subject={sidebarSubject}
-          folders={folders}
           onSave={async (result) => {
             const created = await createPage({ ...result, subject: sidebarSubject });
             navigate(`/whiteboards/page/${created.id}`);
@@ -836,14 +833,12 @@ function WhiteboardPageViewInner() {
             const created = await createPage({ ...result, subject: sidebarSubject });
             navigate(`/whiteboards/page/${created.id}`);
           }}
-          onCreateFolder={(input) => createFolder({ ...input, subject: sidebarSubject })}
           onClose={() => setCreatingPage(false)}
         />
       )}
 
       {editingFolder && (
         <FolderModal
-          folders={folders}
           initial={editingFolder}
           onSave={(result) => updateFolder(editingFolder.id, result)}
           onDelete={(folder) => deleteFolder(folder)}
@@ -853,7 +848,6 @@ function WhiteboardPageViewInner() {
 
       {creatingFolder && sidebarSubject && (
         <FolderModal
-          folders={folders}
           onSave={(result) => {
             void createFolder({ ...result, subject: sidebarSubject });
           }}

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { LuChevronDown, LuSearch } from "react-icons/lu";
 import {
   PRACTICE_HUB_SUBJECTS,
@@ -6,6 +8,7 @@ import {
   toggleFavourite,
   type SubjectOption,
 } from "../../data/practiceHubSubjects";
+import { getThemedPortalTarget } from "../../utils/themedPortal";
 import { SubjectGlyph } from "./subjectIcons";
 import "../../styles/practiceHub.css";
 
@@ -24,26 +27,25 @@ type Props = {
   onFavouritesChange?: (ids: string[]) => void;
 };
 
+type ContextMenuState = {
+  subjectId: string;
+  x: number;
+  y: number;
+};
+
 function SubjectTile({
   subject,
   selected,
-  pinned,
-  menuOpen,
   onSelect,
   onOpenMenu,
-  onCloseMenu,
-  onTogglePin,
 }: {
   subject: SubjectOption;
   selected: boolean;
-  pinned: boolean;
-  menuOpen: boolean;
   onSelect: () => void;
-  onOpenMenu: () => void;
-  onCloseMenu: () => void;
-  onTogglePin: () => void;
+  onOpenMenu: (x: number, y: number) => void;
 }) {
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdPointRef = useRef<{ x: number; y: number } | null>(null);
   const holdFiredRef = useRef(false);
   const [holding, setHolding] = useState(false);
 
@@ -61,13 +63,15 @@ function SubjectTile({
     (e: React.PointerEvent) => {
       if (e.button !== 0 && e.pointerType === "mouse") return;
       holdFiredRef.current = false;
+      holdPointRef.current = { x: e.clientX, y: e.clientY };
       setHolding(true);
       holdTimerRef.current = setTimeout(() => {
         holdTimerRef.current = null;
         holdFiredRef.current = true;
         suppressNextSelectUntil = Date.now() + 400;
         setHolding(false);
-        onOpenMenu();
+        const point = holdPointRef.current ?? { x: e.clientX, y: e.clientY };
+        onOpenMenu(point.x, point.y);
       }, HOLD_MS);
     },
     [onOpenMenu]
@@ -77,7 +81,7 @@ function SubjectTile({
     <div
       role="option"
       aria-selected={selected}
-      className={`relative flex flex-col items-center gap-2 rounded-2xl px-2 pb-3 pt-3 text-center transition-colors cursor-pointer select-none touch-manipulation ${
+      className={`relative flex flex-col items-center gap-2 rounded-lg px-2 pb-3 pt-3 text-center transition-colors cursor-pointer select-none touch-manipulation ${
         selected
           ? "color-bg-accent color-txt-accent"
           : "color-txt-main hover:color-bg-grey-5"
@@ -87,20 +91,21 @@ function SubjectTile({
           holdFiredRef.current = false;
           return;
         }
-        if (menuOpen) {
-          onCloseMenu();
-          return;
-        }
         onSelect();
       }}
       onPointerDown={startHold}
+      onPointerMove={(e) => {
+        if (holdPointRef.current) {
+          holdPointRef.current = { x: e.clientX, y: e.clientY };
+        }
+      }}
       onPointerUp={clearHold}
       onPointerLeave={clearHold}
       onPointerCancel={clearHold}
       onContextMenu={(e) => {
         e.preventDefault();
         suppressNextSelectUntil = Date.now() + 400;
-        onOpenMenu();
+        onOpenMenu(e.clientX, e.clientY);
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -110,27 +115,8 @@ function SubjectTile({
       }}
       tabIndex={0}
     >
-      {menuOpen && (
-        <div
-          className="absolute inset-x-1 top-1 z-20"
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            className="w-full rounded-xl border-2 color-shadow color-bg px-2 py-1.5 text-[11px] font-semibold leading-snug color-txt-main transition-colors hover:color-bg-grey-5"
-            onClick={() => {
-              onTogglePin();
-              onCloseMenu();
-            }}
-          >
-            {pinned ? "Remove from your subjects" : "Add to your subjects"}
-          </button>
-        </div>
-      )}
-
       <span
-        className={`flex size-12 items-center justify-center rounded-xl ${
+        className={`flex size-12 items-center justify-center rounded-lg ${
           selected ? "color-bg" : "color-bg-grey-5"
         }`}
         aria-hidden
@@ -149,6 +135,73 @@ function SubjectTile({
   );
 }
 
+function SubjectContextMenu({
+  menu,
+  label,
+  onToggle,
+  onClose,
+}: {
+  menu: ContextMenuState;
+  label: string;
+  onToggle: () => void;
+  onClose: () => void;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ left: menu.x, top: menu.y });
+
+  useLayoutEffect(() => {
+    const el = menuRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const pad = 8;
+    setPos({
+      left: Math.max(pad, Math.min(menu.x, window.innerWidth - rect.width - pad)),
+      top: Math.max(pad, Math.min(menu.y, window.innerHeight - rect.height - pad)),
+    });
+  }, [menu.x, menu.y]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    function onPointerDown(e: PointerEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointerDown, true);
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      role="menu"
+      data-subject-context-menu
+      className="fixed z-[80] min-w-[11.5rem] rounded-lg border-2 color-shadow color-bg py-1"
+      style={{ left: pos.left, top: pos.top }}
+    >
+      <button
+        type="button"
+        role="menuitem"
+        className="w-full cursor-pointer px-3 py-2 text-left text-sm color-txt-main transition-colors hover:color-bg-grey-5"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+          onClose();
+        }}
+      >
+        {label}
+      </button>
+    </div>,
+    getThemedPortalTarget()
+  );
+}
+
 export default function SubjectDropdown({
   value,
   onChange,
@@ -160,7 +213,7 @@ export default function SubjectDropdown({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [favourites, setFavourites] = useState<string[]>(() => getFavouriteSubjectIds());
-  const [menuSubjectId, setMenuSubjectId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const options = subjects != null && subjects.length > 0 ? subjects : PRACTICE_HUB_SUBJECTS;
@@ -171,14 +224,16 @@ export default function SubjectDropdown({
   }, [open]);
 
   useEffect(() => {
-    if (!open) setMenuSubjectId(null);
+    if (!open) setContextMenu(null);
   }, [open]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      // Context menu is portaled outside the wrap — don't treat it as outside.
+      if ((target as Element).closest?.("[data-subject-context-menu]")) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -209,9 +264,14 @@ export default function SubjectDropdown({
     [value, options, allowAllSubjects]
   );
 
+  const menuSubject = useMemo(
+    () => (contextMenu ? options.find((s) => s.id === contextMenu.subjectId) ?? null : null),
+    [contextMenu, options]
+  );
+
   const handleSelect = useCallback(
     (subject: SubjectOption | null) => {
-      setMenuSubjectId(null);
+      setContextMenu(null);
       onChange(subject?.id ?? null);
       setOpen(false);
       setSearch("");
@@ -229,6 +289,10 @@ export default function SubjectDropdown({
     },
     [onFavouritesChange]
   );
+
+  const openMenuFor = useCallback((subjectId: string, x: number, y: number) => {
+    setContextMenu({ subjectId, x, y });
+  }, []);
 
   const searching = search.trim().length > 0;
 
@@ -260,94 +324,107 @@ export default function SubjectDropdown({
         </span>
       </button>
 
-      {open && (
-        <div
-          className="practice-hub__subject-dropdown practice-hub__subject-dropdown--grid"
-          role="listbox"
-          aria-label="Subjects"
-          onScroll={() => setMenuSubjectId(null)}
-        >
-          <div className="flex shrink-0 items-center gap-2.5 border-b border-grey/15 px-4 py-3">
-            <LuSearch size={18} className="shrink-0 color-txt-sub" aria-hidden />
-            <input
-              type="text"
-              className="min-w-0 flex-1 border-none bg-transparent py-1 text-base color-txt-main outline-none placeholder:color-txt-sub"
-              placeholder="Search subjects…"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setMenuSubjectId(null);
-              }}
-              autoFocus
-              aria-label="Search subjects"
-            />
-          </div>
-
-          <div
-            className="flex max-h-[min(32rem,70vh)] min-h-0 flex-1 flex-col overflow-y-auto scrollbar-minimal"
-            onScroll={() => setMenuSubjectId(null)}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="subject-dropdown"
+            className="practice-hub__subject-dropdown practice-hub__subject-dropdown--grid"
+            role="listbox"
+            aria-label="Subjects"
+            onScroll={() => setContextMenu(null)}
+            initial={{ opacity: 0, y: -8, scale: 0.96, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+            exit={{ opacity: 0, y: -6, scale: 0.98, x: "-50%" }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            style={{ transformOrigin: "top center" }}
           >
-            <section className="shrink-0 border-b border-grey/15">
-              <h3 className="px-4 pb-1.5 pt-3.5 text-xs font-semibold uppercase tracking-wide color-txt-sub">
-                Your subjects
-              </h3>
-              <div className="px-3 pb-3">
-                {yourSubjects.length === 0 ? (
-                  <p className="px-1 py-4 text-center text-sm leading-snug color-txt-sub">
-                    {searching
-                      ? "No matching subjects"
-                      : "Hold a subject to add it here"}
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5">
-                    {yourSubjects.map((s) => (
-                      <SubjectTile
-                        key={s.id}
-                        subject={s}
-                        selected={value === s.id}
-                        pinned
-                        menuOpen={menuSubjectId === s.id}
-                        onSelect={() => handleSelect(s)}
-                        onOpenMenu={() => setMenuSubjectId(s.id)}
-                        onCloseMenu={() => setMenuSubjectId(null)}
-                        onTogglePin={() => handleTogglePin(s.id)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
+            <div className="flex shrink-0 items-center gap-2.5 border-b border-grey/15 px-4 py-3">
+              <LuSearch size={18} className="shrink-0 color-txt-sub" aria-hidden />
+              <input
+                type="text"
+                className="min-w-0 flex-1 border-none bg-transparent py-1 text-base color-txt-main outline-none placeholder:color-txt-sub"
+                placeholder="Search subjects…"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setContextMenu(null);
+                }}
+                autoFocus
+                aria-label="Search subjects"
+              />
+            </div>
 
-            <section className="min-h-0 flex-1">
-              <h3 className="px-4 pb-1.5 pt-3.5 text-xs font-semibold uppercase tracking-wide color-txt-sub">
-                {searching ? "Results" : "All subjects"}
-              </h3>
-              <div className="px-3 pb-3">
-                {otherSubjects.length === 0 ? (
-                  <p className="px-1 py-4 text-center text-sm leading-snug color-txt-sub">
-                    {filtered.length === 0 ? "No subjects match" : "Nothing else to show"}
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5">
-                    {otherSubjects.map((s) => (
-                      <SubjectTile
-                        key={s.id}
-                        subject={s}
-                        selected={value === s.id}
-                        pinned={false}
-                        menuOpen={menuSubjectId === s.id}
-                        onSelect={() => handleSelect(s)}
-                        onOpenMenu={() => setMenuSubjectId(s.id)}
-                        onCloseMenu={() => setMenuSubjectId(null)}
-                        onTogglePin={() => handleTogglePin(s.id)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          </div>
-        </div>
+            <div
+              className="flex max-h-[min(32rem,70vh)] min-h-0 flex-1 flex-col overflow-y-auto scrollbar-minimal"
+              onScroll={() => setContextMenu(null)}
+            >
+              <section className="shrink-0 border-b border-grey/15">
+                <h3 className="px-4 pb-1.5 pt-3.5 text-xs font-semibold uppercase tracking-wide color-txt-sub">
+                  Your subjects
+                </h3>
+                <div className="px-3 pb-3">
+                  {yourSubjects.length === 0 ? (
+                    <p className="px-1 py-4 text-center text-sm leading-snug color-txt-sub">
+                      {searching
+                        ? "No matching subjects"
+                        : "Hold a subject to add it here"}
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5">
+                      {yourSubjects.map((s) => (
+                        <SubjectTile
+                          key={s.id}
+                          subject={s}
+                          selected={value === s.id}
+                          onSelect={() => handleSelect(s)}
+                          onOpenMenu={(x, y) => openMenuFor(s.id, x, y)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="min-h-0 flex-1">
+                <h3 className="px-4 pb-1.5 pt-3.5 text-xs font-semibold uppercase tracking-wide color-txt-sub">
+                  {searching ? "Results" : "All subjects"}
+                </h3>
+                <div className="px-3 pb-3">
+                  {otherSubjects.length === 0 ? (
+                    <p className="px-1 py-4 text-center text-sm leading-snug color-txt-sub">
+                      {filtered.length === 0 ? "No subjects match" : "Nothing else to show"}
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5">
+                      {otherSubjects.map((s) => (
+                        <SubjectTile
+                          key={s.id}
+                          subject={s}
+                          selected={value === s.id}
+                          onSelect={() => handleSelect(s)}
+                          onOpenMenu={(x, y) => openMenuFor(s.id, x, y)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {contextMenu && menuSubject && (
+        <SubjectContextMenu
+          menu={contextMenu}
+          label={
+            favourites.includes(contextMenu.subjectId)
+              ? "Remove from your subjects"
+              : "Add to your subjects"
+          }
+          onToggle={() => handleTogglePin(contextMenu.subjectId)}
+          onClose={() => setContextMenu(null)}
+        />
       )}
     </div>
   );

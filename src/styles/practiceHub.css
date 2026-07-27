@@ -325,7 +325,7 @@
   width: 100%;
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
-  border-radius: var(--radius-in, 5px);
+  border-radius: 0.5rem;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, opacity 0.15s;
   text-align: left;
@@ -375,7 +375,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   z-index: 50;
   @apply color-bg border-2 color-shadow;
 }
@@ -385,7 +385,7 @@
   right: auto;
   width: min(44rem, calc(100vw - 1.5rem));
   max-height: none;
-  transform: translateX(-50%);
+  /* Horizontal centering is applied via motion (x: -50%) so enter/exit can animate. */
 }
 
 .practice-hub__subject-search-wrap {
