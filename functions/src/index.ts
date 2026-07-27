@@ -15,6 +15,153 @@ const corsMiddleware = cors({ origin: true });
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_MODEL = "google/gemini-3-flash-preview";
 
+type AiPurpose = "tutor" | "grading" | "discover" | "whiteboard";
+
+const AI_LIMITS: Record<"free" | "ace", Record<AiPurpose, number>> = {
+    free: {
+        tutor: 5,
+        grading: 1,
+        discover: 30,
+        whiteboard: 0,
+    },
+    ace: {
+        tutor: 200,
+        grading: 40,
+        discover: 200,
+        whiteboard: 100,
+    },
+};
+
+class AiQuotaError extends Error {
+    constructor(
+        readonly purpose: AiPurpose,
+        readonly limit: number,
+        readonly isPro: boolean,
+    ) {
+        super(`Monthly ${purpose} allowance reached`);
+    }
+}
+
+function bearerToken(req: any): string | null {
+    const value = req.headers?.authorization;
+    if (typeof value !== "string") return null;
+    const match = value.match(/^Bearer\s+(.+)$/i);
+    return match?.[1]?.trim() || null;
+}
+
+async function authenticatedUser(req: any): Promise<{
+    uid: string;
+    isPro: boolean;
+    isAdmin: boolean;
+}> {
+    const token = bearerToken(req);
+    if (!token) throw new Error("AUTH_REQUIRED");
+    const decoded = await admin.auth().verifyIdToken(token);
+    const userSnapshot = await admin.firestore().doc(`user-data/${decoded.uid}`).get();
+    const userData = userSnapshot.data() ?? {};
+    return {
+        uid: decoded.uid,
+        isPro: userData.isPro === true,
+        isAdmin: decoded.admin === true || userData.isAdmin === true,
+    };
+}
+
+function parseAiPurpose(value: unknown): AiPurpose {
+    if (value === "grading" || value === "discover" || value === "whiteboard") return value;
+    return "tutor";
+}
+
+function currentUtcMonth(): string {
+    return new Date().toISOString().slice(0, 7);
+}
+
+function nextUtcMonthStart(): string {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString();
+}
+
+function aiUsageDocument(uid: string) {
+    return admin.firestore().doc(`ai_usage/${uid}_${currentUtcMonth()}`);
+}
+
+async function consumeAiAllowance(args: {
+    uid: string;
+    isPro: boolean;
+    isAdmin: boolean;
+    purpose: AiPurpose;
+    usageId: unknown;
+}): Promise<{ used: number; limit: number }> {
+    const { uid, isPro, isAdmin, purpose } = args;
+    const planLimit = AI_LIMITS[isPro ? "ace" : "free"][purpose];
+    const limit = isAdmin ? Number.MAX_SAFE_INTEGER : planLimit;
+
+    const suppliedUsageId = typeof args.usageId === "string" ? args.usageId.trim().slice(0, 120) : "";
+    const usageId = suppliedUsageId || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const countField = `${purpose}Count`;
+    const idsField = `${purpose}UsageIds`;
+    const callCountsField = `${purpose}CallCounts`;
+    // Keep metering outside user-owned profile paths so client Firestore
+    // permissions cannot reset or forge allowance counters.
+    const usageRef = aiUsageDocument(uid);
+
+    return admin.firestore().runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(usageRef);
+        const data = snapshot.data() ?? {};
+        const ids = Array.isArray(data[idsField])
+            ? data[idsField].filter((id: unknown): id is string => typeof id === "string")
+            : [];
+        const callCounts = data[callCountsField] && typeof data[callCountsField] === "object"
+            ? data[callCountsField] as Record<string, number>
+            : {};
+        const used = typeof data[countField] === "number" ? data[countField] : 0;
+
+        // A grading action uses multiple model calls. Reusing its usageId makes
+        // retries and the second marking pass count as one student action.
+        if (purpose === "grading" && suppliedUsageId && ids.includes(usageId)) {
+            const calls = typeof callCounts[usageId] === "number" ? callCounts[usageId] : 1;
+            if (calls >= 5) throw new AiQuotaError(purpose, limit, isPro);
+            transaction.set(usageRef, {
+                [callCountsField]: { ...callCounts, [usageId]: calls + 1 },
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+            return { used, limit };
+        }
+        if (!isAdmin && used >= limit) throw new AiQuotaError(purpose, limit, isPro);
+
+        transaction.set(usageRef, {
+            [countField]: used + 1,
+            ...(purpose === "grading" ? {
+                [idsField]: [...ids, usageId],
+                [callCountsField]: { ...callCounts, [usageId]: 1 },
+            } : {}),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        return { used: used + 1, limit };
+    });
+}
+
+function countMessagePayload(messages: unknown[]): { images: number; characters: number } {
+    let images = 0;
+    let characters = 0;
+    for (const message of messages) {
+        if (!message || typeof message !== "object") continue;
+        const content = (message as any).content;
+        if (typeof content === "string") {
+            characters += content.length;
+            continue;
+        }
+        if (!Array.isArray(content)) continue;
+        for (const part of content) {
+            if (part?.type === "text" && typeof part.text === "string") characters += part.text.length;
+            if (part?.type === "image_url" && typeof part.image_url?.url === "string") {
+                images += 1;
+                characters += part.image_url.url.length;
+            }
+        }
+    }
+    return { images, characters };
+}
+
 function normalizePreviewUrl(input: unknown): string | null {
     if (typeof input !== "string") return null;
     const trimmed = input.trim();
@@ -184,10 +331,25 @@ export const verifyCaptcha = functions.https.onRequest(
     }
 );
 
-export const chat = functions.https.onRequest({
-    cors: true,
-    secrets: ["OPENROUTER_API_KEY"]
-}, async (req, res) => {
+function createMeteredChatFunction() {
+    return functions.https.onRequest({
+        cors: true,
+        secrets: ["OPENROUTER_API_KEY"]
+    }, async (req, res) => {
+    if (req.method !== "POST") {
+        res.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+
+    let access: Awaited<ReturnType<typeof authenticatedUser>>;
+    try {
+        access = await authenticatedUser(req);
+    } catch (error) {
+        console.warn("AI authentication failed:", error);
+        res.status(401).json({ error: "Sign in again to use AI.", code: "AUTH_REQUIRED" });
+        return;
+    }
+
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
         console.error("Missing OPENROUTER_API_KEY");
@@ -195,11 +357,45 @@ export const chat = functions.https.onRequest({
         return;
     }
 
-    const { messages, context, temperature, top_p } = req.body;
+    const { messages, context, temperature, top_p, purpose: purposeValue, usageId } = req.body;
     if (!Array.isArray(messages) || messages.length === 0) {
         res.status(400).json({ error: "messages array is required" });
         return;
     }
+    if (messages.length > 40) {
+        res.status(400).json({ error: "Conversation is too long. Start a new chat.", code: "REQUEST_TOO_LARGE" });
+        return;
+    }
+    const payloadSize = countMessagePayload(messages);
+    const contextLength = typeof context === "string" ? context.length : 0;
+    if (payloadSize.images > 6 || payloadSize.characters + contextLength > 8_000_000) {
+        res.status(413).json({ error: "AI request is too large.", code: "REQUEST_TOO_LARGE" });
+        return;
+    }
+
+    const purpose = parseAiPurpose(purposeValue);
+    let allowance: { used: number; limit: number };
+    try {
+        allowance = await consumeAiAllowance({ ...access, purpose, usageId });
+    } catch (error) {
+        if (error instanceof AiQuotaError) {
+            res.status(429).json({
+                error: error.isPro
+                    ? "You have reached this month's fair-use allowance."
+                    : "Your free AI allowance is used up. Upgrade to ACE for full access.",
+                code: "AI_QUOTA_EXCEEDED",
+                purpose: error.purpose,
+                limit: error.limit,
+                upgradeRequired: !error.isPro,
+            });
+            return;
+        }
+        console.error("Failed to check AI allowance:", error);
+        res.status(500).json({ error: "Could not check AI allowance." });
+        return;
+    }
+    res.setHeader("X-AI-Usage", String(allowance.used));
+    res.setHeader("X-AI-Limit", String(allowance.limit));
 
     const systemMessage = typeof context === "string" && context.trim()
         ? {
@@ -266,6 +462,50 @@ export const chat = functions.https.onRequest({
         console.error("AI Error:", error);
         res.status(500).json({ error: "Failed to generate text" });
     }
+    });
+}
+
+// Keep the original export for the next coordinated backend/mobile rollout.
+// The web app uses the separate endpoint so existing installed clients that
+// still call the legacy production `chat` revision are not interrupted.
+export const chat = createMeteredChatFunction();
+export const meteredChat = createMeteredChatFunction();
+
+export const aiUsage = functions.https.onRequest({
+    cors: true,
+}, async (req, res) => {
+    if (req.method !== "GET") {
+        res.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+
+    let access: Awaited<ReturnType<typeof authenticatedUser>>;
+    try {
+        access = await authenticatedUser(req);
+    } catch (error) {
+        res.status(401).json({ error: "Sign in again to view AI usage.", code: "AUTH_REQUIRED" });
+        return;
+    }
+
+    const snapshot = await aiUsageDocument(access.uid).get();
+    const data = snapshot.data() ?? {};
+    const limits = AI_LIMITS[access.isPro ? "ace" : "free"];
+    const usage = Object.fromEntries(
+        (Object.keys(limits) as AiPurpose[]).map((purpose) => {
+            const value = data[`${purpose}Count`];
+            return [purpose, typeof value === "number" ? Math.max(0, value) : 0];
+        })
+    ) as Record<AiPurpose, number>;
+
+    res.setHeader("Cache-Control", "private, no-store");
+    res.status(200).json({
+        month: currentUtcMonth(),
+        resetsAt: nextUtcMonthStart(),
+        plan: access.isAdmin ? "admin" : access.isPro ? "ace" : "free",
+        unlimited: access.isAdmin,
+        usage,
+        limits,
+    });
 });
 
 // ======================== EXTRACT QUESTIONS ======================== //
@@ -363,6 +603,18 @@ export const extractQuestions = functions.https.onRequest({
     timeoutSeconds: 300,
     memory: "1GiB",
 }, async (req, res) => {
+    let access: Awaited<ReturnType<typeof authenticatedUser>>;
+    try {
+        access = await authenticatedUser(req);
+    } catch (error) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+    }
+    if (!access.isAdmin) {
+        res.status(403).json({ error: "Admin access required" });
+        return;
+    }
+
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
         res.status(500).json({ error: "Server configuration error" });

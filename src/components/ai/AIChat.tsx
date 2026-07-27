@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import { AnimatePresence } from "framer-motion";
-import { LuSendHorizontal } from "react-icons/lu";
+import { LuArrowRight, LuSendHorizontal, LuSparkles } from "react-icons/lu";
+import { useNavigate } from "react-router-dom";
 import { UserContext } from "../../context/UserContext";
 import { useAI } from "./useAI";
 import { ChatMessage, ChatMessageLoading } from "./ChatMessage";
@@ -36,6 +37,7 @@ const AI_PLACEHOLDERS = [
 
 export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPaperSnapshot, injectedExchange, onMarkCompleteFromGrading }: AIChatProps) {
   const { user } = useContext(UserContext);
+  const navigate = useNavigate();
   const [aiPlaceholder] = useState(() => AI_PLACEHOLDERS[Math.floor(Math.random() * AI_PLACEHOLDERS.length)]);
   const [completedActionNonce, setCompletedActionNonce] = useState<string | null>(null);
   const {
@@ -63,6 +65,7 @@ export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPape
       completedActionNonce !== injectedExchange.nonce &&
       onMarkCompleteFromGrading,
   );
+  const allowanceReached = error?.code === "AI_QUOTA_EXCEEDED";
 
   const handleMarkComplete = () => {
     if (!onMarkCompleteFromGrading || !injectedExchange?.nonce) return;
@@ -85,7 +88,33 @@ export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPape
           ))}
           {loading && <ChatMessageLoading streamingContent={streamingContent} />}
         </AnimatePresence>
-        {error && <p className="text-sm text-[var(--color-red)] text-center py-2">{error}</p>}
+        {error && (
+          <div className={`ai-chat-notice ${allowanceReached ? "ai-chat-notice--allowance" : ""}`} role="alert">
+            <span className="ai-chat-notice__icon" aria-hidden>
+              <LuSparkles size={16} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold color-txt-main">
+                {allowanceReached ? "Monthly AI allowance reached" : "AI couldn’t respond"}
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed color-txt-sub">
+                {allowanceReached && error.upgradeRequired
+                  ? "You’ve used your free messages. ACE includes a larger monthly allowance."
+                  : error.message}
+              </p>
+            </div>
+            {allowanceReached && error.upgradeRequired && (
+              <button
+                type="button"
+                onClick={() => navigate("/user/manage-account?tab=payments")}
+                className="ai-chat-notice__action"
+              >
+                View ACE
+                <LuArrowRight size={14} aria-hidden />
+              </button>
+            )}
+          </div>
+        )}
         {injectedExchange?.action?.type === "markComplete" && injectedExchange.nonce && (
           <div className="flex justify-start">
             {showMarkCompleteAction ? (
@@ -111,14 +140,15 @@ export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPape
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={aiPlaceholder}
+            placeholder={allowanceReached ? "Your AI allowance has been used for this month." : aiPlaceholder}
             rows={2}
-            disabled={loading}
+            disabled={loading || allowanceReached}
+            aria-disabled={loading || allowanceReached}
             className="flex-1 resize-none min-h-[2.75rem] max-h-24 border-0 bg-transparent color-txt-main pl-4 pr-2 py-2.5 text-sm placeholder:color-txt-sub/70 focus:outline-none focus:ring-0 disabled:opacity-50"
           />
           <button
             onClick={sendMessage}
-            disabled={loading || !input.trim()}
+            disabled={loading || allowanceReached || !input.trim()}
             aria-label="Send"
             className="shrink-0 p-2.5 color-txt-main hover:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
           >

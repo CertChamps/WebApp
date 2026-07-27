@@ -54,8 +54,8 @@ export default function ContentProGate({
       <img src={crownImg} alt="" className="w-24 h-24 object-contain" />
       <h2 className="text-xl font-bold color-txt-main">CertChamps ACE</h2>
       <p className="color-txt-sub text-sm leading-relaxed">
-        Unlock the full library — every subject, paper, and topic. Each subject includes a free sample so you can
-        practice before upgrading. ACE also unlocks threads and more.
+        Unlock every subject, paper, and topic, plus full AI tutoring and instant answer marking. Your free samples
+        and community access are always available.
       </p>
       <div className="flex flex-col gap-3 w-full">
         {sampleLabel && (freePaper || freeImageSample) && (

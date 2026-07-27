@@ -81,9 +81,13 @@ export function hasAceAccess(user: AccessUser): boolean {
   return user?.isPro === true;
 }
 
-export function canUseAceFeature(user: AccessUser, feature: AceFeature): boolean {
-  if (feature === "ai") return true;
-  return hasAceAccess(user);
+export function canUseAceFeature(_user: AccessUser, _feature: AceFeature): boolean {
+  // Community participation and the limited AI sample are part of the
+  // free product. Paid content depth and server-enforced AI allowances are
+  // what distinguish ACE.
+  void _user;
+  void _feature;
+  return true;
 }
 
 export function canAccessPaper(

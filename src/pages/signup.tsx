@@ -3,6 +3,7 @@ import { FaGoogle, FaApple } from "react-icons/fa";
 import crown from "../assets/logo.png";
 import useAuthentication from "../hooks/useAuthentication";
 import { useNavigate, useLocation } from "react-router-dom";
+import { PRIVACY_URL, TERMS_URL } from "../lib/legal";
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function SignUp() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [legalAccepted, setLegalAccepted] = useState(false);
 
   const heading_style = "txt-sub text-xs font-bold w-9/12 mx-auto mb-1";
 
@@ -58,8 +60,22 @@ export default function SignUp() {
       return;
     }
 
-    await signUpWithEmail(username, email, password, token);
+    if (!legalAccepted) {
+      setError((prev: any) => ({ ...prev, legal: "Agree to the Terms before creating your account." }));
+      return;
+    }
+
+    await signUpWithEmail(username, email, password, token, legalAccepted);
     (window as any).grecaptcha.reset(captchaId);
+  };
+
+  const handleProviderSignup = (provider: "google" | "apple") => {
+    if (!legalAccepted) {
+      setError((prev: any) => ({ ...prev, legal: "Agree to the Terms before creating your account." }));
+      return;
+    }
+    if (provider === "google") void loginWithGoogle(true);
+    else void loginWithApple(true);
   };
 
   return (
@@ -106,6 +122,48 @@ export default function SignUp() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
+        <label className="mx-auto mb-2 flex w-9/12 cursor-pointer items-start gap-2.5 text-xs leading-relaxed color-txt-sub">
+          <input
+            type="checkbox"
+            checked={legalAccepted}
+            onChange={(event) => {
+              setLegalAccepted(event.target.checked);
+              if (event.target.checked) {
+                setError((prev: any) => ({ ...prev, legal: undefined }));
+              }
+            }}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--theme-txt-accent)]"
+          />
+          <span>
+            I agree to the{" "}
+            <a
+              href={TERMS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold color-txt-accent underline underline-offset-2"
+              onClick={(event) => event.stopPropagation()}
+            >
+              Terms of Service
+            </a>{" "}
+            and acknowledge the{" "}
+            <a
+              href={PRIVACY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold color-txt-accent underline underline-offset-2"
+              onClick={(event) => event.stopPropagation()}
+            >
+              Privacy Policy
+            </a>
+            .
+          </span>
+        </label>
+        {error?.legal && (
+          <p className="mx-auto mb-2 w-9/12 text-xs text-red" role="alert">
+            {error.legal}
+          </p>
+        )}
+
         {/* CAPTCHA container */}
         <div
           id="recaptcha-container"
@@ -123,8 +181,8 @@ export default function SignUp() {
           role="button"
           tabIndex={0}
           aria-label="Sign up with Apple"
-          onClick={() => { loginWithApple(); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loginWithApple(); } }}
+          onClick={() => handleProviderSignup("apple")}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProviderSignup("apple"); } }}
           className="red-btn mx-auto my-2 w-9/12 text-center bg-black text-white flex justify-center items-center cursor-pointer select-none"
         >
           <FaApple className="mr-2 text-white" size={19} />
@@ -134,8 +192,8 @@ export default function SignUp() {
         <div
           role="button"
           tabIndex={0}
-          onClick={() => { loginWithGoogle(); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loginWithGoogle(); } }}
+          onClick={() => handleProviderSignup("google")}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProviderSignup("google"); } }}
           className="red-btn mx-auto my-2 w-9/12 text-center bg-[#4C8BF5] flex justify-center items-center cursor-pointer select-none"
         >
           <FaGoogle className="mr-2 text-white" size={17} />

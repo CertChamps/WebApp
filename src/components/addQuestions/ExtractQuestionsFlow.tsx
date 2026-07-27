@@ -5,6 +5,7 @@ import PdfRegionView, { type PdfRegion } from "../questions/PdfRegionView";
 import PaperPdfPlaceholder from "../questions/PaperPdfPlaceholder";
 import "../../styles/settings.css";
 import { idbSaveBlob, idbLoadBlob, idbDeleteBlob } from "../../utils/extractionStorage";
+import { auth } from "../../../firebase";
 
 const EXTRACT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/extractQuestions";
 const LOG_TABLES_PDF_URL = "/assets/log_tables.pdf";
@@ -349,9 +350,15 @@ export default function ExtractQuestionsFlow({
     ): Promise<{ ok: boolean; data: Record<string, unknown>; res: Response }> => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), STEP_TIMEOUT_MS);
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error("Sign in again to use AI extraction.");
+      const idToken = await currentUser.getIdToken();
       const res = await fetch(EXTRACT_API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify(body),
         signal: controller.signal,
       });

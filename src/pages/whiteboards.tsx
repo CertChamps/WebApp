@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -6,6 +6,7 @@ import {
   LuFileText,
   LuFolder,
   LuLoaderCircle,
+  LuLock,
   LuPencil,
 } from "react-icons/lu";
 import SubjectDropdown from "../components/practiceHub/SubjectDropdown";
@@ -19,6 +20,8 @@ import {
   type WhiteboardFolder,
 } from "../data/whiteboards";
 import { getFavouriteSubjectIds } from "../data/practiceHubSubjects";
+import { UserContext } from "../context/UserContext";
+import { hasAceAccess } from "../lib/contentAccess";
 import "../styles/practiceHub.css";
 
 const RECENTS_PREVIEW_COUNT = 8;
@@ -45,6 +48,8 @@ function FolderRecentGlyph({ folder }: { folder: WhiteboardFolder }) {
 
 export default function Whiteboards() {
   const navigate = useNavigate();
+  const { user } = useContext(UserContext);
+  const hasAce = hasAceAccess(user);
   const [subject, setSubject] = useState<string | null>(
     () => getLastWhiteboardsSubject() ?? getFavouriteSubjectIds()[0] ?? null
   );
@@ -99,13 +104,17 @@ export default function Whiteboards() {
   );
 
   const handleAISubmit = useCallback(async () => {
+    if (!hasAce) {
+      navigate("/user/manage-account?tab=payments");
+      return;
+    }
     if (!subject || aiBusy || !aiPrompt.trim()) return;
     const proposal = await aiSearch(aiPrompt);
     if (proposal) {
       setAiPrompt("");
       await createPageFromProposal(proposal);
     }
-  }, [subject, aiBusy, aiPrompt, aiSearch, createPageFromProposal]);
+  }, [hasAce, navigate, subject, aiBusy, aiPrompt, aiSearch, createPageFromProposal]);
 
   const handleFindQuestions = useCallback(() => {
     navigate(subject ? `/practice?subject=${encodeURIComponent(subject)}` : "/practice");
@@ -179,6 +188,22 @@ export default function Whiteboards() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
         >
+          {!hasAce && (
+            <button
+              type="button"
+              onClick={() => navigate("/user/manage-account?tab=payments")}
+              className="flex w-full items-center justify-between gap-3 rounded-2xl color-bg-accent px-4 py-3 text-left cursor-pointer"
+            >
+              <span className="flex items-center gap-3">
+                <LuLock size={17} className="color-txt-accent" />
+                <span>
+                  <span className="block text-sm font-bold color-txt-main">AI question matching is included with ACE</span>
+                  <span className="block text-xs color-txt-sub">Blank whiteboards remain free.</span>
+                </span>
+              </span>
+              <LuArrowRight size={17} className="color-txt-accent" />
+            </button>
+          )}
           <div className="flex w-full items-center gap-2 rounded-2xl color-bg-grey-5 px-4 py-2">
             <input
               type="text"
@@ -193,14 +218,14 @@ export default function Whiteboards() {
                   : "Pick a subject first, then describe the questions you want…"
               }
               className="min-w-0 flex-1 bg-transparent py-1.5 text-sm color-txt-main placeholder:color-txt-sub outline-none"
-              disabled={actionsDisabled || aiBusy}
+              disabled={!hasAce || actionsDisabled || aiBusy}
               aria-label="Find questions with AI"
             />
             <button
               type="button"
               className="shrink-0 rounded-xl p-2 color-txt-accent hover:color-bg-grey-10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
               onClick={handleAISubmit}
-              disabled={actionsDisabled || aiBusy || !aiPrompt.trim()}
+              disabled={!hasAce || actionsDisabled || aiBusy || !aiPrompt.trim()}
               aria-label="Search questions"
             >
               {aiBusy ? (

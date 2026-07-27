@@ -170,10 +170,11 @@ Return ONLY this JSON, nothing else, no markdown fences:
 
 export type StreamChatResponse = (
   messages: Array<{ role: string; content: unknown }>,
-  options?: { temperature?: number; top_p?: number; context?: string },
+  options?: { temperature?: number; top_p?: number; context?: string; usageId?: string },
 ) => Promise<string>;
 
 type GradingInput = {
+  usageId: string;
   questionId: string;
   questionText: string;
   markingSchemeText: string;
@@ -299,7 +300,7 @@ export async function runGrading(input: GradingInput): Promise<GradingResult> {
       const capturePayload = attempt.capturePayload();
       const pass1Raw = await input.streamChatResponse(
         [{ role: "system", content: attempt.systemPrompt }, ...buildPass1User(capturePayload, attempt.instruction)],
-        { temperature: 0.1, top_p: 0.9 },
+        { temperature: 0.1, top_p: 0.9, usageId: input.usageId },
       );
 
       try {
@@ -341,13 +342,13 @@ export async function runGrading(input: GradingInput): Promise<GradingResult> {
   try {
     pass2Raw = await input.streamChatResponse(
       [{ role: "system", content: PASS2_SYSTEM_PROMPT }, { role: "user", content: pass2UserContent }],
-      { temperature: 0.1, top_p: 0.9 },
+      { temperature: 0.1, top_p: 0.9, usageId: input.usageId },
     );
     pass2 = parsePass2Validated(pass2Raw);
   } catch (firstErr) {
     const retryRaw = await input.streamChatResponse(
       [{ role: "system", content: PASS2_SYSTEM_PROMPT }, { role: "user", content: pass2UserContent }],
-      { temperature: 0.1, top_p: 0.9 },
+      { temperature: 0.1, top_p: 0.9, usageId: input.usageId },
     );
     try {
       pass2 = parsePass2Validated(retryRaw);

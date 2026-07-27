@@ -1,6 +1,19 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { LuArrowLeft, LuLogOut, LuPencil, LuSparkles, LuCheck, LuTrash2 } from "react-icons/lu";
+import {
+    LuArrowLeft,
+    LuCheck,
+    LuClipboardCheck,
+    LuGauge,
+    LuLogOut,
+    LuMessageSquare,
+    LuPencil,
+    LuRefreshCw,
+    LuSearch,
+    LuSparkles,
+    LuTrash2,
+    LuWandSparkles,
+} from "react-icons/lu";
 import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import Cropper from "react-easy-crop";
@@ -12,9 +25,11 @@ import { iapDebug } from "../lib/payments/paymentsDebug";
 import { signOutSession } from "../lib/authSession";
 import { deleteAccount as deleteAccountRequest } from "../lib/deleteAccount";
 import { prepareProfileImagePreview, revokeProfileImagePreview } from "../lib/profileImage";
+import { fetchAiUsage, type AiPurpose, type AiUsageSummary } from "../lib/aiApi";
+import { PRIVACY_URL, TERMS_URL } from "../lib/legal";
 import "../styles/settings.css";
 
-type TabId = "home" | "payments";
+type TabId = "home" | "payments" | "usage";
 
 const container = {
     hidden: {},
@@ -155,10 +170,22 @@ const PaymentsTab = ({
                                     </span>
                                     <span className="color-txt-sub text-base font-medium">/ {pricePeriod}</span>
                                 </div>
+                                <p className="-mt-4 mb-6 text-xs leading-relaxed color-txt-sub">
+                                    Billed {pricePeriod === "year" ? "annually" : "monthly"} and renews automatically
+                                    until cancelled. Cancel anytime; access continues until the end of the paid period.
+                                </p>
 
-                                <motion.p variants={fadeUp} className="color-txt-sub text-base leading-relaxed mb-8">
-                                    Everything. You get everything. For a full year. We won't cheap out on you.
-                                </motion.p>
+                                <motion.div variants={fadeUp} className="color-txt-sub text-sm leading-relaxed mb-8">
+                                    <p className="text-base font-semibold color-txt-main mb-3">
+                                        Every exam question, with feedback when you need it.
+                                    </p>
+                                    <ul className="space-y-2 list-disc pl-5">
+                                        <li>Every past paper, subject, level and topic</li>
+                                        <li>Full AI tutor access and instant answer marking</li>
+                                        <li>AI question matching for personalised whiteboards</li>
+                                        <li>Detailed mistake highlights and progress insights</li>
+                                    </ul>
+                                </motion.div>
 
                                 <motion.button
                                     type="button"
@@ -172,9 +199,30 @@ const PaymentsTab = ({
                                     <span className="relative z-[1] color-txt-main font-bold">
                                         {checkoutLoading
                                             ? (activeProvider === "apple" ? "Opening Apple…" : "Redirecting to checkout…")
-                                            : "Get ACE"}
+                                            : `Subscribe for ${priceFormatted ?? "€30"}/${pricePeriod}`}
                                     </span>
                                 </motion.button>
+                                <p className="mt-3 text-center text-[11px] leading-relaxed color-txt-sub">
+                                    By subscribing, you agree to the{" "}
+                                    <a
+                                        href={TERMS_URL}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-semibold color-txt-accent underline underline-offset-2"
+                                    >
+                                        Terms of Service
+                                    </a>{" "}
+                                    and acknowledge the{" "}
+                                    <a
+                                        href={PRIVACY_URL}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-semibold color-txt-accent underline underline-offset-2"
+                                    >
+                                        Privacy Policy
+                                    </a>
+                                    .
+                                </p>
                                 {checkoutError && <p className="text-red-500 text-sm mt-3">{checkoutError}</p>}
 
                                 {activeProvider === "apple" && (
@@ -195,6 +243,196 @@ const PaymentsTab = ({
         </motion.div>
     );
 };
+
+const usageItems: Array<{
+    purpose: AiPurpose;
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+}> = [
+    {
+        purpose: "tutor",
+        label: "AI tutor messages",
+        description: "Hints, explanations and guided help with questions.",
+        icon: <LuMessageSquare size={20} />,
+    },
+    {
+        purpose: "grading",
+        label: "Answer checks",
+        description: "Handwriting recognition, marking and mistake feedback.",
+        icon: <LuClipboardCheck size={20} />,
+    },
+    {
+        purpose: "discover",
+        label: "Discover searches",
+        description: "AI-assisted searches across community resources.",
+        icon: <LuSearch size={20} />,
+    },
+    {
+        purpose: "whiteboard",
+        label: "Whiteboard matches",
+        description: "AI-created study pages matched to your request.",
+        icon: <LuWandSparkles size={20} />,
+    },
+];
+
+function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
+    const [summary, setSummary] = useState<AiUsageSummary | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadUsage = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            setSummary(await fetchAiUsage());
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Could not load usage.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        void loadUsage();
+    }, []);
+
+    const planLabel =
+        summary?.plan === "admin" ? "Admin" :
+            summary?.plan === "ace" ? "ACE" :
+                "Free";
+    const resetLabel = summary
+        ? new Date(summary.resetsAt).toLocaleDateString(undefined, {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+            timeZone: "UTC",
+        })
+        : null;
+
+    return (
+        <motion.div variants={container} initial="hidden" animate="show" className="max-w-2xl">
+            <motion.div variants={fadeUp} className="flex flex-wrap items-start justify-between gap-4 mb-8">
+                <div>
+                    <h1 className="profile-heading text-3xl font-bold mb-2">Usage & limits</h1>
+                    <p className="color-txt-sub text-base">
+                        Your AI activity for the current monthly allowance.
+                    </p>
+                </div>
+                {summary && (
+                    <span className="inline-flex items-center gap-2 rounded-full color-bg-accent color-txt-accent px-3 py-1.5 text-sm font-bold">
+                        <LuGauge size={16} />
+                        {planLabel} plan
+                    </span>
+                )}
+            </motion.div>
+
+            {loading && (
+                <motion.div variants={fadeUp} className="grid grid-cols-1 sm:grid-cols-2 gap-4" aria-label="Loading usage">
+                    {usageItems.map(({ purpose }) => (
+                        <div key={purpose} className="h-40 rounded-2xl color-bg-grey-5 animate-pulse" />
+                    ))}
+                </motion.div>
+            )}
+
+            {!loading && error && (
+                <motion.div variants={fadeUp} className="rounded-2xl color-bg-grey-5 p-6">
+                    <p className="font-semibold color-txt-main">Usage could not be loaded</p>
+                    <p className="text-sm color-txt-sub mt-1">{error}</p>
+                    <button
+                        type="button"
+                        onClick={() => void loadUsage()}
+                        className="mt-4 inline-flex items-center gap-2 rounded-xl color-bg-accent color-txt-accent px-4 py-2 text-sm font-semibold cursor-pointer"
+                    >
+                        <LuRefreshCw size={16} />
+                        Try again
+                    </button>
+                </motion.div>
+            )}
+
+            {!loading && summary && (
+                <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {usageItems.map(({ purpose, label, description, icon }) => {
+                            const used = summary.usage[purpose] ?? 0;
+                            const limit = summary.limits[purpose] ?? 0;
+                            const aceOnly = summary.plan === "free" && limit === 0;
+                            const remaining = Math.max(0, limit - used);
+                            const percentage = summary.unlimited || limit === 0
+                                ? 0
+                                : Math.min(100, Math.round((used / limit) * 100));
+
+                            return (
+                                <motion.div
+                                    key={purpose}
+                                    variants={fadeUp}
+                                    className="rounded-2xl color-bg-grey-5 p-5 border border-[var(--color-grey)]/15"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl color-bg color-txt-accent">
+                                            {icon}
+                                        </span>
+                                        <span className="text-sm font-bold color-txt-main tabular-nums">
+                                            {summary.unlimited
+                                                ? "Unlimited"
+                                                : aceOnly
+                                                    ? "ACE only"
+                                                    : `${used} / ${limit}`}
+                                        </span>
+                                    </div>
+                                    <h2 className="font-bold color-txt-main mt-4">{label}</h2>
+                                    <p className="text-xs color-txt-sub leading-relaxed mt-1 min-h-8">{description}</p>
+                                    {!summary.unlimited && !aceOnly && (
+                                        <>
+                                            <div className="h-2 rounded-full color-bg mt-4 overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full color-bg-accent transition-[width] duration-500"
+                                                    style={{ width: `${percentage}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-xs color-txt-sub mt-2">{remaining} remaining this month</p>
+                                        </>
+                                    )}
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+
+                    <motion.div variants={fadeUp} className="mt-6 rounded-2xl color-bg p-5 shadow-small">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <p className="font-semibold color-txt-main">Monthly reset</p>
+                                <p className="text-sm color-txt-sub mt-1">
+                                    Allowances reset on {resetLabel}. Community features and free study tools have no usage limit.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => void loadUsage()}
+                                className="shrink-0 rounded-xl p-2.5 color-txt-accent hover:color-bg-grey-5 cursor-pointer"
+                                aria-label="Refresh usage"
+                                title="Refresh usage"
+                            >
+                                <LuRefreshCw size={18} />
+                            </button>
+                        </div>
+                    </motion.div>
+
+                    {summary.plan === "free" && (
+                        <motion.button
+                            variants={fadeUp}
+                            type="button"
+                            onClick={onViewPlans}
+                            className="mt-6 w-full rounded-xl color-bg-accent color-txt-accent px-5 py-3 text-sm font-bold cursor-pointer hover:opacity-90"
+                        >
+                            View ACE allowances
+                        </motion.button>
+                    )}
+                </>
+            )}
+        </motion.div>
+    );
+}
 
 const ManageAccount = () => {
     const { user, setUser } = useContext(UserContext);
@@ -222,10 +460,9 @@ const ManageAccount = () => {
     const payments = usePayments();
 
     useEffect(() => {
-        if (searchParams.get("tab") === "payments") {
-            setActiveTab("payments");
-        }
-    }, []);
+        const requestedTab = searchParams.get("tab");
+        if (requestedTab === "payments" || requestedTab === "usage") setActiveTab(requestedTab);
+    }, [searchParams]);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -310,6 +547,7 @@ const ManageAccount = () => {
     const navItems: { id: TabId; label: string }[] = [
         { id: "home", label: "Profile" },
         { id: "payments", label: "Payments" },
+        { id: "usage", label: "Usage & limits" },
     ];
 
     // Read success/cancel from URL and refetch user when returning from
@@ -519,6 +757,10 @@ const ManageAccount = () => {
                         onManage={handleManageSubscription}
                         onRestore={handleRestore}
                     />
+                )}
+
+                {activeTab === "usage" && (
+                    <UsageTab onViewPlans={() => setActiveTab("payments")} />
                 )}
             </div>
 
