@@ -11,7 +11,6 @@ import { createPortal } from "react-dom";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  LuArrowLeft,
   LuBookOpen,
   LuCalculator,
   LuChevronLeft,
@@ -21,8 +20,8 @@ import {
   LuEyeOff,
   LuFileText,
   LuLoaderCircle,
-  LuMaximize2,
-  LuMinimize2,
+  LuPanelLeftClose,
+  LuPanelLeftOpen,
   LuPencil,
   LuPlus,
   LuWrench,
@@ -88,41 +87,6 @@ function PaperPanelToggle({
       title={visible ? "Hide question paper" : "Show question paper"}
     >
       {visible ? <LuEyeOff size={16} strokeWidth={2} /> : <LuEye size={16} strokeWidth={2} />}
-    </button>
-  );
-}
-
-/** Full-screen toggle whose icon animates (rotate + fade) between the two states. */
-function FullscreenToggle({ active, onClick }: { active: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      aria-label={active ? "Exit full screen" : "Full screen"}
-      title={active ? "Exit full screen" : "Full screen"}
-      className={`shrink-0 rounded-lg p-2 transition-colors cursor-pointer ${
-        active ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-bg-grey-5"
-      }`}
-    >
-      <span className="relative block h-4 w-4">
-        <AnimatePresence initial={false} mode="wait">
-          <motion.span
-            key={active ? "min" : "max"}
-            initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
-            animate={{ opacity: 1, rotate: 0, scale: 1 }}
-            exit={{ opacity: 0, rotate: 90, scale: 0.5 }}
-            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute inset-0 flex items-center justify-center"
-          >
-            {active ? (
-              <LuMinimize2 size={16} strokeWidth={2} />
-            ) : (
-              <LuMaximize2 size={16} strokeWidth={2} />
-            )}
-          </motion.span>
-        </AnimatePresence>
-      </span>
     </button>
   );
 }
@@ -339,17 +303,17 @@ function WhiteboardPageViewInner() {
     moveItem,
   } = useWhiteboards(sidebarSubject);
 
-  // Full-screen focus mode (collapses the sidebar + app navbar) and floatable tools.
-  const [focusMode, setFocusMode] = useState(false);
+  // The folders control collapses both left-side navigation areas together.
+  const [foldersSidebarOpen, setFoldersSidebarOpen] = useState(true);
   const [showCalculator, setShowCalculator] = useState(false);
   const [showLogTables, setShowLogTables] = useState(false);
   const [logTablesBlob, setLogTablesBlob] = useState<Blob | null>(null);
 
   useEffect(() => {
-    if (focusMode) document.body.classList.add("wb-focus-mode");
+    if (!foldersSidebarOpen) document.body.classList.add("wb-focus-mode");
     else document.body.classList.remove("wb-focus-mode");
     return () => document.body.classList.remove("wb-focus-mode");
-  }, [focusMode]);
+  }, [foldersSidebarOpen]);
 
   useEffect(() => {
     if (!showLogTables || logTablesBlob) return;
@@ -548,9 +512,9 @@ function WhiteboardPageViewInner() {
     <div className="flex min-h-0 h-full w-full">
       <div
         className={`flex h-full min-h-0 shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          focusMode ? "w-0 overflow-hidden" : "w-64"
+          !foldersSidebarOpen ? "w-0 overflow-hidden" : "w-64"
         }`}
-        aria-hidden={focusMode}
+        aria-hidden={!foldersSidebarOpen}
       >
         <WhiteboardsSidebar
           subject={sidebarSubject}
@@ -577,10 +541,15 @@ function WhiteboardPageViewInner() {
           <button
             type="button"
             className="shrink-0 rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
-            onClick={() => navigate("/whiteboards")}
-            aria-label="Back to Whiteboards"
+            onClick={() => setFoldersSidebarOpen((open) => !open)}
+            aria-label={foldersSidebarOpen ? "Collapse navigation" : "Open navigation"}
+            title={foldersSidebarOpen ? "Collapse navigation" : "Open navigation"}
           >
-            <LuArrowLeft size={16} />
+            {foldersSidebarOpen ? (
+              <LuPanelLeftClose size={16} />
+            ) : (
+              <LuPanelLeftOpen size={16} />
+            )}
           </button>
 
           <div className="flex min-w-0 items-center gap-1.5">
@@ -602,7 +571,10 @@ function WhiteboardPageViewInner() {
           </div>
 
           {attachments.length > 0 && (
-            <div ref={centerTitleRowRef} className="mx-auto flex min-w-0 items-center gap-0.5">
+            <div
+              ref={centerTitleRowRef}
+              className="absolute left-1/2 top-1/2 z-10 flex w-[min(45%,360px)] min-w-0 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-0.5"
+            >
               <button
                 type="button"
                 className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
@@ -650,7 +622,6 @@ function WhiteboardPageViewInner() {
               <LuPlus size={13} strokeWidth={2.5} />
               Add question
             </button>
-            <FullscreenToggle active={focusMode} onClick={() => setFocusMode((f) => !f)} />
           </div>
         </div>
 

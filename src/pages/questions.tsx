@@ -33,10 +33,13 @@ import {
   type GroupedImageQuestion,
   type ImageTopic,
 } from "../hooks/useImageQuestions";
+import SaveQuestionToCanvasModal from "../components/whiteboards/SaveQuestionToCanvasModal";
+import { buildImageAttachment, buildPaperAttachment } from "../lib/whiteboardAttachments";
+import { getPracticeSubjectId } from "../data/practiceHubSubjects";
 
 // Components
 import { createPortal } from "react-dom";
-import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle, LuEye, LuEyeOff } from "react-icons/lu";
+import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle, LuEye, LuEyeOff, LuPencil } from "react-icons/lu";
 import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
 import QuestionTitlePicker, { type QuestionPickerItem } from "../components/questions/QuestionTitlePicker";
@@ -310,6 +313,7 @@ export default function Questions() {
     const [position, setPosition] = useState(0);
     const [questions, setQuestions] = useState<any[]>([]);
     const [showSearch, setShowSearch] = useState(false);
+    const [showSaveToCanvas, setShowSaveToCanvas] = useState(false);
     const [randomise, setRandomise] = useState(false);
     const [showPastPaperFilter, setShowPastPaperFilter] = useState(false);
     const [showFilter, setShowFilter] = useState(false);
@@ -639,6 +643,52 @@ export default function Questions() {
     }, [paperQuestions, selectedSubTopics]);
 
     const currentPaperQuestion = filteredPaperQuestions[paperQuestionPosition - 1];
+
+    const whiteboardSubject = useMemo(
+        () => getPracticeSubjectId(normalizedUrlSubject || selectedPaper?.subject || subjectFilter || ""),
+        [normalizedUrlSubject, selectedPaper?.subject, subjectFilter]
+    );
+    const currentWhiteboardAttachment = useMemo(() => {
+        if (mode === "pastpaper" && selectedPaper && currentPaperQuestion) {
+            return buildPaperAttachment(selectedPaper, currentPaperQuestion);
+        }
+        if (
+            mode === "imagequestions" &&
+            currentGroupedQuestion &&
+            imageQuestionTopic &&
+            normalizedUrlSubject &&
+            normalizedUrlLevel
+        ) {
+            const topic =
+                imageAllTopics.find((item) => item.name === imageQuestionTopic) ??
+                {
+                    name: imageQuestionTopic,
+                    displayName: formatSectionLabel(imageQuestionTopic),
+                    path: "",
+                    questionCount: imageGroupedList.length,
+                    thumbnailUrl: null,
+                };
+            return buildImageAttachment(
+                normalizedUrlSubject,
+                normalizedUrlLevel,
+                topic,
+                currentGroupedQuestion,
+                topicMarkingSchemeFiles
+            );
+        }
+        return null;
+    }, [
+        mode,
+        selectedPaper,
+        currentPaperQuestion,
+        currentGroupedQuestion,
+        imageQuestionTopic,
+        normalizedUrlSubject,
+        normalizedUrlLevel,
+        imageAllTopics,
+        imageGroupedList.length,
+        topicMarkingSchemeFiles,
+    ]);
     const paperQuestionIndexInFullList =
       currentPaperQuestion != null ? paperQuestions.indexOf(currentPaperQuestion) : -1;
     const questionForMarkingScheme =
@@ -2096,6 +2146,19 @@ export default function Questions() {
                                         <span>search</span>
                                     </button>
                                 )}
+                                {currentWhiteboardAttachment && whiteboardSubject && (
+                                    <button
+                                        type="button"
+                                        aria-label="Add question to canvas"
+                                        title="Add question to canvas"
+                                        className={`question-selector-button pointer-events-auto ${showSaveToCanvas ? "question-selector-button-active" : ""}`}
+                                        onClick={() => setShowSaveToCanvas(true)}
+                                        aria-pressed={showSaveToCanvas}
+                                    >
+                                        <LuPencil size={18} strokeWidth={2} />
+                                        <span>canvas</span>
+                                    </button>
+                                )}
                             </div>
                         }
                     />
@@ -2760,6 +2823,14 @@ export default function Questions() {
                     document.body
                 )}
 
+            {showSaveToCanvas && currentWhiteboardAttachment && whiteboardSubject && (
+                <SaveQuestionToCanvasModal
+                    subject={whiteboardSubject}
+                    attachment={currentWhiteboardAttachment}
+                    onClose={() => setShowSaveToCanvas(false)}
+                />
+            )}
+
             </div>
             {/*===============================================================================================*/}
 
@@ -2870,5 +2941,3 @@ function TimerTimesUpSync({ onTimesUp }: { onTimesUp: () => void }) {
 
     return null;
 }
-
- 

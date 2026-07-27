@@ -6,6 +6,7 @@ const STORAGE_BASE = "temp_images/leaving-cert";
 const MARKING_SCHEME_BASE = "marking-schemes/leaving-cert";
 
 const markingSchemeFileCache = new Map<string, CacheEntry<MarkingSchemeFile[]>>();
+const markingSchemeLevelFileCache = new Map<string, CacheEntry<MarkingSchemeFile[]>>();
 
 export type ImageTopic = {
   name: string;
@@ -28,12 +29,18 @@ export type GroupedImageQuestion = {
   images: ImageQuestion[];
 };
 
+export type ImageSubjectAvailability = {
+  storageName: string;
+  levels: string[];
+};
+
 type CacheEntry<T> = { data: T; ts: number };
 const CACHE_TTL = 5 * 60 * 1000;
 
 const levelCache = new Map<string, CacheEntry<string[]>>();
 const topicCache = new Map<string, CacheEntry<ImageTopic[]>>();
 const questionCache = new Map<string, CacheEntry<ImageQuestion[]>>();
+let subjectAvailabilityCache: CacheEntry<ImageSubjectAvailability[]> | null = null;
 const resolvedFolderCache = new Map<string, string>();
 let parentFolderList: string[] | null = null;
 
@@ -41,6 +48,66 @@ function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null 
   const entry = cache.get(key);
   if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
   return null;
+}
+
+/** Lists the subjects that actually have image questions, including their available levels. */
+export async function listImageSubjectAvailability(): Promise<ImageSubjectAvailability[]> {
+  if (subjectAvailabilityCache && Date.now() - subjectAvailabilityCache.ts < CACHE_TTL) {
+    return subjectAvailabilityCache.data;
+  }
+
+  const rootResult = await listAll(ref(storage, STORAGE_BASE));
+  parentFolderList = rootResult.prefixes.map((prefix) => prefix.name);
+
+  const subjects = await Promise.all(
+    rootResult.prefixes.map(async (prefix) => {
+      try {
+        const result = await listAll(ref(storage, prefix.fullPath));
+        const levels = result.prefixes.map((level) => level.name);
+        levelCache.set(prefix.name, { data: levels, ts: Date.now() });
+        return { storageName: prefix.name, levels };
+      } catch {
+        return { storageName: prefix.name, levels: [] };
+      }
+    })
+  );
+
+  const available = subjects.filter((subject) => subject.levels.length > 0);
+  subjectAvailabilityCache = { data: available, ts: Date.now() };
+  return available;
+}
+
+export function useImageSubjectAvailability(): {
+  subjects: ImageSubjectAvailability[];
+  loading: boolean;
+  error: string | null;
+} {
+  const [subjects, setSubjects] = useState<ImageSubjectAvailability[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    listImageSubjectAvailability()
+      .then((result) => {
+        if (!cancelled) setSubjects(result);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setSubjects([]);
+        setError(err instanceof Error ? err.message : "Failed to load subjects");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { subjects, loading, error };
 }
 
 const normaliseForMatch = (s: string) => s.replace(/[-_]/g, "").toLowerCase();
@@ -285,8 +352,43 @@ export async function listMarkingSchemeFilesForTopic(
 
   if (files.length > 0) {
     markingSchemeFileCache.set(key, { data: files, ts: Date.now() });
+    return files;
   }
-  return files;
+
+  // Some subjects (notably Mathematics) store marking schemes in only a few
+  // category folders even though the same question appears under several
+  // topics. If the selected topic has no folder, search the whole level and
+  // let the filename matcher below attach the right scheme to each question.
+  const levelKey = `ms-level/${resolved}/${level}`;
+  const cachedLevelFiles = getCached(markingSchemeLevelFileCache, levelKey);
+  if (cachedLevelFiles) {
+    markingSchemeFileCache.set(key, { data: cachedLevelFiles, ts: Date.now() });
+    return cachedLevelFiles;
+  }
+
+  const levelRef = ref(storage, `${MARKING_SCHEME_BASE}/${resolved}/${level}-level`);
+  const levelResult = await listAll(levelRef);
+  const nestedResults = await Promise.all(
+    levelResult.prefixes.map(async (prefix) => {
+      try {
+        const nested = await listAll(ref(storage, prefix.fullPath));
+        return nested.items.map((item) => ({
+          name: item.name,
+          storagePath: item.fullPath,
+        }));
+      } catch {
+        return [] as MarkingSchemeFile[];
+      }
+    })
+  );
+  const levelFiles = [
+    ...levelResult.items.map((item) => ({ name: item.name, storagePath: item.fullPath })),
+    ...nestedResults.flat(),
+  ];
+
+  markingSchemeLevelFileCache.set(levelKey, { data: levelFiles, ts: Date.now() });
+  markingSchemeFileCache.set(key, { data: levelFiles, ts: Date.now() });
+  return levelFiles;
 }
 
 /** Match marking scheme files to a grouped question by filename prefix (e.g. 2016_-_3_Q8_7). */

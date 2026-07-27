@@ -5,7 +5,7 @@ import Login from "./pages/login";
 import SignUp from "./pages/signup";
 import VerifyEmail from "./pages/verifyEmail";
 import Questions from "./pages/questions";
-import PracticeHub from "./pages/PracticeHub";
+import PracticeHub from "./pages/PracticeBrowser";
 import Social from "./pages/social/social";
 import Discover from "./pages/discover";
 import Games from "./pages/games";

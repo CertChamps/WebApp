@@ -13,20 +13,26 @@ type Props = {
 };
 
 const PANEL_WIDTH = 256;
+const PANEL_MARGIN = 8;
 
 /** Small preset emoji picker used for whiteboard pages and folders. */
 export default function EmojiPicker({ value, onChange, fallbackIcon, "aria-label": ariaLabel }: Props) {
   const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const updatePosition = useCallback(() => {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
+    const width = Math.min(PANEL_WIDTH, window.innerWidth - PANEL_MARGIN * 2);
     setPosition({
       top: rect.bottom + 6,
-      left: Math.min(Math.max(8, rect.left), window.innerWidth - PANEL_WIDTH - 8),
+      left: Math.min(
+        Math.max(PANEL_MARGIN, rect.left),
+        window.innerWidth - width - PANEL_MARGIN
+      ),
+      width,
     });
   }, []);
 
@@ -78,7 +84,13 @@ export default function EmojiPicker({ value, onChange, fallbackIcon, "aria-label
           <div
             ref={panelRef}
             className="fixed z-[80] rounded-xl color-bg color-shadow p-2"
-            style={{ top: position.top, left: position.left, width: PANEL_WIDTH }}
+            style={{
+              top: position.top,
+              left: position.left,
+              width: position.width,
+              maxWidth: `calc(100vw - ${PANEL_MARGIN * 2}px)`,
+              overflowX: "clip",
+            }}
           >
             <div className="flex items-center justify-between px-1 pb-1">
               <span className="text-xs font-semibold color-txt-sub">Pick an icon</span>
@@ -95,12 +107,15 @@ export default function EmojiPicker({ value, onChange, fallbackIcon, "aria-label
                 </button>
               )}
             </div>
-            <div className="grid max-h-48 grid-cols-8 gap-0.5 overflow-y-auto scrollbar-minimal">
+            <div
+              className="grid max-h-48 w-full min-w-0 grid-cols-8 gap-0.5 overflow-y-auto scrollbar-minimal"
+              style={{ overflowX: "clip", overscrollBehaviorX: "none" }}
+            >
               {WHITEBOARD_EMOJIS.map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
-                  className={`flex size-7 items-center justify-center rounded-md text-base transition-colors cursor-pointer hover:color-bg-grey-10 ${
+                  className={`flex aspect-square w-full min-w-0 items-center justify-center overflow-hidden rounded-md text-base transition-colors cursor-pointer hover:color-bg-grey-10 ${
                     value === emoji ? "color-bg-accent" : ""
                   }`}
                   onClick={() => {
