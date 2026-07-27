@@ -1,13 +1,8 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { LuFolder, LuTrash2 } from "react-icons/lu";
 import WhiteboardModal from "./WhiteboardModal";
 import EmojiPicker from "./EmojiPicker";
-import CustomSelect from "../practiceHub/CustomSelect";
-import {
-  FOLDER_COLOURS,
-  isDescendantFolder,
-  type WhiteboardFolder,
-} from "../../data/whiteboards";
+import { FOLDER_COLOURS, type WhiteboardFolder } from "../../data/whiteboards";
 import "../../styles/practiceHub.css";
 
 export type FolderModalResult = {
@@ -18,17 +13,18 @@ export type FolderModalResult = {
 };
 
 type Props = {
-  folders: WhiteboardFolder[];
   /** Present in edit mode. */
   initial?: WhiteboardFolder | null;
+  /** Optional parent when creating from a nested context (sidebar drag still handles nesting). */
+  defaultParentId?: string | null;
   onSave: (result: FolderModalResult) => Promise<void> | void;
   onDelete?: (folder: WhiteboardFolder) => Promise<void> | void;
   onClose: () => void;
 };
 
 export default function FolderModal({
-  folders,
   initial = null,
+  defaultParentId = null,
   onSave,
   onDelete,
   onClose,
@@ -36,21 +32,11 @@ export default function FolderModal({
   const [name, setName] = useState(initial?.name ?? "");
   const [colour, setColour] = useState<string | null>(initial?.colour ?? null);
   const [emoji, setEmoji] = useState<string | null>(initial?.emoji ?? null);
-  const [parentId, setParentId] = useState<string | null>(initial?.parentId ?? null);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const parentOptions = useMemo(() => {
-    const eligible = folders.filter((f) => {
-      if (!initial) return true;
-      if (f.id === initial.id) return false;
-      return !isDescendantFolder(folders, initial.id, f.id);
-    });
-    return [
-      { value: "", label: "Subject root (no folder)" },
-      ...eligible.map((f) => ({ value: f.id, label: `${f.emoji ? `${f.emoji} ` : ""}${f.name}` })),
-    ];
-  }, [folders, initial]);
+  /** Preserve existing parent on edit; use default when creating from a nested context. */
+  const parentId = initial?.parentId ?? defaultParentId ?? null;
 
   const canSave = name.trim().length > 0 && !saving;
 
@@ -58,7 +44,7 @@ export default function FolderModal({
     if (!canSave) return;
     setSaving(true);
     try {
-      await onSave({ name: name.trim(), colour, emoji, parentId: initial ? parentId : null });
+      await onSave({ name: name.trim(), colour, emoji, parentId });
       onClose();
     } finally {
       setSaving(false);
@@ -82,7 +68,7 @@ export default function FolderModal({
       onClose={onClose}
       footer={
         confirmingDelete && initial ? (
-          <div className="flex flex-col gap-2 rounded-xl color-bg-grey-5 p-3">
+          <div className="flex flex-col gap-2 rounded-lg color-bg-grey-5 p-3">
             <p className="text-sm color-txt-main font-semibold">Delete “{initial.name}”?</p>
             <p className="text-xs color-txt-sub">
               Pages and folders inside it won't be deleted — they'll move up one level.
@@ -90,7 +76,7 @@ export default function FolderModal({
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
-                className="flex-1 py-2 rounded-xl text-sm font-semibold color-bg-grey-10 color-txt-main hover:opacity-80 transition-opacity cursor-pointer"
+                className="flex-1 py-2 rounded-lg text-sm font-semibold color-bg-grey-10 color-txt-main hover:opacity-80 transition-opacity cursor-pointer"
                 onClick={() => setConfirmingDelete(false)}
                 disabled={saving}
               >
@@ -98,7 +84,7 @@ export default function FolderModal({
               </button>
               <button
                 type="button"
-                className="flex-1 py-2 rounded-xl text-sm font-semibold red-btn cursor-pointer"
+                className="flex-1 py-2 rounded-lg text-sm font-semibold red-btn cursor-pointer"
                 onClick={handleDelete}
                 disabled={saving}
               >
@@ -111,7 +97,7 @@ export default function FolderModal({
             {initial && onDelete && (
               <button
                 type="button"
-                className="p-2.5 rounded-xl color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
+                className="p-2.5 rounded-lg color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
                 onClick={() => setConfirmingDelete(true)}
                 aria-label="Delete folder"
                 title="Delete folder"
@@ -121,7 +107,7 @@ export default function FolderModal({
             )}
             <button
               type="button"
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold color-bg-grey-5 color-txt-main hover:color-bg-grey-10 transition-colors cursor-pointer"
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold color-bg-grey-5 color-txt-main hover:color-bg-grey-10 transition-colors cursor-pointer"
               onClick={onClose}
               disabled={saving}
             >
@@ -129,7 +115,7 @@ export default function FolderModal({
             </button>
             <button
               type="button"
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
               onClick={handleSave}
               disabled={!canSave}
             >
@@ -163,7 +149,7 @@ export default function FolderModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Calculus"
-              className="w-full px-3 py-2 rounded-xl text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none"
+              className="w-full px-3 py-2 rounded-lg text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSave();
@@ -190,19 +176,6 @@ export default function FolderModal({
             ))}
           </div>
         </div>
-
-        {initial && (
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold color-txt-sub">Parent folder</span>
-            <CustomSelect
-              options={parentOptions}
-              value={parentId ?? ""}
-              onChange={(v) => setParentId(v || null)}
-              placeholder="Subject root (no folder)"
-              aria-label="Parent folder"
-            />
-          </div>
-        )}
       </div>
     </WhiteboardModal>
   );
