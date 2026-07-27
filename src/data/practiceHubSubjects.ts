@@ -109,6 +109,18 @@ export function getSubjectLabel(backendId: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Convert a backend/storage subject id to the canonical Practice Hub subject slug. */
+export function getPracticeSubjectId(subjectId: string): string {
+  const normalized = subjectId.trim().toLowerCase();
+  if (PRACTICE_HUB_SUBJECTS.some((subject) => subject.id === normalized)) {
+    return normalized;
+  }
+  const mapped = Object.entries(SUBJECT_ID_TO_BACKEND).find(([, backendIds]) =>
+    backendIds.includes(normalized)
+  );
+  return mapped?.[0] ?? normalized;
+}
+
 export function subjectMatchesPaper(subjectId: string | null, paperSubject: string | undefined): boolean {
   if (!subjectId) return true;
   if (!paperSubject) return false;

@@ -9,7 +9,9 @@ import {
   LuFileText,
   LuImage,
   LuLoaderCircle,
+  LuPencil,
   LuSearch,
+  LuStar,
 } from "react-icons/lu";
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
 import type { SidebarPanelId } from "../components/sidebar/SidebarTileManager";
@@ -28,12 +30,20 @@ import {
 } from "../hooks/useImageQuestions";
 import {
   getStorageFolderName,
+  getFavouriteSubjectIds,
+  FAVOURITES_CHANGED_EVENT,
   PRACTICE_HUB_SUBJECTS,
+  toggleFavourite,
   type SubjectOption,
 } from "../data/practiceHubSubjects";
+import SaveQuestionToCanvasModal from "../components/whiteboards/SaveQuestionToCanvasModal";
+import { buildImageAttachment } from "../lib/whiteboardAttachments";
+import type { AttachedQuestion } from "../data/whiteboards";
 import "../styles/practiceBrowser.css";
 
 const LEVEL_ORDER = ["higher", "ordinary", "foundation"];
+
+type SubjectEntry = SubjectOption & { levels: string[] };
 
 function normalise(value: string): string {
   return value.replace(/[-_\s]/g, "").toLowerCase();
@@ -108,6 +118,44 @@ function InlineMarkingScheme({ files }: { files: MarkingSchemeFile[] }) {
   );
 }
 
+function SubjectCard({
+  subject,
+  favourite,
+  onToggleFavourite,
+  onOpenLevel,
+}: {
+  subject: SubjectEntry;
+  favourite: boolean;
+  onToggleFavourite: () => void;
+  onOpenLevel: (level: string) => void;
+}) {
+  return (
+    <article className={`practice-browser__subject-card ${favourite ? "practice-browser__subject-card--favourite" : ""}`}>
+      <div className="practice-browser__card-title">
+        <h3>{subject.label}</h3>
+        <button
+          type="button"
+          className={`practice-browser__favourite-button ${favourite ? "practice-browser__favourite-button--active" : ""}`}
+          onClick={onToggleFavourite}
+          aria-label={favourite ? `Remove ${subject.label} from favourites` : `Add ${subject.label} to favourites`}
+          aria-pressed={favourite}
+          title={favourite ? "Remove from favourites" : "Add to favourites"}
+        >
+          <LuStar size={19} fill={favourite ? "currentColor" : "none"} strokeWidth={2} />
+        </button>
+      </div>
+      <div className="practice-browser__levels">
+        {sortLevels(subject.levels).map((level) => (
+          <button key={level} type="button" onClick={() => onOpenLevel(level)}>
+            <span>{levelLabel(level)}</span>
+            <LuChevronRight size={16} />
+          </button>
+        ))}
+      </div>
+    </article>
+  );
+}
+
 function QuestionCard({
   question,
   index,
@@ -115,6 +163,7 @@ function QuestionCard({
   active,
   register,
   onActivate,
+  onAddToCanvas,
 }: {
   question: GroupedImageQuestion;
   index: number;
@@ -122,6 +171,7 @@ function QuestionCard({
   active: boolean;
   register: (element: HTMLElement | null) => void;
   onActivate: () => void;
+  onAddToCanvas: () => void;
 }) {
   const files = useMemo(
     () => getMarkingSchemeFilesForGroupedQuestion(markingSchemeFiles, question),
@@ -140,10 +190,24 @@ function QuestionCard({
           <p className="practice-browser__eyebrow">Question {index + 1}</p>
           <h2 className="text-base font-bold color-txt-main">{question.displayName}</h2>
         </div>
-        <span className="practice-browser__image-count">
-          <LuImage size={14} />
-          {question.images.length}
-        </span>
+        <div className="practice-browser__question-actions">
+          <span className="practice-browser__image-count">
+            <LuImage size={14} />
+            {question.images.length}
+          </span>
+          <button
+            type="button"
+            className="practice-browser__canvas-button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onAddToCanvas();
+            }}
+            aria-label={`Add ${question.displayName} to a canvas`}
+            title="Add question to canvas"
+          >
+            <LuPencil size={17} strokeWidth={2.2} />
+          </button>
+        </div>
       </header>
 
       <div className="practice-browser__question-images">
@@ -174,7 +238,11 @@ function PracticeBrowserInner() {
   const [search, setSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarPanel, setSidebarPanel] = useState<SidebarPanelId | null>("ai");
+  const [canvasAttachment, setCanvasAttachment] = useState<AttachedQuestion | null>(null);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+  const [favouriteSubjectIds, setFavouriteSubjectIds] = useState<string[]>(
+    () => getFavouriteSubjectIds()
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const questionElements = useRef(new Map<string, HTMLElement>());
   const titleRowRef = useRef<HTMLDivElement>(null);
@@ -214,6 +282,24 @@ function PracticeBrowserInner() {
     if (!query) return subjectEntries;
     return subjectEntries.filter((subject) => subject.label.toLowerCase().includes(query));
   }, [search, subjectEntries]);
+  const favouriteSubjects = useMemo(
+    () => filteredSubjects.filter((subject) => favouriteSubjectIds.includes(subject.id)),
+    [filteredSubjects, favouriteSubjectIds]
+  );
+  const otherSubjects = useMemo(
+    () => filteredSubjects.filter((subject) => !favouriteSubjectIds.includes(subject.id)),
+    [filteredSubjects, favouriteSubjectIds]
+  );
+
+  useEffect(() => {
+    const syncFavourites = () => setFavouriteSubjectIds(getFavouriteSubjectIds());
+    window.addEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
+    return () => window.removeEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
+  }, []);
+
+  const handleToggleFavourite = useCallback((subject: string) => {
+    setFavouriteSubjectIds((current) => toggleFavourite(subject, current));
+  }, []);
 
   const filteredTopics = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -377,6 +463,19 @@ function PracticeBrowserInner() {
                       else questionElements.current.delete(question.key);
                     }}
                     onActivate={() => setActiveQuestionIndex(index)}
+                    onAddToCanvas={() => {
+                      if (!storageSubject || !selectedLevel || !selectedTopic) return;
+                      setActiveQuestionIndex(index);
+                      setCanvasAttachment(
+                        buildImageAttachment(
+                          storageSubject,
+                          selectedLevel,
+                          selectedTopic,
+                          question,
+                          markingSchemeFiles
+                        )
+                      );
+                    }}
                   />
                 ))}
               </div>
@@ -416,6 +515,14 @@ function PracticeBrowserInner() {
             markingSchemeQuestionName={activeQuestion?.displayName}
           />
         </div>
+
+        {canvasAttachment && subjectId && (
+          <SaveQuestionToCanvasModal
+            subject={subjectId}
+            attachment={canvasAttachment}
+            onClose={() => setCanvasAttachment(null)}
+          />
+        )}
       </div>
     );
   }
@@ -478,28 +585,44 @@ function PracticeBrowserInner() {
         ) : subjectsError && !selectedSubject ? (
           <div className="practice-browser__status">Couldn’t load the available subjects.</div>
         ) : !selectedSubject ? (
-          <section>
-            <h2 className="practice-browser__section-title">
-              <LuBookOpen size={19} /> Subjects <span>({filteredSubjects.length})</span>
-            </h2>
-            <div className="practice-browser__card-grid">
-              {filteredSubjects.map((subject) => (
-                <article key={subject.id} className="practice-browser__subject-card">
-                  <div className="practice-browser__card-title">
-                    <h3>{subject.label}</h3>
-                  </div>
-                  <div className="practice-browser__levels">
-                    {sortLevels(subject.levels).map((level) => (
-                      <button key={level} type="button" onClick={() => openLevel(subject.id, level)}>
-                        <span>{levelLabel(level)}</span>
-                        <LuChevronRight size={16} />
-                      </button>
-                    ))}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
+          <div className="flex flex-col gap-8">
+            {favouriteSubjects.length > 0 && (
+              <section>
+                <h2 className="practice-browser__section-title practice-browser__section-title--favourites">
+                  <LuStar size={19} fill="currentColor" /> Favourites{" "}
+                  <span>({favouriteSubjects.length})</span>
+                </h2>
+                <div className="practice-browser__card-grid">
+                  {favouriteSubjects.map((subject) => (
+                    <SubjectCard
+                      key={subject.id}
+                      subject={subject}
+                      favourite
+                      onToggleFavourite={() => handleToggleFavourite(subject.id)}
+                      onOpenLevel={(level) => openLevel(subject.id, level)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section>
+              <h2 className="practice-browser__section-title">
+                <LuBookOpen size={19} /> Subjects <span>({otherSubjects.length})</span>
+              </h2>
+              <div className="practice-browser__card-grid">
+                {otherSubjects.map((subject) => (
+                  <SubjectCard
+                    key={subject.id}
+                    subject={subject}
+                    favourite={false}
+                    onToggleFavourite={() => handleToggleFavourite(subject.id)}
+                    onOpenLevel={(level) => openLevel(subject.id, level)}
+                  />
+                ))}
+              </div>
+            </section>
+          </div>
         ) : !selectedLevel ? (
           <section>
             <h2 className="practice-browser__section-title">Available levels</h2>
