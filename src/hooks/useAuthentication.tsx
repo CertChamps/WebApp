@@ -17,6 +17,10 @@ import { signInWithApple } from "../lib/nativeAppleLogin";
 import { setPaymentsUser } from "../lib/payments";
 import { getPostAuthPath } from "../lib/onboarding";
 import { setFavouriteSubjectIds } from "../data/practiceHubSubjects";
+import {
+  CURRENT_PRIVACY_VERSION,
+  CURRENT_TERMS_VERSION,
+} from "../lib/legal";
 
 type authprops = { prevRoute?: string };
 
@@ -43,7 +47,13 @@ export default function useAuthentication(props?: authprops) {
   const navigate = useNavigate();
 
   /** ==================== CREATE / SETUP USER ==================== */
-  const createUser = async (uid: string, username: string, email: string, emailVerified: boolean = false) => {
+  const createUser = async (
+    uid: string,
+    username: string,
+    email: string,
+    emailVerified: boolean = false,
+    legalAccepted: boolean = false,
+  ) => {
     // FALLBACK: If "crown.png" is missing, use a placeholder to prevent crash
     let imageUrl = "";
     try {
@@ -72,6 +82,12 @@ export default function useAuthentication(props?: authprops) {
       releaseNotesSeenVersions: [],
       hasCompletedOnboarding: false,
       studyingSubjects: [],
+      ...(legalAccepted ? {
+        termsVersion: CURRENT_TERMS_VERSION,
+        termsAcceptedAt: serverTimestamp(),
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+        privacyAcknowledgedAt: serverTimestamp(),
+      } : {}),
     };
 
     // 1. Set Context
@@ -82,6 +98,8 @@ export default function useAuthentication(props?: authprops) {
       isPro: false,
       hasCompletedOnboarding: false,
       studyingSubjects: [],
+      termsVersion: legalAccepted ? CURRENT_TERMS_VERSION : undefined,
+      privacyVersion: legalAccepted ? CURRENT_PRIVACY_VERSION : undefined,
     });
 
     // 2. Write to DB
@@ -96,7 +114,7 @@ export default function useAuthentication(props?: authprops) {
   };
 
 /** ==================== SETUP EXISTING / NEW USER ==================== */
-const userSetup = async (uid: string, username: string, email: string) => {
+const userSetup = async (uid: string, username: string, email: string, legalAccepted: boolean = false) => {
   const currentPath = getCurrentAppPath();
   console.log("1. Starting userSetup. Current Path:", currentPath);
 
@@ -108,6 +126,14 @@ const userSetup = async (uid: string, username: string, email: string) => {
 
     if (userDoc.exists()) {
       const userData = userDoc.data();
+      if (legalAccepted) {
+        await setDoc(doc(db, "user-data", uid), {
+          termsVersion: CURRENT_TERMS_VERSION,
+          termsAcceptedAt: serverTimestamp(),
+          privacyVersion: CURRENT_PRIVACY_VERSION,
+          privacyAcknowledgedAt: serverTimestamp(),
+        }, { merge: true });
+      }
       
       // Safe Image Loading
       let imageUrl = "";
@@ -174,6 +200,8 @@ const userSetup = async (uid: string, username: string, email: string) => {
           : [],
         hasCompletedOnboarding,
         studyingSubjects,
+        termsVersion: legalAccepted ? CURRENT_TERMS_VERSION : userData.termsVersion,
+        privacyVersion: legalAccepted ? CURRENT_PRIVACY_VERSION : userData.privacyVersion,
       });
 
       console.log("2. Context Set. Verified:", isEmailVerified);
@@ -217,7 +245,7 @@ const userSetup = async (uid: string, username: string, email: string) => {
 
     } else {
       console.log("2. New user detected, creating profile...");
-      await createUser(uid, username, email, isEmailVerified);
+      await createUser(uid, username, email, isEmailVerified, legalAccepted);
       return { hasCompletedOnboarding: false as const };
     }
   } catch (err) {
@@ -245,14 +273,14 @@ useEffect(() => {
    * Single entry point — signInWithGoogle() picks the native plugin on
    * iOS/Android Capacitor and the existing web popup on the browser.
    */
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = async (legalAccepted: boolean = false) => {
     setIsLoggingIn(true); // Stop auto-listener
     try {
       const result = await signInWithGoogle();
       const user = result.user;
 
       if (user && user.email) {
-        await userSetup(user.uid, user.displayName ?? "newUser", user.email);
+        await userSetup(user.uid, user.displayName ?? "newUser", user.email, legalAccepted);
       }
     } catch (err: any) {
       // Capacitor / Firebase errors have non-enumerable props, so a bare
@@ -274,14 +302,14 @@ useEffect(() => {
    * iOS/Android Capacitor and the Firebase web popup on the browser
    * (including iPad Safari).
    */
-  const loginWithApple = async () => {
+  const loginWithApple = async (legalAccepted: boolean = false) => {
     setIsLoggingIn(true);
     try {
       const result = await signInWithApple();
       const user = result.user;
 
       if (user && user.email) {
-        await userSetup(user.uid, user.displayName ?? "newUser", user.email);
+        await userSetup(user.uid, user.displayName ?? "newUser", user.email, legalAccepted);
       } else if (user) {
         // Apple users may opt out of sharing their email. We still create a
         // Firebase session, but we can't proceed without one in our schema.
@@ -318,13 +346,18 @@ useEffect(() => {
     username: string,
     email: string,
     password: string,
-    captchaToken: string
+    captchaToken: string,
+    legalAccepted: boolean = false,
   ) => {
     setError({});
 
     // --- CAPTCHA CHECKS RESTORED ---
     if (!captchaToken) {
       setError((prev: any) => ({ ...prev, general: "Please complete CAPTCHA first." }));
+      return;
+    }
+    if (!legalAccepted) {
+      setError((prev: any) => ({ ...prev, legal: "You must agree before creating an account." }));
       return;
     }
 
@@ -360,7 +393,7 @@ useEffect(() => {
       if (user) {
         await sendEmailVerification(user);
         // 3️⃣ Create user in Firestore
-        await createUser(user.uid, username, email, false);
+        await createUser(user.uid, username, email, false, true);
       }
     } catch (err: any) {
       const code = err.code;

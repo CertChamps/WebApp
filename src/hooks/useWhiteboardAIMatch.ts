@@ -13,8 +13,7 @@ import {
 import { getStorageFolderName, getSubjectLabel } from "../data/practiceHubSubjects";
 import { buildImageAttachment, buildPaperAttachment } from "../lib/whiteboardAttachments";
 import type { AttachedQuestion } from "../data/whiteboards";
-
-const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
+import { aiResponseError, authenticatedAiFetch, METERED_CHAT_API_URL } from "../lib/aiApi";
 const MAX_CANDIDATES = 700;
 const MAX_SELECTIONS = 20;
 
@@ -93,16 +92,12 @@ function buildContext(subjectLabel: string): string {
 }
 
 async function requestCompletion(context: string, userPrompt: string): Promise<string> {
-  const res = await fetch(CHAT_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const res = await authenticatedAiFetch(METERED_CHAT_API_URL, {
       messages: [{ role: "user", content: userPrompt }],
       context,
       temperature: 0.2,
-    }),
-  });
-  if (!res.ok) throw new Error("AI request failed");
+    }, "whiteboard");
+  if (!res.ok) throw await aiResponseError(res, "AI request failed");
   const reader = res.body?.getReader();
   if (!reader) throw new Error("No response body");
   const decoder = new TextDecoder();

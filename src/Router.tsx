@@ -32,6 +32,9 @@ import ReleaseNotesPrompt from "./components/prompts/release_notes_prompt";
 import OnboardingRoute from "./components/onboarding/OnboardingRoute";
 import { SpotifyProvider } from "./context/SpotifyContext";
 import { SpotifyCallback } from "./components/spotify";
+import NotFound from "./pages/notFound";
+import ForgotPassword from "./pages/forgotPassword";
+import LegalTermsPrompt from "./components/prompts/legal_terms_prompt";
 
 /** Redirects /practice/:id (deck links from social) to /decks/:id */
 function PracticeToDeckRedirect() {
@@ -71,6 +74,7 @@ function RootLayout() {
       <Outlet />
       <UsernamePrompt />
       <ReleaseNotesPrompt />
+      <LegalTermsPrompt />
     </SpotifyProvider>
   );
 }
@@ -82,6 +86,7 @@ const router = createHashRouter([
     children: [
       { path: "/", element: <SignUp /> },
       { path: "/login", element: <Login /> },
+      { path: "/forgot-password", element: <ForgotPassword /> },
       { path: "/verify-email", element: <VerifyEmail /> },
       { path: "/spotify/callback", element: <SpotifyCallback /> },
       {
@@ -324,7 +329,7 @@ const router = createHashRouter([
       </ProtectedRoute>
     ),
   },
-    {
+  {
     path: "/mobileRedirect",
     element: (
       <ProtectedRoute>
@@ -333,6 +338,10 @@ const router = createHashRouter([
         </>
       </ProtectedRoute>
     ),
+  },
+  {
+    path: "*",
+    element: <NotFound />,
   },
 
 

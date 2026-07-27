@@ -36,6 +36,14 @@ export default function Login() {
                 <input type="password" placeholder="password" className="txtbox mx-auto mb-4 w-9/12" 
                     onChange={(txt: React.ChangeEvent<HTMLInputElement>) => {setPassword(txt.target.value)}}/>
 
+                <button
+                    type="button"
+                    className="block w-9/12 mx-auto -mt-2 mb-3 text-right text-xs font-semibold color-txt-sub hover:color-txt-accent transition-colors"
+                    onClick={() => navigate('/forgot-password')}
+                >
+                    Forgot password?
+                </button>
+
                 <p className="blue-btn mx-auto my-2 w-9/12 text-center"
                      onClick={() => {signInWithEmail(email ?? '', password ?? '')}}>Login</p>
 

@@ -36,6 +36,8 @@ export type UserContextType = {
     releaseNotesSeenVersions?: string[],
     hasCompletedOnboarding?: boolean,
     studyingSubjects?: string[],
+    termsVersion?: string,
+    privacyVersion?: string,
     },
     setUser: React.Dispatch<React.SetStateAction<any>>
 }
@@ -67,6 +69,8 @@ export const UserContext = createContext<UserContextType>({
     releaseNotesSeenVersions: [],
     hasCompletedOnboarding: undefined,
     studyingSubjects: [],
+    termsVersion: undefined,
+    privacyVersion: undefined,
     },
     setUser: () => {}
 })

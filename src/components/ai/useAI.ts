@@ -1,6 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { AiRequestError, aiResponseError, authenticatedAiFetch, METERED_CHAT_API_URL } from "../../lib/aiApi";
 
 export type Message = { role: "user" | "assistant"; content: string; source?: "chat" | "injected" };
+export type AIChatError = {
+  message: string;
+  code: string | null;
+  upgradeRequired: boolean;
+};
 export type InjectedExchange = {
   nonce: string;
   userMessage: string;
@@ -17,8 +23,6 @@ export type GetDrawingSnapshot = () => string | null;
 export type GetStaveAnalysis = () => string | null;
 /** Optional: return current exam paper (first page) as image data URL so the AI can see the paper. */
 export type GetPaperSnapshot = () => string | null;
-
-const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
 
 function isIOSLikeDevice(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -122,7 +126,7 @@ export function useAI(
   const [streamingContent, setStreamingContent] = useState("");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AIChatError | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -204,15 +208,14 @@ export function useAI(
         } as any;
       }
       const context = buildQuestionContext(question, staveAnalysis);
-      const res = await fetch(CHAT_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages, context }),
-      });
+      const res = await authenticatedAiFetch(
+        METERED_CHAT_API_URL,
+        { messages: apiMessages, context },
+        "tutor",
+      );
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || errData.details || "Request failed");
+        throw await aiResponseError(res, "The AI tutor could not respond.");
       }
 
       const reader = res.body?.getReader();
@@ -255,7 +258,11 @@ export function useAI(
       setStreamingContent("");
     } catch (err) {
       setStreamingContent("");
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError({
+        message: err instanceof Error ? err.message : "Something went wrong",
+        code: err instanceof AiRequestError ? err.code : null,
+        upgradeRequired: err instanceof AiRequestError && err.upgradeRequired,
+      });
     } finally {
       setLoading(false);
       if (!isIOSLikeDevice()) {

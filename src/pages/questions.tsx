@@ -74,6 +74,7 @@ import {
 import { getDocumentCached } from "../utils/pdfDocumentCache";
 import { getLogTablesPdfBlob } from "../utils/logTablesPdf";
 import type { InjectedExchange } from "../components/ai/useAI";
+import { aiResponseError, authenticatedAiFetch, createAiUsageId, METERED_CHAT_API_URL } from "../lib/aiApi";
 import { runGrading } from "../lib/grading/GradingEngine";
 import type { CanvasAnnotation, CanvasCapturePayload, GradingStatus, Pass1Result } from "../lib/grading/GradingTypes";
 import { buildPartSummary } from "../lib/grading/annotationBuilder";
@@ -87,7 +88,6 @@ import "../styles/sidebar.css";
 
 const QUESTIONS_MODE_KEY = "questions-page-mode";
 const QUESTIONS_RESUME_SEARCH_KEY = "questions-page-resume-search";
-const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
 
 function isSavedGradingAnnotations(value: unknown): value is CanvasAnnotation[] {
     if (!Array.isArray(value)) return false;
@@ -885,22 +885,17 @@ export default function Questions() {
 
     const streamChatResponse = useCallback(async (
         messages: Array<{ role: string; content: any }>,
-        options?: { temperature?: number; top_p?: number; context?: string }
+        options?: { temperature?: number; top_p?: number; context?: string; usageId?: string }
     ): Promise<string> => {
-        const res = await fetch(CHAT_API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+        const res = await authenticatedAiFetch(METERED_CHAT_API_URL, {
                 messages,
                 context: options?.context,
                 temperature: options?.temperature,
                 top_p: options?.top_p,
-            }),
-        });
+            }, "grading", options?.usageId);
 
         if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || errData.details || "Failed to check answer");
+            throw await aiResponseError(res, "Failed to check answer");
         }
 
         const reader = res.body?.getReader();
@@ -1066,6 +1061,7 @@ export default function Questions() {
             }
 
             const result = await runGrading({
+                usageId: createAiUsageId("grading"),
                 questionId: activeCanvasQuestionId,
                 questionText,
                 markingSchemeText,
@@ -1089,6 +1085,8 @@ export default function Questions() {
             setGradingStatus("error");
             if (err instanceof BlankCanvasError) {
                 setCheckMyAnswerStatus("Your canvas looks empty - write your workings and try again.");
+            } else if (err instanceof Error && err.name === "AI_QUOTA_EXCEEDED") {
+                setCheckMyAnswerStatus(err.message);
             } else {
                 setCheckMyAnswerStatus("Something went wrong - try again");
             }

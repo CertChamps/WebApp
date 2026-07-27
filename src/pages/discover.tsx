@@ -13,6 +13,7 @@ import {
     runTransaction,
     serverTimestamp,
 } from "firebase/firestore";
+import { aiResponseError, authenticatedAiFetch, METERED_CHAT_API_URL } from "../lib/aiApi";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
 import { db, storage } from "../../firebase";
 import { UserContext } from "../context/UserContext";
@@ -134,7 +135,6 @@ const MAX_THUMBNAIL_BYTES = 2 * 1024 * 1024;
 const MAX_PDF_BYTES = 25 * 1024 * 1024;
 
 const LINK_PREVIEW_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/fetchLinkPreview";
-const CHAT_API_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/chat";
 const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
 const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
 
@@ -305,16 +305,12 @@ type DiscoverAIReply = {
 };
 
 async function requestDiscoverAI(context: string, userPrompt: string): Promise<string> {
-    const response = await fetch(CHAT_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+    const response = await authenticatedAiFetch(METERED_CHAT_API_URL, {
             messages: [{ role: "user", content: userPrompt }],
             context,
             temperature: 0.2,
-        }),
-    });
-    if (!response.ok) throw new Error("AI resource search failed");
+        }, "discover");
+    if (!response.ok) throw await aiResponseError(response, "AI resource search failed");
 
     const reader = response.body?.getReader();
     if (!reader) throw new Error("No AI response body");
