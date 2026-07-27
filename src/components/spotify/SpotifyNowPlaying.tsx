@@ -10,6 +10,8 @@ import {
   LuMusic,
 } from "react-icons/lu";
 import { useSpotify } from "../../context/SpotifyContext";
+import { SPOTIFY_GREEN, spotify } from "./spotifyTheme";
+import { useAlbumColor } from "./useAlbumColor";
 
 function formatMs(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -48,12 +50,14 @@ export function SpotifyNowPlaying() {
 
   const VolumeIcon = volume === 0 ? LuVolumeX : volume < 0.5 ? LuVolume1 : LuVolume2;
 
+  const accent = useAlbumColor(nowPlaying?.albumArt ?? null);
+
   if (!nowPlaying) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 rounded-xl color-bg-grey-5 p-6 text-center">
-        <LuMusic size={26} strokeWidth={1.5} className="color-txt-sub opacity-60" />
-        <p className="text-sm font-medium color-txt-main">Nothing playing</p>
-        <p className="text-xs color-txt-sub">Pick a track or playlist below to start listening.</p>
+      <div className={`flex flex-col items-center justify-center gap-2 rounded-lg ${spotify.card} p-6 text-center`}>
+        <LuMusic size={26} strokeWidth={1.5} className={`${spotify.textSub} opacity-60`} />
+        <p className="text-sm font-medium text-white">Nothing playing</p>
+        <p className={`text-xs ${spotify.textSub}`}>Pick a track or playlist below to start listening.</p>
       </div>
     );
   }
@@ -61,9 +65,12 @@ export function SpotifyNowPlaying() {
   const progressMax = durationMs || 1;
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl color-bg-grey-5 p-3">
+    <div
+      className="flex flex-col gap-3 rounded-lg p-3"
+      style={{ background: `linear-gradient(to bottom, ${accent} 0%, #191919 72%)` }}
+    >
       <div className="flex flex-col items-center gap-3">
-        <div className="aspect-square w-full max-w-[160px] overflow-hidden rounded-lg color-bg-grey-10">
+        <div className="aspect-square w-full max-w-[170px] overflow-hidden rounded-md bg-black/30 shadow-lg">
           {nowPlaying.albumArt ? (
             <img
               src={nowPlaying.albumArt}
@@ -73,15 +80,15 @@ export function SpotifyNowPlaying() {
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <LuMusic size={32} strokeWidth={1.5} className="color-txt-sub opacity-50" />
+              <LuMusic size={32} strokeWidth={1.5} className={`${spotify.textSub} opacity-50`} />
             </div>
           )}
         </div>
         <div className="w-full text-center">
-          <p className="truncate text-sm font-bold color-txt-main" title={nowPlaying.name}>
+          <p className="truncate text-sm font-bold text-white" title={nowPlaying.name}>
             {nowPlaying.name}
           </p>
-          <p className="truncate text-xs color-txt-sub" title={nowPlaying.artist}>
+          <p className={`truncate text-xs ${spotify.textSub}`} title={nowPlaying.artist}>
             {nowPlaying.artist}
           </p>
         </div>
@@ -96,46 +103,46 @@ export function SpotifyNowPlaying() {
           value={Math.min(positionMs, progressMax)}
           onChange={onSeek}
           aria-label="Seek"
-          style={{ accentColor: "currentColor" }}
-          className="h-1 w-full cursor-pointer rounded-full color-txt-accent"
+          style={{ accentColor: SPOTIFY_GREEN }}
+          className="h-1 w-full cursor-pointer rounded-full"
         />
-        <div className="flex justify-between text-[10px] tabular-nums color-txt-sub">
+        <div className={`flex justify-between text-[10px] tabular-nums ${spotify.textSub}`}>
           <span>{formatMs(positionMs)}</span>
           <span>{formatMs(durationMs)}</span>
         </div>
       </div>
 
       {/* Transport controls */}
-      <div className="flex items-center justify-center gap-4">
+      <div className="flex items-center justify-center gap-5">
         <button
           type="button"
           onClick={() => void previous()}
           aria-label="Previous track"
-          className="color-txt-sub transition-colors hover:color-txt-main"
+          className={`${spotify.textSub} transition-colors hover:text-white`}
         >
-          <LuSkipBack size={20} strokeWidth={2} />
+          <LuSkipBack size={20} strokeWidth={2} fill="currentColor" />
         </button>
         <button
           type="button"
           onClick={() => void togglePlay()}
           aria-label={paused ? "Play" : "Pause"}
-          className="flex h-11 w-11 items-center justify-center rounded-full color-bg-accent color-txt-accent transition-opacity hover:opacity-80"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-black transition-transform hover:scale-105"
         >
-          {paused ? <LuPlay size={20} strokeWidth={2} className="ml-0.5" /> : <LuPause size={20} strokeWidth={2} />}
+          {paused ? <LuPlay size={22} strokeWidth={0} fill="currentColor" className="ml-0.5" /> : <LuPause size={22} strokeWidth={0} fill="currentColor" />}
         </button>
         <button
           type="button"
           onClick={() => void next()}
           aria-label="Next track"
-          className="color-txt-sub transition-colors hover:color-txt-main"
+          className={`${spotify.textSub} transition-colors hover:text-white`}
         >
-          <LuSkipForward size={20} strokeWidth={2} />
+          <LuSkipForward size={20} strokeWidth={2} fill="currentColor" />
         </button>
       </div>
 
       {/* Volume */}
       <div className="flex items-center gap-2">
-        <VolumeIcon size={16} strokeWidth={2} className="shrink-0 color-txt-sub" />
+        <VolumeIcon size={16} strokeWidth={2} className={`shrink-0 ${spotify.textSub}`} />
         <input
           type="range"
           min={0}
@@ -143,8 +150,8 @@ export function SpotifyNowPlaying() {
           value={Math.round(volume * 100)}
           onChange={onVolume}
           aria-label="Volume"
-          style={{ accentColor: "currentColor" }}
-          className="h-1 w-full cursor-pointer rounded-full color-txt-accent"
+          style={{ accentColor: SPOTIFY_GREEN }}
+          className="h-1 w-full cursor-pointer rounded-full"
         />
       </div>
     </div>

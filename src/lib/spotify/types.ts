@@ -14,7 +14,8 @@ export interface SpotifyUserProfile {
   id: string;
   display_name: string | null;
   email?: string;
-  product: SpotifyProduct;
+  /** Removed from GET /me in Feb 2026 Development Mode — treat as unknown when absent. */
+  product?: SpotifyProduct;
   images?: SpotifyImage[];
 }
 
@@ -38,6 +39,16 @@ export interface SpotifyTrack {
   duration_ms: number;
   artists: SpotifyArtistRef[];
   album: SpotifyAlbumRef;
+  /** Present on playlist items; "episode" entries are filtered out. */
+  type?: string;
+}
+
+export interface SpotifyAlbum {
+  id: string;
+  name: string;
+  uri: string;
+  images: SpotifyImage[];
+  artists?: SpotifyArtistRef[];
 }
 
 export interface SpotifyPlaylist {
@@ -45,8 +56,21 @@ export interface SpotifyPlaylist {
   name: string;
   uri: string;
   images: SpotifyImage[];
-  tracks: { total: number };
+  /**
+   * Track count paging object.
+   * Pre-Feb 2026: `tracks`. Post-Feb 2026 Development Mode: `items`.
+   * Often missing on search results / non-owned playlists.
+   */
+  tracks?: { total: number } | null;
+  items?: { total: number } | null;
   owner: { display_name: string | null };
+}
+
+/** Recently played, grouped for the "Recent" view. */
+export interface RecentlyPlayed {
+  tracks: SpotifyTrack[];
+  albums: SpotifyAlbum[];
+  playlists: SpotifyPlaylist[];
 }
 
 /** Stored token bundle (localStorage). */

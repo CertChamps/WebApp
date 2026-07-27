@@ -375,10 +375,17 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   z-index: 50;
   @apply color-bg border-2 color-shadow;
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-black, #353535) 0.12);
+}
+
+.practice-hub__subject-dropdown--grid {
+  left: 50%;
+  right: auto;
+  width: min(44rem, calc(100vw - 1.5rem));
+  max-height: none;
+  transform: translateX(-50%);
 }
 
 .practice-hub__subject-search-wrap {

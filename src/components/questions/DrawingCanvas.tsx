@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2, FileText, Ban } from "lucide-react";
+import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2, FileText, Ban, Paperclip, LoaderCircle } from "lucide-react";
 import type { CanvasAnnotation, CanvasCapturePayload } from "../../lib/grading/GradingTypes";
 import { buildCapturePayload } from "../../lib/grading/canvasCapture";
+import { renderPdfPages } from "../../utils/pdfPagesToImages";
+import type { CanvasObject } from "../../hooks/useCanvasStorage";
 import RenderMath from "../math/mathdisplay";
+
+export type { CanvasObject } from "../../hooks/useCanvasStorage";
 
 type Point = { x: number; y: number; pressure: number };
 type Stroke = { points: Point[]; tool: "pen" | "eraser"; colorIndex?: number; thicknessIndex?: number; color?: string };
@@ -444,6 +448,97 @@ function normalizeStrokeColors(source: Stroke[] | null | undefined): Stroke[] {
 	});
 }
 
+function genObjectId(): string {
+	if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+	return `obj-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(reader.result as string);
+		reader.onerror = () => reject(reader.error);
+		reader.readAsDataURL(blob);
+	});
+}
+
+async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+	const res = await fetch(dataUrl);
+	return res.blob();
+}
+
+function loadImageSize(url: string): Promise<{ width: number; height: number }> {
+	return new Promise((resolve, reject) => {
+		const img = new Image();
+		img.onload = () => resolve({ width: img.naturalWidth || 400, height: img.naturalHeight || 300 });
+		img.onerror = () => reject(new Error("Failed to load image"));
+		img.src = url;
+	});
+}
+
+/**
+ * Downscale + recompress an image before it's stored on the canvas.
+ * Large phone photos (often several MB) upload slowly / bloat the saved canvas
+ * JSON and sometimes fail to load; capping the resolution and re-encoding keeps
+ * them sharp while dramatically reducing size. Returns the original blob if it's
+ * already small or if anything goes wrong (so we never lose the attachment).
+ */
+async function prepareImageForCanvas(
+	blob: Blob,
+	opts: { maxDim?: number; quality?: number } = {}
+): Promise<Blob> {
+	const maxDim = opts.maxDim ?? 2000;
+	const quality = opts.quality ?? 0.85;
+	// SVG is vector + tiny — rasterizing would only make it worse.
+	if (blob.type === "image/svg+xml") return blob;
+
+	const url = URL.createObjectURL(blob);
+	try {
+		const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+			const el = new Image();
+			el.onload = () => resolve(el);
+			el.onerror = () => reject(new Error("Failed to decode image"));
+			el.src = url;
+		});
+		const w = img.naturalWidth || 0;
+		const h = img.naturalHeight || 0;
+		if (!w || !h) return blob;
+
+		const scale = Math.min(1, maxDim / Math.max(w, h));
+		const alreadyCompressed = blob.type === "image/jpeg" || blob.type === "image/webp";
+		// Nothing to gain: already within bounds and in a compressed format.
+		if (scale === 1 && alreadyCompressed) return blob;
+
+		const targetW = Math.max(1, Math.round(w * scale));
+		const targetH = Math.max(1, Math.round(h * scale));
+		const canvas = document.createElement("canvas");
+		canvas.width = targetW;
+		canvas.height = targetH;
+		const ctx = canvas.getContext("2d");
+		if (!ctx) return blob;
+		ctx.drawImage(img, 0, 0, targetW, targetH);
+
+		// Preserve transparency for png/gif via WebP (alpha-capable); photos → JPEG.
+		const hasAlpha = blob.type === "image/png" || blob.type === "image/gif";
+		const preferredType = hasAlpha ? "image/webp" : "image/jpeg";
+		let out = await new Promise<Blob | null>((resolve) =>
+			canvas.toBlob(resolve, preferredType, quality)
+		);
+		// Fallback to PNG if the preferred type isn't supported by this browser.
+		if (!out) {
+			out = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+		}
+		if (!out) return blob;
+		// If we didn't downscale and re-encoding grew the file, keep the original.
+		if (scale === 1 && out.size >= blob.size) return blob;
+		return out;
+	} catch {
+		return blob;
+	} finally {
+		URL.revokeObjectURL(url);
+	}
+}
+
 function appendSampledPointsFixedHz(
 	points: Point[],
 	nextPoint: Point,
@@ -616,6 +711,14 @@ type DrawingCanvasProps = {
 	defaultGridMode?: GridMode;
 	/** World-space grading annotations rendered in the canvas loop. */
 	gradingAnnotations?: CanvasAnnotation[] | null;
+	/** Show the attach button + enable placing image/PDF objects on the canvas. */
+	enableAttachments?: boolean;
+	/** Pre-populate canvas with previously saved image/PDF objects. */
+	initialObjects?: CanvasObject[] | null;
+	/** Called (debounced) when objects change (added, moved, resized, deleted). */
+	onObjectsChange?: (objects: CanvasObject[]) => void;
+	/** Upload an attachment blob and return a durable URL. Falls back to a data URL when omitted. */
+	onUploadImage?: (blob: Blob) => Promise<string>;
 };
 
 function getStrokeBounds(stroke: Stroke): { minX: number; maxX: number; minY: number; maxY: number } | null {
@@ -716,9 +819,10 @@ function buildLineAnchors(
 		.map((c) => ({ y: c.y, xLeft: c.xLeft, xRight: percentile75([...c.xRights].sort((a, b) => a - b)) }));
 }
 
-export default function DrawingCanvas({ onClose, registerDrawingSnapshot, registerGetLineCount, registerGetGradingCapture, registerGetStaveAnalysis, initialStrokes, onStrokesChange, onEditInteraction, wrapperClassName, readOnly = false, defaultGridMode = "lines", gradingAnnotations = null }: DrawingCanvasProps) {
+export default function DrawingCanvas({ onClose, registerDrawingSnapshot, registerGetLineCount, registerGetGradingCapture, registerGetStaveAnalysis, initialStrokes, onStrokesChange, onEditInteraction, wrapperClassName, readOnly = false, defaultGridMode = "lines", gradingAnnotations = null, enableAttachments = false, initialObjects = null, onObjectsChange, onUploadImage }: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const objectsCanvasRef = useRef<HTMLCanvasElement>(null);
 	const penButtonRef = useRef<HTMLButtonElement>(null);
 	const eraserButtonRef = useRef<HTMLButtonElement>(null);
 	const gridButtonRef = useRef<HTMLButtonElement>(null);
@@ -850,6 +954,141 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	const [selectedStrokeIndexes, setSelectedStrokeIndexes] = useState<number[]>([]);
 	const [transformSession, setTransformSession] = useState<TransformSession | null>(null);
 	const penPalette = [strokeColor, secondaryStrokeColor, accentColor].filter(Boolean);
+
+	// Attached image / PDF-page objects placed on the canvas.
+	const [objects, setObjects] = useState<CanvasObject[]>(() => initialObjects ?? []);
+	const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+	const [isAttaching, setIsAttaching] = useState(false);
+	const [attachError, setAttachError] = useState<string | null>(null);
+	/** Bumped when an attached image finishes decoding so the canvas redraws. */
+	const [objectImagesVersion, setObjectImagesVersion] = useState(0);
+	const attachErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const showAttachError = useCallback((message: string) => {
+		setAttachError(message);
+		if (attachErrorTimerRef.current) clearTimeout(attachErrorTimerRef.current);
+		attachErrorTimerRef.current = setTimeout(() => {
+			attachErrorTimerRef.current = null;
+			setAttachError(null);
+		}, 5000);
+	}, []);
+	useEffect(() => {
+		return () => {
+			if (attachErrorTimerRef.current) clearTimeout(attachErrorTimerRef.current);
+		};
+	}, []);
+	const objectsRef = useRef(objects);
+	objectsRef.current = objects;
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const objectImageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
+	const localBlobUrlsRef = useRef<Set<string>>(new Set());
+	const objectDragRef = useRef<{
+		id: string;
+		mode: "move" | "resize";
+		startClientX: number;
+		startClientY: number;
+		start: CanvasObject;
+		aspect: number;
+		base: CanvasObject[];
+	} | null>(null);
+	const onObjectsChangeRef = useRef(onObjectsChange);
+	onObjectsChangeRef.current = onObjectsChange;
+	const objectsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	// Sync objects when initialObjects changes (page navigation).
+	const prevInitialObjectsRef = useRef(initialObjects);
+	useEffect(() => {
+		if (prevInitialObjectsRef.current !== initialObjects) {
+			prevInitialObjectsRef.current = initialObjects;
+			setObjects(initialObjects ?? []);
+			setSelectedObjectId(null);
+		}
+	}, [initialObjects]);
+
+	// Debounced persistence of objects (mirrors stroke saving).
+	// Converts ephemeral blob: URLs to data URLs so a slow upload can't wipe the attachment.
+	const objectsInitialMountRef = useRef(true);
+	useEffect(() => {
+		if (objectsInitialMountRef.current) {
+			objectsInitialMountRef.current = false;
+			return;
+		}
+		if (!onObjectsChangeRef.current) return;
+		if (objectsDebounceRef.current) clearTimeout(objectsDebounceRef.current);
+		const snapshot = objects;
+		objectsDebounceRef.current = setTimeout(() => {
+			objectsDebounceRef.current = null;
+			void (async () => {
+				const durable = await Promise.all(
+					snapshot.map(async (o) => {
+						if (!o.src.startsWith("blob:")) return o;
+						try {
+							const res = await fetch(o.src);
+							const blob = await res.blob();
+							const dataUrl = await blobToDataUrl(blob);
+							return { ...o, src: dataUrl };
+						} catch {
+							return null;
+						}
+					})
+				);
+				onObjectsChangeRef.current?.(durable.filter((o): o is CanvasObject => o != null));
+			})();
+		}, 1200);
+		return () => {
+			if (objectsDebounceRef.current) clearTimeout(objectsDebounceRef.current);
+		};
+	}, [objects]);
+
+	// Flush pending object save on unmount.
+	useEffect(() => {
+		return () => {
+			if (objectsDebounceRef.current) {
+				clearTimeout(objectsDebounceRef.current);
+				objectsDebounceRef.current = null;
+				onObjectsChangeRef.current?.(objectsRef.current);
+			}
+			for (const url of localBlobUrlsRef.current) {
+				URL.revokeObjectURL(url);
+			}
+			localBlobUrlsRef.current.clear();
+		};
+	}, []);
+
+	/** Decode attached images into a cache so we can paint them on the canvas. */
+	useEffect(() => {
+		let cancelled = false;
+		const needed = new Set(objects.map((o) => o.src).filter(Boolean));
+
+		for (const src of needed) {
+			const cached = objectImageCacheRef.current.get(src);
+			if (cached && cached.complete && cached.naturalWidth > 0) continue;
+			if (cached && !cached.complete) continue; // already loading
+
+			const img = new Image();
+			// Don't set crossOrigin — Firebase download URLs often lack CORS for canvas,
+			// and anonymous mode would make the image fail to load entirely.
+			img.onload = () => {
+				if (cancelled) return;
+				setObjectImagesVersion((v) => v + 1);
+			};
+			img.onerror = () => {
+				console.error("[DrawingCanvas] failed to decode attached image:", src.slice(0, 120));
+				objectImageCacheRef.current.delete(src);
+				if (!cancelled) setObjectImagesVersion((v) => v + 1);
+			};
+			objectImageCacheRef.current.set(src, img);
+			img.src = src;
+		}
+
+		// Drop cache entries we no longer need (except in-flight local blob URLs still referenced).
+		for (const key of Array.from(objectImageCacheRef.current.keys())) {
+			if (!needed.has(key)) objectImageCacheRef.current.delete(key);
+		}
+
+		return () => {
+			cancelled = true;
+		};
+	}, [objects]);
 
 	const isDrawingRef = useRef(false);
 	const lastPointRef = useRef<Point | null>(null);
@@ -986,64 +1225,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		ctx.translate(pan.x, pan.y);
 		ctx.scale(scale, scale);
 
-		// Grid under ink - lines, dots, or music staves
-		if (gridMode !== "off" && gridColor) {
-			const left = -pan.x / scale;
-			const top = -pan.y / scale;
-			const right = left + w / scale;
-			const bottom = top + h / scale;
-			ctx.globalAlpha = gridOpacity;
-
-			if (gridMode === "music") {
-				ctx.strokeStyle = gridColor;
-				ctx.lineWidth = 1.2 / scale;
-				const startStave = Math.floor(top / MUSIC_STAVE_REPEAT);
-				const endStave = Math.ceil(bottom / MUSIC_STAVE_REPEAT);
-				ctx.beginPath();
-				for (let s = startStave; s <= endStave; s++) {
-					const staveTop = s * MUSIC_STAVE_REPEAT;
-					for (let i = 0; i < MUSIC_STAFF_LINES; i++) {
-						const y = staveTop + i * MUSIC_LINE_GAP;
-						ctx.moveTo(left, y);
-						ctx.lineTo(right, y);
-					}
-				}
-				ctx.stroke();
-			} else if (gridMode === "essay") {
-				drawEssayGrid(ctx, left, top, right, bottom, scale, gridColor, gridOpacity);
-			} else {
-				const startX = Math.floor(left / GRID_STEP) * GRID_STEP;
-				const endX = Math.ceil(right / GRID_STEP) * GRID_STEP;
-				const startY = Math.floor(top / GRID_STEP) * GRID_STEP;
-				const endY = Math.ceil(bottom / GRID_STEP) * GRID_STEP;
-				if (gridMode === "lines") {
-					ctx.strokeStyle = gridColor;
-					ctx.lineWidth = 1 / scale;
-					ctx.beginPath();
-					for (let x = startX; x <= endX; x += GRID_STEP) {
-						ctx.moveTo(x, top);
-						ctx.lineTo(x, bottom);
-					}
-					for (let y = startY; y <= endY; y += GRID_STEP) {
-						ctx.moveTo(left, y);
-						ctx.lineTo(right, y);
-					}
-					ctx.stroke();
-				} else {
-					ctx.fillStyle = gridColor;
-					for (let x = startX; x <= endX; x += GRID_STEP) {
-						for (let y = startY; y <= endY; y += GRID_STEP) {
-							ctx.beginPath();
-							ctx.arc(x, y, GRID_DOT_RADIUS / scale, 0, Math.PI * 2);
-							ctx.fill();
-						}
-					}
-				}
-			}
-			ctx.globalAlpha = 1;
-		}
-
-		// Draw strokes above the grid
+		// Strokes only — grid + images are on the objects canvas underneath
 		for (let index = 0; index < strokes.length; index++) {
 			drawStroke(ctx, strokes[index], { muted: targetedStrokeIndexes.has(index) });
 		}
@@ -1192,11 +1374,108 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		}
 
 		ctx.restore();
-	}, [pan, scale, gridMode, strokes, currentStroke, strokeColor, gridColor, tool, lineAnchors, gradingAnnotations, accentColor, fontReady, lassoPath, selectedStrokeIndexes, transformSession, eraserMode, eraserHitRadius, penPalette, activePenColorIndex, gridOpacity]);
+	}, [pan, scale, strokes, currentStroke, strokeColor, tool, lineAnchors, gradingAnnotations, accentColor, fontReady, lassoPath, selectedStrokeIndexes, transformSession, eraserMode, eraserHitRadius, penPalette, activePenColorIndex]);
+
+	/** Paint grid then attached images (under ink) so images sit above the grid. */
+	const drawObjects = useCallback(() => {
+		const canvas = objectsCanvasRef.current;
+		const ctx = canvas?.getContext("2d");
+		if (!canvas || !ctx) return;
+
+		const dpr = window.devicePixelRatio || 1;
+		const rect = canvas.getBoundingClientRect();
+		const w = rect.width;
+		const h = rect.height;
+		if (w <= 0 || h <= 0) return;
+		if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+			canvas.width = w * dpr;
+			canvas.height = h * dpr;
+			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		}
+
+		ctx.clearRect(0, 0, w, h);
+		ctx.save();
+		ctx.translate(pan.x, pan.y);
+		ctx.scale(scale, scale);
+
+		// Grid first so images render above it
+		if (gridMode !== "off" && gridColor) {
+			const left = -pan.x / scale;
+			const top = -pan.y / scale;
+			const right = left + w / scale;
+			const bottom = top + h / scale;
+			ctx.globalAlpha = gridOpacity;
+
+			if (gridMode === "music") {
+				ctx.strokeStyle = gridColor;
+				ctx.lineWidth = 1.2 / scale;
+				const startStave = Math.floor(top / MUSIC_STAVE_REPEAT);
+				const endStave = Math.ceil(bottom / MUSIC_STAVE_REPEAT);
+				ctx.beginPath();
+				for (let s = startStave; s <= endStave; s++) {
+					const staveTop = s * MUSIC_STAVE_REPEAT;
+					for (let i = 0; i < MUSIC_STAFF_LINES; i++) {
+						const y = staveTop + i * MUSIC_LINE_GAP;
+						ctx.moveTo(left, y);
+						ctx.lineTo(right, y);
+					}
+				}
+				ctx.stroke();
+			} else if (gridMode === "essay") {
+				drawEssayGrid(ctx, left, top, right, bottom, scale, gridColor, gridOpacity);
+			} else {
+				const startX = Math.floor(left / GRID_STEP) * GRID_STEP;
+				const endX = Math.ceil(right / GRID_STEP) * GRID_STEP;
+				const startY = Math.floor(top / GRID_STEP) * GRID_STEP;
+				const endY = Math.ceil(bottom / GRID_STEP) * GRID_STEP;
+				if (gridMode === "lines") {
+					ctx.strokeStyle = gridColor;
+					ctx.lineWidth = 1 / scale;
+					ctx.beginPath();
+					for (let x = startX; x <= endX; x += GRID_STEP) {
+						ctx.moveTo(x, top);
+						ctx.lineTo(x, bottom);
+					}
+					for (let y = startY; y <= endY; y += GRID_STEP) {
+						ctx.moveTo(left, y);
+						ctx.lineTo(right, y);
+					}
+					ctx.stroke();
+				} else {
+					ctx.fillStyle = gridColor;
+					for (let x = startX; x <= endX; x += GRID_STEP) {
+						for (let y = startY; y <= endY; y += GRID_STEP) {
+							ctx.beginPath();
+							ctx.arc(x, y, GRID_DOT_RADIUS / scale, 0, Math.PI * 2);
+							ctx.fill();
+						}
+					}
+				}
+			}
+			ctx.globalAlpha = 1;
+		}
+
+		for (const obj of objects) {
+			if (!obj.src || obj.width <= 0 || obj.height <= 0) continue;
+			const img = objectImageCacheRef.current.get(obj.src);
+			if (!img || !img.complete || img.naturalWidth <= 0) continue;
+			try {
+				ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
+			} catch (err) {
+				console.error("[DrawingCanvas] drawImage failed:", err);
+			}
+		}
+
+		ctx.restore();
+	}, [pan, scale, objects, objectImagesVersion, gridMode, gridColor, gridOpacity]);
 
 	useEffect(() => {
 		draw();
 	}, [draw]);
+
+	useEffect(() => {
+		drawObjects();
+	}, [drawObjects]);
 
 	useEffect(() => {
 		setSelectedStrokeIndexes((previous) => {
@@ -1213,6 +1492,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		if (selectedStrokeIndexesRef.current.length > 0) setSelectedStrokeIndexes([]);
 		if (lassoPath) setLassoPath(null);
 		if (transformSessionRef.current) setTransformSession(null);
+		setSelectedObjectId(null);
 	}, [tool, lassoPath]);
 
 	const clearToolLongPressTimer = useCallback(() => {
@@ -1321,7 +1601,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 
 	// Expose current drawing as PNG for AI/vision (includes music staves when active)
 	const getSnapshot = useCallback(() => {
-		if (strokes.length === 0 && !currentStroke) return null;
+		if (strokes.length === 0 && !currentStroke && objects.length === 0) return null;
 		const canvas = canvasRef.current;
 		if (!canvas || canvas.width === 0 || canvas.height === 0) return null;
 		const dpr = window.devicePixelRatio || 1;
@@ -1397,6 +1677,18 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			drawEssayGrid(ctx, left, top, right, bottom, scale, "#BBBBBB", 1);
 		}
 
+		// Images above grid, under ink
+		for (const obj of objects) {
+			if (!obj.src || obj.width <= 0 || obj.height <= 0) continue;
+			const img = objectImageCacheRef.current.get(obj.src);
+			if (!img || !img.complete || img.naturalWidth <= 0) continue;
+			try {
+				ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
+			} catch {
+				/* skip tainted / failed images in snapshot */
+			}
+		}
+
 		const drawSnapshotPenStroke = (stroke: Stroke) => {
 			if (stroke.tool !== "pen" || stroke.points.length < 2) return;
 			ctx.globalCompositeOperation = "source-over";
@@ -1439,8 +1731,13 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		for (const stroke of strokes) drawSnapshotPenStroke(stroke);
 		if (currentStroke?.tool === "pen") drawSnapshotPenStroke(currentStroke);
 		ctx.restore();
-		return off.toDataURL("image/png");
-	}, [pan, scale, strokes, currentStroke, gridMode, penPalette, activePenColorIndex]);
+		try {
+			return off.toDataURL("image/png");
+		} catch (err) {
+			console.error("[DrawingCanvas] snapshot failed (possibly tainted canvas):", err);
+			return null;
+		}
+	}, [pan, scale, strokes, currentStroke, gridMode, penPalette, activePenColorIndex, objects, objectImagesVersion]);
 	const getGradingCapture = useCallback((mode: "default" | "full-ink" | "retry-aggressive" = "default"): CanvasCapturePayload | null => {
 		const renderStrokes = [...strokes, ...(currentStroke ? [currentStroke] : [])];
 		if (!renderStrokes.some((stroke) => stroke.tool === "pen" && stroke.points.length > 1)) return null;
@@ -1733,6 +2030,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					} else {
 						setTransformSession(null);
 						setSelectedStrokeIndexes([]);
+						setSelectedObjectId(null);
 						setLassoPath([world]);
 						isDrawingRef.current = true;
 					}
@@ -1963,6 +2261,241 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 		setLassoPath(null);
 	}, [commitStrokeChange]);
 
+	// --- Attached objects (images / PDF pages) ---
+
+	/** Compute a nicely-sized, centered placement (world coords) for a new object. */
+	const placeObjectRect = useCallback((naturalWidth: number, naturalHeight: number) => {
+		const rect = canvasRef.current?.getBoundingClientRect();
+		const viewportW = rect?.width ?? 800;
+		const viewportH = rect?.height ?? 600;
+		const currentScale = scaleRef.current || 1;
+		const currentPan = panRef.current;
+		const maxWorldW = (viewportW * 0.6) / currentScale;
+		const maxWorldH = (viewportH * 0.7) / currentScale;
+		const ratio = Math.min(maxWorldW / naturalWidth, maxWorldH / naturalHeight, 1);
+		const width = Math.max(40, naturalWidth * ratio);
+		const height = Math.max(40, naturalHeight * ratio);
+		const centerWorldX = (viewportW / 2 - currentPan.x) / currentScale;
+		const centerWorldY = (viewportH / 2 - currentPan.y) / currentScale;
+		return { x: centerWorldX - width / 2, y: centerWorldY - height / 2, width, height };
+	}, []);
+
+	const resolveAssetUrl = useCallback(
+		async (blob: Blob): Promise<string> => {
+			if (onUploadImage) {
+				try {
+					return await onUploadImage(blob);
+				} catch (err) {
+					console.error("[DrawingCanvas] asset upload failed, embedding inline:", err);
+				}
+			}
+			return blobToDataUrl(blob);
+		},
+		[onUploadImage]
+	);
+
+	const handleAttachFiles = useCallback(
+		async (files: FileList | null) => {
+			if (!files || files.length === 0) return;
+			setAttachError(null);
+			setIsAttaching(true);
+			const unsupported: string[] = [];
+			const failed: string[] = [];
+			try {
+				const created: CanvasObject[] = [];
+				const pendingUpgrades: { id: string; blob: Blob; localSrc: string }[] = [];
+				const gap = 24;
+				let stackX: number | null = null;
+				let stackY: number | null = null;
+
+				const pushObject = (localSrc: string, naturalW: number, naturalH: number, blob: Blob) => {
+					const placed = placeObjectRect(naturalW, naturalH);
+					if (stackX == null || stackY == null) {
+						stackX = placed.x;
+						stackY = placed.y;
+					}
+					const obj: CanvasObject = {
+						id: genObjectId(),
+						src: localSrc,
+						x: stackX,
+						y: stackY,
+						width: placed.width,
+						height: placed.height,
+					};
+					stackY += placed.height + gap;
+					created.push(obj);
+					pendingUpgrades.push({ id: obj.id, blob, localSrc });
+				};
+
+				const isPdf = (file: File) =>
+					file.type === "application/pdf" ||
+					file.name.toLowerCase().endsWith(".pdf");
+				const isImage = (file: File) =>
+					file.type.startsWith("image/") ||
+					/\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)$/i.test(file.name);
+
+				for (const file of Array.from(files)) {
+					if (isPdf(file)) {
+						let pageUrls: string[] = [];
+						try {
+							pageUrls = await renderPdfPages(file);
+						} catch (err) {
+							console.error("[DrawingCanvas] failed to render PDF:", err);
+							failed.push(file.name);
+							continue;
+						}
+						if (pageUrls.length === 0) {
+							failed.push(file.name);
+							continue;
+						}
+						for (const pageUrl of pageUrls) {
+							try {
+								const rawBlob = await dataUrlToBlob(pageUrl);
+								const blob = await prepareImageForCanvas(rawBlob, { maxDim: 2400 });
+								const localSrc = URL.createObjectURL(blob);
+								localBlobUrlsRef.current.add(localSrc);
+								const { width, height } = await loadImageSize(localSrc);
+								pushObject(localSrc, width, height, blob);
+							} catch (err) {
+								console.error("[DrawingCanvas] failed to attach PDF page:", err);
+								failed.push(file.name);
+								break;
+							}
+						}
+					} else if (isImage(file)) {
+						try {
+							const prepared = await prepareImageForCanvas(file);
+							const localSrc = URL.createObjectURL(prepared);
+							localBlobUrlsRef.current.add(localSrc);
+							let dims = { width: 400, height: 300 };
+							try {
+								dims = await loadImageSize(localSrc);
+							} catch {
+								/* use fallback size */
+							}
+							pushObject(localSrc, dims.width, dims.height, prepared);
+						} catch (err) {
+							console.error("[DrawingCanvas] failed to attach image:", err);
+							failed.push(file.name);
+						}
+					} else {
+						unsupported.push(file.name);
+					}
+				}
+
+				// Place objects immediately with local blob URLs so they render before upload.
+				if (created.length > 0) {
+					setObjects((prev) => [...prev, ...created]);
+					setTool("lasso");
+					setSelectedObjectId(created[0].id);
+				}
+
+				if (unsupported.length > 0 || failed.length > 0) {
+					const parts: string[] = [];
+					if (unsupported.length > 0) {
+						parts.push(
+							unsupported.length === 1
+								? `"${unsupported[0]}" isn't an image or PDF`
+								: `${unsupported.length} files weren't images or PDFs`
+						);
+					}
+					if (failed.length > 0) {
+						parts.push(
+							failed.length === 1
+								? `couldn't open "${failed[0]}"`
+								: `couldn't open ${failed.length} files`
+						);
+					}
+					showAttachError(
+						`${parts.join(" · ")}. Only images and PDFs can be added.`
+					);
+				}
+
+				// Upgrade local blob URLs to durable storage URLs in the background.
+				for (const pending of pendingUpgrades) {
+					void (async () => {
+						try {
+							const durable = await resolveAssetUrl(pending.blob);
+							setObjects((prev) =>
+								prev.map((o) => (o.id === pending.id ? { ...o, src: durable } : o))
+							);
+							// Revoke after React has swapped src away from the blob URL.
+							window.setTimeout(() => {
+								const stillUsed = objectsRef.current.some((o) => o.src === pending.localSrc);
+								if (!stillUsed && localBlobUrlsRef.current.has(pending.localSrc)) {
+									URL.revokeObjectURL(pending.localSrc);
+									localBlobUrlsRef.current.delete(pending.localSrc);
+								}
+							}, 1500);
+						} catch (err) {
+							console.error("[DrawingCanvas] durable upload failed, keeping local preview:", err);
+						}
+					})();
+				}
+			} catch (err) {
+				console.error("[DrawingCanvas] attach failed:", err);
+				showAttachError("Something went wrong adding that file. Please try again.");
+			} finally {
+				setIsAttaching(false);
+			}
+		},
+		[placeObjectRect, resolveAssetUrl, showAttachError]
+	);
+
+	const deleteObject = useCallback((id: string) => {
+		setObjects((prev) => prev.filter((o) => o.id !== id));
+		setSelectedObjectId((current) => (current === id ? null : current));
+	}, []);
+
+	const beginObjectDrag = useCallback(
+		(e: React.PointerEvent, id: string, mode: "move" | "resize") => {
+			e.preventDefault();
+			e.stopPropagation();
+			const target = objectsRef.current.find((o) => o.id === id);
+			if (!target) return;
+			setSelectedObjectId(id);
+			objectDragRef.current = {
+				id,
+				mode,
+				startClientX: e.clientX,
+				startClientY: e.clientY,
+				start: target,
+				aspect: target.height === 0 ? 1 : target.width / target.height,
+				base: objectsRef.current,
+			};
+
+			const onMove = (ev: PointerEvent) => {
+				const drag = objectDragRef.current;
+				if (!drag) return;
+				const currentScale = scaleRef.current || 1;
+				const dxWorld = (ev.clientX - drag.startClientX) / currentScale;
+				const dyWorld = (ev.clientY - drag.startClientY) / currentScale;
+				setObjects((prev) =>
+					prev.map((o) => {
+						if (o.id !== drag.id) return o;
+						if (drag.mode === "move") {
+							return { ...o, x: drag.start.x + dxWorld, y: drag.start.y + dyWorld };
+						}
+						const deltaW = Math.max(dxWorld, dyWorld * drag.aspect);
+						const width = Math.max(40, drag.start.width + deltaW);
+						const height = width / drag.aspect;
+						return { ...o, width, height };
+					})
+				);
+			};
+			const onUp = () => {
+				objectDragRef.current = null;
+				window.removeEventListener("pointermove", onMove);
+				window.removeEventListener("pointerup", onUp);
+				window.removeEventListener("pointercancel", onUp);
+			};
+			window.addEventListener("pointermove", onMove);
+			window.addEventListener("pointerup", onUp);
+			window.addEventListener("pointercancel", onUp);
+		},
+		[]
+	);
+
 	const undo = useCallback(() => {
 		if (undoStackRef.current.length === 0) return;
 		onEditInteraction?.();
@@ -2064,11 +2597,30 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			<div ref={accentColorSampleRef} className="color-txt-accent absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			<div ref={accentBgSampleRef} className="color-bg-accent absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			<div ref={mutedBgSampleRef} className="color-bg-grey-5 absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
+			{enableAttachments && (
+				<input
+					ref={fileInputRef}
+					type="file"
+					accept="image/*,application/pdf"
+					multiple
+					className="hidden"
+					onChange={(e) => {
+						void handleAttachFiles(e.target.files);
+						e.target.value = "";
+					}}
+				/>
+			)}
 			{/* Canvas area */}
 			<div
 				className="flex-1 min-h-0 relative z-0 overflow-hidden select-none"
 				style={{ WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}
 			>
+				{/* Images / PDF pages — separate layer so ink eraser doesn't punch through them */}
+				<canvas
+					ref={objectsCanvasRef}
+					className="absolute inset-0 w-full h-full block pointer-events-none"
+					aria-hidden
+				/>
 				<canvas
 					ref={canvasRef}
 					tabIndex={-1}
@@ -2090,6 +2642,75 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 						WebkitTapHighlightColor: "transparent",
 					}}
 				/>
+				{/* Object manipulation layer — only in select mode so drawing passes through otherwise */}
+				{!readOnly && enableAttachments && tool === "lasso" && objects.map((o) => {
+					const left = o.x * scale + pan.x;
+					const top = o.y * scale + pan.y;
+					const width = o.width * scale;
+					const height = o.height * scale;
+					const selected = selectedObjectId === o.id;
+					const accent = accentColor || strokeColor || "#2563EB";
+					return (
+						<div
+							key={o.id}
+							onPointerDown={(e) => beginObjectDrag(e, o.id, "move")}
+							className="absolute z-[1500]"
+							style={{
+								left,
+								top,
+								width,
+								height,
+								cursor: "move",
+								touchAction: "none",
+								borderRadius: 4,
+								border: selected
+									? `1.5px solid ${accent}`
+									: "1.5px dashed rgba(128, 128, 128, 0.55)",
+								pointerEvents: "auto",
+							}}
+						>
+							{selected && (
+								<>
+									<div
+										onPointerDown={(e) => beginObjectDrag(e, o.id, "resize")}
+										className="absolute"
+										style={{
+											right: -7,
+											bottom: -7,
+											width: 14,
+											height: 14,
+											borderRadius: "9999px",
+											background: "#ffffff",
+											border: `2px solid ${accent}`,
+											cursor: "nwse-resize",
+											touchAction: "none",
+										}}
+									/>
+									<button
+										type="button"
+										onPointerDown={(e) => e.stopPropagation()}
+										onClick={(e) => {
+											e.stopPropagation();
+											deleteObject(o.id);
+										}}
+										className="absolute flex items-center justify-center rounded-full color-bg color-txt-main color-shadow border hover:color-bg-grey-10 transition-colors"
+										style={{
+											right: -11,
+											top: -11,
+											width: 22,
+											height: 22,
+											borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
+										}}
+										title="Remove attachment"
+										aria-label="Remove attachment"
+									>
+										<Trash2 size={12} strokeWidth={2} />
+									</button>
+								</>
+							)}
+						</div>
+					);
+				})}
 				{!readOnly && selectionDeleteAnchor && (
 					<button
 						type="button"
@@ -2110,6 +2731,25 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					>
 						<Trash2 size={14} strokeWidth={2} />
 					</button>
+				)}
+				{/* Attachment error toast (unsupported file types / failed loads) */}
+				{!readOnly && enableAttachments && attachError && (
+					<div
+						className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[2100] flex max-w-[min(90vw,26rem)] items-start gap-2 rounded-[var(--radius-out)] px-3 py-2 color-bg color-shadow border"
+						style={{ borderColor: "color-mix(in srgb, currentColor 18%, transparent)" }}
+						role="alert"
+					>
+						<Ban size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-red-500" />
+						<span className="text-xs font-medium leading-snug color-txt-main">{attachError}</span>
+						<button
+							type="button"
+							onClick={() => setAttachError(null)}
+							className="ml-1 shrink-0 rounded-full p-0.5 color-txt-sub hover:color-bg-grey-10 transition-colors"
+							aria-label="Dismiss"
+						>
+							<X size={14} strokeWidth={2} />
+						</button>
+					</div>
 				)}
 				{/* Floating bar - mostly transparent with blur (hidden in readOnly) */}
 				{!readOnly && (
@@ -2208,6 +2848,24 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				>
 					<MousePointer2 size={18} strokeWidth={2} />
 				</button>
+				{enableAttachments && (
+					<button
+						type="button"
+						onClick={() => {
+							if (!isAttaching) fileInputRef.current?.click();
+						}}
+						disabled={isAttaching}
+						className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 hover:color-bg-grey-10 ${isAttaching ? "opacity-60 cursor-wait" : ""}`}
+						title="Attach image or PDF"
+						aria-label="Attach image or PDF"
+					>
+						{isAttaching ? (
+							<LoaderCircle size={18} strokeWidth={2} className="animate-spin" />
+						) : (
+							<Paperclip size={18} strokeWidth={2} />
+						)}
+					</button>
+				)}
 				<div className="relative">
 				<button
 					ref={gridButtonRef}
