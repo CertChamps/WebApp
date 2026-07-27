@@ -202,9 +202,17 @@ export function useExamPapers(
             const levelSnap = await getDoc(levelRef);
             if (!usingFallbackLevels) {
               if (!levelSnap.exists()) continue;
+              const levelData = levelSnap.data() ?? {};
               const levelSections =
-                (levelSnap.data()?.sections as string[] | undefined) ?? [];
+                (levelData.sections as string[] | undefined) ?? [];
+              // Image catalogue levels use sections: ["questions"] — skip PDF papers path
+              if (levelData.contentMode === "image") continue;
               if (!levelSections.includes("papers")) continue;
+            } else {
+              // Maths fallback: still skip if this level was migrated to images
+              if (levelSnap.exists() && levelSnap.data()?.contentMode === "image") {
+                continue;
+              }
             }
 
             const papersRef = collection(

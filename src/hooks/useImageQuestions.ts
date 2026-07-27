@@ -1,8 +1,22 @@
 import { useEffect, useRef, useState } from "react";
-import { ref, listAll, getDownloadURL, getMetadata } from "firebase/storage";
+import { ref, listAll, getDownloadURL } from "firebase/storage";
 import { storage } from "../../firebase";
+import {
+  DEFAULT_EXAM_CYCLE,
+  type ExamCycleId,
+} from "../lib/examCycle";
+import {
+  listCatalogueLevels,
+  listCataloguePapers,
+  listCatalogueQuestions,
+  listCatalogueSubjectAvailability,
+  listCatalogueTopics,
+  resolveImageDownloadUrl,
+  dedupeCatalogueByFileStem,
+  type CataloguePaper,
+  type CatalogueQuestion,
+} from "../lib/firestoreImageCatalogue";
 
-const STORAGE_BASE = "temp_images/leaving-cert";
 const MARKING_SCHEME_BASE = "marking-schemes/leaving-cert";
 
 const markingSchemeFileCache = new Map<string, CacheEntry<MarkingSchemeFile[]>>();
@@ -21,12 +35,26 @@ export type ImageQuestion = {
   displayName: string;
   storagePath: string;
   downloadUrl: string;
+  /** Firestore catalogue metadata (when loaded from Firestore). */
+  year?: number;
+  paper?: number;
+  paperType?: string;
+  topic?: string;
+  catalogueId?: string;
+  /** Storage paths for marking scheme image(s), when present on the catalogue doc. */
+  markingSchemePaths?: string[];
 };
 
 export type GroupedImageQuestion = {
   key: string;
   displayName: string;
   images: ImageQuestion[];
+  year?: number;
+  paper?: number;
+  paperType?: string;
+  topic?: string;
+  /** Aggregated marking scheme paths from catalogue (preferred over Storage listing). */
+  markingSchemePaths?: string[];
 };
 
 export type ImageSubjectAvailability = {
@@ -34,15 +62,16 @@ export type ImageSubjectAvailability = {
   levels: string[];
 };
 
+export type ImagePaperGroup = CataloguePaper;
+
 type CacheEntry<T> = { data: T; ts: number };
 const CACHE_TTL = 5 * 60 * 1000;
 
 const levelCache = new Map<string, CacheEntry<string[]>>();
 const topicCache = new Map<string, CacheEntry<ImageTopic[]>>();
 const questionCache = new Map<string, CacheEntry<ImageQuestion[]>>();
+const paperCache = new Map<string, CacheEntry<ImagePaperGroup[]>>();
 let subjectAvailabilityCache: CacheEntry<ImageSubjectAvailability[]> | null = null;
-const resolvedFolderCache = new Map<string, string>();
-let parentFolderList: string[] | null = null;
 
 function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
   const entry = cache.get(key);
@@ -50,34 +79,34 @@ function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null 
   return null;
 }
 
-/** Lists the subjects that actually have image questions, including their available levels. */
-export async function listImageSubjectAvailability(): Promise<ImageSubjectAvailability[]> {
-  if (subjectAvailabilityCache && Date.now() - subjectAvailabilityCache.ts < CACHE_TTL) {
+/** Lists subjects that have image questions in Firestore (levels non-empty). */
+export async function listImageSubjectAvailability(
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
+): Promise<ImageSubjectAvailability[]> {
+  const cacheKey = `avail:${cycle}`;
+  if (
+    subjectAvailabilityCache &&
+    subjectAvailabilityCache.ts &&
+    Date.now() - subjectAvailabilityCache.ts < CACHE_TTL &&
+    (subjectAvailabilityCache as CacheEntry<ImageSubjectAvailability[]> & { cycle?: string }).cycle ===
+      cycle
+  ) {
     return subjectAvailabilityCache.data;
   }
 
-  const rootResult = await listAll(ref(storage, STORAGE_BASE));
-  parentFolderList = rootResult.prefixes.map((prefix) => prefix.name);
-
-  const subjects = await Promise.all(
-    rootResult.prefixes.map(async (prefix) => {
-      try {
-        const result = await listAll(ref(storage, prefix.fullPath));
-        const levels = result.prefixes.map((level) => level.name);
-        levelCache.set(prefix.name, { data: levels, ts: Date.now() });
-        return { storageName: prefix.name, levels };
-      } catch {
-        return { storageName: prefix.name, levels: [] };
-      }
-    })
-  );
-
-  const available = subjects.filter((subject) => subject.levels.length > 0);
+  const available = await listCatalogueSubjectAvailability(cycle);
   subjectAvailabilityCache = { data: available, ts: Date.now() };
+  (subjectAvailabilityCache as CacheEntry<ImageSubjectAvailability[]> & { cycle?: string }).cycle =
+    cycle;
+  for (const s of available) {
+    levelCache.set(`${cycle}:${s.storageName}`, { data: s.levels, ts: Date.now() });
+  }
   return available;
 }
 
-export function useImageSubjectAvailability(): {
+export function useImageSubjectAvailability(
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
+): {
   subjects: ImageSubjectAvailability[];
   loading: boolean;
   error: string | null;
@@ -90,7 +119,7 @@ export function useImageSubjectAvailability(): {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    listImageSubjectAvailability()
+    listImageSubjectAvailability(cycle)
       .then((result) => {
         if (!cancelled) setSubjects(result);
       })
@@ -105,41 +134,9 @@ export function useImageSubjectAvailability(): {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cycle]);
 
   return { subjects, loading, error };
-}
-
-const normaliseForMatch = (s: string) => s.replace(/[-_]/g, "").toLowerCase();
-
-async function resolveStorageFolder(subject: string): Promise<string> {
-  const cached = resolvedFolderCache.get(subject);
-  if (cached) return cached;
-
-  const directRef = ref(storage, `${STORAGE_BASE}/${subject}`);
-  const directResult = await listAll(directRef);
-  if (directResult.prefixes.length > 0 || directResult.items.length > 0) {
-    resolvedFolderCache.set(subject, subject);
-    return subject;
-  }
-
-  if (!parentFolderList) {
-    const parentRef = ref(storage, STORAGE_BASE);
-    const parentResult = await listAll(parentRef);
-    parentFolderList = parentResult.prefixes.map((p) => p.name);
-  }
-
-  const norm = normaliseForMatch(subject);
-  const match =
-    parentFolderList.find((f) => normaliseForMatch(f) === norm) ??
-    parentFolderList.find((f) => {
-      const nf = normaliseForMatch(f);
-      return nf.includes(norm) || norm.includes(nf);
-    });
-
-  const resolved = match ?? subject;
-  resolvedFolderCache.set(subject, resolved);
-  return resolved;
 }
 
 function stripExtension(filename: string): string {
@@ -193,7 +190,16 @@ function naturalCompare(a: string, b: string): number {
  * name exists. This avoids false positives like stripping "_9" from "Q9".
  */
 export function groupImageQuestions(flat: ImageQuestion[]): GroupedImageQuestion[] {
-  const bareNames = flat.map((q) => stripExtension(q.name));
+  // Exact same storage object twice → keep one
+  const pathSeen = new Set<string>();
+  const uniqueFlat = flat.filter((q) => {
+    const key = q.storagePath.trim().toLowerCase();
+    if (!key || pathSeen.has(key)) return false;
+    pathSeen.add(key);
+    return true;
+  });
+
+  const bareNames = uniqueFlat.map((q) => stripExtension(q.name));
   const bareNameSet = new Set(bareNames);
 
   const tentativeKeyCount = new Map<string, number>();
@@ -205,16 +211,15 @@ export function groupImageQuestions(flat: ImageQuestion[]): GroupedImageQuestion
   const map = new Map<string, ImageQuestion[]>();
   const keyOrder: string[] = [];
 
-  for (let i = 0; i < flat.length; i++) {
-    const q = flat[i];
+  for (let i = 0; i < uniqueFlat.length; i++) {
+    const q = uniqueFlat[i];
     const bare = bareNames[i];
     const tentativeKey = tryStripSuffix(bare);
     const stripped = tentativeKey !== bare;
 
     const shouldGroup =
       stripped &&
-      ((tentativeKeyCount.get(tentativeKey) ?? 0) > 1 ||
-        bareNameSet.has(tentativeKey));
+      ((tentativeKeyCount.get(tentativeKey) ?? 0) > 1 || bareNameSet.has(tentativeKey));
 
     const key = shouldGroup ? tentativeKey : bare;
 
@@ -229,102 +234,121 @@ export function groupImageQuestions(flat: ImageQuestion[]): GroupedImageQuestion
 
   return keyOrder.map((key) => {
     const images = map.get(key)!;
-    images.sort(
+    // Within a multipart group, collapse duplicate part filenames from other topics
+    const stemSeen = new Set<string>();
+    const dedupedImages = images.filter((img) => {
+      const stem = stripExtension(img.name).toLowerCase();
+      if (stemSeen.has(stem)) return false;
+      stemSeen.add(stem);
+      return true;
+    });
+    dedupedImages.sort(
       (a, b) =>
         getPartNumber(stripExtension(a.name), key) -
         getPartNumber(stripExtension(b.name), key)
     );
+    const head = dedupedImages[0];
+    const markingSchemePaths = collectMarkingSchemePaths(dedupedImages);
     return {
       key,
       displayName: prettifyName(key),
-      images,
+      images: dedupedImages,
+      year: head?.year,
+      paper: head?.paper,
+      paperType: head?.paperType,
+      topic: head?.topic,
+      ...(markingSchemePaths.length > 0 ? { markingSchemePaths } : {}),
     };
   });
 }
 
-export async function listLevelsForSubject(subject: string): Promise<string[]> {
-  const key = subject;
+function collectMarkingSchemePaths(
+  images: Array<{ markingSchemePaths?: string[] }>
+): string[] {
+  const seen = new Set<string>();
+  const paths: string[] = [];
+  for (const img of images) {
+    for (const p of img.markingSchemePaths ?? []) {
+      const trimmed = p.trim();
+      if (!trimmed || seen.has(trimmed)) continue;
+      seen.add(trimmed);
+      paths.push(trimmed);
+    }
+  }
+  return paths;
+}
+
+async function catalogueToImageQuestions(rows: CatalogueQuestion[]): Promise<ImageQuestion[]> {
+  const results = await Promise.allSettled(
+    rows.map(async (q) => {
+      const downloadUrl = await resolveImageDownloadUrl(q.imagePath);
+      return {
+        name: q.fileName,
+        displayName: q.questionName,
+        storagePath: q.imagePath,
+        downloadUrl,
+        year: q.year,
+        paper: q.paper,
+        paperType: q.paperType,
+        topic: q.topic,
+        catalogueId: q.id,
+        ...(q.markingSchemePaths?.length
+          ? { markingSchemePaths: q.markingSchemePaths }
+          : {}),
+      } satisfies ImageQuestion;
+    })
+  );
+
+  return results
+    .filter((r): r is PromiseFulfilledResult<ImageQuestion> => r.status === "fulfilled")
+    .map((r) => r.value);
+}
+
+export async function listLevelsForSubject(
+  subject: string,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
+): Promise<string[]> {
+  const key = `${cycle}:${subject}`;
   const cached = getCached(levelCache, key);
   if (cached) return cached;
 
-  const resolved = await resolveStorageFolder(subject);
-  const folderRef = ref(storage, `${STORAGE_BASE}/${resolved}`);
-  const result = await listAll(folderRef);
-  const levels = result.prefixes.map((p) => p.name);
+  const levels = await listCatalogueLevels(subject, cycle);
   levelCache.set(key, { data: levels, ts: Date.now() });
   return levels;
 }
 
 export async function listTopicsForSubjectLevel(
   subject: string,
-  level: string
+  level: string,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
 ): Promise<ImageTopic[]> {
-  const key = `${subject}/${level}`;
+  const key = `${cycle}:${subject}/${level}`;
   const cached = getCached(topicCache, key);
   if (cached) return cached;
 
-  const resolved = await resolveStorageFolder(subject);
-  const folderRef = ref(storage, `${STORAGE_BASE}/${resolved}/${level}`);
-  const result = await listAll(folderRef);
-
-  const topics: ImageTopic[] = await Promise.all(
-    result.prefixes.map(async (prefix) => {
-      const topicRef = ref(storage, prefix.fullPath);
-      const topicResult = await listAll(topicRef);
-      const itemBareNames = topicResult.items.map((i) => stripExtension(i.name));
-      const itemBareSet = new Set(itemBareNames);
-      const tentativeCounts = new Map<string, number>();
-      for (const bare of itemBareNames) {
-        const k = tryStripSuffix(bare);
-        tentativeCounts.set(k, (tentativeCounts.get(k) ?? 0) + 1);
-      }
-      const groupKeys = new Set<string>();
-      for (const bare of itemBareNames) {
-        const tk = tryStripSuffix(bare);
-        const stripped = tk !== bare;
-        const shouldGroup = stripped && ((tentativeCounts.get(tk) ?? 0) > 1 || itemBareSet.has(tk));
-        groupKeys.add(shouldGroup ? tk : bare);
-      }
-      const count = groupKeys.size;
-
+  const topics = await listCatalogueTopics(subject, level, cycle);
+  const mapped: ImageTopic[] = await Promise.all(
+    topics.map(async (t) => {
       let thumbnailUrl: string | null = null;
-      if (topicResult.items.length > 0) {
+      if (t.thumbnailPath) {
         try {
-          const candidates = topicResult.items;
-          const sampleSize = Math.min(candidates.length, 6);
-          const step = Math.max(1, Math.floor(candidates.length / sampleSize));
-          const sampled = Array.from({ length: sampleSize }, (_, i) =>
-            candidates[Math.min(i * step, candidates.length - 1)]
-          );
-          const metas = await Promise.all(
-            sampled.map(async (item) => {
-              try {
-                const m = await getMetadata(item);
-                return { item, size: m.size ?? 0 };
-              } catch {
-                return { item, size: 0 };
-              }
-            })
-          );
-          const best = metas.reduce((a, b) => (b.size > a.size ? b : a));
-          thumbnailUrl = await getDownloadURL(best.item);
+          thumbnailUrl = await resolveImageDownloadUrl(t.thumbnailPath);
         } catch {
           thumbnailUrl = null;
         }
       }
-
       return {
-        name: prefix.name,
-        displayName: prettifyName(prefix.name),
-        path: prefix.fullPath,
-        questionCount: count,
+        name: t.name,
+        displayName: t.displayName,
+        path: t.name,
+        questionCount: t.questionCount,
         thumbnailUrl,
       };
     })
   );
 
-  topicCache.set(key, { data: topics, ts: Date.now() });
-  return topics;
+  topicCache.set(key, { data: mapped, ts: Date.now() });
+  return mapped;
 }
 
 export type MarkingSchemeFile = {
@@ -332,70 +356,106 @@ export type MarkingSchemeFile = {
   storagePath: string;
 };
 
+/** Marking schemes: prefer Firestore catalogue paths; Storage listing is a fallback. */
 export async function listMarkingSchemeFilesForTopic(
   subject: string,
   level: string,
-  topic: string
+  topic: string,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
 ): Promise<MarkingSchemeFile[]> {
-  const key = `ms/${subject}/${level}/${topic}`;
+  const msBase =
+    cycle === "junior"
+      ? "marking-schemes/junior-cycle"
+      : MARKING_SCHEME_BASE;
+
+  const key = `ms/${cycle}/${subject}/${level}/${topic}`;
   const cached = getCached(markingSchemeFileCache, key);
   if (cached) return cached;
 
-  const resolved = await resolveStorageFolder(subject);
-  const folderRef = ref(storage, `${MARKING_SCHEME_BASE}/${resolved}/${level}-level/${topic}`);
-  const result = await listAll(folderRef);
-
-  const files = result.items.map((item) => ({
-    name: item.name,
-    storagePath: item.fullPath,
-  }));
-
-  if (files.length > 0) {
-    markingSchemeFileCache.set(key, { data: files, ts: Date.now() });
-    return files;
-  }
-
-  // Some subjects (notably Mathematics) store marking schemes in only a few
-  // category folders even though the same question appears under several
-  // topics. If the selected topic has no folder, search the whole level and
-  // let the filename matcher below attach the right scheme to each question.
-  const levelKey = `ms-level/${resolved}/${level}`;
-  const cachedLevelFiles = getCached(markingSchemeLevelFileCache, levelKey);
-  if (cachedLevelFiles) {
-    markingSchemeFileCache.set(key, { data: cachedLevelFiles, ts: Date.now() });
-    return cachedLevelFiles;
-  }
-
-  const levelRef = ref(storage, `${MARKING_SCHEME_BASE}/${resolved}/${level}-level`);
-  const levelResult = await listAll(levelRef);
-  const nestedResults = await Promise.all(
-    levelResult.prefixes.map(async (prefix) => {
-      try {
-        const nested = await listAll(ref(storage, prefix.fullPath));
-        return nested.items.map((item) => ({
-          name: item.name,
-          storagePath: item.fullPath,
-        }));
-      } catch {
-        return [] as MarkingSchemeFile[];
+  try {
+    const folderRef = ref(storage, `${msBase}/${subject}/${level}-level/${topic}`);
+    try {
+      const result = await listAll(folderRef);
+      const files = result.items.map((item) => ({
+        name: item.name,
+        storagePath: item.fullPath,
+      }));
+      if (files.length > 0) {
+        markingSchemeFileCache.set(key, { data: files, ts: Date.now() });
+        return files;
       }
-    })
-  );
-  const levelFiles = [
-    ...levelResult.items.map((item) => ({ name: item.name, storagePath: item.fullPath })),
-    ...nestedResults.flat(),
-  ];
+    } catch {
+      // fall through to level-wide search
+    }
 
-  markingSchemeLevelFileCache.set(levelKey, { data: levelFiles, ts: Date.now() });
-  markingSchemeFileCache.set(key, { data: levelFiles, ts: Date.now() });
-  return levelFiles;
+    const levelKey = `ms-level/${cycle}/${subject}/${level}`;
+    const cachedLevelFiles = getCached(markingSchemeLevelFileCache, levelKey);
+    if (cachedLevelFiles) {
+      markingSchemeFileCache.set(key, { data: cachedLevelFiles, ts: Date.now() });
+      return cachedLevelFiles;
+    }
+
+    const levelRef = ref(storage, `${msBase}/${subject}/${level}-level`);
+    const levelResult = await listAll(levelRef);
+    const nestedResults = await Promise.all(
+      levelResult.prefixes.map(async (prefix) => {
+        try {
+          const nested = await listAll(ref(storage, prefix.fullPath));
+          return nested.items.map((item) => ({
+            name: item.name,
+            storagePath: item.fullPath,
+          }));
+        } catch {
+          return [] as MarkingSchemeFile[];
+        }
+      })
+    );
+    const levelFiles = [
+      ...levelResult.items.map((item) => ({ name: item.name, storagePath: item.fullPath })),
+      ...nestedResults.flat(),
+    ];
+    markingSchemeLevelFileCache.set(levelKey, { data: levelFiles, ts: Date.now() });
+    markingSchemeFileCache.set(key, { data: levelFiles, ts: Date.now() });
+    return levelFiles;
+  } catch (err) {
+    // Partial / missing Storage trees must not break practice UI
+    console.warn("[marking-schemes] Storage list failed; catalogue paths may still work:", err);
+    markingSchemeFileCache.set(key, { data: [], ts: Date.now() });
+    return [];
+  }
 }
 
-/** Match marking scheme files to a grouped question by filename prefix (e.g. 2016_-_3_Q8_7). */
+/** Build MarkingSchemeFile entries from storage path strings. */
+export function markingSchemeFilesFromPaths(paths: string[]): MarkingSchemeFile[] {
+  const seen = new Set<string>();
+  const files: MarkingSchemeFile[] = [];
+  for (const raw of paths) {
+    const storagePath = raw?.trim();
+    if (!storagePath || seen.has(storagePath)) continue;
+    seen.add(storagePath);
+    files.push({
+      name: storagePath.split("/").pop() || storagePath,
+      storagePath,
+    });
+  }
+  return files;
+}
+
+/**
+ * Resolve marking schemes for a grouped question.
+ * Prefers Firestore catalogue paths (survives partial Storage listing failures);
+ * falls back to filename matching against a Storage-listed pool.
+ */
 export function getMarkingSchemeFilesForGroupedQuestion(
   allFiles: MarkingSchemeFile[],
   grouped: GroupedImageQuestion
 ): MarkingSchemeFile[] {
+  const fromCatalogue = markingSchemeFilesFromPaths([
+    ...(grouped.markingSchemePaths ?? []),
+    ...grouped.images.flatMap((img) => img.markingSchemePaths ?? []),
+  ]);
+  if (fromCatalogue.length > 0) return fromCatalogue;
+
   if (allFiles.length === 0) return [];
 
   const groupKey = grouped.key;
@@ -422,48 +482,81 @@ export async function resolveMarkingSchemeUrls(
 
   const results = await Promise.allSettled(
     files.map(async (f) => {
-      const downloadUrl = await getDownloadURL(ref(storage, f.storagePath));
+      const path = f.storagePath?.trim();
+      if (!path) throw new Error("empty marking scheme path");
+      const downloadUrl = await getDownloadURL(ref(storage, path));
       return {
         name: f.name,
         displayName: prettifyName(f.name),
-        storagePath: f.storagePath,
+        storagePath: path,
         downloadUrl,
       };
     })
   );
 
-  return results
+  const resolved = results
     .filter((r): r is PromiseFulfilledResult<ImageQuestion> => r.status === "fulfilled")
     .map((r) => r.value);
+
+  if (resolved.length < files.length) {
+    console.warn(
+      `[marking-schemes] resolved ${resolved.length}/${files.length} URLs (missing or inaccessible files skipped)`
+    );
+  }
+
+  return resolved;
 }
 
 export async function listQuestionsForTopic(
   subject: string,
   level: string,
-  topic: string
+  topic: string,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
 ): Promise<ImageQuestion[]> {
-  const key = `${subject}/${level}/${topic}`;
+  const key = `${cycle}:${subject}/${level}/${topic}`;
   const cached = getCached(questionCache, key);
   if (cached) return cached;
 
-  const resolved = await resolveStorageFolder(subject);
-  const folderRef = ref(storage, `${STORAGE_BASE}/${resolved}/${level}/${topic}`);
-  const result = await listAll(folderRef);
-
-  const questions: ImageQuestion[] = await Promise.all(
-    result.items.map(async (item) => {
-      const downloadUrl = await getDownloadURL(item);
-      return {
-        name: item.name,
-        displayName: prettifyName(item.name),
-        storagePath: item.fullPath,
-        downloadUrl,
-      };
-    })
-  );
-
+  const rows = await listCatalogueQuestions(subject, level, { cycle, topic });
+  const questions = await catalogueToImageQuestions(rows);
   questionCache.set(key, { data: questions, ts: Date.now() });
   return questions;
+}
+
+export async function listQuestionsForPaper(
+  subject: string,
+  level: string,
+  year: number,
+  paper: number | null,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
+): Promise<ImageQuestion[]> {
+  const key = `${cycle}:${subject}/${level}/paper:${year}:${paper ?? "x"}`;
+  const cached = getCached(questionCache, key);
+  if (cached) return cached;
+
+  const rows = await listCatalogueQuestions(subject, level, {
+    cycle,
+    year,
+    paper: paper ?? null,
+  });
+  // Same exam scan often lives under several topic folders — show once on paper view.
+  const questions = await catalogueToImageQuestions(dedupeCatalogueByFileStem(rows));
+  questionCache.set(key, { data: questions, ts: Date.now() });
+  return questions;
+}
+
+export async function listPaperGroupsForSubjectLevel(
+  subject: string,
+  level: string,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
+): Promise<ImagePaperGroup[]> {
+  const key = `${cycle}:${subject}/${level}:papers`;
+  const cached = getCached(paperCache, key);
+  if (cached) return cached;
+
+  const papers = await listCataloguePapers(subject, level, cycle);
+  paperCache.set(key, { data: papers, ts: Date.now() });
+  return papers;
 }
 
 export type UseImageTopicsResult = {
@@ -475,7 +568,8 @@ export type UseImageTopicsResult = {
 
 export function useImageTopics(
   subject: string | null,
-  level: string | null
+  level: string | null,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
 ): UseImageTopicsResult {
   const [topics, setTopics] = useState<ImageTopic[]>([]);
   const [levels, setLevels] = useState<string[]>([]);
@@ -498,7 +592,7 @@ export function useImageTopics(
 
     (async () => {
       try {
-        const availableLevels = await listLevelsForSubject(subject);
+        const availableLevels = await listLevelsForSubject(subject, cycle);
         if (id !== abortRef.current) return;
         setLevels(availableLevels);
 
@@ -509,20 +603,58 @@ export function useImageTopics(
           return;
         }
 
-        const topicList = await listTopicsForSubjectLevel(subject, targetLevel);
+        const topicList = await listTopicsForSubjectLevel(subject, targetLevel, cycle);
         if (id !== abortRef.current) return;
         setTopics(topicList);
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (id !== abortRef.current) return;
-        setError(err?.message ?? "Failed to load topics");
+        setError(err instanceof Error ? err.message : "Failed to load topics");
         setTopics([]);
       } finally {
         if (id === abortRef.current) setLoading(false);
       }
     })();
-  }, [subject, level]);
+  }, [subject, level, cycle]);
 
   return { topics, levels, loading, error };
+}
+
+export function useImagePapers(
+  subject: string | null,
+  level: string | null,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
+): { papers: ImagePaperGroup[]; loading: boolean; error: string | null } {
+  const [papers, setPapers] = useState<ImagePaperGroup[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef(0);
+
+  useEffect(() => {
+    if (!subject || !level) {
+      setPapers([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    const id = ++abortRef.current;
+    setLoading(true);
+    setError(null);
+    listPaperGroupsForSubjectLevel(subject, level, cycle)
+      .then((rows) => {
+        if (id !== abortRef.current) return;
+        setPapers(rows);
+      })
+      .catch((err: unknown) => {
+        if (id !== abortRef.current) return;
+        setError(err instanceof Error ? err.message : "Failed to load papers");
+        setPapers([]);
+      })
+      .finally(() => {
+        if (id === abortRef.current) setLoading(false);
+      });
+  }, [subject, level, cycle]);
+
+  return { papers, loading, error };
 }
 
 export type UseImageQuestionsResult = {
@@ -535,7 +667,8 @@ export type UseImageQuestionsResult = {
 export function useImageMarkingSchemesForTopic(
   subject: string | null,
   level: string | null,
-  topic: string | null
+  topic: string | null,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
 ): { files: MarkingSchemeFile[]; loading: boolean; error: string | null } {
   const [files, setFiles] = useState<MarkingSchemeFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -554,21 +687,22 @@ export function useImageMarkingSchemesForTopic(
     setLoading(true);
     setError(null);
 
-    listMarkingSchemeFilesForTopic(subject, level, topic)
+    // Soft-fail: empty list is fine — catalogue paths on questions still work.
+    listMarkingSchemeFilesForTopic(subject, level, topic, cycle)
       .then((items) => {
         if (id !== abortRef.current) return;
         setFiles(items);
       })
       .catch((err: unknown) => {
         if (id !== abortRef.current) return;
-        console.error("Failed to load marking scheme files:", err);
-        setError(err instanceof Error ? err.message : "Failed to load marking schemes");
+        console.warn("[marking-schemes] topic list failed:", err);
+        setError(null);
         setFiles([]);
       })
       .finally(() => {
         if (id === abortRef.current) setLoading(false);
       });
-  }, [subject, level, topic]);
+  }, [subject, level, topic, cycle]);
 
   return { files, loading, error };
 }
@@ -596,7 +730,7 @@ export function useMarkingSchemeUrls(files: MarkingSchemeFile[]) {
       })
       .catch((err: unknown) => {
         if (id !== abortRef.current) return;
-        console.error("Failed to resolve marking scheme URLs:", err);
+        console.warn("[marking-schemes] URL resolve failed:", err);
         setImages([]);
       })
       .finally(() => {
@@ -610,7 +744,8 @@ export function useMarkingSchemeUrls(files: MarkingSchemeFile[]) {
 export function useImageQuestionsForTopic(
   subject: string | null,
   level: string | null,
-  topic: string | null
+  topic: string | null,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
 ): UseImageQuestionsResult {
   const [questions, setQuestions] = useState<ImageQuestion[]>([]);
   const [grouped, setGrouped] = useState<GroupedImageQuestion[]>([]);
@@ -631,29 +766,77 @@ export function useImageQuestionsForTopic(
     setLoading(true);
     setError(null);
 
-    listQuestionsForTopic(subject, level, topic)
+    listQuestionsForTopic(subject, level, topic, cycle)
       .then((qs) => {
         if (id !== abortRef.current) return;
         setQuestions(qs);
         setGrouped(groupImageQuestions(qs));
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         if (id !== abortRef.current) return;
-        setError(err?.message ?? "Failed to load questions");
+        setError(err instanceof Error ? err.message : "Failed to load questions");
         setQuestions([]);
         setGrouped([]);
       })
       .finally(() => {
         if (id === abortRef.current) setLoading(false);
       });
-  }, [subject, level, topic]);
+  }, [subject, level, topic, cycle]);
+
+  return { questions, grouped, loading, error };
+}
+
+/** Load questions for a year (+ optional paper number) across all topics. */
+export function useImageQuestionsForPaper(
+  subject: string | null,
+  level: string | null,
+  year: number | null,
+  paper: number | null,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
+): UseImageQuestionsResult {
+  const [questions, setQuestions] = useState<ImageQuestion[]>([]);
+  const [grouped, setGrouped] = useState<GroupedImageQuestion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef(0);
+
+  useEffect(() => {
+    if (!subject || !level || year == null) {
+      setQuestions([]);
+      setGrouped([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    const id = ++abortRef.current;
+    setLoading(true);
+    setError(null);
+
+    listQuestionsForPaper(subject, level, year, paper, cycle)
+      .then((qs) => {
+        if (id !== abortRef.current) return;
+        setQuestions(qs);
+        setGrouped(groupImageQuestions(qs));
+      })
+      .catch((err: unknown) => {
+        if (id !== abortRef.current) return;
+        setError(err instanceof Error ? err.message : "Failed to load questions");
+        setQuestions([]);
+        setGrouped([]);
+      })
+      .finally(() => {
+        if (id === abortRef.current) setLoading(false);
+      });
+  }, [subject, level, year, paper, cycle]);
 
   return { questions, grouped, loading, error };
 }
 
 export function useAllTopicsForSubjectLevel(
   subject: string | null,
-  level: string | null
+  level: string | null,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
 ): { topics: ImageTopic[]; loading: boolean } {
   const [topics, setTopics] = useState<ImageTopic[]>([]);
   const [loading, setLoading] = useState(false);
@@ -666,7 +849,7 @@ export function useAllTopicsForSubjectLevel(
     }
     const id = ++abortRef.current;
     setLoading(true);
-    listTopicsForSubjectLevel(subject, level)
+    listTopicsForSubjectLevel(subject, level, cycle)
       .then((t) => {
         if (id === abortRef.current) setTopics(t);
       })
@@ -676,7 +859,7 @@ export function useAllTopicsForSubjectLevel(
       .finally(() => {
         if (id === abortRef.current) setLoading(false);
       });
-  }, [subject, level]);
+  }, [subject, level, cycle]);
 
   return { topics, loading };
 }

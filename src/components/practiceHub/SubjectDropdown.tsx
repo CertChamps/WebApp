@@ -36,11 +36,13 @@ type ContextMenuState = {
 function SubjectTile({
   subject,
   selected,
+  favourited,
   onSelect,
   onOpenMenu,
 }: {
   subject: SubjectOption;
   selected: boolean;
+  favourited: boolean;
   onSelect: () => void;
   onOpenMenu: (x: number, y: number) => void;
 }) {
@@ -84,7 +86,9 @@ function SubjectTile({
       className={`relative flex flex-col items-center gap-2 rounded-lg px-2 pb-3 pt-3 text-center transition-colors cursor-pointer select-none touch-manipulation ${
         selected
           ? "color-bg-accent color-txt-accent"
-          : "color-txt-main hover:color-bg-grey-5"
+          : favourited
+            ? "color-txt-accent hover:color-bg-accent"
+            : "color-txt-main hover:color-bg-grey-5"
       } ${holding ? "scale-[1.03] color-bg-grey-5" : ""}`}
       onClick={() => {
         if (holdFiredRef.current || Date.now() < suppressNextSelectUntil) {
@@ -117,14 +121,14 @@ function SubjectTile({
     >
       <span
         className={`flex size-12 items-center justify-center rounded-lg ${
-          selected ? "color-bg" : "color-bg-grey-5"
+          selected ? "color-bg" : favourited ? "color-bg-accent" : "color-bg-grey-5"
         }`}
         aria-hidden
       >
         <SubjectGlyph
           subjectId={subject.id}
           size={26}
-          className={selected ? "color-txt-accent" : "color-txt-accent opacity-80"}
+          className="color-txt-accent"
         />
       </span>
 
@@ -313,8 +317,8 @@ export default function SubjectDropdown({
       >
         <span className="flex min-w-0 flex-1 items-center gap-2">
           {value ? (
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg color-bg-grey-5" aria-hidden>
-              <SubjectGlyph subjectId={value} size={18} />
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg color-bg-accent" aria-hidden>
+              <SubjectGlyph subjectId={value} size={18} className="color-txt-accent" />
             </span>
           ) : null}
           <span className="practice-hub__subject-trigger-label truncate">{selectedLabel}</span>
@@ -376,6 +380,7 @@ export default function SubjectDropdown({
                           key={s.id}
                           subject={s}
                           selected={value === s.id}
+                          favourited
                           onSelect={() => handleSelect(s)}
                           onOpenMenu={(x, y) => openMenuFor(s.id, x, y)}
                         />
@@ -401,6 +406,7 @@ export default function SubjectDropdown({
                           key={s.id}
                           subject={s}
                           selected={value === s.id}
+                          favourited={false}
                           onSelect={() => handleSelect(s)}
                           onOpenMenu={(x, y) => openMenuFor(s.id, x, y)}
                         />

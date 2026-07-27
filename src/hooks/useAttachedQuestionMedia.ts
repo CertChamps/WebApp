@@ -76,7 +76,11 @@ export function useAttachedQuestionMedia(attachment: AttachedQuestion | null): A
         const bank = attachment.bank;
         if (bank.kind === "image") {
           questionUrls = await resolveStorageUrls(bank.imagePaths ?? []);
-          markingUrls = await resolveStorageUrls(bank.markingSchemePaths ?? []);
+          try {
+            markingUrls = await resolveStorageUrls(bank.markingSchemePaths ?? []);
+          } catch {
+            markingUrls = [];
+          }
         } else {
           if (bank.paperStoragePath) {
             const blob = await fetchStorageBlob(bank.paperStoragePath);

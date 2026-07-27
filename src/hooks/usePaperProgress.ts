@@ -4,7 +4,7 @@ import { db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { normalizePaperLevel, type ExamPaper } from "./useExamPapers";
 
-/** Virtual paper for one image-practice topic (Storage-backed questions). */
+/** Virtual paper for one image-practice topic (Firestore catalogue). */
 export function buildImageTopicExamPaper(
   subject: string,
   level: string,
@@ -23,6 +23,28 @@ export function buildImageTopicExamPaper(
     storagePath: `virtual://imagequestions/${sub}/${lev}/${topicKey}`,
     subject: sub,
     level: lev,
+  };
+}
+
+/** Virtual paper for browse-by-paper image sessions (year + optional paper number). */
+export function buildImageYearPaperExamPaper(
+  subject: string,
+  level: string,
+  year: number,
+  paper: number | null
+): ExamPaper {
+  const sub = subject.trim().toLowerCase();
+  const lev = normalizePaperLevel(level.trim()) || "unknown";
+  const label =
+    paper === 1 || paper === 2 ? `${year} Paper ${paper}` : String(year);
+  const id = `img-paper-${year}-${paper ?? "x"}`;
+  return {
+    id,
+    label,
+    storagePath: `virtual://imagequestions/${sub}/${lev}/${id}`,
+    subject: sub,
+    level: lev,
+    year,
   };
 }
 
