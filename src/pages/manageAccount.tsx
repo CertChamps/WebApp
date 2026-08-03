@@ -3,18 +3,22 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
     LuArrowLeft,
     LuCheck,
+    LuCircleAlert,
     LuClipboardCheck,
     LuGauge,
     LuLogOut,
     LuMessageSquare,
+    LuPaperclip,
     LuPencil,
     LuRefreshCw,
     LuSearch,
     LuSparkles,
     LuTrash2,
+    LuUpload,
+    LuX,
     LuWandSparkles,
 } from "react-icons/lu";
-import { doc, setDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 import Cropper from "react-easy-crop";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,7 +33,7 @@ import { fetchAiUsage, type AiPurpose, type AiUsageSummary } from "../lib/aiApi"
 import { PRIVACY_URL, TERMS_URL } from "../lib/legal";
 import "../styles/settings.css";
 
-type TabId = "home" | "payments" | "usage";
+type TabId = "home" | "payments" | "usage" | "help";
 
 const container = {
     hidden: {},
@@ -434,6 +438,274 @@ function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
     );
 }
 
+type HelpFormState = {
+    email: string;
+    subject: string;
+    description: string;
+    issueType: string;
+};
+
+const ISSUE_TYPES = [
+    "Account",
+    "Payments",
+    "AI usage",
+    "Bug report",
+    "Feature request",
+    "Other",
+];
+
+const MAX_HELP_FILES = 5;
+const MAX_HELP_FILE_BYTES = 8 * 1024 * 1024;
+
+function HelpTab({ user }: { user: any }) {
+    const [form, setForm] = useState<HelpFormState>({
+        email: user?.email ?? "",
+        subject: "",
+        description: "",
+        issueType: "",
+    });
+    const [files, setFiles] = useState<File[]>([]);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [sent, setSent] = useState(false);
+
+    useEffect(() => {
+        setForm((prev) => ({ ...prev, email: prev.email || user?.email || "" }));
+    }, [user?.email]);
+
+    const updateField = (field: keyof HelpFormState, value: string) => {
+        setForm((prev) => ({ ...prev, [field]: value }));
+        setError(null);
+        setSent(false);
+    };
+
+    const addFiles = (nextFiles: FileList | null) => {
+        if (!nextFiles) return;
+        setError(null);
+        const validFiles = Array.from(nextFiles).filter((file) => file.size <= MAX_HELP_FILE_BYTES);
+        const rejectedCount = nextFiles.length - validFiles.length;
+        setFiles((prev) => [...prev, ...validFiles].slice(0, MAX_HELP_FILES));
+        if (rejectedCount > 0) setError("Some files were skipped because they are over 8 MB.");
+    };
+
+    const removeFile = (fileName: string) => {
+        setFiles((prev) => prev.filter((file) => file.name !== fileName));
+    };
+
+    const submitHelpRequest = async () => {
+        const email = form.email.trim();
+        const subject = form.subject.trim();
+        const description = form.description.trim();
+        const issueType = form.issueType;
+
+        if (!email || !subject || !description || !issueType) {
+            setError("Please fill in every required field.");
+            return;
+        }
+        if (!user?.uid) {
+            setError("Please sign in again before sending a report.");
+            return;
+        }
+
+        setSubmitting(true);
+        setError(null);
+        setSent(false);
+        try {
+            const reportRef = doc(collection(db, "feedback"));
+            const storage = getStorage();
+            let attachmentUploadError = false;
+            const attachments = await Promise.all(
+                files.map(async (file, index) => {
+                    const safeName = file.name.replace(/[^\w.-]/g, "_");
+                    const path = `feedback-attachments/${user.uid}/${reportRef.id}/${Date.now()}-${index}-${safeName}`;
+                    const fileRef = ref(storage, path);
+                    try {
+                        await uploadBytes(fileRef, file, { contentType: file.type || "application/octet-stream" });
+                        const url = await getDownloadURL(fileRef);
+                        return {
+                            name: file.name,
+                            path,
+                            url,
+                            size: file.size,
+                            contentType: file.type || "application/octet-stream",
+                        };
+                    } catch (uploadErr) {
+                        attachmentUploadError = true;
+                        console.error("Failed to upload help attachment:", uploadErr);
+                        return null;
+                    }
+                })
+            );
+
+            await setDoc(reportRef, {
+                userId: user.uid,
+                username: user.username ?? "",
+                userEmail: user.email ?? "",
+                contactEmail: email,
+                subject,
+                description,
+                message: description,
+                type: "general",
+                issueType,
+                source: "help",
+                status: "open",
+                attachments: attachments.filter(Boolean),
+                attachmentUploadError,
+                adminTag: null,
+                createdAt: serverTimestamp(),
+                timestamp: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            });
+
+            setForm({ email, subject: "", description: "", issueType: "" });
+            setFiles([]);
+            setSent(true);
+            if (attachmentUploadError) {
+                setError("Report sent, but one or more attachments could not be uploaded.");
+            }
+        } catch (err) {
+            console.error("Failed to submit help request:", err);
+            setError(err instanceof Error ? err.message : "Could not send your report. Please try again.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <motion.div variants={container} initial="hidden" animate="show" className="max-w-4xl">
+            <motion.h1 variants={fadeUp} className="profile-heading text-3xl font-bold mb-2">
+                Help
+            </motion.h1>
+
+            <motion.div
+                variants={fadeUp}
+                className="rounded-2xl color-bg-grey-5 p-6 sm:p-8 shadow-small"
+            >
+                <div className="space-y-5">
+                        <label className="block">
+                            <span className="text-base font-bold color-txt-main">Your Email Address <span className="text-red-500">*</span></span>
+                            <input
+                                type="email"
+                                value={form.email}
+                                onChange={(event) => updateField("email", event.target.value)}
+                                className="mt-2 w-full rounded-xl border border-color-border color-bg px-4 py-3 text-base font-semibold color-txt-main outline-none transition-colors placeholder:color-txt-sub focus:border-[var(--accent)]"
+                                autoComplete="email"
+                            />
+                        </label>
+
+                        <label className="block">
+                            <span className="text-base font-bold color-txt-main">Subject <span className="text-red-500">*</span></span>
+                            <input
+                                type="text"
+                                value={form.subject}
+                                onChange={(event) => updateField("subject", event.target.value)}
+                                className="mt-2 w-full rounded-xl border border-color-border color-bg px-4 py-3 text-base font-semibold color-txt-main outline-none transition-colors placeholder:color-txt-sub focus:border-[var(--accent)]"
+                            />
+                        </label>
+
+                        <label className="block">
+                            <span className="text-base font-bold color-txt-main">Description <span className="text-red-500">*</span></span>
+                            <textarea
+                                value={form.description}
+                                onChange={(event) => updateField("description", event.target.value)}
+                                rows={5}
+                                className="mt-2 w-full resize-none rounded-xl border border-color-border color-bg px-4 py-3 text-base font-semibold color-txt-main outline-none transition-colors placeholder:color-txt-sub focus:border-[var(--accent)]"
+                            />
+                        </label>
+
+                        <label className="block">
+                            <span className="text-base font-bold color-txt-main">Type of issue <span className="text-red-500">*</span></span>
+                            <select
+                                value={form.issueType}
+                                onChange={(event) => updateField("issueType", event.target.value)}
+                                className="mt-2 w-full rounded-xl border border-color-border color-bg px-4 py-3 text-sm font-bold color-txt-main outline-none transition-colors focus:border-[var(--accent)]"
+                            >
+                                <option value="">Please select one...</option>
+                                {ISSUE_TYPES.map((issueType) => (
+                                    <option key={issueType} value={issueType}>
+                                        {issueType}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+
+                        <div>
+                            <p className="text-base font-bold color-txt-main">Attachments</p>
+                            <label
+                                className="mt-2 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-color-border color-bg px-4 py-6 text-center transition-colors hover:border-[var(--accent)]"
+                                onDragOver={(event) => event.preventDefault()}
+                                onDrop={(event) => {
+                                    event.preventDefault();
+                                    addFiles(event.dataTransfer.files);
+                                }}
+                            >
+                                <input
+                                    type="file"
+                                    multiple
+                                    className="hidden"
+                                    onChange={(event) => {
+                                        addFiles(event.target.files);
+                                        event.target.value = "";
+                                    }}
+                                />
+                                <LuUpload size={24} className="mb-2 color-txt-accent" />
+                                <span className="text-base font-bold color-txt-main">
+                                    <span className="color-txt-accent">Add file</span> or drop files here
+                                </span>
+                                <span className="mt-1 text-xs font-semibold color-txt-sub">Up to {MAX_HELP_FILES} files, 8 MB each</span>
+                            </label>
+
+                            {files.length > 0 && (
+                                <div className="mt-3 space-y-2">
+                                    {files.map((file) => (
+                                        <div key={file.name} className="flex items-center justify-between gap-3 rounded-xl color-bg px-3 py-2 text-sm">
+                                            <span className="flex min-w-0 items-center gap-2 color-txt-main">
+                                                <LuPaperclip size={15} className="shrink-0 color-txt-accent" />
+                                                <span className="truncate">{file.name}</span>
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeFile(file.name)}
+                                                className="shrink-0 rounded-lg p-1 color-txt-sub hover:color-bg-grey-5 hover:color-txt-main"
+                                                aria-label={`Remove ${file.name}`}
+                                            >
+                                                <LuX size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {error && (
+                            <p className="flex items-center gap-2 rounded-xl bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300">
+                                <LuCircleAlert size={16} />
+                                {error}
+                            </p>
+                        )}
+                        {sent && (
+                            <p className="flex items-center gap-2 rounded-xl bg-green-500/10 px-3 py-2 text-sm font-semibold text-green-500">
+                                <LuCheck size={16} />
+                                Report sent. Our team can now review it.
+                            </p>
+                        )}
+
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => void submitHelpRequest()}
+                                disabled={submitting}
+                                className="min-w-44 rounded-xl color-bg-accent px-8 py-3 text-base font-bold color-txt-accent transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {submitting ? "Submitting..." : "Submit"}
+                            </button>
+                        </div>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+}
+
 const ManageAccount = () => {
     const { user, setUser } = useContext(UserContext);
     const navigate = useNavigate();
@@ -548,6 +820,7 @@ const ManageAccount = () => {
         { id: "home", label: "Profile" },
         { id: "payments", label: "Payments" },
         { id: "usage", label: "Usage & limits" },
+        { id: "help", label: "Help" },
     ];
 
     // Read success/cancel from URL and refetch user when returning from
@@ -761,6 +1034,10 @@ const ManageAccount = () => {
 
                 {activeTab === "usage" && (
                     <UsageTab onViewPlans={() => setActiveTab("payments")} />
+                )}
+
+                {activeTab === "help" && (
+                    <HelpTab user={user} />
                 )}
             </div>
 

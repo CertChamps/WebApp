@@ -19,6 +19,7 @@ import DeckViewer from "./pages/deckViewer";
 import AddQuestions from "./pages/addQuestions";
 import AdminCanvasViewer from "./pages/adminCanvasViewer";
 import DiscoverModeration from "./pages/discoverModeration";
+import HelpReports from "./pages/helpReports";
 import ProfileViewer from "./pages/profileViewer";
 import { ProtectedRoute } from "./components/protectedRoute";
 import Progress from "./pages/progress/progress_main";
@@ -263,6 +264,41 @@ const router = createHashRouter([
           <Navbar />
           <DiscoverModeration />
         </div>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/help-reports",
+    element: (
+      <ProtectedRoute>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+          <Navbar />
+          <HelpReports />
+        </div>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/helpReports",
+    element: (
+      <ProtectedRoute>
+        <Navigate to="/admin/help-reports" replace />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/help",
+    element: (
+      <ProtectedRoute>
+        <Navigate to="/admin/help-reports" replace />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/help-reports",
+    element: (
+      <ProtectedRoute>
+        <Navigate to="/admin/help-reports" replace />
       </ProtectedRoute>
     ),
   },
