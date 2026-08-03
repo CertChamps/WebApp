@@ -17,6 +17,7 @@ import {
   LuDatabase,
   LuFileJson,
   LuImage,
+  LuLifeBuoy,
   LuLoaderCircle,
   LuSearch,
   LuUser,
@@ -586,14 +587,24 @@ export default function AdminCanvasViewer() {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate("/admin/discover-moderation")}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-semibold hover:opacity-90 transition-opacity"
-        >
-          <LuImage size={16} />
-          Discover moderation
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/admin/help-reports")}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            <LuLifeBuoy size={16} />
+            Help reports
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/admin/discover-moderation")}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            <LuImage size={16} />
+            Discover moderation
+          </button>
+        </div>
       </div>
 
       {pageError && (

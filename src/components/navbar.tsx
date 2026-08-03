@@ -32,6 +32,8 @@ export default function Navbar () {
         if (path.startsWith('/user/settings')) return 'user/settings'
         if (path.startsWith('/admin/add-questions')) return 'admin/add-questions'
         if (path.startsWith('/admin/canvas-viewer')) return 'admin/canvas-viewer'
+        if (path.startsWith('/admin/help')) return 'admin/canvas-viewer'
+        if (path.startsWith('/admin/discover-moderation')) return 'admin/canvas-viewer'
         if (path.startsWith('/games')) return 'games'
         if (path.startsWith('/whiteboards')) return 'whiteboards'
         if (path.startsWith('/practice')) return 'practice'
