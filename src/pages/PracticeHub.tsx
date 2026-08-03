@@ -133,7 +133,7 @@ export default function PracticeHub() {
     [subjectFilter]
   );
 
-  const isImageMode = subjectFilter != null && !papersLoading && papers.length === 0;
+  const isImageMode = subjectFilter != null;
 
   const imageLevelFilter = levelFilter === "all" ? null : levelFilter;
   const {
@@ -975,7 +975,7 @@ export default function PracticeHub() {
               ) : (
                 <div className="min-h-[280px] w-full flex items-center justify-center px-4 mb-6">
                   <div className="max-w-xl text-center">
-                    <LuStar size={40} className="color-txt-sub opacity-40 mx-auto mb-3" />
+                    <LuStar size={40} className="color-txt-accent opacity-40 mx-auto mb-3" />
                     <p className="txt-heading-colour text-2xl font-bold mb-2">No favourite subjects yet</p>
                     <p className="txt-sub color-txt-sub mb-5">
                       Star your favourite subjects and they'll appear here for quick access.
@@ -1354,7 +1354,11 @@ const TAGS_VISIBLE_ON_CARD = 3;
 
 function ContentAccessBadge({ label }: { label: ContentAccessLabel }) {
   if (label === "free") {
-    return <span className="practice-hub__access-badge practice-hub__access-badge--free">Free</span>;
+    return (
+      <span className="practice-hub__access-badge color-bg-accent color-txt-accent">
+        Free
+      </span>
+    );
   }
   return (
     <span className="practice-hub__access-badge practice-hub__access-badge--locked">
@@ -1538,8 +1542,8 @@ function TopicCard({
 /** Icon thumbnail for favourite subject cards on the landing page */
 function SubjectIconImage({ subjectId }: { subjectId: string }) {
   return (
-    <div className="image overflow-hidden flex items-center justify-center color-bg">
-      <SubjectGlyph subjectId={subjectId} size={48} className="color-txt-accent opacity-70" />
+    <div className="image overflow-hidden flex items-center justify-center color-bg-accent">
+      <SubjectGlyph subjectId={subjectId} size={48} className="color-txt-accent" />
     </div>
   );
 }

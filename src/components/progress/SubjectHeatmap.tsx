@@ -135,10 +135,12 @@ export default function SubjectHeatmap({ subject, level, entries }: Props) {
         );
         const levelSnap = await getDoc(levelRef);
         const sections = (levelSnap.data()?.sections as string[] | undefined) ?? [];
+        const contentMode = levelSnap.data()?.contentMode;
         const hasPapers =
-          sections.includes("papers") ||
+          contentMode !== "image" &&
+          (sections.includes("papers") ||
           subject.toLowerCase() === "maths" ||
-          subject.toLowerCase() === "applied-maths";
+          subject.toLowerCase() === "applied-maths");
 
         let paperList: PaperInfo[] = [];
         if (hasPapers) {

@@ -7,7 +7,6 @@ import {
   LuChevronLeft,
   LuChevronRight,
   LuFileText,
-  LuImage,
   LuLoaderCircle,
   LuPencil,
   LuSearch,
@@ -22,11 +21,14 @@ import {
   getMarkingSchemeFilesForGroupedQuestion,
   useImageMarkingSchemesForTopic,
   useImageQuestionsForTopic,
+  useImageQuestionsForPaper,
   useImageSubjectAvailability,
   useImageTopics,
+  useImagePapers,
   useMarkingSchemeUrls,
   type GroupedImageQuestion,
   type MarkingSchemeFile,
+  type ImagePaperGroup,
 } from "../hooks/useImageQuestions";
 import {
   getStorageFolderName,
@@ -36,6 +38,7 @@ import {
   toggleFavourite,
   type SubjectOption,
 } from "../data/practiceHubSubjects";
+import { parseExamCycle, type ExamCycleId, EXAM_CYCLES } from "../lib/examCycle";
 import SaveQuestionToCanvasModal from "../components/whiteboards/SaveQuestionToCanvasModal";
 import { buildImageAttachment } from "../lib/whiteboardAttachments";
 import type { AttachedQuestion } from "../data/whiteboards";
@@ -44,6 +47,7 @@ import "../styles/practiceBrowser.css";
 const LEVEL_ORDER = ["higher", "ordinary", "foundation"];
 
 type SubjectEntry = SubjectOption & { levels: string[] };
+type BrowseMode = "topic" | "paper";
 
 function normalise(value: string): string {
   return value.replace(/[-_\s]/g, "").toLowerCase();
@@ -76,6 +80,7 @@ function questionYear(question: GroupedImageQuestion): number {
 function InlineMarkingScheme({ files }: { files: MarkingSchemeFile[] }) {
   const [open, setOpen] = useState(false);
   const { images, loading } = useMarkingSchemeUrls(open ? files : []);
+  const hasFiles = files.length > 0;
 
   return (
     <div className="practice-browser__marking">
@@ -84,10 +89,10 @@ function InlineMarkingScheme({ files }: { files: MarkingSchemeFile[] }) {
         className="practice-browser__marking-toggle"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        disabled={files.length === 0}
+        disabled={!hasFiles}
       >
-        <span>{files.length > 0 ? "Marking scheme" : "No marking scheme available"}</span>
-        {files.length > 0 && (
+        <span>{hasFiles ? "Marking scheme" : "No marking scheme available"}</span>
+        {hasFiles && (
           <LuChevronDown
             size={18}
             className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -95,12 +100,16 @@ function InlineMarkingScheme({ files }: { files: MarkingSchemeFile[] }) {
         )}
       </button>
 
-      {open && (
+      {open && hasFiles && (
         <div className="practice-browser__marking-images">
           {loading ? (
             <div className="flex items-center justify-center py-8 color-txt-sub">
               <LuLoaderCircle size={20} className="animate-spin" />
             </div>
+          ) : images.length === 0 ? (
+            <p className="py-6 text-center text-sm color-txt-sub">
+              Marking scheme couldn’t be loaded for this question.
+            </p>
           ) : (
             images.map((image) => (
               <img
@@ -191,10 +200,6 @@ function QuestionCard({
           <h2 className="text-base font-bold color-txt-main">{question.displayName}</h2>
         </div>
         <div className="practice-browser__question-actions">
-          <span className="practice-browser__image-count">
-            <LuImage size={14} />
-            {question.images.length}
-          </span>
           <button
             type="button"
             className="practice-browser__canvas-button"
@@ -202,10 +207,11 @@ function QuestionCard({
               event.stopPropagation();
               onAddToCanvas();
             }}
-            aria-label={`Add ${question.displayName} to a canvas`}
-            title="Add question to canvas"
+            aria-label={`Add ${question.displayName} to a page`}
+            title="Add to page"
           >
-            <LuPencil size={17} strokeWidth={2.2} />
+            <LuPencil size={15} strokeWidth={2.2} />
+            <span>Add to page</span>
           </button>
         </div>
       </header>
@@ -233,6 +239,13 @@ function PracticeBrowserInner() {
   const subjectId = searchParams.get("subject");
   const selectedLevel = searchParams.get("level");
   const selectedTopicName = searchParams.get("topic");
+  const browseMode = (searchParams.get("browse") === "paper" ? "paper" : "topic") as BrowseMode;
+  const paperYearParam = searchParams.get("year");
+  const paperNumParam = searchParams.get("paper");
+  const selectedPaperYear = paperYearParam ? Number(paperYearParam) : null;
+  const selectedPaperNum =
+    paperNumParam === "1" || paperNumParam === "2" ? Number(paperNumParam) : null;
+  const cycle: ExamCycleId = parseExamCycle(searchParams.get("cycle"));
   const storageSubject = subjectId ? getStorageFolderName(subjectId) : null;
 
   const [search, setSearch] = useState("");
@@ -248,26 +261,91 @@ function PracticeBrowserInner() {
   const titleRowRef = useRef<HTMLDivElement>(null);
 
   const { subjects: availableSubjects, loading: subjectsLoading, error: subjectsError } =
-    useImageSubjectAvailability();
+    useImageSubjectAvailability(cycle);
   const { topics, levels, loading: topicsLoading, error: topicsError } = useImageTopics(
     storageSubject,
-    selectedLevel
-  );
-  const { grouped: unsortedQuestions, loading: questionsLoading, error: questionsError } = useImageQuestionsForTopic(
-    storageSubject,
     selectedLevel,
-    selectedTopicName
+    cycle
   );
+  const {
+    papers: paperGroups,
+    loading: papersLoading,
+    error: papersError,
+  } = useImagePapers(
+    browseMode === "paper" ? storageSubject : null,
+    browseMode === "paper" ? selectedLevel : null,
+    cycle
+  );
+
+  const inPaperFeed =
+    browseMode === "paper" &&
+    selectedPaperYear != null &&
+    Number.isFinite(selectedPaperYear);
+  const inTopicFeed = browseMode === "topic" && Boolean(selectedTopicName);
+
+  const {
+    grouped: topicGrouped,
+    loading: topicQuestionsLoading,
+    error: topicQuestionsError,
+  } = useImageQuestionsForTopic(
+    inTopicFeed ? storageSubject : null,
+    inTopicFeed ? selectedLevel : null,
+    inTopicFeed ? selectedTopicName : null,
+    cycle
+  );
+  const {
+    grouped: paperGrouped,
+    loading: paperQuestionsLoading,
+    error: paperQuestionsError,
+  } = useImageQuestionsForPaper(
+    inPaperFeed ? storageSubject : null,
+    inPaperFeed ? selectedLevel : null,
+    inPaperFeed ? selectedPaperYear : null,
+    inPaperFeed ? selectedPaperNum : null,
+    cycle
+  );
+
+  const unsortedQuestions = inPaperFeed ? paperGrouped : topicGrouped;
+  const questionsLoading = inPaperFeed ? paperQuestionsLoading : topicQuestionsLoading;
+  const questionsError = inPaperFeed ? paperQuestionsError : topicQuestionsError;
+
+  const markingTopic =
+    inTopicFeed
+      ? selectedTopicName
+      : inPaperFeed && paperGrouped[0]?.topic
+        ? paperGrouped[0].topic
+        : null;
   const { files: markingSchemeFiles, loading: markingSchemesLoading } =
-    useImageMarkingSchemesForTopic(storageSubject, selectedLevel, selectedTopicName);
+    useImageMarkingSchemesForTopic(
+      storageSubject,
+      selectedLevel,
+      markingTopic,
+      cycle
+    );
 
   const subjectEntries = useMemo(() => {
     const availability = new Map(
       availableSubjects.map((subject) => [normalise(subject.storageName), subject.levels])
     );
+    const resolveLevels = (subject: SubjectOption): string[] => {
+      const candidates = [
+        getStorageFolderName(subject.id),
+        subject.id,
+        subject.label,
+      ].map(normalise);
+      for (const key of candidates) {
+        const hit = availability.get(key);
+        if (hit?.length) return hit;
+      }
+      // fuzzy: maths ↔ mathematics
+      for (const [key, levels] of availability) {
+        if (candidates.some((c) => key.includes(c) || c.includes(key))) return levels;
+      }
+      return [];
+    };
     return PRACTICE_HUB_SUBJECTS.map((subject) => ({
       ...subject,
-      levels: availability.get(normalise(getStorageFolderName(subject.id))) ?? [],
+      levels: resolveLevels(subject),
     })).filter((subject) => subject.levels.length > 0);
   }, [availableSubjects]);
 
@@ -276,6 +354,16 @@ function PracticeBrowserInner() {
     [subjectId]
   );
   const selectedTopic = topics.find((topic) => topic.name === selectedTopicName) ?? null;
+  const selectedPaperGroup: ImagePaperGroup | null = useMemo(() => {
+    if (!inPaperFeed || selectedPaperYear == null) return null;
+    return (
+      paperGroups.find(
+        (p) =>
+          p.year === selectedPaperYear &&
+          (selectedPaperNum == null ? p.paper == null : p.paper === selectedPaperNum)
+      ) ?? null
+    );
+  }, [inPaperFeed, paperGroups, selectedPaperYear, selectedPaperNum]);
 
   const filteredSubjects = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -307,6 +395,12 @@ function PracticeBrowserInner() {
     return topics.filter((topic) => topic.displayName.toLowerCase().includes(query));
   }, [search, topics]);
 
+  const filteredPapers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return paperGroups;
+    return paperGroups.filter((p) => p.label.toLowerCase().includes(query));
+  }, [search, paperGroups]);
+
   const grouped = useMemo(
     () =>
       [...unsortedQuestions].sort(
@@ -332,7 +426,7 @@ function PracticeBrowserInner() {
     setSearch("");
     setActiveQuestionIndex(0);
     questionElements.current.clear();
-  }, [subjectId, selectedLevel, selectedTopicName]);
+  }, [subjectId, selectedLevel, selectedTopicName, selectedPaperYear, selectedPaperNum, browseMode, cycle]);
 
   useEffect(() => {
     const root = scrollRef.current;
@@ -354,19 +448,29 @@ function PracticeBrowserInner() {
   }, [grouped]);
 
   const updateLocation = useCallback(
-    (next: { subject?: string | null; level?: string | null; topic?: string | null }) => {
+    (next: Record<string, string | null | undefined>) => {
       const params = new URLSearchParams(searchParams);
       for (const [key, value] of Object.entries(next)) {
-        if (value) params.set(key, value);
+        if (value != null && value !== "") params.set(key, value);
         else params.delete(key);
       }
+      if (!params.get("cycle")) params.set("cycle", cycle);
       setSearchParams(params);
     },
-    [searchParams, setSearchParams]
+    [searchParams, setSearchParams, cycle]
   );
 
   const openLevel = (subject: string, level: string) => {
-    setSearchParams({ subject, level });
+    setSearchParams({ subject, level, cycle, browse: browseMode });
+  };
+
+  const setBrowseMode = (mode: BrowseMode) => {
+    updateLocation({
+      browse: mode,
+      topic: null,
+      year: null,
+      paper: null,
+    });
   };
 
   const selectQuestion = (index: number) => {
@@ -376,7 +480,7 @@ function PracticeBrowserInner() {
     questionElements.current.get(question.key)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const showFeed = Boolean(storageSubject && selectedLevel && selectedTopicName);
+  const showFeed = inTopicFeed || inPaperFeed;
 
   if (showFeed) {
     return (
@@ -396,10 +500,16 @@ function PracticeBrowserInner() {
               <button
                 type="button"
                 className="practice-browser__back"
-                onClick={() => updateLocation({ topic: null })}
+                onClick={() =>
+                  updateLocation({
+                    topic: null,
+                    year: null,
+                    paper: null,
+                  })
+                }
               >
                 <LuArrowLeft size={17} />
-                Topics
+                {browseMode === "paper" ? "Papers" : "Topics"}
               </button>
 
               {grouped.length > 0 && (
@@ -435,7 +545,14 @@ function PracticeBrowserInner() {
               )}
 
               <div className="practice-browser__topic-label">
-                <span>{selectedTopic?.displayName ?? "Questions"}</span>
+                <span>
+                  {inPaperFeed
+                    ? selectedPaperGroup?.label ??
+                      (selectedPaperNum
+                        ? `${selectedPaperYear} Paper ${selectedPaperNum}`
+                        : String(selectedPaperYear))
+                    : selectedTopic?.displayName ?? "Questions"}
+                </span>
                 <small>{levelLabel(selectedLevel ?? "")}</small>
               </div>
             </div>
@@ -464,13 +581,25 @@ function PracticeBrowserInner() {
                     }}
                     onActivate={() => setActiveQuestionIndex(index)}
                     onAddToCanvas={() => {
-                      if (!storageSubject || !selectedLevel || !selectedTopic) return;
+                      if (!storageSubject || !selectedLevel) return;
+                      const topicForAttach =
+                        selectedTopic ??
+                        (question.topic
+                          ? {
+                              name: question.topic,
+                              displayName: question.topic,
+                              path: question.topic,
+                              questionCount: 0,
+                              thumbnailUrl: null,
+                            }
+                          : null);
+                      if (!topicForAttach) return;
                       setActiveQuestionIndex(index);
                       setCanvasAttachment(
                         buildImageAttachment(
                           storageSubject,
                           selectedLevel,
-                          selectedTopic,
+                          topicForAttach,
                           question,
                           markingSchemeFiles
                         )
@@ -511,7 +640,9 @@ function PracticeBrowserInner() {
             onOpenPanelChange={(panel) => setSidebarPanel(panel ?? null)}
             forceShowMarkingSchemeTab
             markingSchemeImages={activeMarkingImages}
-            markingSchemeLoading={markingSchemesLoading || activeMarkingLoading}
+            markingSchemeLoading={
+              (activeMarkingFiles.length === 0 && markingSchemesLoading) || activeMarkingLoading
+            }
             markingSchemeQuestionName={activeQuestion?.displayName}
           />
         </div>
@@ -527,17 +658,19 @@ function PracticeBrowserInner() {
     );
   }
 
-  const viewingTopics = Boolean(storageSubject && selectedLevel);
-  const pageTitle = viewingTopics
-    ? `${levelLabel(selectedLevel ?? "")} Topics`
+  const viewingBrowse = Boolean(storageSubject && selectedLevel);
+  const pageTitle = viewingBrowse
+    ? `${levelLabel(selectedLevel ?? "")} · ${browseMode === "paper" ? "By paper" : "By topic"}`
     : selectedSubject
       ? selectedSubject.label
       : "Practice Questions";
-  const pageDescription = viewingTopics
-    ? `Choose a topic to view all ${selectedSubject?.label ?? "subject"} questions in order.`
+  const pageDescription = viewingBrowse
+    ? browseMode === "paper"
+      ? `Browse ${selectedSubject?.label ?? "subject"} by exam paper.`
+      : `Browse ${selectedSubject?.label ?? "subject"} by topic.`
     : selectedSubject
       ? "Choose one of the available levels."
-      : "Choose a subject and level to browse question images and marking schemes.";
+      : "Choose a subject and level to browse question images.";
 
   return (
     <div className="practice-browser h-full w-full overflow-y-auto overflow-x-hidden color-bg scrollbar-minimal">
@@ -549,9 +682,15 @@ function PracticeBrowserInner() {
                 type="button"
                 className="practice-browser__back mt-1"
                 onClick={() =>
-                  viewingTopics
-                    ? updateLocation({ level: null, topic: null })
-                    : updateLocation({ subject: null, level: null, topic: null })
+                  viewingBrowse
+                    ? updateLocation({ level: null, topic: null, year: null, paper: null })
+                    : updateLocation({
+                        subject: null,
+                        level: null,
+                        topic: null,
+                        year: null,
+                        paper: null,
+                      })
                 }
                 aria-label="Back"
               >
@@ -563,16 +702,45 @@ function PracticeBrowserInner() {
               <p>{pageDescription}</p>
             </div>
           </div>
+
+          {!selectedSubject && (
+            <div className="practice-browser__cycle-toggle" role="group" aria-label="Exam cycle">
+              {(Object.keys(EXAM_CYCLES) as ExamCycleId[]).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={cycle === id ? "is-active" : ""}
+                  onClick={() =>
+                    setSearchParams({ cycle: id })
+                  }
+                >
+                  {EXAM_CYCLES[id].label}
+                </button>
+              ))}
+            </div>
+          )}
         </header>
 
-        {!selectedSubject || viewingTopics ? (
+        {!selectedSubject || viewingBrowse ? (
           <label className="practice-browser__search">
             <LuSearch size={19} />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder={viewingTopics ? "Search topics…" : "Search subjects…"}
-              aria-label={viewingTopics ? "Search topics" : "Search subjects"}
+              placeholder={
+                viewingBrowse
+                  ? browseMode === "paper"
+                    ? "Search papers…"
+                    : "Search topics…"
+                  : "Search subjects…"
+              }
+              aria-label={
+                viewingBrowse
+                  ? browseMode === "paper"
+                    ? "Search papers"
+                    : "Search topics"
+                  : "Search subjects"
+              }
             />
           </label>
         ) : null}
@@ -637,38 +805,101 @@ function PracticeBrowserInner() {
               ))}
             </div>
           </section>
-        ) : topicsLoading ? (
-          <div className="practice-browser__status">
-            <LuLoaderCircle size={24} className="animate-spin" />
-            Loading topics…
-          </div>
-        ) : topicsError ? (
-          <div className="practice-browser__status">Couldn’t load the topics for this level.</div>
         ) : (
-          <section>
-            <h2 className="practice-browser__section-title">
-              Topics <span>({filteredTopics.length})</span>
-            </h2>
-            <div className="practice-browser__card-grid">
-              {filteredTopics.map((topic) => (
-                <button
-                  key={topic.name}
-                  type="button"
-                  className="practice-browser__topic-card"
-                  onClick={() => updateLocation({ topic: topic.name })}
-                >
-                  <div className="practice-browser__topic-card-heading">
-                    <span className="practice-browser__card-icon"><LuFileText size={19} /></span>
-                    <h3>{topic.displayName}</h3>
-                  </div>
-                  <div className="practice-browser__topic-count">
-                    <span>{topic.questionCount} questions</span>
-                    <LuChevronRight size={17} />
-                  </div>
-                </button>
-              ))}
+          <>
+            <div className="practice-browser__browse-toggle" role="group" aria-label="Browse by">
+              <button
+                type="button"
+                className={browseMode === "topic" ? "is-active" : ""}
+                onClick={() => setBrowseMode("topic")}
+              >
+                By topic
+              </button>
+              <button
+                type="button"
+                className={browseMode === "paper" ? "is-active" : ""}
+                onClick={() => setBrowseMode("paper")}
+              >
+                By paper
+              </button>
             </div>
-          </section>
+
+            {browseMode === "topic" ? (
+              topicsLoading ? (
+                <div className="practice-browser__status">
+                  <LuLoaderCircle size={24} className="animate-spin" />
+                  Loading topics…
+                </div>
+              ) : topicsError ? (
+                <div className="practice-browser__status">Couldn’t load the topics for this level.</div>
+              ) : (
+                <section>
+                  <h2 className="practice-browser__section-title">
+                    Topics <span>({filteredTopics.length})</span>
+                  </h2>
+                  <div className="practice-browser__card-grid">
+                    {filteredTopics.map((topic) => (
+                      <button
+                        key={topic.name}
+                        type="button"
+                        className="practice-browser__topic-card"
+                        onClick={() => updateLocation({ topic: topic.name, year: null, paper: null })}
+                      >
+                        <div className="practice-browser__topic-card-heading">
+                          <span className="practice-browser__card-icon"><LuFileText size={19} /></span>
+                          <h3>{topic.displayName}</h3>
+                        </div>
+                        <div className="practice-browser__topic-count">
+                          <span>{topic.questionCount} questions</span>
+                          <LuChevronRight size={17} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )
+            ) : papersLoading ? (
+              <div className="practice-browser__status">
+                <LuLoaderCircle size={24} className="animate-spin" />
+                Loading papers…
+              </div>
+            ) : papersError ? (
+              <div className="practice-browser__status">Couldn’t load the papers for this level.</div>
+            ) : (
+              <section>
+                <h2 className="practice-browser__section-title">
+                  Papers <span>({filteredPapers.length})</span>
+                </h2>
+                <div className="practice-browser__card-grid">
+                  {filteredPapers.map((paper) => (
+                    <button
+                      key={paper.key}
+                      type="button"
+                      className="practice-browser__topic-card"
+                      onClick={() =>
+                        updateLocation({
+                          topic: null,
+                          year: String(paper.year),
+                          paper: paper.paper != null ? String(paper.paper) : null,
+                        })
+                      }
+                    >
+                      <div className="practice-browser__topic-card-heading">
+                        <span className="practice-browser__card-icon"><LuBookOpen size={19} /></span>
+                        <h3>{paper.label}</h3>
+                      </div>
+                      <div className="practice-browser__topic-count">
+                        <span>
+                          {paper.questionCount} questions · {paper.topics.length} topics
+                        </span>
+                        <LuChevronRight size={17} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
       </div>
     </div>

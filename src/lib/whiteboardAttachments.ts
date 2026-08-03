@@ -34,7 +34,7 @@ export function buildImageAttachment(
   level: string,
   topic: ImageTopic,
   grouped: GroupedImageQuestion,
-  msFiles: MarkingSchemeFile[]
+  msFiles: MarkingSchemeFile[] = []
 ): AttachedQuestion {
   const matchedMs = getMarkingSchemeFilesForGroupedQuestion(msFiles, grouped);
   return {

@@ -339,7 +339,7 @@
 
 .practice-hub__subject-trigger:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-blue) 25%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-txt-accent) 25%, transparent);
 }
 
 .practice-hub__subject-trigger-label {
@@ -1111,14 +1111,8 @@
   line-height: 1.2;
 }
 
-.practice-hub__access-badge--free {
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-  color: var(--color-accent);
-}
-
 .practice-hub__access-badge--locked {
-  background: color-mix(in srgb, var(--color-grey) 12%, transparent);
-  color: var(--color-txt-sub);
+  @apply color-bg-grey-10 color-txt-sub;
 }
 
 /* Favourite-subject tiles: compact — icons only, not full paper previews.

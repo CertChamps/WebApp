@@ -20,12 +20,13 @@ import {
     pickStarterImageTopic,
 } from "../lib/contentAccess";
 import { usePaperSnapshot } from "../hooks/usePaperSnapshot";
-import { buildImageTopicExamPaper, usePaperProgress } from "../hooks/usePaperProgress";
+import { buildImageTopicExamPaper, buildImageYearPaperExamPaper, usePaperProgress } from "../hooks/usePaperProgress";
 import useFilters from "../hooks/useFilters";
 import { getPastPaperTopicScope } from "../data/mathsHigherTopics";
 import { useQuestionSessionLog, type QuestionMeta } from "../hooks/useQuestionSessionLog";
 import {
   useImageQuestionsForTopic,
+  useImageQuestionsForPaper,
   useImageMarkingSchemesForTopic,
   useMarkingSchemeUrls,
   useAllTopicsForSubjectLevel,
@@ -33,6 +34,7 @@ import {
   type GroupedImageQuestion,
   type ImageTopic,
 } from "../hooks/useImageQuestions";
+import { parseExamCycle } from "../lib/examCycle";
 import SaveQuestionToCanvasModal from "../components/whiteboards/SaveQuestionToCanvasModal";
 import { buildImageAttachment, buildPaperAttachment } from "../lib/whiteboardAttachments";
 import { getPracticeSubjectId } from "../data/practiceHubSubjects";
@@ -299,6 +301,12 @@ export default function Questions() {
     const urlIndexInPaper = searchParams.get("indexInPaper");
     const urlQuestionId = searchParams.get("questionId");
     const urlImageKey = searchParams.get("imageKey");
+    const urlYearRaw = searchParams.get("year");
+    const urlPaperRaw = searchParams.get("paper");
+    const urlImageYear = urlYearRaw && /^\d{4}$/.test(urlYearRaw) ? Number(urlYearRaw) : null;
+    const urlImagePaper =
+      urlPaperRaw === "1" || urlPaperRaw === "2" ? Number(urlPaperRaw) : null;
+    const examCycle = parseExamCycle(searchParams.get("cycle"));
     const normalizedUrlLevel = normalizePaperLevel(urlLevel);
     const normalizedUrlSubject = (urlSubject ?? "").trim().toLowerCase();
 
@@ -325,6 +333,7 @@ export default function Questions() {
     );
 
     const [mode, setMode] = useState<QuestionsMode>(initialMode);
+    const imageBrowseByPaper = mode === "imagequestions" && urlImageYear != null;
     const practiceSessionTutorialStartedRef = useRef(false);
     const [practiceSessionTutorialStep, setPracticeSessionTutorialStep] =
         useState<PracticeSessionTutorialStep | null>(null);
@@ -460,9 +469,20 @@ export default function Questions() {
         grouped: topicImageGroupedList,
         loading: topicImageQuestionsLoading,
     } = useImageQuestionsForTopic(
-        mode === "imagequestions" ? normalizedUrlSubject || null : null,
-        mode === "imagequestions" ? normalizedUrlLevel || null : null,
-        mode === "imagequestions" ? imageQuestionTopic : null
+        mode === "imagequestions" && !imageBrowseByPaper ? normalizedUrlSubject || null : null,
+        mode === "imagequestions" && !imageBrowseByPaper ? normalizedUrlLevel || null : null,
+        mode === "imagequestions" && !imageBrowseByPaper ? imageQuestionTopic : null,
+        examCycle
+    );
+    const {
+        grouped: paperImageGroupedList,
+        loading: paperImageQuestionsLoading,
+    } = useImageQuestionsForPaper(
+        imageBrowseByPaper ? normalizedUrlSubject || null : null,
+        imageBrowseByPaper ? normalizedUrlLevel || null : null,
+        imageBrowseByPaper ? urlImageYear : null,
+        imageBrowseByPaper ? urlImagePaper : null,
+        examCycle
     );
     const {
         files: topicMarkingSchemeFiles,
@@ -470,10 +490,15 @@ export default function Questions() {
     } = useImageMarkingSchemesForTopic(
         mode === "imagequestions" ? normalizedUrlSubject || null : null,
         mode === "imagequestions" ? normalizedUrlLevel || null : null,
-        mode === "imagequestions" ? imageQuestionTopic : null
+        mode === "imagequestions"
+          ? (imageQuestionTopic || paperImageGroupedList[0]?.topic || null)
+          : null,
+        examCycle
     );
-    const imageGroupedList = topicImageGroupedList;
-    const imageQuestionsLoading = topicImageQuestionsLoading;
+    const imageGroupedList = imageBrowseByPaper ? paperImageGroupedList : topicImageGroupedList;
+    const imageQuestionsLoading = imageBrowseByPaper
+      ? paperImageQuestionsLoading
+      : topicImageQuestionsLoading;
 
     const navClusterTutorialRect = useTutorialAnchorRect(
         isPracticeSessionTutorialStep2,
@@ -490,7 +515,8 @@ export default function Questions() {
         topics: imageAllTopics,
     } = useAllTopicsForSubjectLevel(
         mode === "imagequestions" ? normalizedUrlSubject || null : null,
-        mode === "imagequestions" ? normalizedUrlLevel || null : null
+        mode === "imagequestions" ? normalizedUrlLevel || null : null,
+        examCycle
     );
     useEffect(() => {
         setImageQuestionTopic(urlTopic || null);
@@ -508,11 +534,28 @@ export default function Questions() {
     const [showComingSoonToast, setShowComingSoonToast] = useState(false);
 
     const imageProgressPaper = useMemo(() => {
-        if (mode !== "imagequestions" || !normalizedUrlSubject || !normalizedUrlLevel || !imageQuestionTopic) {
+        if (mode !== "imagequestions" || !normalizedUrlSubject || !normalizedUrlLevel) {
             return null;
         }
+        if (imageBrowseByPaper && urlImageYear != null) {
+            return buildImageYearPaperExamPaper(
+                normalizedUrlSubject,
+                normalizedUrlLevel,
+                urlImageYear,
+                urlImagePaper
+            );
+        }
+        if (!imageQuestionTopic) return null;
         return buildImageTopicExamPaper(normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic);
-    }, [mode, normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic]);
+    }, [
+        mode,
+        normalizedUrlSubject,
+        normalizedUrlLevel,
+        imageQuestionTopic,
+        imageBrowseByPaper,
+        urlImageYear,
+        urlImagePaper,
+    ]);
 
     const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
 
@@ -535,11 +578,12 @@ export default function Questions() {
 
     const imageTopicBlocked = useMemo(() => {
         if (mode !== "imagequestions" || hasAceAccess(user)) return false;
+        if (imageBrowseByPaper) return false; // paper sessions use same free-sample gating as topics below if needed
         if (!normalizedUrlSubject || !imageQuestionTopic || imageAllTopics.length === 0) return false;
         const topic = imageAllTopics.find((t) => t.name === imageQuestionTopic);
         if (!topic) return false;
         return !canAccessImageTopic(user, topic, starterImageTopic, normalizedUrlSubject);
-    }, [mode, user, normalizedUrlSubject, imageQuestionTopic, imageAllTopics, starterImageTopic]);
+    }, [mode, user, normalizedUrlSubject, imageQuestionTopic, imageAllTopics, starterImageTopic, imageBrowseByPaper]);
 
     const paperContentBlocked = useMemo(() => {
         if (mode !== "pastpaper" || !selectedPaper) return false;
@@ -740,13 +784,16 @@ export default function Questions() {
             return `${selectedPaper.id}_${currentPaperQuestion.id}`;
         }
         if (mode === "imagequestions" && currentGroupedQuestion) {
-            return `img_${normalizedUrlSubject}_${normalizedUrlLevel}_${imageQuestionTopic}_${currentGroupedQuestion.key}`;
+            const scope = imageBrowseByPaper
+              ? `paper-${urlImageYear}-${urlImagePaper ?? "x"}`
+              : imageQuestionTopic;
+            return `img_${normalizedUrlSubject}_${normalizedUrlLevel}_${scope}_${currentGroupedQuestion.key}`;
         }
         if (mode === "certchamps" && currentQuestion?.id) {
             return currentQuestion.id as string;
         }
         return null;
-    }, [mode, selectedPaper, currentPaperQuestion, currentGroupedQuestion, currentQuestion, normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic]);
+    }, [mode, selectedPaper, currentPaperQuestion, currentGroupedQuestion, currentQuestion, normalizedUrlSubject, normalizedUrlLevel, imageQuestionTopic, imageBrowseByPaper, urlImageYear, urlImagePaper]);
 
     const questionLogMeta = useMemo((): QuestionMeta | null => {
         if (mode === "pastpaper" && selectedPaper && currentPaperQuestion) {
@@ -1562,16 +1609,20 @@ export default function Questions() {
             );
         } else if (mode === "imagequestions") {
             if (!currentGroupedQuestion) return;
-            setSearchParams(
-                {
-                    mode: "imagequestions",
-                    subject: normalizedUrlSubject,
-                    level: normalizedUrlLevel,
-                    topic: imageQuestionTopic ?? "",
-                    imageKey: currentGroupedQuestion.key,
-                },
-                { replace: true }
-            );
+            const params: Record<string, string> = {
+                mode: "imagequestions",
+                subject: normalizedUrlSubject,
+                level: normalizedUrlLevel,
+                imageKey: currentGroupedQuestion.key,
+                cycle: examCycle,
+            };
+            if (imageBrowseByPaper && urlImageYear != null) {
+                params.year = String(urlImageYear);
+                if (urlImagePaper != null) params.paper = String(urlImagePaper);
+            } else if (imageQuestionTopic) {
+                params.topic = imageQuestionTopic;
+            }
+            setSearchParams(params, { replace: true });
         } else {
             if (!currentQuestion?.id) return;
             const params: Record<string, string> = {
@@ -1800,7 +1851,8 @@ export default function Questions() {
                     markingSchemeImages={mode === "imagequestions" ? currentImageMarkingSchemes : undefined}
                     markingSchemeLoading={
                         mode === "imagequestions"
-                            ? topicMarkingSchemesLoading || currentMarkingSchemeUrlsLoading
+                            ? (currentMarkingSchemeFiles.length === 0 && topicMarkingSchemesLoading) ||
+                              currentMarkingSchemeUrlsLoading
                             : undefined
                     }
                     aiInjectedExchange={aiInjectedExchange}
