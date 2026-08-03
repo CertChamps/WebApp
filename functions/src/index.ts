@@ -423,6 +423,9 @@ function createMeteredChatFunction() {
     try {
         const resolvedTemperature = typeof temperature === "number" ? temperature : 0.7;
         const resolvedTopP = typeof top_p === "number" ? top_p : 1;
+        // Grading returns structured multi-part JSON; 1000 tokens often truncates
+        // mid-object and causes client-side parse failures / useless retries.
+        const maxTokens = purpose === "grading" ? 4096 : 1000;
         const response = await fetch(OPENROUTER_URL, {
             method: "POST",
             headers: {
@@ -433,10 +436,10 @@ function createMeteredChatFunction() {
             body: JSON.stringify({
                 model: OPENROUTER_MODEL,
                 messages: apiMessages,
-                max_tokens: 1000,
+                max_tokens: maxTokens,
                 temperature: resolvedTemperature,
                 top_p: resolvedTopP,
-                stream: true
+                stream: true,
             })
         });
 

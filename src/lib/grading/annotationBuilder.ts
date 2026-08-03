@@ -110,29 +110,32 @@ export function buildAnnotations(pass1: Pass1Result, pass2: Pass2Result, capture
     }
   }
 
-  const markLabel = /^\d+\/\d+$/.test(pass2.markLabel)
-    ? pass2.markLabel
-    : `${Math.max(0, Math.round(pass2.totalAwarded))}/${Math.max(0, Math.round(pass2.totalAvailable))}`;
+  const shouldShowMark = pass2.totalAvailable > 0;
+  if (shouldShowMark) {
+    const markLabel = /^\d+\/\d+$/.test(pass2.markLabel)
+      ? pass2.markLabel
+      : `${Math.max(0, Math.round(pass2.totalAwarded))}/${Math.max(0, Math.round(pass2.totalAvailable))}`;
 
-  const markAnchorWorld = fracToWorld(captureBounds, pass2.answerMarkPosition.x, pass2.answerMarkPosition.y);
-  const answerPart = [...pass2.parts].reverse().find((part) => part.marksAvailable > 0) ?? pass2.parts[pass2.parts.length - 1];
-  const answerPartP1 = answerPart
-    ? pass1.parts.find((part) => part.partId.toLowerCase() === answerPart.partId.toLowerCase())
-    : pass1.parts[pass1.parts.length - 1];
-  const regionWorld = answerPartP1 ? partRegionToWorld(captureBounds, answerPartP1) : {
-    left: captureBounds.x,
-    top: captureBounds.y,
-    right: captureBounds.x + captureBounds.width,
-    bottom: captureBounds.y + captureBounds.height,
-  };
-  const markWorld = chooseMarkPlacement(markAnchorWorld, regionWorld);
+    const markAnchorWorld = fracToWorld(captureBounds, pass2.answerMarkPosition.x, pass2.answerMarkPosition.y);
+    const answerPart = [...pass2.parts].reverse().find((part) => part.marksAvailable > 0) ?? pass2.parts[pass2.parts.length - 1];
+    const answerPartP1 = answerPart
+      ? pass1.parts.find((part) => part.partId.toLowerCase() === answerPart.partId.toLowerCase())
+      : pass1.parts[pass1.parts.length - 1];
+    const regionWorld = answerPartP1 ? partRegionToWorld(captureBounds, answerPartP1) : {
+      left: captureBounds.x,
+      top: captureBounds.y,
+      right: captureBounds.x + captureBounds.width,
+      bottom: captureBounds.y + captureBounds.height,
+    };
+    const markWorld = chooseMarkPlacement(markAnchorWorld, regionWorld);
 
-  annotations.push({
-    type: "markAnnotation",
-    worldX: markWorld.x,
-    worldY: markWorld.y,
-    label: markLabel,
-  });
+    annotations.push({
+      type: "markAnnotation",
+      worldX: markWorld.x,
+      worldY: markWorld.y,
+      label: markLabel,
+    });
+  }
 
   return annotations;
 }

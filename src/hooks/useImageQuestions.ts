@@ -157,6 +157,31 @@ function tryStripSuffix(nameWithoutExt: string): string {
   return nameWithoutExt.replace(/[\s_-]+\d+$/, "");
 }
 
+/** year + optional P1/P2 + Q number — ignores part letters / SAMPLE / DEFERRED. */
+const EXAM_CORE_RE =
+  /(?<year>(?:19|20)\d{2})(?:_P(?<paper>[12]))?.*?[_-]?Q(?<q>\d+)/i;
+
+export type ExamCore = { year: string; paper: string; q: string };
+
+export function extractExamCore(stem: string): ExamCore | null {
+  if (!stem) return null;
+  const m = EXAM_CORE_RE.exec(stem);
+  if (!m?.groups?.year || !m.groups.q) return null;
+  return {
+    year: m.groups.year,
+    paper: m.groups.paper ?? "",
+    q: m.groups.q,
+  };
+}
+
+function examCoresEqual(a: ExamCore | null, b: ExamCore | null): boolean {
+  return !!a && !!b && a.year === b.year && a.paper === b.paper && a.q === b.q;
+}
+
+function isImageMarkingSchemeName(name: string): boolean {
+  return !/\.pdf$/i.test(name);
+}
+
 /** Extract the trailing part number (0 if no suffix matched). */
 function getPartNumber(nameWithoutExt: string, groupKey: string): number {
   if (nameWithoutExt === groupKey) return 0;
@@ -458,12 +483,15 @@ export function getMarkingSchemeFilesForGroupedQuestion(
 
   if (allFiles.length === 0) return [];
 
+  const imageFiles = allFiles.filter((f) => isImageMarkingSchemeName(f.name));
   const groupKey = grouped.key;
   const partPrefix = `${groupKey}_`;
+  const groupCore = extractExamCore(groupKey);
 
-  const matched = allFiles.filter((f) => {
+  const matched = imageFiles.filter((f) => {
     const bare = stripExtension(f.name);
-    return bare === groupKey || bare.startsWith(partPrefix);
+    if (bare === groupKey || bare.startsWith(partPrefix)) return true;
+    return examCoresEqual(groupCore, extractExamCore(bare));
   });
 
   matched.sort((a, b) => {

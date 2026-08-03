@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { LuChevronDown, LuSearch } from "react-icons/lu";
+import { LuChevronDown, LuSearch, LuStar } from "react-icons/lu";
 import {
   PRACTICE_HUB_SUBJECTS,
   getFavouriteSubjectIds,
@@ -25,6 +25,11 @@ type Props = {
   id?: string;
   "aria-label"?: string;
   onFavouritesChange?: (ids: string[]) => void;
+  /**
+   * `grid` — icon tiles (Practice Hub). `list` — compact text rows with star favourites
+   * (whiteboards).
+   */
+  variant?: "grid" | "list";
 };
 
 type ContextMenuState = {
@@ -213,12 +218,14 @@ export default function SubjectDropdown({
   id = "ph-subject",
   "aria-label": ariaLabel,
   onFavouritesChange,
+  variant = "grid",
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [favourites, setFavourites] = useState<string[]>(() => getFavouriteSubjectIds());
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isList = variant === "list";
 
   const options = subjects != null && subjects.length > 0 ? subjects : PRACTICE_HUB_SUBJECTS;
   const allowAllSubjects = subjects == null || subjects.length === 0;
@@ -261,6 +268,11 @@ export default function SubjectDropdown({
     [filtered, favourites]
   );
 
+  const favouriteSubjects = useMemo(
+    () => filtered.filter((s) => favourites.includes(s.id)),
+    [filtered, favourites]
+  );
+
   const selectedLabel = useMemo(
     () =>
       options.find((s) => s.id === value)?.label ??
@@ -294,6 +306,14 @@ export default function SubjectDropdown({
     [onFavouritesChange]
   );
 
+  const handleFavourite = useCallback(
+    (e: React.MouseEvent, subjectId: string) => {
+      e.stopPropagation();
+      handleTogglePin(subjectId);
+    },
+    [handleTogglePin]
+  );
+
   const openMenuFor = useCallback((subjectId: string, x: number, y: number) => {
     setContextMenu({ subjectId, x, y });
   }, []);
@@ -303,7 +323,7 @@ export default function SubjectDropdown({
   return (
     <div
       ref={containerRef}
-      className="practice-hub__subject-wrap"
+      className={`practice-hub__subject-wrap${isList ? " practice-hub__subject-wrap--compact" : ""}`}
       data-state={open ? "open" : "closed"}
     >
       <button
@@ -312,24 +332,127 @@ export default function SubjectDropdown({
         aria-label={ariaLabel ?? "Choose subject"}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="practice-hub__subject-trigger"
+        className={`practice-hub__subject-trigger${isList ? " practice-hub__subject-trigger--compact" : ""}`}
         onClick={() => setOpen((o) => !o)}
       >
-        <span className="flex min-w-0 flex-1 items-center gap-2">
-          {value ? (
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg color-bg-accent" aria-hidden>
-              <SubjectGlyph subjectId={value} size={18} className="color-txt-accent" />
-            </span>
-          ) : null}
+        {isList ? (
           <span className="practice-hub__subject-trigger-label truncate">{selectedLabel}</span>
-        </span>
+        ) : (
+          <span className="flex min-w-0 flex-1 items-center gap-2">
+            {value ? (
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg color-bg-accent" aria-hidden>
+                <SubjectGlyph subjectId={value} size={18} className="color-txt-accent" />
+              </span>
+            ) : null}
+            <span className="practice-hub__subject-trigger-label truncate">{selectedLabel}</span>
+          </span>
+        )}
         <span className="practice-hub__subject-arrow" aria-hidden>
-          <LuChevronDown size={18} strokeWidth={2} className="practice-hub__subject-chevron" />
+          <LuChevronDown size={isList ? 16 : 18} strokeWidth={2} className="practice-hub__subject-chevron" />
         </span>
       </button>
 
       <AnimatePresence>
-        {open && (
+        {open && isList && (
+          <motion.div
+            key="subject-dropdown-list"
+            className="practice-hub__subject-dropdown practice-hub__subject-dropdown--list"
+            role="listbox"
+            aria-label="Subjects"
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.99 }}
+            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            style={{ transformOrigin: "top center" }}
+          >
+            <div className="practice-hub__subject-search-wrap">
+              <LuSearch size={15} className="practice-hub__subject-search-icon" aria-hidden />
+              <input
+                type="text"
+                className="practice-hub__subject-search"
+                placeholder="Search subjects…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                autoFocus
+                aria-label="Search subjects"
+              />
+            </div>
+
+            <div className="practice-hub__subject-scroll">
+              {favouriteSubjects.length > 0 && (
+                <div className="practice-hub__subject-group">
+                  <div className="practice-hub__subject-group-label">Favourites</div>
+                  {favouriteSubjects.map((s) => (
+                    <button
+                      key={`fav-${s.id}`}
+                      type="button"
+                      role="option"
+                      aria-selected={value === s.id}
+                      className="practice-hub__subject-option"
+                      onClick={() => handleSelect(s)}
+                    >
+                      <span className="truncate">{s.label}</span>
+                      <button
+                        type="button"
+                        className="practice-hub__subject-fav practice-hub__subject-fav--on"
+                        onClick={(e) => handleFavourite(e, s.id)}
+                        aria-label={`Unfavourite ${s.label}`}
+                        title="Remove from favourites"
+                      >
+                        <LuStar size={14} fill="currentColor" />
+                      </button>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="practice-hub__subject-group">
+                <div className="practice-hub__subject-group-label">
+                  {search.trim() ? "Results" : "All subjects"}
+                </div>
+                <div className="practice-hub__subject-list">
+                  {filtered.length === 0 ? (
+                    <div className="practice-hub__subject-empty color-txt-sub text-sm py-2">
+                      No subjects match
+                    </div>
+                  ) : (
+                    filtered.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        role="option"
+                        aria-selected={value === s.id}
+                        className="practice-hub__subject-option"
+                        onClick={() => handleSelect(s)}
+                      >
+                        <span className="truncate">{s.label}</span>
+                        <button
+                          type="button"
+                          className={`practice-hub__subject-fav ${favourites.includes(s.id) ? "practice-hub__subject-fav--on" : ""}`}
+                          onClick={(e) => handleFavourite(e, s.id)}
+                          aria-label={
+                            favourites.includes(s.id)
+                              ? `Unfavourite ${s.label}`
+                              : `Favourite ${s.label}`
+                          }
+                          title={
+                            favourites.includes(s.id)
+                              ? "Remove from favourites"
+                              : "Add to favourites"
+                          }
+                        >
+                          <LuStar size={14} fill={favourites.includes(s.id) ? "currentColor" : "none"} />
+                        </button>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {open && !isList && (
           <motion.div
             key="subject-dropdown"
             className="practice-hub__subject-dropdown practice-hub__subject-dropdown--grid"
@@ -420,7 +543,7 @@ export default function SubjectDropdown({
         )}
       </AnimatePresence>
 
-      {contextMenu && menuSubject && (
+      {!isList && contextMenu && menuSubject && (
         <SubjectContextMenu
           menu={contextMenu}
           label={

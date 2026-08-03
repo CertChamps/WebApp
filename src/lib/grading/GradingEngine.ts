@@ -2,6 +2,7 @@ import { Pass1Schema, Pass2Schema } from "./GradingSchemas";
 import type { CanvasCapturePayload, GradingResult, GradingStatus, Pass1Result, Pass2Result } from "./GradingTypes";
 import { buildAnnotations } from "./annotationBuilder";
 import { hashSnapshot } from "./canvasCapture";
+import { AiRequestError } from "../aiApi";
 
 export const PASS1_SYSTEM_PROMPT = `You are an expert exam marker assistant completing the first step
 of a structured two-pass marking process.
@@ -168,6 +169,78 @@ Return ONLY this JSON, nothing else, no markdown fences:
   Never write just the awarded mark alone.
 }`;
 
+export const PASS2_ADAPTIVE_SYSTEM_PROMPT = `You are an expert tutor reviewing a student's whiteboard work.
+
+You may NOT have an official marking scheme. Adapt to the material:
+  - If question images are provided, treat those as the question the student is answering
+  - If this is custom / uploaded / freeform work with no clear exam mark allocation,
+    focus on helpful, encouraging feedback rather than inventing a rigid mark scheme
+  - Only award numerical marks when it clearly suits the task (e.g. a standard
+    exam-style question with obvious part marks, or a marking scheme image is present)
+  - When marks are NOT suitable: set totalAvailable: 0, totalAwarded: 0,
+    isFullMarks: false, markLabel: "", and set each part's marksAvailable /
+    marksAwarded to 0. Still give useful feedback via the errors array
+    (constructive notes count as "errors" for annotation purposes — write them
+    in second person). For fully correct work with no marks, leave errors empty
+    and set isCorrect: true
+  - When marks ARE suitable: award fairly, use markLabel like '7/10', and follow
+    normal marking judgment
+
+Rules that always apply:
+  - Write all feedback in second person, directly addressing the student as 'you'.
+    Never refer to 'the student', 'the answer', or use third-person phrasing.
+    Every feedbackText must start with 'You' or address the student directly
+    within the first four words.
+  - Write all mathematical expressions in LaTeX wrapped in dollar signs
+  - Be concise — one clear sentence per note, encouraging and personal
+  - Feedback must cite the specific place in the working when pointing out a mistake
+  - Some parts may have attempted: false
+  - For attempted: false parts:
+      - Set marksAwarded: 0
+      - Set isCorrect: false
+      - Set errors to a single entry with feedbackText exactly:
+        'No workings found for this part.'
+      - Set errorBox to { x: 0, y: 0, width: 0, height: 0 }
+  - Every part in the input must appear in the output; do not omit any part
+
+For each feedback note that needs a canvas annotation:
+  - When drawing the bounding box, encapsulate the entire line or step —
+    not just a single symbol
+  - Add approximately 8px padding above and below
+  - Return the box as normalised fractions (0-1) relative to image dimensions
+
+Return ONLY this JSON, nothing else, no markdown fences:
+{
+  totalAwarded: number,
+  totalAvailable: number,
+  isFullMarks: boolean,
+  parts: [
+    {
+      partId: string,
+      marksAwarded: number,
+      marksAvailable: number,
+      isCorrect: boolean,
+      errors: [
+        {
+          id: string,
+          feedbackText: string,
+          errorBox: {
+            x: number,
+            y: number,
+            width: number,
+            height: number
+          }
+        }
+      ]
+    }
+  ],
+  answerMarkPosition: {
+    x: number,
+    y: number
+  },
+  markLabel: string - '7/10' when awarding marks, or '' when feedback-only.
+}`;
+
 export type StreamChatResponse = (
   messages: Array<{ role: string; content: unknown }>,
   options?: { temperature?: number; top_p?: number; context?: string; usageId?: string },
@@ -179,6 +252,13 @@ type GradingInput = {
   questionText: string;
   markingSchemeText: string;
   markingSchemeImages: string[];
+  /** Question paper / upload images so the model can see what was asked. */
+  questionImages?: string[];
+  /**
+   * When true (no formal marking scheme), use adaptive tutor prompting and
+   * only award marks when it clearly suits the task.
+   */
+  adaptiveMarking?: boolean;
   capture: CanvasCapturePayload;
   fullInkCapture?: CanvasCapturePayload | null;
   aggressiveFullInkCapture?: CanvasCapturePayload | null;
@@ -201,9 +281,26 @@ function stripCodeFences(raw: string): string {
   return body.trim();
 }
 
-function parseValidated<T>(raw: string, schema: { safeParse: (value: unknown) => { success: true; data: T } | { success: false } }): T {
+/** Pull the first JSON object out of model text (prose wrappers / fences). */
+function extractJsonObject(raw: string): unknown {
   const cleaned = stripCodeFences(raw);
-  const parsed = JSON.parse(cleaned);
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(cleaned.slice(start, end + 1));
+    }
+    throw new Error("No JSON object found in model response.");
+  }
+}
+
+function parseValidated<T>(
+  raw: string,
+  schema: { safeParse: (value: unknown) => { success: true; data: T } | { success: false; error?: unknown } },
+): T {
+  const parsed = extractJsonObject(raw);
   const validated = schema.safeParse(parsed);
   if (!validated.success) {
     throw new Error("Model response failed schema validation.");
@@ -212,32 +309,65 @@ function parseValidated<T>(raw: string, schema: { safeParse: (value: unknown) =>
 }
 
 function parsePass2Validated(raw: string): Pass2Result {
-  const cleaned = stripCodeFences(raw);
-  const parsed = JSON.parse(cleaned) as {
-    parts?: Array<{ errors?: Array<{ errorBox?: { x?: number; y?: number; width?: number; height?: number } }> }>;
-  };
-
-  if (Array.isArray(parsed.parts)) {
-    for (const part of parsed.parts) {
-      if (!Array.isArray(part.errors)) continue;
-      for (const error of part.errors) {
-        const box = error.errorBox;
-        if (!box) continue;
-        const width = Number(box.width);
-        const height = Number(box.height);
-        const isDegenerate = width > 0 && height > 0 && (width <= 0.005 || height <= 0.005);
-        if (isDegenerate) {
-          error.errorBox = { x: 0, y: 0, width: 0, height: 0 };
-        }
-      }
-    }
-  }
-
+  const parsed = extractJsonObject(raw);
   const validated = Pass2Schema.safeParse(parsed);
   if (!validated.success) {
     throw new Error("Model response failed schema validation.");
   }
   return validated.data;
+}
+
+function defaultPass1(): Pass1Result {
+  return {
+    parts: [
+      {
+        partId: "a",
+        attempted: true,
+        transcript: "[unclear]",
+        workingsRegion: { x: 0.1, y: 0.1, width: 0.8, height: 0.8 },
+        answerLocation: { x: 0.5, y: 0.5 },
+      },
+    ],
+  };
+}
+
+function fallbackPass2(pass1: Pass1Result, rawText?: string): Pass2Result {
+  const cleaned = (rawText ?? "").replace(/```[\s\S]*?```/g, " ").replace(/\s+/g, " ").trim();
+  let note =
+    "I've looked over your workings and left what I could. Try Check Answer again if you want another pass.";
+  if (cleaned.length > 40 && cleaned.length < 600 && !cleaned.startsWith("{")) {
+    note = cleaned;
+  }
+  if (!/^you\b/i.test(note)) {
+    note = `You can use this note: ${note}`;
+  }
+
+  return {
+    totalAwarded: 0,
+    totalAvailable: 0,
+    isFullMarks: false,
+    markLabel: "",
+    answerMarkPosition: { x: 0.5, y: 0.5 },
+    parts: pass1.parts.map((part) => ({
+      partId: part.partId,
+      marksAwarded: 0,
+      marksAvailable: 0,
+      isCorrect: false,
+      errors: [
+        {
+          id: "fallback",
+          feedbackText: part.attempted
+            ? note
+            : "No workings found for this part.",
+          errorBox: { x: 0, y: 0, width: 0, height: 0 },
+        },
+      ],
+    })),
+  };
+}
+
+function isHardAiFailure(err: unknown): boolean {
+  return err instanceof AiRequestError || (err instanceof Error && /quota|sign in|allowance|AUTH/i.test(err.message));
 }
 
 export async function runGrading(input: GradingInput): Promise<GradingResult> {
@@ -258,105 +388,91 @@ export async function runGrading(input: GradingInput): Promise<GradingResult> {
             `Capture world bounds: ${JSON.stringify(capturePayload.captureWorldBounds)}`,
             "canvasDensityNote: This image contains handwritten mathematical workings. Pencil strokes may appear faint. Treat any marks, numbers, symbols, or letters as intentional workings unless they are clearly decorative doodles unrelated to the question.",
             instruction,
-          ].join("\n\n"),
+            (input.questionImages?.length ?? 0) > 0
+              ? "Question images are attached after this text (before the student whiteboard). Use them to understand what was asked."
+              : "",
+            "Always return valid JSON matching the required schema — never refuse, never return an empty response.",
+          ].filter(Boolean).join("\n\n"),
         },
+        ...(input.questionImages ?? []).slice(0, 4).map((url) => ({
+          type: "image_url" as const,
+          image_url: { url },
+        })),
         { type: "image_url", image_url: { url: capturePayload.dataUrl } },
       ],
     },
   ]);
 
-  const isAllUnattempted = (value: Pass1Result) =>
-    value.parts.length > 0 && value.parts.every((part) => part.attempted === false);
-
   input.onStatus("reading");
   let pass1 = input.pass1Cache[cacheKey];
-  if (!pass1 || isAllUnattempted(pass1)) {
-    let lastParseOrApiError: unknown = null;
-    const resolveAggressiveCapture = () =>
-      input.getAggressiveCapture?.() ?? input.aggressiveFullInkCapture ?? input.fullInkCapture ?? capture;
-
-    const pass1Attempts: Array<{ instruction: string; systemPrompt: string; capturePayload: () => CanvasCapturePayload }> = [
-      {
-        capturePayload: () => capture,
-        instruction: "Locate and transcribe by part.",
-        systemPrompt: PASS1_SYSTEM_PROMPT,
-      },
-      {
-        capturePayload: resolveAggressiveCapture,
-        instruction:
-          "IMPORTANT: The student has confirmed they have written workings on this canvas. You must find them. Look for any faint marks, light pencil strokes, or partially visible writing. Even a single digit counts as an attempt. Do not return attempted: false for any part unless you are certain beyond doubt it is blank.",
-        systemPrompt: PASS1_SYSTEM_PROMPT,
-      },
-      {
-        capturePayload: resolveAggressiveCapture,
-        instruction:
-          "For each question part, assign any writing you can find to the most likely part. If unsure, assign it to part a. Do not return empty transcripts. If you see any marks at all, transcribe them.",
-        systemPrompt:
-          "Look at this whiteboard image. I need you to find any handwritten numbers, letters, equations, or mathematical working anywhere in the image - regardless of whether they seem related to the question.\n\nFor each question part listed below, assign any writing you can find to the most likely part it belongs to. If you cannot tell which part it belongs to, assign it to part a.\n\nDo not return empty transcripts. If you see any marks at all, transcribe them. Return the same JSON structure as before.",
-      },
-    ];
-
-    for (const attempt of pass1Attempts) {
-      const capturePayload = attempt.capturePayload();
-      const pass1Raw = await input.streamChatResponse(
-        [{ role: "system", content: attempt.systemPrompt }, ...buildPass1User(capturePayload, attempt.instruction)],
+  if (!pass1) {
+    // One read pass only — do not burn quota on aggressive "find faint ink" retries.
+    // Prefer proceeding with a best-effort transcript (or a safe default) over erroring out.
+    const capturePayload = input.fullInkCapture ?? capture;
+    let pass1Raw = "";
+    try {
+      pass1Raw = await input.streamChatResponse(
+        [
+          { role: "system", content: PASS1_SYSTEM_PROMPT },
+          ...buildPass1User(capturePayload, "Locate and transcribe by part. Return JSON only."),
+        ],
         { temperature: 0.1, top_p: 0.9, usageId: input.usageId },
       );
-
-      try {
-        const parsed = parseValidated(pass1Raw, Pass1Schema);
-        pass1 = parsed;
-        if (!isAllUnattempted(parsed)) break;
-      } catch (err) {
-        lastParseOrApiError = err;
-      }
-    }
-
-    if (!pass1 && lastParseOrApiError) {
-      throw lastParseOrApiError;
-    }
-
-    if (!pass1) {
-      throw new Error("Pass 1 failed after retries.");
+      pass1 = parseValidated(pass1Raw, Pass1Schema);
+    } catch (err) {
+      if (isHardAiFailure(err)) throw err;
+      console.warn("[grading] Pass1 parse failed — using default transcript", err);
+      console.warn("[grading] Pass1 raw", pass1Raw?.slice?.(0, 800));
+      pass1 = defaultPass1();
     }
 
     input.setPass1Cache((prev) => ({ ...prev, [cacheKey]: pass1! }));
   }
 
   input.onStatus("marking");
+  const adaptive = Boolean(input.adaptiveMarking);
+  const pass2SystemPrompt = adaptive ? PASS2_ADAPTIVE_SYSTEM_PROMPT : PASS2_SYSTEM_PROMPT;
   const pass2UserText = [
     `Question:\n${input.questionText}`,
-    `Marking scheme:\n${input.markingSchemeText}`,
+    adaptive
+      ? (input.markingSchemeText
+          ? `Reference material (may be incomplete):\n${input.markingSchemeText}`
+          : "No official marking scheme was provided. Adapt: give useful feedback, and only award marks if clearly suited.")
+      : `Marking scheme:\n${input.markingSchemeText}`,
     "Pass 1 result:",
     JSON.stringify(pass1),
+    "Always return valid JSON matching the required schema. Prefer useful feedback over refusing.",
   ].join("\n\n");
 
   const pass2UserContent: Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }> = [
     { type: "text", text: pass2UserText },
+    ...(input.questionImages ?? []).slice(0, 4).map((url) => ({
+      type: "image_url" as const,
+      image_url: { url },
+    })),
     { type: "image_url", image_url: { url: capture.dataUrl } },
     ...input.markingSchemeImages.map((url) => ({ type: "image_url" as const, image_url: { url } })),
   ];
 
+  // Single marking pass — no blind retry. On parse failure, still return salvageable feedback.
   let pass2Raw = "";
   let pass2: Pass2Result;
   try {
     pass2Raw = await input.streamChatResponse(
-      [{ role: "system", content: PASS2_SYSTEM_PROMPT }, { role: "user", content: pass2UserContent }],
+      [{ role: "system", content: pass2SystemPrompt }, { role: "user", content: pass2UserContent }],
       { temperature: 0.1, top_p: 0.9, usageId: input.usageId },
     );
     pass2 = parsePass2Validated(pass2Raw);
-  } catch (firstErr) {
-    const retryRaw = await input.streamChatResponse(
-      [{ role: "system", content: PASS2_SYSTEM_PROMPT }, { role: "user", content: pass2UserContent }],
-      { temperature: 0.1, top_p: 0.9, usageId: input.usageId },
-    );
-    try {
-      pass2 = parsePass2Validated(retryRaw);
-    } catch {
-      console.error("Pass2 raw first", pass2Raw);
-      console.error("Pass2 raw retry", retryRaw);
-      throw firstErr;
-    }
+  } catch (err) {
+    if (isHardAiFailure(err)) throw err;
+    console.warn("[grading] Pass2 parse failed — returning fallback feedback", err);
+    console.warn("[grading] Pass2 raw", pass2Raw?.slice?.(0, 800));
+    pass2 = fallbackPass2(pass1, pass2Raw);
+  }
+
+  // Ensure every Pass1 part appears in Pass2 output.
+  if (pass2.parts.length === 0) {
+    pass2 = fallbackPass2(pass1, pass2Raw);
   }
 
   input.onStatus("rendering");

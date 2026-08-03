@@ -491,6 +491,7 @@ export default function WhiteboardsSidebar({
           onChange={onSubjectChange}
           id="wb-sidebar-subject"
           aria-label="Whiteboards subject"
+          variant="list"
         />
       </div>
 

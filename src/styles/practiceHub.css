@@ -333,6 +333,30 @@
   @apply color-bg txt-bold border-2 color-shadow;
 }
 
+.practice-hub__subject-trigger--compact {
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.25rem;
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--theme-txt-sub, #6b7280) 28%, transparent);
+  background: transparent;
+  box-shadow: none;
+  color: var(--theme-txt-main);
+}
+
+.practice-hub__subject-trigger--compact:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--theme-txt-sub, #6b7280) 6%, transparent);
+  border-color: color-mix(in srgb, var(--theme-txt-sub, #6b7280) 40%, transparent);
+}
+
+.practice-hub__subject-wrap--compact .practice-hub__subject-arrow {
+  color: var(--theme-txt-sub, #6b7280);
+  opacity: 0.7;
+}
+
 .practice-hub__subject-trigger:hover {
   opacity: 0.9;
 }
@@ -386,6 +410,38 @@
   width: min(44rem, calc(100vw - 1.5rem));
   max-height: none;
   /* Horizontal centering is applied via motion (x: -50%) so enter/exit can animate. */
+}
+
+.practice-hub__subject-dropdown--list {
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: min(22rem, 60vh);
+  border-radius: 0.25rem;
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--theme-txt-sub, #6b7280) 28%, transparent);
+  box-shadow: none;
+}
+
+.practice-hub__subject-dropdown--list .practice-hub__subject-search-wrap {
+  padding: 0.5rem 0.7rem;
+  gap: 0.5rem;
+  border-color: color-mix(in srgb, var(--theme-txt-sub, #6b7280) 18%, transparent);
+}
+
+.practice-hub__subject-dropdown--list .practice-hub__subject-search {
+  padding: 0.3rem 0;
+  font-size: 0.875rem;
+}
+
+.practice-hub__subject-dropdown--list .practice-hub__subject-option {
+  padding: 0.5rem 0.7rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.practice-hub__subject-dropdown--list .practice-hub__subject-group-label {
+  padding: 0.55rem 0.7rem 0.25rem;
 }
 
 .practice-hub__subject-search-wrap {

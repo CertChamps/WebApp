@@ -15,6 +15,7 @@ import {
   LuCalculator,
   LuChevronLeft,
   LuChevronRight,
+  LuCircleCheck,
   LuClipboardList,
   LuEye,
   LuEyeOff,
@@ -28,6 +29,7 @@ import {
 } from "react-icons/lu";
 import DrawingCanvas, {
   type RegisterDrawingSnapshot,
+  type RegisterGetGradingCapture,
   type CanvasObject,
 } from "../components/questions/DrawingCanvas";
 import QuestionTitlePicker from "../components/questions/QuestionTitlePicker";
@@ -56,6 +58,12 @@ import {
 } from "../data/whiteboards";
 import type { ImageQuestion } from "../hooks/useImageQuestions";
 import { getThemedPortalTarget } from "../utils/themedPortal";
+import type { InjectedExchange } from "../components/ai/useAI";
+import { AiRequestError, aiResponseError, authenticatedAiFetch, createAiUsageId, METERED_CHAT_API_URL } from "../lib/aiApi";
+import { runGrading } from "../lib/grading/GradingEngine";
+import type { CanvasAnnotation, CanvasCapturePayload, GradingStatus, Pass1Result } from "../lib/grading/GradingTypes";
+import { buildPartSummary } from "../lib/grading/annotationBuilder";
+import { BlankCanvasError } from "../lib/grading/canvasCapture";
 import "../styles/questions.css";
 import "../styles/practiceHub.css";
 
@@ -67,6 +75,63 @@ type CanvasStroke = {
   thicknessIndex?: number;
   color?: string;
 };
+
+function isSavedGradingAnnotations(value: unknown): value is CanvasAnnotation[] {
+  if (!Array.isArray(value)) return false;
+  return value.every((item) => {
+    if (!item || typeof item !== "object") return false;
+    const record = item as Record<string, unknown>;
+    if (record.type === "errorComment") {
+      return (
+        typeof record.id === "string" &&
+        typeof record.worldX === "number" &&
+        typeof record.worldY === "number" &&
+        typeof record.text === "string"
+      );
+    }
+    if (record.type === "markAnnotation") {
+      return (
+        typeof record.worldX === "number" &&
+        typeof record.worldY === "number" &&
+        typeof record.label === "string"
+      );
+    }
+    if (record.type === "errorBox") {
+      return (
+        typeof record.id === "string" &&
+        typeof record.worldX === "number" &&
+        typeof record.worldY === "number"
+      );
+    }
+    if (record.type === "handCircle") {
+      return (
+        typeof record.worldX === "number" &&
+        typeof record.worldY === "number" &&
+        typeof record.width === "number" &&
+        typeof record.height === "number"
+      );
+    }
+    return false;
+  });
+}
+
+function gradingStatusLabel(status: GradingStatus): string {
+  switch (status) {
+    case "capturing":
+    case "reading":
+      return "Reading your workings...";
+    case "marking":
+      return "Marking...";
+    case "rendering":
+      return "Check Answer";
+    case "done":
+      return "Done";
+    case "error":
+      return "Try again";
+    default:
+      return "Check Answer";
+  }
+}
 
 function PaperPanelToggle({
   visible,
@@ -331,31 +396,55 @@ function WhiteboardPageViewInner() {
   const [canvasStrokes, setCanvasStrokes] = useState<CanvasStroke[]>([]);
   const [canvasObjects, setCanvasObjects] = useState<CanvasObject[]>([]);
   const [canvasLoading, setCanvasLoading] = useState(true);
+  const [gradingAnnotations, setGradingAnnotations] = useState<CanvasAnnotation[]>([]);
+  const [checkAnswerStatus, setCheckAnswerStatus] = useState<string | null>(null);
+  const [gradingStatus, setGradingStatus] = useState<GradingStatus>("idle");
+  const [pass1Cache, setPass1Cache] = useState<Record<string, Pass1Result>>({});
+  const [aiInjectedExchange, setAiInjectedExchange] = useState<InjectedExchange | null>(null);
   const canvasStrokesRef = useRef(canvasStrokes);
   canvasStrokesRef.current = canvasStrokes;
   const canvasObjectsRef = useRef(canvasObjects);
   canvasObjectsRef.current = canvasObjects;
+  const gradingAnnotationsRef = useRef(gradingAnnotations);
+  gradingAnnotationsRef.current = gradingAnnotations;
   const getDrawingSnapshotRef = useRef<(() => string | null) | null>(null);
   const registerDrawingSnapshot = useCallback<RegisterDrawingSnapshot>((fn) => {
     getDrawingSnapshotRef.current = fn;
   }, []);
   const getDrawingSnapshot = useCallback(() => getDrawingSnapshotRef.current?.() ?? null, []);
 
+  const getGradingCaptureRef = useRef<
+    ((mode?: "default" | "full-ink" | "retry-aggressive") => CanvasCapturePayload | null) | null
+  >(null);
+  const registerGetGradingCapture = useCallback<RegisterGetGradingCapture>((fn) => {
+    getGradingCaptureRef.current = fn;
+  }, []);
+  const getGradingCapture = useCallback(
+    (mode: "default" | "full-ink" | "retry-aggressive" = "default") =>
+      getGradingCaptureRef.current?.(mode) ?? null,
+    []
+  );
+
   useEffect(() => {
     if (!canvasId) return;
     let cancelled = false;
     setCanvasLoading(true);
+    setGradingAnnotations([]);
     loadCanvas(canvasId)
       .then((loaded) => {
         if (cancelled) return;
         setCanvasStrokes(loaded?.strokes ?? []);
         setCanvasObjects(loaded?.objects ?? []);
+        setGradingAnnotations(
+          isSavedGradingAnnotations(loaded?.feedbackOverlay) ? loaded.feedbackOverlay : []
+        );
         setCanvasLoading(false);
       })
       .catch(() => {
         if (cancelled) return;
         setCanvasStrokes([]);
         setCanvasObjects([]);
+        setGradingAnnotations([]);
         setCanvasLoading(false);
       });
     return () => {
@@ -363,11 +452,24 @@ function WhiteboardPageViewInner() {
     };
   }, [canvasId, loadCanvas]);
 
+  const handleCanvasEditInteraction = useCallback(() => {
+    setGradingAnnotations([]);
+    setAiInjectedExchange(null);
+    setCheckAnswerStatus(null);
+    setGradingStatus("idle");
+  }, []);
+
+  useEffect(() => {
+    setCheckAnswerStatus(null);
+    setGradingStatus("idle");
+    setAiInjectedExchange(null);
+  }, [canvasId]);
+
   const handleStrokesChange = useCallback(
     (strokes: CanvasStroke[]) => {
       if (!canvasId) return;
       setCanvasStrokes(strokes);
-      saveCanvas(canvasId, strokes, null, canvasObjectsRef.current);
+      saveCanvas(canvasId, strokes, [], canvasObjectsRef.current);
     },
     [canvasId, saveCanvas]
   );
@@ -376,7 +478,7 @@ function WhiteboardPageViewInner() {
     (objects: CanvasObject[]) => {
       if (!canvasId) return;
       setCanvasObjects(objects);
-      saveCanvas(canvasId, canvasStrokesRef.current, null, objects);
+      saveCanvas(canvasId, canvasStrokesRef.current, gradingAnnotationsRef.current, objects);
     },
     [canvasId, saveCanvas]
   );
@@ -388,6 +490,134 @@ function WhiteboardPageViewInner() {
     },
     [canvasId, uploadCanvasAsset]
   );
+
+  const streamChatResponse = useCallback(
+    async (
+      messages: Array<{ role: string; content: unknown }>,
+      opts?: { temperature?: number; top_p?: number; context?: string; usageId?: string }
+    ): Promise<string> => {
+      const res = await authenticatedAiFetch(
+        METERED_CHAT_API_URL,
+        {
+          messages,
+          context: opts?.context,
+          temperature: opts?.temperature,
+          top_p: opts?.top_p,
+        },
+        "grading",
+        opts?.usageId
+      );
+
+      if (!res.ok) {
+        throw await aiResponseError(res, "Failed to check answer");
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6);
+          if (payload === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(payload) as {
+              choices?: Array<{ delta?: { content?: string } }>;
+              error?: { message?: string };
+            };
+            if (parsed.error?.message) throw new Error(parsed.error.message);
+            const token = parsed.choices?.[0]?.delta?.content;
+            if (token) fullText += token;
+          } catch (err) {
+            if (err instanceof SyntaxError) continue;
+            throw err;
+          }
+        }
+      }
+
+      return fullText.trim();
+    },
+    []
+  );
+
+  const canCheckNow = gradingStatus === "idle" || gradingStatus === "done" || gradingStatus === "error";
+
+  const injectGradingMessage = useCallback((result: Awaited<ReturnType<typeof runGrading>>) => {
+    const hasMarks = result.pass2.totalAvailable > 0;
+
+    if (hasMarks && result.pass2.isFullMarks) {
+      setAiInjectedExchange({
+        nonce: `${Date.now()}`,
+        userMessage: "Check Answer",
+        assistantMessage: `Well done - full marks! You scored ${result.pass2.totalAwarded}/${result.pass2.totalAvailable}.`,
+      });
+      return;
+    }
+
+    const partSummaries = buildPartSummary(result.pass2);
+    const partBreakdown = partSummaries
+      .map((p) => {
+        if (!hasMarks) {
+          if (p.summary === "correct") return "Looking good on this part.";
+          return p.summary;
+        }
+        if (p.marksAwarded === p.marksAvailable) {
+          return `${p.marksAwarded}/${p.marksAvailable} \u2014 well done.`;
+        }
+        return `${p.marksAwarded}/${p.marksAvailable} \u2014 ${p.summary}`;
+      })
+      .join("\n");
+
+    if (!hasMarks) {
+      const notes = partSummaries.filter((p) => p.summary !== "correct");
+      const message = notes.length === 0
+        ? "I've looked over your work — it's looking solid. I've left notes on the canvas where useful."
+        : [
+            "I've reviewed your work — here's what to focus on:",
+            "",
+            partBreakdown,
+            "",
+            "I've highlighted the key spots on your working.",
+          ].join("\n");
+      setAiInjectedExchange({
+        nonce: `${Date.now()}`,
+        userMessage: "Check Answer",
+        assistantMessage: message,
+      });
+      return;
+    }
+
+    const scoreRatio = result.pass2.totalAwarded / result.pass2.totalAvailable;
+    let openingEncouragement = "keep working at it, here is where things went wrong.";
+    if (scoreRatio >= 0.7 && scoreRatio < 1) {
+      openingEncouragement = "nearly there, here is what to work on.";
+    } else if (scoreRatio >= 0.4 && scoreRatio < 0.7) {
+      openingEncouragement = "close, just a couple of things to fix.";
+    }
+
+    const message = [
+      `You scored ${result.pass2.totalAwarded}/${result.pass2.totalAvailable} \u2014 ${openingEncouragement}`,
+      "",
+      partBreakdown,
+      "",
+      "I've highlighted exactly where to look on your working.",
+    ].join("\n");
+
+    setAiInjectedExchange({
+      nonce: `${Date.now()}`,
+      userMessage: "Check Answer",
+      assistantMessage: message,
+    });
+  }, []);
 
   const touchedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -437,6 +667,100 @@ function WhiteboardPageViewInner() {
     () => toImageQuestions(media.markingSchemeImages, "ms"),
     [media.markingSchemeImages]
   );
+
+  const handleCheckAnswer = useCallback(async () => {
+    if (!canCheckNow) return;
+    if (canvasLoading || !canvasId) {
+      setCheckAnswerStatus("Something went wrong - try again");
+      setGradingStatus("error");
+      return;
+    }
+
+    setCheckAnswerStatus(null);
+    setGradingAnnotations([]);
+
+    try {
+      const capture = getGradingCapture("default");
+      const fullInkCapture = getGradingCapture("full-ink");
+      if (!capture) {
+        throw new BlankCanvasError();
+      }
+
+      const questionImages = media.questionImages.map((img) => img.src).filter(Boolean).slice(0, 4);
+      const schemeImages = media.markingSchemeImages.map((img) => img.src).filter(Boolean).slice(0, 4);
+      const hasScheme = schemeImages.length > 0;
+      const isCustom = currentAttachment?.source === "custom";
+      const adaptiveMarking = !hasScheme || isCustom;
+
+      const questionText = currentAttachment
+        ? [
+            currentAttachment.label || "Question",
+            currentAttachment.source === "custom"
+              ? "This is a custom / student-uploaded question. Infer what is being asked from the question images when provided."
+              : "",
+            !hasScheme
+              ? "No official marking scheme is attached — give helpful feedback and only award marks if clearly suited."
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n")
+        : [
+            "Open whiteboard practice — no specific question is attached.",
+            "Review whatever the student has written and give helpful, encouraging feedback.",
+            "Only award marks if the work clearly follows a standard exam-style question with an obvious mark allocation.",
+          ].join("\n");
+
+      const markingSchemeText = hasScheme
+        ? `Marking scheme images for: ${currentAttachment?.label ?? "question"}`
+        : "";
+
+      const result = await runGrading({
+        usageId: createAiUsageId("grading"),
+        questionId: canvasId,
+        questionText,
+        markingSchemeText,
+        markingSchemeImages: schemeImages,
+        questionImages,
+        adaptiveMarking,
+        capture,
+        fullInkCapture: fullInkCapture ?? undefined,
+        getAggressiveCapture: () => getGradingCapture("retry-aggressive"),
+        streamChatResponse,
+        pass1Cache,
+        setPass1Cache,
+        onStatus: setGradingStatus,
+      });
+
+      setGradingAnnotations(result.annotations);
+      saveCanvas(canvasId, canvasStrokesRef.current, result.annotations, canvasObjectsRef.current);
+      injectGradingMessage(result);
+      setSessionSidebarOpen(true);
+      setSidebarOpenPanel("ai");
+      setCheckAnswerStatus(null);
+    } catch (err) {
+      setGradingStatus("error");
+      if (err instanceof BlankCanvasError) {
+        setCheckAnswerStatus("Your canvas looks empty - write your workings and try again.");
+      } else if (err instanceof AiRequestError && err.code === "AI_QUOTA_EXCEEDED") {
+        setCheckAnswerStatus(err.message);
+      } else {
+        setCheckAnswerStatus("Something went wrong - try again");
+      }
+      console.error("[whiteboard grading] failed", err);
+    }
+  }, [
+    canCheckNow,
+    canvasLoading,
+    canvasId,
+    getGradingCapture,
+    media.questionImages,
+    media.markingSchemeImages,
+    currentAttachment,
+    streamChatResponse,
+    pass1Cache,
+    saveCanvas,
+    injectGradingMessage,
+  ]);
 
   const pickerItems = useMemo(
     () => attachments.map((a) => ({ id: a.id, label: a.label })),
@@ -633,12 +957,44 @@ function WhiteboardPageViewInner() {
                 key={canvasId ?? "no-page"}
                 initialStrokes={canvasStrokes}
                 onStrokesChange={handleStrokesChange}
+                onEditInteraction={handleCanvasEditInteraction}
                 registerDrawingSnapshot={registerDrawingSnapshot}
+                registerGetGradingCapture={registerGetGradingCapture}
+                gradingAnnotations={gradingAnnotations}
                 enableAttachments
                 initialObjects={canvasObjects}
                 onObjectsChange={handleObjectsChange}
                 onUploadImage={handleUploadImage}
               />
+              <div className="absolute z-30 pointer-events-auto bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                <div className="relative">
+                  <button
+                    type="button"
+                    aria-label="Check Answer"
+                    className="questions-action-button questions-action-button--active disabled:opacity-60 disabled:cursor-not-allowed"
+                    onClick={() => void handleCheckAnswer()}
+                    disabled={!canCheckNow}
+                    title="Check Answer with AI"
+                  >
+                    <LuCircleCheck size={14} strokeWidth={2} />
+                    <span>{!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check Answer"}</span>
+                  </button>
+                  {checkAnswerStatus && (
+                    <div className="absolute bottom-full mb-2 max-w-[280px] text-xs color-txt-sub bg-[var(--grey-5)]/90 rounded-md px-2 py-1 z-20 flex items-center gap-2">
+                      <span>{checkAnswerStatus}</span>
+                      {gradingStatus === "error" && (
+                        <button
+                          type="button"
+                          onClick={() => void handleCheckAnswer()}
+                          className="text-[11px] font-semibold color-txt-accent hover:opacity-80"
+                        >
+                          Retry
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
           {canvasLoading && (
@@ -761,6 +1117,7 @@ function WhiteboardPageViewInner() {
               markingSchemeImages={markingSchemeImages}
               markingSchemeLoading={media.loading}
               markingSchemeQuestionName={currentAttachment?.label}
+              aiInjectedExchange={aiInjectedExchange}
             />
           </div>
         </div>

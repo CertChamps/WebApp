@@ -74,7 +74,7 @@ import {
 import { getDocumentCached } from "../utils/pdfDocumentCache";
 import { getLogTablesPdfBlob } from "../utils/logTablesPdf";
 import type { InjectedExchange } from "../components/ai/useAI";
-import { aiResponseError, authenticatedAiFetch, createAiUsageId, METERED_CHAT_API_URL } from "../lib/aiApi";
+import { AiRequestError, aiResponseError, authenticatedAiFetch, createAiUsageId, METERED_CHAT_API_URL } from "../lib/aiApi";
 import { runGrading } from "../lib/grading/GradingEngine";
 import type { CanvasAnnotation, CanvasCapturePayload, GradingStatus, Pass1Result } from "../lib/grading/GradingTypes";
 import { buildPartSummary } from "../lib/grading/annotationBuilder";
@@ -1085,7 +1085,7 @@ export default function Questions() {
             setGradingStatus("error");
             if (err instanceof BlankCanvasError) {
                 setCheckMyAnswerStatus("Your canvas looks empty - write your workings and try again.");
-            } else if (err instanceof Error && err.name === "AI_QUOTA_EXCEEDED") {
+            } else if (err instanceof AiRequestError && err.code === "AI_QUOTA_EXCEEDED") {
                 setCheckMyAnswerStatus(err.message);
             } else {
                 setCheckMyAnswerStatus("Something went wrong - try again");

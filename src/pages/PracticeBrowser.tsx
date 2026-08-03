@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   LuArrowLeft,
@@ -45,6 +45,7 @@ import type { AttachedQuestion } from "../data/whiteboards";
 import "../styles/practiceBrowser.css";
 
 const LEVEL_ORDER = ["higher", "ordinary", "foundation"];
+const EXAM_CYCLE_IDS = Object.keys(EXAM_CYCLES) as ExamCycleId[];
 
 type SubjectEntry = SubjectOption & { levels: string[] };
 type BrowseMode = "topic" | "paper";
@@ -207,11 +208,11 @@ function QuestionCard({
               event.stopPropagation();
               onAddToCanvas();
             }}
-            aria-label={`Add ${question.displayName} to a page`}
-            title="Add to page"
+            aria-label={`Add ${question.displayName} to whiteboard`}
+            title="Add to whiteboard"
           >
-            <LuPencil size={15} strokeWidth={2.2} />
-            <span>Add to page</span>
+            <LuPencil size={18} strokeWidth={2.4} />
+            <span>Add to whiteboard</span>
           </button>
         </div>
       </header>
@@ -676,43 +677,69 @@ function PracticeBrowserInner() {
     <div className="practice-browser h-full w-full overflow-y-auto overflow-x-hidden color-bg scrollbar-minimal">
       <div className="practice-browser__browse">
         <header className="practice-browser__hero">
-          <div className="flex items-start gap-3">
-            {selectedSubject && (
+          {selectedSubject && (
+            <nav className="practice-browser__breadcrumbs" aria-label="Breadcrumb">
               <button
                 type="button"
-                className="practice-browser__back mt-1"
+                className="practice-browser__breadcrumb"
                 onClick={() =>
-                  viewingBrowse
-                    ? updateLocation({ level: null, topic: null, year: null, paper: null })
-                    : updateLocation({
-                        subject: null,
-                        level: null,
-                        topic: null,
-                        year: null,
-                        paper: null,
-                      })
+                  updateLocation({
+                    subject: null,
+                    level: null,
+                    topic: null,
+                    year: null,
+                    paper: null,
+                  })
                 }
-                aria-label="Back"
               >
-                <LuArrowLeft size={18} />
+                Practice Questions
               </button>
-            )}
-            <div>
-              <h1>{pageTitle}</h1>
-              <p>{pageDescription}</p>
-            </div>
-          </div>
+              <LuChevronRight size={14} strokeWidth={2.5} className="practice-browser__breadcrumb-sep" aria-hidden />
+              {viewingBrowse ? (
+                <>
+                  <button
+                    type="button"
+                    className="practice-browser__breadcrumb truncate"
+                    onClick={() =>
+                      updateLocation({ level: null, topic: null, year: null, paper: null })
+                    }
+                  >
+                    {selectedSubject.label}
+                  </button>
+                  <LuChevronRight size={14} strokeWidth={2.5} className="practice-browser__breadcrumb-sep" aria-hidden />
+                  <span className="practice-browser__breadcrumb practice-browser__breadcrumb--current truncate">
+                    {levelLabel(selectedLevel ?? "")}
+                  </span>
+                </>
+              ) : (
+                <span className="practice-browser__breadcrumb practice-browser__breadcrumb--current truncate">
+                  {selectedSubject.label}
+                </span>
+              )}
+            </nav>
+          )}
+          <h1>{pageTitle}</h1>
+          <p>{pageDescription}</p>
 
           {!selectedSubject && (
-            <div className="practice-browser__cycle-toggle" role="group" aria-label="Exam cycle">
-              {(Object.keys(EXAM_CYCLES) as ExamCycleId[]).map((id) => (
+            <div
+              className="practice-browser__cycle-toggle"
+              role="group"
+              aria-label="Exam cycle"
+              style={
+                {
+                  "--pb-toggle-count": EXAM_CYCLE_IDS.length,
+                  "--pb-toggle-index": Math.max(0, EXAM_CYCLE_IDS.indexOf(cycle)),
+                } as CSSProperties
+              }
+            >
+              <span className="practice-browser__toggle-thumb" aria-hidden />
+              {EXAM_CYCLE_IDS.map((id) => (
                 <button
                   key={id}
                   type="button"
                   className={cycle === id ? "is-active" : ""}
-                  onClick={() =>
-                    setSearchParams({ cycle: id })
-                  }
+                  onClick={() => setSearchParams({ cycle: id })}
                 >
                   {EXAM_CYCLES[id].label}
                 </button>
@@ -807,7 +834,18 @@ function PracticeBrowserInner() {
           </section>
         ) : (
           <>
-            <div className="practice-browser__browse-toggle" role="group" aria-label="Browse by">
+            <div
+              className="practice-browser__browse-toggle"
+              role="group"
+              aria-label="Browse by"
+              style={
+                {
+                  "--pb-toggle-count": 2,
+                  "--pb-toggle-index": browseMode === "paper" ? 1 : 0,
+                } as CSSProperties
+              }
+            >
+              <span className="practice-browser__toggle-thumb" aria-hidden />
               <button
                 type="button"
                 className={browseMode === "topic" ? "is-active" : ""}

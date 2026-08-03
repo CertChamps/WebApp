@@ -28,6 +28,7 @@ Usage:
   python migrate_images_to_firestore.py --cred "..." --cycle all --apply --replace
   python migrate_images_to_firestore.py --cred "..." --mode marking-schemes --cycle leaving
   python migrate_images_to_firestore.py --cred "..." --mode marking-schemes --cycle all --apply
+  python migrate_images_to_firestore.py --cred "..." --mode marking-schemes --cycle junior --report-unmatched
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ import hashlib
 import os
 import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -288,6 +289,33 @@ def try_strip_suffix(name_without_ext: str) -> str:
     return re.sub(r"[\s_-]+\d+$", "", name_without_ext)
 
 
+# year + optional P1/P2 + Q number — ignores part letters / SAMPLE / DEFERRED markers
+EXAM_CORE_RE = re.compile(
+    r"(?P<year>(?:19|20)\d{2})"
+    r"(?:_P(?P<paper>[12]))?"
+    r".*?[_\-]?Q(?P<q>\d+)",
+    re.IGNORECASE,
+)
+
+
+def extract_exam_core(stem: str) -> Optional[tuple[str, str, str]]:
+    """
+    Returns (year, paper|'', qnum) for matching across part-letter / naming variants.
+    Paper is '' when absent (not P1/P2). Does not treat SAMPLE/DEFERRED as paper.
+    """
+    if not stem:
+        return None
+    m = EXAM_CORE_RE.search(stem)
+    if not m:
+        return None
+    return (m.group("year"), m.group("paper") or "", m.group("q"))
+
+
+def is_image_ms_candidate(ms: MarkingSchemeFile) -> bool:
+    """Skip past-paper PDF bundles (e.g. 2007ms.pdf) when linking image questions."""
+    return Path(ms.file_name).suffix.lower() != ".pdf"
+
+
 def parse_marking_scheme_path(blob_name: str, prefix: str) -> Optional[MarkingSchemeFile]:
     """
     Expect either:
@@ -366,30 +394,61 @@ def match_marking_schemes_for_question(
 ) -> list[MarkingSchemeFile]:
     """
     Prefer same-topic matches; fall back to whole level.
-    Try exact question stem first, then stripped group key (multipart).
+    Try exact question stem first, then stripped group key (multipart),
+    then year+paper+Q core (all parts/pages for that exam question).
+    Skips past-paper PDF candidates.
     """
     stem = Path(file_name).stem
     group_key = try_strip_suffix(stem)
+    image_cands = [m for m in candidates if is_image_ms_candidate(m)]
 
-    def pick(pool: list[MarkingSchemeFile], key: str) -> list[MarkingSchemeFile]:
+    def pick_exact(pool: list[MarkingSchemeFile], key: str) -> list[MarkingSchemeFile]:
         matched = [m for m in pool if ms_matches_key(m.stem, key)]
         matched.sort(key=lambda m: (m.stem, m.file_name))
         return matched
 
+    def pick_core(pool: list[MarkingSchemeFile]) -> list[MarkingSchemeFile]:
+        core = extract_exam_core(stem)
+        if not core:
+            return []
+        matched = [m for m in pool if extract_exam_core(m.stem) == core]
+        matched.sort(key=lambda m: (m.stem, m.file_name))
+        return matched
+
     topic_pool = (
-        [m for m in candidates if m.topic == topic] if topic else []
+        [m for m in image_cands if m.topic == topic] if topic else []
     )
-    for pool in (topic_pool, candidates):
+    for pool in (topic_pool, image_cands):
         if not pool:
             continue
-        hit = pick(pool, stem)
+        hit = pick_exact(pool, stem)
         if hit:
             return hit
         if group_key != stem:
-            hit = pick(pool, group_key)
+            hit = pick_exact(pool, group_key)
             if hit:
                 return hit
+        hit = pick_core(pool)
+        if hit:
+            return hit
     return []
+
+
+def classify_unmatched_reason(
+    file_name: str,
+    topic: Optional[str],
+    candidates: list[MarkingSchemeFile],
+) -> str:
+    """Best-effort reason label for --report-unmatched."""
+    image_cands = [m for m in candidates if is_image_ms_candidate(m)]
+    if not image_cands:
+        return "no_ms_for_subject_level"
+    core = extract_exam_core(Path(file_name).stem)
+    if core and any(extract_exam_core(m.stem) == core for m in image_cands):
+        return "core_exists_but_unmatched"  # should be rare after core fallback
+    if topic and not any(m.topic == topic for m in image_cands):
+        return "no_ms_in_topic_and_no_core"
+    return "no_ms_for_year_q"
 
 
 # ── Firestore wipe / write ───────────────────────────────────────────────────
@@ -635,6 +694,8 @@ class MarkingSchemeStats:
     updated: int = 0
     would_update: int = 0
     subjects: set[str] = field(default_factory=set)
+    unmatched_reasons: Counter = field(default_factory=Counter)
+    unmatched_samples: dict[str, list[str]] = field(default_factory=dict)
 
 
 def run_marking_schemes_cycle(
@@ -648,6 +709,7 @@ def run_marking_schemes_cycle(
     limit: Optional[int],
     subject_filter: Optional[set[str]],
     question_limit: Optional[int],
+    report_unmatched: bool = False,
 ) -> MarkingSchemeStats:
     """
     Attach markingSchemePath / markingSchemePaths onto existing image question docs.
@@ -711,6 +773,18 @@ def run_marking_schemes_cycle(
                 )
                 if not matched:
                     stats.unmatched += 1
+                    if report_unmatched:
+                        reason = classify_unmatched_reason(
+                            str(file_name),
+                            str(topic) if topic else None,
+                            candidates,
+                        )
+                        stats.unmatched_reasons[reason] += 1
+                        samples = stats.unmatched_samples.setdefault(reason, [])
+                        if len(samples) < 5:
+                            samples.append(
+                                f"{subject}/{level}/{topic}/{file_name}"
+                            )
                     continue
 
                 paths = [m.storage_path for m in matched]
@@ -760,6 +834,12 @@ def run_marking_schemes_cycle(
     print(f"  docs to update:      {stats.would_update}")
     if not dry_run:
         print(f"  updated:             {stats.updated}")
+    if report_unmatched and stats.unmatched_reasons:
+        print("  unmatched reasons:")
+        for reason, count in stats.unmatched_reasons.most_common():
+            print(f"    {reason}: {count}")
+            for sample in stats.unmatched_samples.get(reason, []):
+                print(f"      e.g. {sample}")
     return stats
 
 
@@ -882,6 +962,11 @@ def main() -> None:
         default=None,
         help="Only include this storage subject folder (repeatable)",
     )
+    parser.add_argument(
+        "--report-unmatched",
+        action="store_true",
+        help="marking-schemes mode: print unmatched reason counts (and samples)",
+    )
     args = parser.parse_args()
 
     subject_filter = set(args.subject) if args.subject else None
@@ -937,6 +1022,7 @@ def main() -> None:
                 limit=args.limit,
                 subject_filter=subject_filter,
                 question_limit=args.question_limit,
+                report_unmatched=bool(args.report_unmatched),
             )
             if ms_stats.ms_files > 0 or ms_stats.questions_scanned > 0:
                 any_work = True

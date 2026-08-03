@@ -154,6 +154,7 @@ function drawMarkAnnotation(
 	ctx: CanvasRenderingContext2D,
 	annotation: Extract<CanvasAnnotation, { type: "markAnnotation" }>,
 	fontReady: boolean,
+	markColor: string,
 ) {
 	// Early return if font is not ready yet (canvas will retry on next draw loop)
 	if (!fontReady) return;
@@ -162,10 +163,11 @@ function drawMarkAnnotation(
 	const angle = (-8 + seed * 16) * (Math.PI / 180);
 	const fontSize = 72;
 	const fontFamily = '"Caveat", "Patrick Hand", "Architects Daughter", cursive';
+	const color = markColor || "#2563EB";
 	ctx.save();
 	ctx.translate(annotation.worldX, annotation.worldY);
 	ctx.rotate(angle);
-	ctx.fillStyle = "#C0392B";
+	ctx.fillStyle = color;
 	ctx.font = `bold ${fontSize}px ${fontFamily}`;
 	ctx.textBaseline = "middle";
 	ctx.fillText(annotation.label, 0, 0);
@@ -224,7 +226,7 @@ function drawMarkAnnotation(
 	);
 	const overshoot = 6 + seededUnit(annotation.worldX + 999) * 4;
 	ctx.lineTo(startX + overshoot, startY + seededUnit(annotation.worldY + 123) * 3 - 1.5);
-	ctx.strokeStyle = "#C0392B";
+	ctx.strokeStyle = color;
 	ctx.lineWidth = 2.5;
 	ctx.lineCap = "round";
 	ctx.lineJoin = "round";
@@ -1365,7 +1367,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 
 			for (const annotation of gradingAnnotations) {
 				if (annotation.type === "markAnnotation") {
-					drawMarkAnnotation(ctx, annotation, fontReady);
+					drawMarkAnnotation(ctx, annotation, fontReady, accentColor || strokeColor || "#2563EB");
 				}
 			}
 		} else {
