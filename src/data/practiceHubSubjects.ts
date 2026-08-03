@@ -1,3 +1,8 @@
+import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { auth, db } from "../../firebase";
+
 /**
  * Leaving Cert subjects for Practice Hub.
  * id: slug used for filtering (paper.subject from Firestore may match or be mapped below).
@@ -163,27 +168,99 @@ export function getFirestoreSubjectIds(subjectSlug: string): string[] {
 
 const FAVOURITES_KEY = "practice-hub-subject-favourites";
 export const FAVOURITES_CHANGED_EVENT = "practice-hub-favourites-changed";
+const FAVOURITES_FIELD = "favouriteSubjects";
+
+function cleanSubjectIds(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((x): x is string => typeof x === "string") : [];
+}
 
 export function getFavouriteSubjectIds(): string[] {
   try {
     const raw = localStorage.getItem(FAVOURITES_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+    return cleanSubjectIds(parsed);
   } catch {
     return [];
   }
 }
 
-export function setFavouriteSubjectIds(ids: string[]): void {
+export function setFavouriteSubjectIds(ids: string[], options: { syncRemote?: boolean } = {}): void {
+  const cleanIds = [...new Set(ids)];
   try {
-    localStorage.setItem(FAVOURITES_KEY, JSON.stringify(ids));
+    localStorage.setItem(FAVOURITES_KEY, JSON.stringify(cleanIds));
     window.dispatchEvent(new Event(FAVOURITES_CHANGED_EVENT));
   } catch (_) {}
+
+  if (options.syncRemote === false) return;
+  const uid = auth.currentUser?.uid;
+  if (!uid) return;
+  setDoc(doc(db, "user-data", uid), { [FAVOURITES_FIELD]: cleanIds }, { merge: true }).catch((err) => {
+    console.error("Failed to sync favourite subjects:", err);
+  });
 }
 
 export function toggleFavourite(id: string, current: string[]): string[] {
   const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
   setFavouriteSubjectIds(next);
   return next;
+}
+
+export function subjectMatchesFavourite(subject: string, favourites: string[]): boolean {
+  const normalized = subject.toLowerCase().trim();
+  return favourites.some((fav) => {
+    if (fav === normalized) return true;
+    const backend = SUBJECT_ID_TO_BACKEND[fav] ?? [];
+    return backend.includes(normalized);
+  });
+}
+
+export function useSyncedFavouriteSubjectIds(): string[] {
+  const [ids, setIds] = useState<string[]>(() => getFavouriteSubjectIds());
+  const [uid, setUid] = useState<string | null>(() => auth.currentUser?.uid ?? null);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, (firebaseUser) => {
+      setUid(firebaseUser?.uid ?? null);
+    });
+  }, []);
+
+  useEffect(() => {
+    const updateFromLocal = () => setIds(getFavouriteSubjectIds());
+    window.addEventListener(FAVOURITES_CHANGED_EVENT, updateFromLocal);
+    window.addEventListener("storage", updateFromLocal);
+
+    if (!uid) {
+      return () => {
+        window.removeEventListener(FAVOURITES_CHANGED_EVENT, updateFromLocal);
+        window.removeEventListener("storage", updateFromLocal);
+      };
+    }
+
+    const unsubscribe = onSnapshot(doc(db, "user-data", uid), (snap) => {
+      const data = snap.data();
+      const hasRemoteFavourites =
+        data != null && Object.prototype.hasOwnProperty.call(data, FAVOURITES_FIELD);
+      const remote = cleanSubjectIds(data?.[FAVOURITES_FIELD]);
+      if (hasRemoteFavourites) {
+        setFavouriteSubjectIds(remote, { syncRemote: false });
+        setIds(remote);
+        return;
+      }
+
+      const local = getFavouriteSubjectIds();
+      setIds(local);
+      if (local.length > 0) {
+        setFavouriteSubjectIds(local);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener(FAVOURITES_CHANGED_EVENT, updateFromLocal);
+      window.removeEventListener("storage", updateFromLocal);
+    };
+  }, [uid]);
+
+  return ids;
 }

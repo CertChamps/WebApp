@@ -23,6 +23,7 @@ import {
     FAVOURITES_CHANGED_EVENT,
     getFavouriteSubjectIds,
     PRACTICE_HUB_SUBJECTS,
+    useSyncedFavouriteSubjectIds,
 } from "../data/practiceHubSubjects";
 import { SubjectDropdown } from "../components/practiceHub";
 import {
@@ -412,6 +413,7 @@ export default function Discover() {
     const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
     const [selectedType, setSelectedType] = useState<ResourceType | "All">("All");
     const [favouriteSubjectIds, setFavouriteSubjectIds] = useState<string[]>(() => getFavouriteSubjectIds());
+    const syncedFavouriteSubjectIds = useSyncedFavouriteSubjectIds();
 
     const [showForm, setShowForm] = useState(false);
     const [title, setTitle] = useState("");
@@ -453,6 +455,10 @@ export default function Discover() {
             window.removeEventListener("storage", updateFavourites);
         };
     }, []);
+
+    useEffect(() => {
+        setFavouriteSubjectIds(syncedFavouriteSubjectIds);
+    }, [syncedFavouriteSubjectIds]);
 
     useEffect(() => {
         const q = query(

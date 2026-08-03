@@ -6,6 +6,7 @@ import {
   PRACTICE_HUB_SUBJECTS,
   getFavouriteSubjectIds,
   toggleFavourite,
+  useSyncedFavouriteSubjectIds,
   type SubjectOption,
 } from "../../data/practiceHubSubjects";
 import { getThemedPortalTarget } from "../../utils/themedPortal";
@@ -223,6 +224,7 @@ export default function SubjectDropdown({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [favourites, setFavourites] = useState<string[]>(() => getFavouriteSubjectIds());
+  const syncedFavourites = useSyncedFavouriteSubjectIds();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isList = variant === "list";
@@ -233,6 +235,10 @@ export default function SubjectDropdown({
   useEffect(() => {
     setFavourites(getFavouriteSubjectIds());
   }, [open]);
+
+  useEffect(() => {
+    setFavourites(syncedFavourites);
+  }, [syncedFavourites]);
 
   useEffect(() => {
     if (!open) setContextMenu(null);
