@@ -2,6 +2,7 @@ import type { CanvasCapturePayload } from "./GradingTypes";
 
 type CapturePoint = { x: number; y: number; pressure?: number };
 type CaptureStroke = { tool: "pen" | "eraser"; points: CapturePoint[] };
+export type CaptureTextBox = { text: string; x: number; y: number; width: number; height: number; fontSize: number; fontWeight?: "normal" | "bold"; fontStyle?: "normal" | "italic"; listStyle?: "none" | "bullet" };
 
 const MIN_LONGEST_AXIS = 2400;
 const JPEG_QUALITY = 0.92;
@@ -25,8 +26,57 @@ export function hashSnapshot(dataUrl: string): string {
   return (hash >>> 0).toString(36);
 }
 
+export function drawCaptureTextBoxes(
+  ctx: CanvasRenderingContext2D,
+  boxes: CaptureTextBox[],
+): void {
+  for (const box of boxes) {
+    if (!box.text.trim() || box.width <= 0 || box.height <= 0) continue;
+    const fontSize = Math.max(8, Math.min(256, box.fontSize || 18));
+    const lineHeight = fontSize * 1.4;
+    const maxWidth = Math.max(1, box.width - 16);
+    const maxY = box.y + box.height - 6;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(box.x, box.y, box.width, box.height);
+    ctx.clip();
+    ctx.fillStyle = "#111827";
+    ctx.textBaseline = "top";
+    ctx.font = `${box.fontStyle === "italic" ? "italic " : ""}${box.fontWeight === "bold" ? "bold " : ""}${fontSize}px sans-serif`;
+    let drawY = box.y + 6;
+    const sourceLines = box.text.slice(0, 100_000).split("\n");
+    for (const rawLine of sourceLines) {
+      if (drawY + lineHeight > maxY) break;
+      const prefix = box.listStyle === "bullet" ? "• " : "";
+      const words = rawLine.trim().split(/\s+/).filter(Boolean);
+      let line = prefix;
+      if (words.length === 0) {
+        drawY += lineHeight;
+        continue;
+      }
+      for (const word of words) {
+        const candidate = line === prefix ? `${prefix}${word}` : `${line} ${word}`;
+        if (line !== prefix && ctx.measureText(candidate).width > maxWidth) {
+          ctx.fillText(line, box.x + 8, drawY, maxWidth);
+          drawY += lineHeight;
+          line = word;
+          if (drawY + lineHeight > maxY) break;
+        } else {
+          line = candidate;
+        }
+      }
+      if (drawY + lineHeight <= maxY && line) {
+        ctx.fillText(line, box.x + 8, drawY, maxWidth);
+        drawY += lineHeight;
+      }
+    }
+    ctx.restore();
+  }
+}
+
 export function buildCapturePayload(args: {
   strokes: CaptureStroke[];
+  textBoxes?: CaptureTextBox[];
   viewportWidth: number;
   viewportHeight: number;
   offsetX: number;
@@ -57,6 +107,15 @@ export function buildCapturePayload(args: {
       maxX = Math.max(maxX, point.x);
       maxY = Math.max(maxY, point.y);
     }
+  }
+  for (const box of args.textBoxes ?? []) {
+    if (!box.text.trim() || !Number.isFinite(box.x) || !Number.isFinite(box.y)) continue;
+    const width = Math.max(1, Number.isFinite(box.width) ? box.width : 1);
+    const height = Math.max(1, Number.isFinite(box.height) ? box.height : 1);
+    minX = Math.min(minX, box.x);
+    minY = Math.min(minY, box.y);
+    maxX = Math.max(maxX, box.x + width);
+    maxY = Math.max(maxY, box.y + height);
   }
 
   const hasInk = Number.isFinite(minX) && Number.isFinite(minY) && Number.isFinite(maxX) && Number.isFinite(maxY);
@@ -122,6 +181,7 @@ export function buildCapturePayload(args: {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.strokeStyle = "#111827";
+  drawCaptureTextBoxes(ctx, args.textBoxes ?? []);
 
   for (const stroke of args.strokes) {
     if (stroke.tool !== "pen" || stroke.points.length < 2) continue;

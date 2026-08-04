@@ -10,10 +10,12 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
-import { deleteObject, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, listAll, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import {
+  documentCanvasId,
+  documentContentStorageId,
   buildWhiteboardTree,
   ORDER_STEP,
   UNSET_ORDER,
@@ -56,6 +58,8 @@ function toPage(id: string, data: Record<string, unknown>): WhiteboardPage {
     attachedQuestions: Array.isArray(data.attachedQuestions)
       ? (data.attachedQuestions as AttachedQuestion[])
       : [],
+    pageType: data.pageType === "document" ? "document" : "whiteboard",
+    documentContent: typeof data.documentContent === "string" ? data.documentContent : "",
     order: typeof data.order === "number" ? data.order : UNSET_ORDER,
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
@@ -69,6 +73,8 @@ export type CreatePageInput = {
   folderId?: string | null;
   emoji?: string | null;
   attachedQuestions?: AttachedQuestion[];
+  pageType?: "whiteboard" | "document";
+  documentContent?: string;
 };
 
 export type CreateFolderInput = {
@@ -181,6 +187,8 @@ export function useWhiteboards(subject: string | null) {
         emoji: input.emoji ?? null,
         attachedQuestions: input.attachedQuestions ?? [],
         order: UNSET_ORDER,
+        pageType: input.pageType ?? "whiteboard",
+        documentContent: input.documentContent ?? "",
         createdAt: now,
         updatedAt: now,
         lastOpenedAt: now,
@@ -195,7 +203,7 @@ export function useWhiteboards(subject: string | null) {
   const updatePage = useCallback(
     async (
       pageId: string,
-      updates: Partial<Pick<WhiteboardPage, "name" | "folderId" | "emoji" | "attachedQuestions">>
+      updates: Partial<Pick<WhiteboardPage, "name" | "folderId" | "emoji" | "attachedQuestions" | "pageType" | "documentContent">>
     ) => {
       if (!uid) throw new Error("Not signed in");
       await updateDoc(doc(db, "user-data", uid, PAGES_COLLECTION, pageId), {
@@ -220,14 +228,53 @@ export function useWhiteboards(subject: string | null) {
     [uid]
   );
 
+  /** Move a page with the top-arrow controls, within its current folder/root sibling list. */
+  const movePageByOffset = useCallback(
+    async (pageId: string, offset: -1 | 1) => {
+      if (!uid) throw new Error("Not signed in");
+      const page = pages.find((item) => item.id === pageId);
+      if (!page) return false;
+      const siblings = [
+        ...folders
+          .filter((item) => item.parentId === page.folderId)
+          .map((item) => ({ type: "folder" as const, id: item.id, order: item.order, name: item.name })),
+        ...pages
+          .filter((item) => item.folderId === page.folderId)
+          .map((item) => ({ type: "page" as const, id: item.id, order: item.order, name: item.name })),
+      ].sort((a, b) =>
+        a.order - b.order || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+      );
+      const from = siblings.findIndex((item) => item.id === pageId);
+      const to = from + offset;
+      if (from < 0 || to < 0 || to >= siblings.length) return false;
+      [siblings[from], siblings[to]] = [siblings[to], siblings[from]];
+      const batch = writeBatch(db);
+      const now = Date.now();
+      siblings.forEach((item, index) => {
+        const collectionName = item.type === "folder" ? FOLDERS_COLLECTION : PAGES_COLLECTION;
+        batch.update(doc(db, "user-data", uid, collectionName, item.id), {
+          order: index * ORDER_STEP,
+          updatedAt: now,
+        });
+      });
+      await batch.commit();
+      return true;
+    },
+    [uid, folders, pages]
+  );
   const deletePage = useCallback(
     async (page: WhiteboardPage) => {
       if (!uid) throw new Error("Not signed in");
       await deleteDoc(doc(db, "user-data", uid, PAGES_COLLECTION, page.id));
-      // Best-effort cleanup of the saved canvas + uploaded custom assets.
-      const canvasId = whiteboardCanvasId(page.id);
-      void deleteDoc(doc(db, "user-data", uid, "question-data", canvasId)).catch(() => {});
-      void deleteObject(ref(storage, `question-data/${uid}/${canvasId}.json`)).catch(() => {});
+      // Best-effort cleanup of canvas/document payloads and their uploaded assets.
+      const storageIds = [whiteboardCanvasId(page.id), documentCanvasId(page.id), documentContentStorageId(page.id)];
+      storageIds.forEach((storageId) => {
+        void deleteDoc(doc(db, "user-data", uid, "question-data", storageId)).catch(() => {});
+        void deleteObject(ref(storage, `question-data/${uid}/${storageId}.json`)).catch(() => {});
+        void listAll(ref(storage, `question-data/${uid}/${storageId}/assets`))
+          .then((result) => Promise.all(result.items.map((item) => deleteObject(item))))
+          .catch(() => {});
+      });
       page.attachedQuestions.forEach((attachment) => {
         if (attachment.source !== "custom" || !attachment.custom) return;
         void deleteObject(ref(storage, attachment.custom.questionPath)).catch(() => {});
@@ -339,6 +386,7 @@ export function useWhiteboards(subject: string | null) {
     recentItems,
     loading,
     createPage,
+    movePageByOffset,
     updatePage,
     deletePage,
     touchPageOpened,
@@ -364,6 +412,7 @@ export function useWhiteboardPage(pageId: string | null) {
       return;
     }
     setLoading(true);
+    setPage(null);
     setNotFound(false);
     const unsub = onSnapshot(
       doc(db, "user-data", uid, PAGES_COLLECTION, pageId),

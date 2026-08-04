@@ -32,10 +32,13 @@ import DrawingCanvas, {
   type RegisterGetGradingCapture,
   type CanvasObject,
 } from "../components/questions/DrawingCanvas";
+import CanvasTextBoxLayer, { type CanvasTextBox } from "../components/questions/CanvasTextBoxLayer";
+import CanvasTextToolbar from "../components/questions/CanvasTextToolbar";
 import QuestionTitlePicker from "../components/questions/QuestionTitlePicker";
 import ZoomableQuestionImage from "../components/questions/ZoomableQuestionImage";
 import WhiteboardsSidebar from "../components/whiteboards/WhiteboardsSidebar";
 import PageDetailsModal from "../components/whiteboards/PageDetailsModal";
+import DocumentEditor from "../components/whiteboards/DocumentEditor";
 import FolderModal from "../components/whiteboards/FolderModal";
 import AddQuestionModal from "../components/whiteboards/AddQuestionModal";
 import FloatingCalculator from "../components/calculator/FloatingCalculator";
@@ -50,6 +53,7 @@ import { useAttachedQuestionMedia } from "../hooks/useAttachedQuestionMedia";
 import { OptionsContext } from "../context/OptionsContext";
 import { TimerProvider } from "../context/TimerContext";
 import {
+  documentCanvasId,
   setLastWhiteboardsSubject,
   whiteboardCanvasId,
   type AttachedQuestion,
@@ -131,6 +135,15 @@ function gradingStatusLabel(status: GradingStatus): string {
     default:
       return "Check Answer";
   }
+}
+
+function computedColorToHex(value: string): string {
+  const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number);
+  if (!channels || channels.length < 3 || channels.some((channel) => !Number.isFinite(channel))) {
+    return "#222222";
+  }
+  return `#${channels.map((channel) => Math.max(0, Math.min(255, Math.round(channel)))
+    .toString(16).padStart(2, "0")).join("")}`;
 }
 
 function PaperPanelToggle({
@@ -365,6 +378,7 @@ function WhiteboardPageViewInner() {
     createFolder,
     updateFolder,
     deleteFolder,
+    movePageByOffset,
     moveItem,
   } = useWhiteboards(sidebarSubject);
 
@@ -392,10 +406,39 @@ function WhiteboardPageViewInner() {
   }, [showLogTables, logTablesBlob]);
 
   const { saveCanvas, loadCanvas, uploadCanvasAsset } = useCanvasStorage();
-  const canvasId = pageId ? whiteboardCanvasId(pageId) : null;
+  const canvasId = pageId && page?.id === pageId
+    ? (page.pageType === "document" ? documentCanvasId(pageId) : whiteboardCanvasId(pageId)) : null;
   const [canvasStrokes, setCanvasStrokes] = useState<CanvasStroke[]>([]);
   const [canvasObjects, setCanvasObjects] = useState<CanvasObject[]>([]);
+  const [canvasTextBoxes, setCanvasTextBoxes] = useState<CanvasTextBox[]>([]);
+  const [canvasTextDefaultColor, setCanvasTextDefaultColor] = useState("#222222");
+  const [editorMode, setEditorMode] = useState<"pen" | "text">("pen");
+  const [selectedCanvasTextBoxId, setSelectedCanvasTextBoxId] = useState<string | null>(null);
+  const [canvasViewport, setCanvasViewport] = useState({
+    pan: { x: 0, y: 0 },
+    scale: 1,
+  });
   const [canvasLoading, setCanvasLoading] = useState(true);
+  const [canvasLoadError, setCanvasLoadError] = useState("");
+  const [canvasLoadAttempt, setCanvasLoadAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!document.body) return;
+    const probe = document.createElement("span");
+    probe.className = "fixed pointer-events-none opacity-0 color-txt-main";
+    probe.setAttribute("aria-hidden", "true");
+    document.body.append(probe);
+    const update = () => {
+      setCanvasTextDefaultColor(computedColorToHex(getComputedStyle(probe).color));
+    };
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => {
+      observer.disconnect();
+      probe.remove();
+    };
+  }, []);
   const [gradingAnnotations, setGradingAnnotations] = useState<CanvasAnnotation[]>([]);
   const [checkAnswerStatus, setCheckAnswerStatus] = useState<string | null>(null);
   const [gradingStatus, setGradingStatus] = useState<GradingStatus>("idle");
@@ -405,6 +448,9 @@ function WhiteboardPageViewInner() {
   canvasStrokesRef.current = canvasStrokes;
   const canvasObjectsRef = useRef(canvasObjects);
   canvasObjectsRef.current = canvasObjects;
+  const canvasTextBoxesRef = useRef(canvasTextBoxes);
+  canvasTextBoxesRef.current = canvasTextBoxes;
+  const canvasTextSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gradingAnnotationsRef = useRef(gradingAnnotations);
   gradingAnnotationsRef.current = gradingAnnotations;
   const getDrawingSnapshotRef = useRef<(() => string | null) | null>(null);
@@ -429,28 +475,35 @@ function WhiteboardPageViewInner() {
     if (!canvasId) return;
     let cancelled = false;
     setCanvasLoading(true);
+    setCanvasLoadError("");
+    setCanvasStrokes([]);
+    setCanvasObjects([]);
+    setCanvasTextBoxes([]);
     setGradingAnnotations([]);
     loadCanvas(canvasId)
       .then((loaded) => {
         if (cancelled) return;
         setCanvasStrokes(loaded?.strokes ?? []);
         setCanvasObjects(loaded?.objects ?? []);
+        setCanvasTextBoxes(loaded?.textBoxes ?? []);
         setGradingAnnotations(
           isSavedGradingAnnotations(loaded?.feedbackOverlay) ? loaded.feedbackOverlay : []
         );
         setCanvasLoading(false);
       })
-      .catch(() => {
+      .catch((error) => {
         if (cancelled) return;
         setCanvasStrokes([]);
         setCanvasObjects([]);
+        setCanvasTextBoxes([]);
         setGradingAnnotations([]);
+        setCanvasLoadError(error instanceof Error ? error.message : "Couldn’t load this page");
         setCanvasLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [canvasId, loadCanvas]);
+  }, [canvasId, loadCanvas, canvasLoadAttempt]);
 
   const handleCanvasEditInteraction = useCallback(() => {
     setGradingAnnotations([]);
@@ -463,13 +516,36 @@ function WhiteboardPageViewInner() {
     setCheckAnswerStatus(null);
     setGradingStatus("idle");
     setAiInjectedExchange(null);
+    setEditorMode("pen");
+    setSelectedCanvasTextBoxId(null);
+    setCanvasViewport({ pan: { x: 0, y: 0 }, scale: 1 });
   }, [canvasId]);
+
+  useEffect(() => () => {
+    if (!canvasTextSaveTimerRef.current) return;
+    clearTimeout(canvasTextSaveTimerRef.current);
+    canvasTextSaveTimerRef.current = null;
+    if (!canvasId) return;
+    void saveCanvas(
+      canvasId,
+      canvasStrokesRef.current,
+      [],
+      canvasObjectsRef.current,
+      canvasTextBoxesRef.current
+    ).catch((error) => console.error("[whiteboard text] final save failed", error));
+  }, [canvasId, saveCanvas]);
 
   const handleStrokesChange = useCallback(
     (strokes: CanvasStroke[]) => {
       if (!canvasId) return;
       setCanvasStrokes(strokes);
-      saveCanvas(canvasId, strokes, [], canvasObjectsRef.current);
+      void saveCanvas(
+        canvasId,
+        strokes,
+        [],
+        canvasObjectsRef.current,
+        canvasTextBoxesRef.current
+      ).catch((error) => console.error("[whiteboard] stroke save failed", error));
     },
     [canvasId, saveCanvas]
   );
@@ -478,9 +554,38 @@ function WhiteboardPageViewInner() {
     (objects: CanvasObject[]) => {
       if (!canvasId) return;
       setCanvasObjects(objects);
-      saveCanvas(canvasId, canvasStrokesRef.current, gradingAnnotationsRef.current, objects);
+      void saveCanvas(
+        canvasId,
+        canvasStrokesRef.current,
+        gradingAnnotationsRef.current,
+        objects,
+        canvasTextBoxesRef.current
+      ).catch((error) => console.error("[whiteboard] object save failed", error));
     },
     [canvasId, saveCanvas]
+  );
+
+  const handleCanvasTextBoxesChange = useCallback((boxes: CanvasTextBox[]) => {
+    if (!canvasId) return;
+    canvasTextBoxesRef.current = boxes;
+    setCanvasTextBoxes(boxes);
+    handleCanvasEditInteraction();
+    if (canvasTextSaveTimerRef.current) clearTimeout(canvasTextSaveTimerRef.current);
+    canvasTextSaveTimerRef.current = setTimeout(() => {
+      canvasTextSaveTimerRef.current = null;
+      void saveCanvas(
+        canvasId,
+        canvasStrokesRef.current,
+        [],
+        canvasObjectsRef.current,
+        boxes
+      ).catch((error) => console.error("[whiteboard text] save failed", error));
+    }, 450);
+  }, [canvasId, handleCanvasEditInteraction, saveCanvas]);
+
+  const handleCanvasViewportChange = useCallback(
+    (viewport: { pan: { x: number; y: number }; scale: number }) => setCanvasViewport(viewport),
+    []
   );
 
   const handleUploadImage = useCallback(
@@ -732,7 +837,13 @@ function WhiteboardPageViewInner() {
       });
 
       setGradingAnnotations(result.annotations);
-      saveCanvas(canvasId, canvasStrokesRef.current, result.annotations, canvasObjectsRef.current);
+      await saveCanvas(
+        canvasId,
+        canvasStrokesRef.current,
+        result.annotations,
+        canvasObjectsRef.current,
+        canvasTextBoxesRef.current
+      );
       injectGradingMessage(result);
       setSessionSidebarOpen(true);
       setSidebarOpenPanel("ai");
@@ -774,12 +885,18 @@ function WhiteboardPageViewInner() {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [showAddQuestion, setShowAddQuestion] = useState(false);
 
+  const documentQuestionInserterRef = useRef<((attachments: AttachedQuestion[]) => void) | null>(null);
+  const registerDocumentQuestionInserter = useCallback((_pageId: string, insert: ((attachments: AttachedQuestion[]) => void) | null) => {
+    documentQuestionInserterRef.current = insert;
+  }, []);
+
   const handleAddAttachments = useCallback(
     async (added: AttachedQuestion[]) => {
       if (!page) return;
       await updatePage(page.id, { attachedQuestions: [...page.attachedQuestions, ...added] });
       setAttachmentIndex(page.attachedQuestions.length);
       setPaperPanelVisible(true);
+      if (page.pageType === "document") documentQuestionInserterRef.current?.(added);
     },
     [page, updatePage]
   );
@@ -817,6 +934,19 @@ function WhiteboardPageViewInner() {
 
   const snippetWidth = Math.min(400, Math.floor(typeof window !== "undefined" ? window.innerWidth * 0.3 : 360));
 
+  const orderedSiblingItems = useMemo(
+    () => [
+      ...folders.filter((item) => item.parentId === page?.folderId)
+        .map((item) => ({ type: "folder" as const, id: item.id, order: item.order, name: item.name })),
+      ...pages.filter((item) => item.folderId === page?.folderId)
+        .map((item) => ({ type: "page" as const, id: item.id, order: item.order, name: item.name })),
+    ].sort((a, b) =>
+      a.order - b.order || a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })
+    ),
+    [folders, pages, page?.folderId]
+  );
+  const currentSiblingIndex = orderedSiblingItems.findIndex((item) => item.type === "page" && item.id === page?.id);
+
   if (notFound) {
     return (
       <div className="flex h-full w-full flex-1 flex-col items-center justify-center gap-3 color-bg">
@@ -831,6 +961,7 @@ function WhiteboardPageViewInner() {
       </div>
     );
   }
+
 
   return (
     <div className="flex min-h-0 h-full w-full">
@@ -892,6 +1023,26 @@ function WhiteboardPageViewInner() {
             >
               <LuPencil size={13} />
             </button>
+            <button
+              type="button"
+              disabled={currentSiblingIndex <= 0}
+              onClick={() => page && void movePageByOffset(page.id, -1)}
+              className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
+              aria-label="Move page up"
+              title="Move page up"
+            >
+              <LuChevronLeft size={14} />
+            </button>
+            <button
+              type="button"
+              disabled={currentSiblingIndex < 0 || currentSiblingIndex >= orderedSiblingItems.length - 1}
+              onClick={() => page && void movePageByOffset(page.id, 1)}
+              className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
+              aria-label="Move page down"
+              title="Move page down"
+            >
+              <LuChevronRight size={14} />
+            </button>
           </div>
 
           {attachments.length > 0 && (
@@ -951,8 +1102,32 @@ function WhiteboardPageViewInner() {
 
         {/* ---- Canvas (full bleed, same as practice) ---- */}
         <div className="relative min-h-0 flex-1">
-          {!canvasLoading && (
-            <div className="absolute inset-0 z-0">
+          {page && page.id === pageId && page.pageType === "document" && !canvasLoading && !canvasLoadError ? (
+            <DocumentEditor
+              key={page.id}
+              page={page}
+              canvasStrokes={canvasStrokes}
+              canvasObjects={canvasObjects}
+              onStrokesChange={handleStrokesChange}
+              onObjectsChange={handleObjectsChange}
+              onUploadImage={handleUploadImage}
+              registerDrawingSnapshot={registerDrawingSnapshot}
+              registerGetGradingCapture={registerGetGradingCapture}
+              onTouch={() => updatePage(page.id, {})}
+              onRequestAddQuestion={() => setShowAddQuestion(true)}
+              registerQuestionInserter={registerDocumentQuestionInserter}
+              onOpenQuestion={(attachmentId) => openQuestion(page, attachmentId)}
+              viewportClassName={[
+                currentAttachment && paperPanelVisible
+                  ? options.leftHandMode ? "xl:pr-96" : "xl:pl-96"
+                  : "",
+                sessionSidebarOpen
+                  ? options.leftHandMode ? "xl:pl-[35%]" : "xl:pr-[35%]"
+                  : "",
+              ].filter(Boolean).join(" ")}
+            />
+          ) : page?.id === pageId && !canvasLoading && !canvasLoadError ? (
+            <div className="absolute inset-0 z-0 color-bg">
               <DrawingCanvas
                 key={canvasId ?? "no-page"}
                 initialStrokes={canvasStrokes}
@@ -963,9 +1138,44 @@ function WhiteboardPageViewInner() {
                 gradingAnnotations={gradingAnnotations}
                 enableAttachments
                 initialObjects={canvasObjects}
+                captureTextBoxes={canvasTextBoxes}
                 onObjectsChange={handleObjectsChange}
                 onUploadImage={handleUploadImage}
+                wrapperClassName={`bg-transparent ${editorMode === "pen" ? "z-20" : "z-10"}`}
+                readOnly={editorMode === "text"}
+                onRequestTextMode={() => {
+                  setSelectedCanvasTextBoxId(null);
+                  setEditorMode("text");
+                }}
+                onViewportChange={handleCanvasViewportChange}
               />
+              <div className={`absolute inset-0 ${editorMode === "text" ? "z-20" : "z-10"}`}>
+                <CanvasTextBoxLayer
+                  boxes={canvasTextBoxes}
+                  pan={canvasViewport.pan}
+                  scale={canvasViewport.scale}
+                  active={editorMode === "text"}
+                  selectedId={selectedCanvasTextBoxId}
+                  onSelectedIdChange={setSelectedCanvasTextBoxId}
+                  onCreateChange={handleCanvasTextBoxesChange}
+                  defaultColor={canvasTextDefaultColor}
+                />
+              </div>
+              {editorMode === "text" && (
+                <CanvasTextToolbar
+                  selected={canvasTextBoxes.find((box) => box.id === selectedCanvasTextBoxId) ?? null}
+                  onSwitchToPen={() => {
+                    setSelectedCanvasTextBoxId(null);
+                    setEditorMode("pen");
+                  }}
+                  onPatchSelected={(patch) => {
+                    const nextBoxes = canvasTextBoxesRef.current.map((box) =>
+                      box.id === selectedCanvasTextBoxId ? { ...box, ...patch } : box
+                    );
+                    handleCanvasTextBoxesChange(nextBoxes);
+                  }}
+                />
+              )}
               <div className="absolute z-30 pointer-events-auto bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-2">
                 <div className="relative">
                   <button
@@ -996,10 +1206,23 @@ function WhiteboardPageViewInner() {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
           {canvasLoading && (
             <div className="absolute inset-0 z-0 flex items-center justify-center">
               <LuLoaderCircle size={22} className="animate-spin color-txt-sub" />
+            </div>
+          )}
+          {!canvasLoading && canvasLoadError && (
+            <div className="absolute inset-0 z-0 flex flex-col items-center justify-center gap-3 color-bg-grey-5 px-4 text-center">
+              <p className="text-sm font-semibold color-txt-main">This page couldn’t be loaded safely.</p>
+              <p className="max-w-sm text-xs color-txt-sub">Your saved content has not been changed. Check your connection and retry.</p>
+              <button
+                type="button"
+                className="rounded-lg color-bg-accent color-txt-accent px-3 py-2 text-xs font-semibold hover:opacity-90"
+                onClick={() => setCanvasLoadAttempt((attempt) => attempt + 1)}
+              >
+                Retry
+              </button>
             </div>
           )}
 
@@ -1186,7 +1409,7 @@ function WhiteboardPageViewInner() {
       {showAddQuestion && page && (
         <AddQuestionModal
           subject={page.subject}
-          onAdd={(added) => void handleAddAttachments(added)}
+          onAdd={handleAddAttachments}
           onClose={() => setShowAddQuestion(false)}
         />
       )}

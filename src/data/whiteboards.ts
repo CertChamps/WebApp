@@ -69,6 +69,10 @@ export type WhiteboardPage = {
   folderId: string | null;
   emoji: string | null;
   attachedQuestions: AttachedQuestion[];
+  /** Canvas pages keep the current freeform experience; document pages use the Word-style editor. */
+  pageType: "whiteboard" | "document";
+  /** Durable rich-text payload for document pages. HTML is intentionally used so inline formatting survives sync. */
+  documentContent: string;
   /** Manual sort position among siblings (shared space with sibling folders). Unset legacy items sort last (alphabetically). */
   order: number;
   createdAt: number;
@@ -384,6 +388,16 @@ export function setLastWhiteboardsSubject(subjectId: string | null): void {
 /** Canvas storage id for a whiteboard page (namespaced so it can't collide with question ids). */
 export function whiteboardCanvasId(pageId: string): string {
   return `whiteboard_${pageId}`;
+}
+
+/** Ink storage id for a document page. Text content is stored independently. */
+export function documentCanvasId(pageId: string): string {
+  return `document_canvas_${pageId}`;
+}
+
+/** Rich-text storage id for a document page. */
+export function documentContentStorageId(pageId: string): string {
+  return `document_content_${pageId}`;
 }
 
 export function newAttachmentId(): string {

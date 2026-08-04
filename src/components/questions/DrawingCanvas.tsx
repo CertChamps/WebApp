@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2, FileText, Ban, Paperclip, LoaderCircle } from "lucide-react";
 import type { CanvasAnnotation, CanvasCapturePayload } from "../../lib/grading/GradingTypes";
-import { buildCapturePayload } from "../../lib/grading/canvasCapture";
+import { buildCapturePayload, drawCaptureTextBoxes, type CaptureTextBox } from "../../lib/grading/canvasCapture";
 import { renderPdfPages } from "../../utils/pdfPagesToImages";
 import type { CanvasObject } from "../../hooks/useCanvasStorage";
 import RenderMath from "../math/mathdisplay";
@@ -721,6 +721,16 @@ type DrawingCanvasProps = {
 	onObjectsChange?: (objects: CanvasObject[]) => void;
 	/** Upload an attachment blob and return a durable URL. Falls back to a data URL when omitted. */
 	onUploadImage?: (blob: Blob) => Promise<string>;
+	/** Replaces the leading pen action with the requested Pen -> Text mode toggle. */
+	onRequestTextMode?: () => void;
+	/** Keep the drawing toolbar anchored to the viewport while a document page scrolls. */
+	toolbarFixed?: boolean;
+	/** Disable canvas pan/zoom so the surrounding document remains the scroll owner. */
+	allowViewportNavigation?: boolean;
+	/** Reports the current whiteboard transform so overlay layers stay aligned. */
+	onViewportChange?: (viewport: { pan: { x: number; y: number }; scale: number }) => void;
+	/** Optional persisted text boxes included in snapshots and grading captures. */
+	captureTextBoxes?: CaptureTextBox[];
 };
 
 function getStrokeBounds(stroke: Stroke): { minX: number; maxX: number; minY: number; maxY: number } | null {
@@ -821,7 +831,29 @@ function buildLineAnchors(
 		.map((c) => ({ y: c.y, xLeft: c.xLeft, xRight: percentile75([...c.xRights].sort((a, b) => a - b)) }));
 }
 
-export default function DrawingCanvas({ onClose, registerDrawingSnapshot, registerGetLineCount, registerGetGradingCapture, registerGetStaveAnalysis, initialStrokes, onStrokesChange, onEditInteraction, wrapperClassName, readOnly = false, defaultGridMode = "lines", gradingAnnotations = null, enableAttachments = false, initialObjects = null, onObjectsChange, onUploadImage }: DrawingCanvasProps) {
+export default function DrawingCanvas({
+	onClose,
+	registerDrawingSnapshot,
+	registerGetLineCount,
+	registerGetGradingCapture,
+	registerGetStaveAnalysis,
+	initialStrokes,
+	onStrokesChange,
+	onEditInteraction,
+	wrapperClassName,
+	readOnly = false,
+	defaultGridMode = "lines",
+	gradingAnnotations = null,
+	enableAttachments = false,
+	initialObjects = null,
+	onObjectsChange,
+	onUploadImage,
+	onRequestTextMode,
+	toolbarFixed = false,
+	allowViewportNavigation = true,
+	onViewportChange,
+	captureTextBoxes = [],
+}: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const objectsCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -839,12 +871,43 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	const mutedBgSampleRef = useRef<HTMLDivElement>(null);
 	const secondaryColorSampleRef = useRef<HTMLDivElement>(null);
 
+	const [fixedToolbarLeft, setFixedToolbarLeft] = useState<number | null>(null);
+	useLayoutEffect(() => {
+		if (!toolbarFixed) {
+			setFixedToolbarLeft(null);
+			return;
+		}
+		let frame = 0;
+		const update = () => {
+			window.cancelAnimationFrame(frame);
+			frame = window.requestAnimationFrame(() => {
+				const rect = containerRef.current?.getBoundingClientRect();
+				if (rect) setFixedToolbarLeft(rect.left + rect.width / 2);
+			});
+		};
+		update();
+		window.addEventListener("resize", update);
+		document.addEventListener("scroll", update, true);
+		const container = containerRef.current;
+		const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+		if (container) resizeObserver?.observe(container);
+		return () => {
+			window.cancelAnimationFrame(frame);
+			window.removeEventListener("resize", update);
+			document.removeEventListener("scroll", update, true);
+			resizeObserver?.disconnect();
+		};
+	}, [toolbarFixed]);
+
 	const [strokes, setStrokes] = useState<Stroke[]>(normalizeStrokeColors(initialStrokes));
 	const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
 	const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
 	const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
 	const [pan, setPan] = useState({ x: 0, y: 0 });
 	const [scale, setScale] = useState(1);
+	useEffect(() => {
+		onViewportChange?.({ pan, scale });
+	}, [onViewportChange, pan, scale]);
 	const [expandedCommentId, setExpandedCommentId] = useState<string | null>(null);
 	const [fontReady, setFontReady] = useState(false);
 	const badgeLayoutsRef = useRef<BadgeLayout[]>([]);
@@ -1166,6 +1229,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 	useEffect(() => {
 		const canvas = canvasRef.current;
 		if (!canvas) return;
+		if (!allowViewportNavigation) return;
 		const preventTouch = (e: TouchEvent) => e.preventDefault();
 		const opts: AddEventListenerOptions = { passive: false, capture: true };
 		canvas.addEventListener("touchstart", preventTouch, opts);
@@ -1178,7 +1242,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			canvas.removeEventListener("touchend", preventTouch, opts);
 			canvas.removeEventListener("touchcancel", preventTouch, opts);
 		};
-	}, []);
+	}, [allowViewportNavigation]);
 
 	const screenToWorld = useCallback(
 		(screenX: number, screenY: number): Point => {
@@ -1603,7 +1667,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 
 	// Expose current drawing as PNG for AI/vision (includes music staves when active)
 	const getSnapshot = useCallback(() => {
-		if (strokes.length === 0 && !currentStroke && objects.length === 0) return null;
+		if (strokes.length === 0 && !currentStroke && objects.length === 0 && !captureTextBoxes.some((box) => box.text.trim())) return null;
 		const canvas = canvasRef.current;
 		if (!canvas || canvas.width === 0 || canvas.height === 0) return null;
 		const dpr = window.devicePixelRatio || 1;
@@ -1691,6 +1755,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			}
 		}
 
+		drawCaptureTextBoxes(ctx, captureTextBoxes);
 		const drawSnapshotPenStroke = (stroke: Stroke) => {
 			if (stroke.tool !== "pen" || stroke.points.length < 2) return;
 			ctx.globalCompositeOperation = "source-over";
@@ -1739,16 +1804,17 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			console.error("[DrawingCanvas] snapshot failed (possibly tainted canvas):", err);
 			return null;
 		}
-	}, [pan, scale, strokes, currentStroke, gridMode, penPalette, activePenColorIndex, objects, objectImagesVersion]);
+	}, [pan, scale, strokes, currentStroke, gridMode, penPalette, activePenColorIndex, objects, objectImagesVersion, captureTextBoxes]);
 	const getGradingCapture = useCallback((mode: "default" | "full-ink" | "retry-aggressive" = "default"): CanvasCapturePayload | null => {
 		const renderStrokes = [...strokes, ...(currentStroke ? [currentStroke] : [])];
-		if (!renderStrokes.some((stroke) => stroke.tool === "pen" && stroke.points.length > 1)) return null;
+		if (!renderStrokes.some((stroke) => stroke.tool === "pen" && stroke.points.length > 1) && !captureTextBoxes.some((box) => box.text.trim())) return null;
 		const canvas = canvasRef.current;
 		if (!canvas) return null;
 		const rect = canvas.getBoundingClientRect();
 		if (rect.width <= 0 || rect.height <= 0 || scale === 0) return null;
 		return buildCapturePayload({
 			strokes: renderStrokes,
+			textBoxes: captureTextBoxes,
 			viewportWidth: rect.width,
 			viewportHeight: rect.height,
 			offsetX: pan.x,
@@ -1759,7 +1825,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			expandPaddingRatio: mode === "retry-aggressive" ? 0.25 : undefined,
 			jpegQuality: mode === "retry-aggressive" ? 0.97 : undefined,
 		});
-	}, [strokes, currentStroke, pan, scale]);
+	}, [strokes, currentStroke, pan, scale, captureTextBoxes]);
 	useEffect(() => {
 		if (!registerDrawingSnapshot) return;
 		registerDrawingSnapshot(getSnapshot);
@@ -1985,6 +2051,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 
 	const handlePointerDown = useCallback(
 		(e: React.PointerEvent) => {
+			if (!allowViewportNavigation && e.pointerType === "touch") return;
 			e.preventDefault();
 			setIsPenPopoverOpen(false);
 			setIsEraserPopoverOpen(false);
@@ -2067,11 +2134,12 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				}
 			}
 		},
-		[pan, scale, screenToWorld, tool, readOnly, onEditInteraction, resolveSelectionHit, startTransformSession, eraserMode, activePenColorIndex, activePenThicknessIndex]
+		[pan, scale, screenToWorld, tool, readOnly, onEditInteraction, resolveSelectionHit, startTransformSession, eraserMode, activePenColorIndex, activePenThicknessIndex, allowViewportNavigation]
 	);
 
 	const handlePointerMove = useCallback(
 		(e: React.PointerEvent) => {
+			if (!allowViewportNavigation && e.pointerType === "touch") return;
 			e.preventDefault();
 			if (readOnly) return;
 			const pointers = pointerIdsRef.current;
@@ -2154,11 +2222,12 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				if (currentStroke.tool === "pen") scheduleHoldStraighten();
 			}
 		},
-		[currentStroke, screenToWorld, scheduleHoldStraighten, readOnly, tool, lassoPath, applyTransformFromSession, eraserMode]
+		[currentStroke, screenToWorld, scheduleHoldStraighten, readOnly, tool, lassoPath, applyTransformFromSession, eraserMode, allowViewportNavigation]
 	);
 
 	const handlePointerUp = useCallback(
 		(e: React.PointerEvent) => {
+			if (!allowViewportNavigation && e.pointerType === "touch") return;
 			e.preventDefault();
 			const canvas = canvasRef.current;
 			if (canvas) canvas.releasePointerCapture(e.pointerId);
@@ -2220,11 +2289,12 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				isDrawingRef.current = false;
 			}
 		},
-		[currentStroke, cancelHoldStraighten, commitStrokeChange, tool, lassoPath, commitTransformSession, eraserMode]
+		[currentStroke, cancelHoldStraighten, commitStrokeChange, tool, lassoPath, commitTransformSession, eraserMode, allowViewportNavigation]
 	);
 
 	const handleWheel = useCallback(
 		(e: React.WheelEvent) => {
+			if (!allowViewportNavigation) return;
 			e.preventDefault();
 			if (readOnly) return;
 			const canvas = canvasRef.current;
@@ -2240,7 +2310,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			setScale(newScale);
 			setPan({ x: newPanX, y: newPanY });
 		},
-		[pan, scale, readOnly]
+		[pan, scale, readOnly, allowViewportNavigation]
 	);
 
 	const clearCanvas = useCallback(() => {
@@ -2584,7 +2654,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 			ref={containerRef}
 			className={`drawing-canvas-wrapper flex flex-col select-none ${wrapperClassName ?? "color-bg"} ${isEmbedded ? "absolute inset-0" : "fixed inset-0 z-50"}`}
 			style={{
-				touchAction: "none",
+				touchAction: allowViewportNavigation ? "none" : "pan-y",
 				WebkitUserSelect: "none",
 				userSelect: "none",
 				WebkitTouchCallout: "none",
@@ -2636,7 +2706,7 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 					onWheel={handleWheel}
 					onContextMenu={(e) => e.preventDefault()}
 					style={{
-						touchAction: "none",
+						touchAction: allowViewportNavigation ? "none" : "pan-y",
 						cursor: tool === "eraser" ? "cell" : tool === "lasso" ? "default" : "crosshair",
 						WebkitUserSelect: "none",
 						userSelect: "none",
@@ -2756,13 +2826,23 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 				{/* Floating bar - mostly transparent with blur (hidden in readOnly) */}
 				{!readOnly && (
 				<div
-					className="drawing-canvas-toolbar absolute bottom-4 left-1/2 -translate-x-1/2 z-[2000] flex items-center justify-center gap-1 py-1.5 px-2 rounded-[var(--radius-out)] color-shadow"
-					style={{
-						background: "rgba(128, 128, 128, 0.05)",
-						backdropFilter: "blur(6px)",
-						WebkitBackdropFilter: "blur(6px)",
-					}}
+					className={`drawing-canvas-toolbar ${toolbarFixed ? "fixed" : "absolute bottom-4 left-1/2"} -translate-x-1/2 z-[2000] flex items-center justify-center gap-1 py-1.5 px-2 rounded-[var(--radius-out)] color-bg color-shadow border`}
+					style={toolbarFixed ? {
+						left: fixedToolbarLeft ?? "50%",
+						bottom: 16,
+					} : undefined}
 				>
+				{onRequestTextMode && (
+					<button
+						type="button"
+						onClick={onRequestTextMode}
+						className="p-1.5 rounded-[var(--radius-in)] transition-colors color-txt-main hover:color-bg-grey-10"
+						title="Switch to text"
+						aria-label="Switch to text"
+					>
+						<FileText size={18} strokeWidth={2} />
+					</button>
+				)}
 				<button
 					type="button"
 					onClick={undo}
@@ -2804,9 +2884,9 @@ export default function DrawingCanvas({ onClose, registerDrawingSnapshot, regist
 							setIsGridPopoverOpen(false);
 						}}
 						className={`p-1.5 rounded-[var(--radius-in)] transition-all color-txt-main hover:opacity-90 ${tool === "pen" ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
-						title="Pen"
+						title={onRequestTextMode ? "Pen colour and thickness" : "Pen"}
 					>
-						<Pencil size={18} strokeWidth={2} />
+						{onRequestTextMode ? <CircleDot size={18} strokeWidth={2} /> : <Pencil size={18} strokeWidth={2} />}
 					</button>
 				</div>
 				<div className="relative">

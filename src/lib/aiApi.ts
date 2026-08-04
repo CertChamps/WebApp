@@ -38,6 +38,7 @@ export async function authenticatedAiFetch(
   body: Record<string, unknown>,
   purpose: AiPurpose,
   usageId = createAiUsageId(purpose),
+  options: { signal?: AbortSignal } = {},
 ): Promise<Response> {
   const currentUser = auth.currentUser;
   if (!currentUser) {
@@ -46,6 +47,7 @@ export async function authenticatedAiFetch(
   const idToken = await currentUser.getIdToken();
   return fetch(url, {
     method: "POST",
+    signal: options.signal,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${idToken}`,

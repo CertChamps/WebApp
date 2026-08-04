@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LuFileText, LuPlus, LuTrash2, LuX, LuZap } from "react-icons/lu";
+import { LuFileText, LuLayoutPanelTop, LuPlus, LuTrash2, LuX, LuZap } from "react-icons/lu";
 import WhiteboardModal from "./WhiteboardModal";
 import EmojiPicker from "./EmojiPicker";
 import AddQuestionModal from "./AddQuestionModal";
@@ -10,6 +10,7 @@ export type PageDetailsResult = {
   name: string;
   folderId: string | null;
   emoji: string | null;
+  pageType: "whiteboard" | "document";
   attachedQuestions: AttachedQuestion[];
 };
 
@@ -42,6 +43,9 @@ export default function PageDetailsModal({
   const [attachedQuestions, setAttachedQuestions] = useState<AttachedQuestion[]>(
     initial?.attachedQuestions ?? []
   );
+  const [pageType, setPageType] = useState<"whiteboard" | "document">(
+    initial?.pageType ?? "whiteboard"
+  );
   const [saving, setSaving] = useState(false);
   const [showAddQuestion, setShowAddQuestion] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -56,6 +60,7 @@ export default function PageDetailsModal({
     folderId,
     emoji,
     attachedQuestions,
+    pageType,
   });
 
   const handleSave = async () => {
@@ -101,7 +106,7 @@ export default function PageDetailsModal({
             <div className="flex flex-col gap-2 rounded-lg color-bg-grey-5 p-3">
               <p className="text-sm color-txt-main font-semibold">Delete “{initial.name}”?</p>
               <p className="text-xs color-txt-sub">
-                The page and its whiteboard drawing will be permanently deleted.
+                The page and all of its saved content will be permanently deleted.
               </p>
               <div className="flex gap-2 pt-1">
                 <button
@@ -153,7 +158,7 @@ export default function PageDetailsModal({
                   {isEdit ? "Save changes" : "Create page"}
                 </button>
               </div>
-              {!isEdit && onBlankCanvas && (
+              {!isEdit && onBlankCanvas && pageType === "whiteboard" && (
                 <button
                   type="button"
                   className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
@@ -195,6 +200,33 @@ export default function PageDetailsModal({
             </div>
           </div>
 
+          {!isEdit && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold color-txt-sub">Page type</span>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { id: "whiteboard" as const, label: "Whiteboard", Icon: LuLayoutPanelTop, detail: "Freeform canvas" },
+                  { id: "document" as const, label: "Document", Icon: LuFileText, detail: "Word-style page" },
+                ]).map(({ id, label, Icon, detail }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setPageType(id)}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-left transition-colors cursor-pointer ${
+                      pageType === id ? "color-bg-accent color-txt-accent" : "color-bg-grey-5 color-txt-main hover:color-bg-grey-10"
+                    }`}
+                    aria-pressed={pageType === id}
+                  >
+                    <Icon size={17} />
+                    <span className="flex flex-col">
+                      <span className="text-sm font-semibold">{label}</span>
+                      <span className="text-[11px] opacity-75">{detail}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold color-txt-sub">Attached questions</span>

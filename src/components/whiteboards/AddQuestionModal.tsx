@@ -33,7 +33,7 @@ import { buildImageAttachment, buildPaperAttachment } from "../../lib/whiteboard
 type Props = {
   /** UI subject slug (Practice Hub subject id). */
   subject: string;
-  onAdd: (attachments: AttachedQuestion[]) => void;
+  onAdd: (attachments: AttachedQuestion[]) => Promise<void> | void;
   onClose: () => void;
 };
 
@@ -163,10 +163,19 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
     return groupedQuestions.filter((g) => g.displayName.toLowerCase().includes(searchLower));
   }, [groupedQuestions, searchLower]);
 
-  const handleAddSelection = () => {
-    if (selection.size === 0) return;
-    onAdd(Array.from(selection.values()));
-    onClose();
+  const handleAddSelection = async () => {
+    if (selection.size === 0 || uploading) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      await onAdd(Array.from(selection.values()));
+      onClose();
+    } catch (error) {
+      console.error("[AddQuestionModal] add failed:", error);
+      setUploadError("Those questions couldn’t be added. Please retry.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleUpload = async () => {
@@ -191,7 +200,7 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
           markingSchemeType: markingAsset?.fileType ?? null,
         },
       };
-      onAdd([attachment]);
+      await onAdd([attachment]);
       onClose();
     } catch (err) {
       console.error("[AddQuestionModal] upload failed:", err);
@@ -222,16 +231,21 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
       maxWidthClass="max-w-xl"
       footer={
         tab === "bank" ? (
-          <button
-            type="button"
-            className="w-full py-2.5 rounded-xl text-sm font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
-            onClick={handleAddSelection}
-            disabled={selection.size === 0}
-          >
-            {selection.size === 0
-              ? "Select questions to add"
-              : `Add ${selection.size} question${selection.size === 1 ? "" : "s"}`}
-          </button>
+          <div className="flex flex-col gap-2">
+            {uploadError && <p className="text-sm color-txt-sub text-center">{uploadError}</p>}
+            <button
+              type="button"
+              className="w-full py-2.5 rounded-xl text-sm font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
+              onClick={handleAddSelection}
+              disabled={selection.size === 0 || uploading}
+            >
+              {uploading
+                ? "Adding…"
+                : selection.size === 0
+                  ? "Select questions to add"
+                  : `Add ${selection.size} question${selection.size === 1 ? "" : "s"}`}
+            </button>
+          </div>
         ) : (
           <div className="flex flex-col gap-2">
             {uploadError && <p className="text-sm color-txt-sub text-center">{uploadError}</p>}

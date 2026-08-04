@@ -83,7 +83,6 @@ function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null 
 export async function listImageSubjectAvailability(
   cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
 ): Promise<ImageSubjectAvailability[]> {
-  const cacheKey = `avail:${cycle}`;
   if (
     subjectAvailabilityCache &&
     subjectAvailabilityCache.ts &&
@@ -305,7 +304,7 @@ function collectMarkingSchemePaths(
 
 async function catalogueToImageQuestions(rows: CatalogueQuestion[]): Promise<ImageQuestion[]> {
   const results = await Promise.allSettled(
-    rows.map(async (q) => {
+    rows.map(async (q): Promise<ImageQuestion> => {
       const downloadUrl = await resolveImageDownloadUrl(q.imagePath);
       return {
         name: q.fileName,
