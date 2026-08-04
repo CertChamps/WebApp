@@ -5,6 +5,10 @@ import { useExamPapers, normalizePaperLevel } from "../../hooks/useExamPapers";
 import SubjectProgressCard from "../../components/progress/SubjectProgressCard";
 import { paperProgressEntryMatchesSubjectLevel } from "../../lib/matchPaperProgressEntry";
 import {
+  subjectMatchesFavourite,
+  useSyncedFavouriteSubjectIds,
+} from "../../data/practiceHubSubjects";
+import {
   progressSubjectLevelKey,
   useProgressHiddenSubjectLevelKeys,
 } from "../../hooks/useProgressHiddenSubjectLevels";
@@ -52,6 +56,7 @@ const QUOTES: [string, string][] = [
 const Progress = () => {
   const { entries: progressEntries, loading: progressLoading } = useAllPaperProgress();
   const { pairs: subjectLevels, loading: subjectLevelsLoading } = useSubjectLevels();
+  const favouriteSubjectIds = useSyncedFavouriteSubjectIds();
   const hiddenSubjectLevelKeys = useProgressHiddenSubjectLevelKeys(progressEntries);
   const {
     papers: leavingCertPapers,
@@ -100,15 +105,21 @@ const Progress = () => {
       extras.push({ subject: sub, level: lvl });
     }
 
-    return [...fromCurriculum, ...extras].filter(
-      (p) => !hiddenSubjectLevelKeys.has(progressSubjectLevelKey(p.subject, p.level))
-    );
+    return [...fromCurriculum, ...extras]
+      .filter((p) => !hiddenSubjectLevelKeys.has(progressSubjectLevelKey(p.subject, p.level)))
+      .sort((a, b) => {
+        const af = subjectMatchesFavourite(a.subject, favouriteSubjectIds);
+        const bf = subjectMatchesFavourite(b.subject, favouriteSubjectIds);
+        if (af !== bf) return af ? -1 : 1;
+        return a.subject.localeCompare(b.subject, undefined, { sensitivity: "base" });
+      });
   }, [
     subjectLevels,
     leavingCertPapers,
     progressEntries,
     leavingCertPapersError,
     hiddenSubjectLevelKeys,
+    favouriteSubjectIds,
   ]);
 
   const subjectGridLoading = subjectLevelsLoading || leavingCertPapersLoading || progressLoading;

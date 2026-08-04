@@ -27,7 +27,14 @@ import { usePaperSnapshot, usePaperPageCount } from "../hooks/usePaperSnapshot";
 import { useImageTopics, listQuestionsForTopic, groupImageQuestions, type ImageTopic } from "../hooks/useImageQuestions";
 import { motion, AnimatePresence } from "framer-motion";
 import { LuX, LuChevronRight, LuSearch, LuFileCheck, LuChevronUp, LuChevronDown, LuTrash2, LuImage, LuStar, LuArrowLeft, LuLock } from "react-icons/lu";
-import { subjectMatchesPaper, getStorageFolderName, getFavouriteSubjectIds, FAVOURITES_CHANGED_EVENT, PRACTICE_HUB_SUBJECTS } from "../data/practiceHubSubjects";
+import {
+  subjectMatchesPaper,
+  getStorageFolderName,
+  getFavouriteSubjectIds,
+  FAVOURITES_CHANGED_EVENT,
+  PRACTICE_HUB_SUBJECTS,
+  useSyncedFavouriteSubjectIds,
+} from "../data/practiceHubSubjects";
 import { SubjectDropdown, YearClockPicker, type YearFilterValue } from "../components/practiceHub";
 import { SubjectGlyph } from "../components/practiceHub/subjectIcons";
 import { getThemedPortalTarget } from "../utils/themedPortal";
@@ -107,7 +114,11 @@ export default function PracticeHub() {
   const globalSearchContainerRef = useRef<HTMLDivElement>(null);
 
   const [hubFavourites, setHubFavourites] = useState<string[]>(() => getFavouriteSubjectIds());
+  const syncedHubFavourites = useSyncedFavouriteSubjectIds();
   const onFavouritesChange = useCallback((ids: string[]) => setHubFavourites(ids), []);
+  useEffect(() => {
+    setHubFavourites(syncedHubFavourites);
+  }, [syncedHubFavourites]);
   useEffect(() => {
     const syncFavourites = () => setHubFavourites(getFavouriteSubjectIds());
     window.addEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);

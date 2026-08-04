@@ -508,7 +508,7 @@ export async function resolveMarkingSchemeUrls(
   if (files.length === 0) return [];
 
   const results = await Promise.allSettled(
-    files.map(async (f) => {
+    files.map(async (f): Promise<ImageQuestion> => {
       const path = f.storagePath?.trim();
       if (!path) throw new Error("empty marking scheme path");
       const downloadUrl = await getDownloadURL(ref(storage, path));

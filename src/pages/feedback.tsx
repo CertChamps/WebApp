@@ -14,6 +14,7 @@ type FeedbackItem = {
     message: string;
     timestamp: number | null;
     adminTag: AdminTag;
+    source: string;
 };
 
 const TYPES: { id: FeedbackType; label: string }[] = [
@@ -79,8 +80,9 @@ export default function Feedback() {
                     message: data.message ?? "",
                     timestamp: data.timestamp?.seconds ?? null,
                     adminTag: (data.adminTag as AdminTag) ?? null,
+                    source: data.source ?? "feedback",
                 };
-            })
+            }).filter((item) => item.source !== "help")
         );
     };
 
@@ -99,6 +101,7 @@ export default function Feedback() {
                 username: user.username ?? "",
                 type,
                 message: trimmed,
+                source: "feedback",
                 timestamp: serverTimestamp(),
                 adminTag: null,
             });

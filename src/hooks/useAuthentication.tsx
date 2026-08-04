@@ -151,6 +151,11 @@ const userSetup = async (uid: string, username: string, email: string, legalAcce
       const studyingSubjects = Array.isArray(userData.studyingSubjects)
         ? userData.studyingSubjects.filter((x): x is string => typeof x === "string")
         : [];
+      const hasFavouriteSubjects =
+        userData != null && Object.prototype.hasOwnProperty.call(userData, "favouriteSubjects");
+      const favouriteSubjects = Array.isArray(userData.favouriteSubjects)
+        ? userData.favouriteSubjects.filter((x): x is string => typeof x === "string")
+        : [];
       let hasCompletedOnboarding = parseOnboardingStatus(userData.hasCompletedOnboarding);
       try {
         const cachedRaw = localStorage.getItem("USER");
@@ -164,7 +169,9 @@ const userSetup = async (uid: string, username: string, email: string, legalAcce
         // ignore cache read errors
       }
 
-      if (studyingSubjects.length > 0) {
+      if (hasFavouriteSubjects) {
+        setFavouriteSubjectIds(favouriteSubjects, { syncRemote: false });
+      } else if (studyingSubjects.length > 0) {
         setFavouriteSubjectIds(studyingSubjects);
       }
 

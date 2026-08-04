@@ -36,6 +36,7 @@ import {
   FAVOURITES_CHANGED_EVENT,
   PRACTICE_HUB_SUBJECTS,
   toggleFavourite,
+  useSyncedFavouriteSubjectIds,
   type SubjectOption,
 } from "../data/practiceHubSubjects";
 import { parseExamCycle, type ExamCycleId, EXAM_CYCLES } from "../lib/examCycle";
@@ -257,6 +258,7 @@ function PracticeBrowserInner() {
   const [favouriteSubjectIds, setFavouriteSubjectIds] = useState<string[]>(
     () => getFavouriteSubjectIds()
   );
+  const syncedFavouriteSubjectIds = useSyncedFavouriteSubjectIds();
   const scrollRef = useRef<HTMLDivElement>(null);
   const questionElements = useRef(new Map<string, HTMLElement>());
   const titleRowRef = useRef<HTMLDivElement>(null);
@@ -385,6 +387,10 @@ function PracticeBrowserInner() {
     window.addEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
     return () => window.removeEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
   }, []);
+
+  useEffect(() => {
+    setFavouriteSubjectIds(syncedFavouriteSubjectIds);
+  }, [syncedFavouriteSubjectIds]);
 
   const handleToggleFavourite = useCallback((subject: string) => {
     setFavouriteSubjectIds((current) => toggleFavourite(subject, current));

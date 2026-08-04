@@ -21,7 +21,7 @@ import {
   setLastWhiteboardsSubject,
   type WhiteboardFolder,
 } from "../data/whiteboards";
-import { getFavouriteSubjectIds } from "../data/practiceHubSubjects";
+import { getFavouriteSubjectIds, useSyncedFavouriteSubjectIds } from "../data/practiceHubSubjects";
 import { UserContext } from "../context/UserContext";
 import { hasAceAccess } from "../lib/contentAccess";
 import "../styles/practiceHub.css";
@@ -65,6 +65,7 @@ export default function Whiteboards() {
   const [subject, setSubject] = useState<string | null>(
     () => getLastWhiteboardsSubject() ?? getFavouriteSubjectIds()[0] ?? null
   );
+  const favouriteSubjectIds = useSyncedFavouriteSubjectIds();
   const {
     recentItems,
     loading,
@@ -85,6 +86,11 @@ export default function Whiteboards() {
     setLastWhiteboardsSubject(subject);
     setShowAllRecents(false);
   }, [subject]);
+
+  useEffect(() => {
+    if (subject || favouriteSubjectIds.length === 0) return;
+    setSubject(favouriteSubjectIds[0]);
+  }, [favouriteSubjectIds, subject]);
 
   const handleSubjectChange = useCallback(
     (subjectId: string | null) => {
