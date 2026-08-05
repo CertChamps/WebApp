@@ -199,6 +199,18 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   @apply outline-none ring-2 ring-offset-2 ring-blue/40;
 }
 
+/* Listening audio scrubber — theme tokens via Tailwind @apply */
+.question-audio-slider {
+  @apply h-1.5 w-full appearance-none rounded-full color-bg-grey-5 outline-none cursor-pointer;
+  accent-color: var(--accent);
+}
+.question-audio-slider::-webkit-slider-thumb {
+  @apply appearance-none h-3.5 w-3.5 rounded-full color-bg-accent cursor-pointer;
+}
+.question-audio-slider::-moz-range-thumb {
+  @apply h-3.5 w-3.5 rounded-full border-0 color-bg-accent cursor-pointer;
+}
+
 /* Questions search modal (utility-themed) */
 .q-search-overlay {
   @apply color-bg-grey-10;

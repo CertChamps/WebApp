@@ -15,6 +15,7 @@ import {
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
 import type { SidebarPanelId } from "../components/sidebar/SidebarTileManager";
 import QuestionTitlePicker from "../components/questions/QuestionTitlePicker";
+import QuestionAudioPlayer from "../components/questions/QuestionAudioPlayer";
 import { OptionsContext } from "../context/OptionsContext";
 import { TimerProvider } from "../context/TimerContext";
 import {
@@ -217,6 +218,16 @@ function QuestionCard({
           </button>
         </div>
       </header>
+
+      {question.audioPath && (
+        <div className="mb-3">
+          <QuestionAudioPlayer
+            audioPath={question.audioPath}
+            startSec={question.audioStartSec}
+            startLabel={question.audioStartLabel}
+          />
+        </div>
+      )}
 
       <div className="practice-browser__question-images">
         {question.images.map((image) => (

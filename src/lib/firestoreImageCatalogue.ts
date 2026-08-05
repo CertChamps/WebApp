@@ -5,7 +5,8 @@
  *   questions/{leavingcert|juniorcert}/subjects/{subject}/levels/{level}/questions/{id}
  *
  * Fields: year, paper, "paper type", topic, imagePath, questionName, fileName, source,
- *         markingSchemePath, markingSchemePaths (optional; backfilled by migrate script)
+ *         markingSchemePath, markingSchemePaths (optional; backfilled by migrate script),
+ *         audioPath, audioStartSec, audioStartLabel (optional; attach_audio_to_questions.py)
  */
 
 import {
@@ -42,6 +43,11 @@ export type CatalogueQuestion = {
   paperType?: string;
   /** Storage paths for marking scheme image(s), when backfilled. */
   markingSchemePaths?: string[];
+  /** Listening audio Storage path (exam-audio/…), when attached. */
+  audioPath?: string;
+  /** Seek offset into the shared listening MP3 (seconds). */
+  audioStartSec?: number;
+  audioStartLabel?: string;
 };
 
 export type CatalogueTopic = {
@@ -294,6 +300,18 @@ function parseQuestionDoc(
       ? paperTypeRaw.trim()
       : undefined;
   const markingSchemePaths = parseMarkingSchemePaths(data);
+  const audioPath =
+    typeof data.audioPath === "string" && data.audioPath.trim()
+      ? data.audioPath.trim()
+      : undefined;
+  const audioStartSec =
+    typeof data.audioStartSec === "number" && Number.isFinite(data.audioStartSec)
+      ? Math.max(0, data.audioStartSec)
+      : undefined;
+  const audioStartLabel =
+    typeof data.audioStartLabel === "string" && data.audioStartLabel.trim()
+      ? data.audioStartLabel.trim()
+      : undefined;
 
   return {
     id,
@@ -313,6 +331,9 @@ function parseQuestionDoc(
     paper,
     paperType,
     ...(markingSchemePaths.length > 0 ? { markingSchemePaths } : {}),
+    ...(audioPath ? { audioPath } : {}),
+    ...(audioStartSec != null ? { audioStartSec } : {}),
+    ...(audioStartLabel ? { audioStartLabel } : {}),
   };
 }
 

@@ -28,6 +28,9 @@ export type AttachedBankRef = {
   groupKey?: string;
   imagePaths?: string[];
   markingSchemePaths?: string[];
+  audioPath?: string;
+  audioStartSec?: number;
+  audioStartLabel?: string;
 };
 
 export type AttachedCustomFiles = {

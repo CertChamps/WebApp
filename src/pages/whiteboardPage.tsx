@@ -36,6 +36,7 @@ import CanvasTextBoxLayer, { type CanvasTextBox } from "../components/questions/
 import CanvasTextToolbar from "../components/questions/CanvasTextToolbar";
 import QuestionTitlePicker from "../components/questions/QuestionTitlePicker";
 import ZoomableQuestionImage from "../components/questions/ZoomableQuestionImage";
+import QuestionAudioPlayer from "../components/questions/QuestionAudioPlayer";
 import WhiteboardsSidebar from "../components/whiteboards/WhiteboardsSidebar";
 import PageDetailsModal from "../components/whiteboards/PageDetailsModal";
 import DocumentEditor from "../components/whiteboards/DocumentEditor";
@@ -1252,7 +1253,15 @@ function WhiteboardPageViewInner() {
                   <div className="min-h-0 min-w-0 h-full flex flex-col pl-2 pr-1 overflow-hidden pointer-events-none">
                     <div className="flex-1 min-h-0 relative pt-4 pointer-events-none">
                       <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-8 items-center pointer-events-auto">
-                        <div className="flex flex-col items-center w-full" style={{ maxWidth: snippetWidth }}>
+                        <div className="flex flex-col items-center w-full gap-3" style={{ maxWidth: snippetWidth }}>
+                          {!media.loading && !media.error && media.audioPath && (
+                            <QuestionAudioPlayer
+                              audioPath={media.audioPath}
+                              startSec={media.audioStartSec}
+                              startLabel={media.audioStartLabel ?? undefined}
+                              className="w-full"
+                            />
+                          )}
                           {media.loading ? (
                             <div className="flex h-40 w-full items-center justify-center">
                               <LuLoaderCircle size={20} className="animate-spin color-txt-sub" />

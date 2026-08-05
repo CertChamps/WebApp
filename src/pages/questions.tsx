@@ -54,6 +54,7 @@ import PaperPdfPlaceholder, { getQuestionScrollOffset } from "../components/ques
 import PaperQuestionRegionPanel from "../components/questions/PaperQuestionRegionPanel";
 import CroppedPdfRegions from "../components/questions/CroppedPdfRegions";
 import ZoomableQuestionImage from "../components/questions/ZoomableQuestionImage";
+import QuestionAudioPlayer from "../components/questions/QuestionAudioPlayer";
 import FloatingLogTables from "../components/FloatingLogTables";
 import FloatingCalculator from "../components/calculator/FloatingCalculator";
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
@@ -2336,7 +2337,15 @@ export default function Questions() {
                                     )}
                                 <div className="flex-1 min-h-0 relative pt-4 pointer-events-none">
                                     <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-28 items-center pointer-events-auto">
-                                        <div className="flex flex-col items-center w-full" style={{ maxWidth: snippetWidth }}>
+                                        <div className="flex flex-col items-center w-full gap-3" style={{ maxWidth: snippetWidth }}>
+                                            {currentGroupedQuestion.audioPath && (
+                                                <QuestionAudioPlayer
+                                                    audioPath={currentGroupedQuestion.audioPath}
+                                                    startSec={currentGroupedQuestion.audioStartSec}
+                                                    startLabel={currentGroupedQuestion.audioStartLabel}
+                                                    className="w-full"
+                                                />
+                                            )}
                                             <ZoomableQuestionImage
                                                 images={currentGroupedQuestion.images.map((img, idx) => ({
                                                     key: img.storagePath,

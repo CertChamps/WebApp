@@ -9,6 +9,9 @@ import type { ZoomablePageImage } from "../components/questions/ZoomableQuestion
 export type AttachedQuestionMedia = {
   questionImages: ZoomablePageImage[];
   markingSchemeImages: ZoomablePageImage[];
+  audioPath: string | null;
+  audioStartSec: number;
+  audioStartLabel: string | null;
   loading: boolean;
   error: string | null;
 };
@@ -16,6 +19,9 @@ export type AttachedQuestionMedia = {
 const EMPTY: AttachedQuestionMedia = {
   questionImages: [],
   markingSchemeImages: [],
+  audioPath: null,
+  audioStartSec: 0,
+  audioStartLabel: null,
   loading: false,
   error: null,
 };
@@ -46,11 +52,14 @@ export function useAttachedQuestionMedia(attachment: AttachedQuestion | null): A
     }
 
     let cancelled = false;
-    setState({ questionImages: [], markingSchemeImages: [], loading: true, error: null });
+    setState({ ...EMPTY, loading: true });
 
     (async () => {
       let questionUrls: string[] = [];
       let markingUrls: string[] = [];
+      let audioPath: string | null = null;
+      let audioStartSec = 0;
+      let audioStartLabel: string | null = null;
 
       if (attachment.source === "custom" && attachment.custom) {
         const { questionPath, questionType, markingSchemePath, markingSchemeType } = attachment.custom;
@@ -80,6 +89,15 @@ export function useAttachedQuestionMedia(attachment: AttachedQuestion | null): A
             markingUrls = await resolveStorageUrls(bank.markingSchemePaths ?? []);
           } catch {
             markingUrls = [];
+          }
+          const path = bank.audioPath?.trim();
+          if (path) {
+            audioPath = path;
+            audioStartSec =
+              typeof bank.audioStartSec === "number" && Number.isFinite(bank.audioStartSec)
+                ? Math.max(0, bank.audioStartSec)
+                : 0;
+            audioStartLabel = bank.audioStartLabel?.trim() || null;
           }
         } else {
           if (bank.paperStoragePath) {
@@ -111,6 +129,9 @@ export function useAttachedQuestionMedia(attachment: AttachedQuestion | null): A
       setState({
         questionImages: toPageImages(questionUrls, attachment.label || "Question"),
         markingSchemeImages: toPageImages(markingUrls, `${attachment.label || "Question"} marking scheme`),
+        audioPath,
+        audioStartSec,
+        audioStartLabel,
         loading: false,
         error: null,
       });
@@ -118,8 +139,7 @@ export function useAttachedQuestionMedia(attachment: AttachedQuestion | null): A
       if (cancelled) return;
       console.error("[useAttachedQuestionMedia] failed:", err);
       setState({
-        questionImages: [],
-        markingSchemeImages: [],
+        ...EMPTY,
         loading: false,
         error: err instanceof Error ? err.message : "Failed to load question",
       });

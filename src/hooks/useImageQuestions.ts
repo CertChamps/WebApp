@@ -43,6 +43,9 @@ export type ImageQuestion = {
   catalogueId?: string;
   /** Storage paths for marking scheme image(s), when present on the catalogue doc. */
   markingSchemePaths?: string[];
+  audioPath?: string;
+  audioStartSec?: number;
+  audioStartLabel?: string;
 };
 
 export type GroupedImageQuestion = {
@@ -55,6 +58,9 @@ export type GroupedImageQuestion = {
   topic?: string;
   /** Aggregated marking scheme paths from catalogue (preferred over Storage listing). */
   markingSchemePaths?: string[];
+  audioPath?: string;
+  audioStartSec?: number;
+  audioStartLabel?: string;
 };
 
 export type ImageSubjectAvailability = {
@@ -273,6 +279,7 @@ export function groupImageQuestions(flat: ImageQuestion[]): GroupedImageQuestion
     );
     const head = dedupedImages[0];
     const markingSchemePaths = collectMarkingSchemePaths(dedupedImages);
+    const audio = pickGroupedAudio(dedupedImages);
     return {
       key,
       displayName: prettifyName(key),
@@ -282,8 +289,26 @@ export function groupImageQuestions(flat: ImageQuestion[]): GroupedImageQuestion
       paperType: head?.paperType,
       topic: head?.topic,
       ...(markingSchemePaths.length > 0 ? { markingSchemePaths } : {}),
+      ...audio,
     };
   });
+}
+
+function pickGroupedAudio(images: ImageQuestion[]): {
+  audioPath?: string;
+  audioStartSec?: number;
+  audioStartLabel?: string;
+} {
+  for (const img of images) {
+    const path = img.audioPath?.trim();
+    if (!path) continue;
+    return {
+      audioPath: path,
+      ...(img.audioStartSec != null ? { audioStartSec: img.audioStartSec } : {}),
+      ...(img.audioStartLabel ? { audioStartLabel: img.audioStartLabel } : {}),
+    };
+  }
+  return {};
 }
 
 function collectMarkingSchemePaths(
@@ -319,6 +344,9 @@ async function catalogueToImageQuestions(rows: CatalogueQuestion[]): Promise<Ima
         ...(q.markingSchemePaths?.length
           ? { markingSchemePaths: q.markingSchemePaths }
           : {}),
+        ...(q.audioPath ? { audioPath: q.audioPath } : {}),
+        ...(q.audioStartSec != null ? { audioStartSec: q.audioStartSec } : {}),
+        ...(q.audioStartLabel ? { audioStartLabel: q.audioStartLabel } : {}),
       } satisfies ImageQuestion;
     })
   );
