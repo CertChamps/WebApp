@@ -46,7 +46,9 @@ import {
     LuUsers,
     LuX,
 } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import VideoEmbedModal from "../components/discover/VideoEmbedModal";
+import { extractYoutubeId, isDiscoverVideoUrl } from "../lib/discoverMedia";
 
 type DiscoverNote = {
     id: string;
@@ -78,6 +80,28 @@ type DiscoverNote = {
     commentCount?: number;
     ratingAverage?: number;
     ratingCount?: number;
+    timestamp: number | null;
+    linkedQuestionId?: string;
+    linkedQuestionName?: string;
+    linkedQuestionPracticeUrl?: string;
+    linkedQuestionSubjectId?: string;
+    linkedQuestionSubjectLabel?: string;
+    linkedQuestionLevel?: string;
+    linkedQuestionTopic?: string;
+    linkedQuestionSource?: string;
+};
+
+type DiscoverQuestionPost = {
+    id: string;
+    questionId: string;
+    questionName: string;
+    subjectId?: string;
+    subjectLabel?: string;
+    level?: string;
+    topic?: string;
+    practiceUrl: string;
+    content: string;
+    sourceContext?: string;
     timestamp: number | null;
 };
 
@@ -226,21 +250,6 @@ function displayHostname(url: string): string {
     } catch {
         return url;
     }
-}
-
-function extractYoutubeId(url: string): string | null {
-    try {
-        const parsed = new URL(url);
-        if (parsed.hostname.includes("youtu.be")) {
-            return parsed.pathname.split("/").filter(Boolean)[0] ?? null;
-        }
-        if (parsed.hostname.includes("youtube.com")) {
-            return parsed.searchParams.get("v");
-        }
-    } catch {
-        return null;
-    }
-    return null;
 }
 
 function fallbackPreview(url: string): LinkPreview {
@@ -402,8 +411,24 @@ export default function Discover() {
     const { user } = useContext(UserContext);
     const isAdmin = isAdminUid(user?.uid, user?.email);
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const linkedQuestion = useMemo(() => {
+        const id = searchParams.get("questionId")?.trim();
+        if (!id) return null;
+        return {
+            id,
+            name: searchParams.get("questionName")?.trim() || "Practice question",
+            subjectId: searchParams.get("subject")?.trim() || undefined,
+            subjectLabel: searchParams.get("subjectLabel")?.trim() || undefined,
+            level: searchParams.get("level")?.trim() || undefined,
+            topic: searchParams.get("topic")?.trim() || undefined,
+            practiceUrl: searchParams.get("practiceUrl")?.trim() || undefined,
+            source: searchParams.get("source")?.trim() || undefined,
+        };
+    }, [searchParams]);
 
     const [notes, setNotes] = useState<DiscoverNote[]>([]);
+    const [questionPosts, setQuestionPosts] = useState<DiscoverQuestionPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [searchFocused, setSearchFocused] = useState(false);
@@ -434,6 +459,7 @@ export default function Discover() {
     const [formError, setFormError] = useState<string | null>(null);
     const [submittedToast, setSubmittedToast] = useState(false);
     const [selectedResource, setSelectedResource] = useState<DiscoverResource | null>(null);
+    const [videoResource, setVideoResource] = useState<DiscoverResource | null>(null);
     const [comments, setComments] = useState<DiscoverComment[]>([]);
     const [commentText, setCommentText] = useState("");
     const [commentSubmitting, setCommentSubmitting] = useState(false);
@@ -461,6 +487,19 @@ export default function Discover() {
     }, [syncedFavouriteSubjectIds]);
 
     useEffect(() => {
+        if (!linkedQuestion) return;
+        if (linkedQuestion.subjectId) {
+            setSelectedSubjectId(linkedQuestion.subjectId);
+            setShareSubjectId(linkedQuestion.subjectId);
+        }
+        if (linkedQuestion.level && RESOURCE_LEVELS.includes(linkedQuestion.level as ResourceLevel)) {
+            setShareLevels([linkedQuestion.level as ResourceLevel]);
+        }
+        if (linkedQuestion.topic) setShareTopics([linkedQuestion.topic.replace(/^#/, "")]);
+        if (searchParams.get("share") === "1") setShowForm(true);
+    }, [linkedQuestion, searchParams]);
+
+    useEffect(() => {
         const q = query(
             collection(db, "discover-notes"),
             orderBy("timestamp", "desc"),
@@ -470,7 +509,7 @@ export default function Discover() {
             q,
             (snap) => {
                 const rows: DiscoverNote[] = snap.docs.map((d) => {
-                    const data = d.data() as any;
+                    const data = d.data();
                     return {
                         id: d.id,
                         userId: data.userId ?? "",
@@ -502,6 +541,14 @@ export default function Discover() {
                         ratingAverage: typeof data.ratingAverage === "number" ? data.ratingAverage : 0,
                         ratingCount: typeof data.ratingCount === "number" ? data.ratingCount : 0,
                         timestamp: data.timestamp?.seconds ?? null,
+                        linkedQuestionId: data.linkedQuestionId ?? undefined,
+                        linkedQuestionName: data.linkedQuestionName ?? undefined,
+                        linkedQuestionPracticeUrl: data.linkedQuestionPracticeUrl ?? undefined,
+                        linkedQuestionSubjectId: data.linkedQuestionSubjectId ?? undefined,
+                        linkedQuestionSubjectLabel: data.linkedQuestionSubjectLabel ?? undefined,
+                        linkedQuestionLevel: data.linkedQuestionLevel ?? undefined,
+                        linkedQuestionTopic: data.linkedQuestionTopic ?? undefined,
+                        linkedQuestionSource: data.linkedQuestionSource ?? undefined,
                     };
                 });
                 setNotes(rows);
@@ -511,6 +558,40 @@ export default function Discover() {
                 console.error("Discover listener error:", err);
                 setLoading(false);
             }
+        );
+        return () => unsub();
+    }, []);
+
+    useEffect(() => {
+        const postsQuery = query(collection(db, "posts"), orderBy("timestamp", "desc"), limit(60));
+        const unsub = onSnapshot(
+            postsQuery,
+            (snap) => {
+                const seen = new Set<string>();
+                const rows: DiscoverQuestionPost[] = [];
+                snap.docs.forEach((row) => {
+                    const data = row.data();
+                    const questionId = String(data.discoverQuestionId ?? "").trim();
+                    const practiceUrl = String(data.practiceUrl ?? "").trim();
+                    if (!data.isQuestionPost || !questionId || !practiceUrl || seen.has(questionId)) return;
+                    seen.add(questionId);
+                    rows.push({
+                        id: row.id,
+                        questionId,
+                        questionName: data.questionName || "Practice question",
+                        subjectId: data.subject || undefined,
+                        subjectLabel: data.subjectLabel || undefined,
+                        level: data.level || undefined,
+                        topic: data.topic || undefined,
+                        practiceUrl,
+                        content: data.content || "",
+                        sourceContext: data.sourceContext || undefined,
+                        timestamp: data.timestamp?.seconds ?? null,
+                    });
+                });
+                setQuestionPosts(rows.slice(0, 8));
+            },
+            (err) => console.warn("Discover question posts listener error:", err)
         );
         return () => unsub();
     }, []);
@@ -645,6 +726,23 @@ export default function Discover() {
         [filteredResources]
     );
 
+    const linkedQuestionResources = useMemo(() => {
+        if (!linkedQuestion) return { exact: [] as DiscoverResource[], fallback: [] as DiscoverResource[] };
+        const exact = filteredResources.filter(
+            (resource) => resource.note?.linkedQuestionId === linkedQuestion.id
+        );
+        const subjectId = linkedQuestion.subjectId?.toLowerCase();
+        const subjectLabel = linkedQuestion.subjectLabel?.toLowerCase();
+        const fallback = filteredResources.filter((resource) => {
+            if (resource.note?.linkedQuestionId === linkedQuestion.id) return false;
+            return (
+                (subjectId && resource.note?.subjectId?.toLowerCase() === subjectId) ||
+                (subjectLabel && resource.subject.toLowerCase() === subjectLabel)
+            );
+        });
+        return { exact: exact.slice(0, 12), fallback: fallback.slice(0, 12) };
+    }, [filteredResources, linkedQuestion]);
+
     useEffect(() => {
         if (resourceSource !== "website") {
             setLinkPreview(null);
@@ -679,7 +777,7 @@ export default function Discover() {
         const unsubComments = onSnapshot(commentsQuery, (snap) => {
             setComments(
                 snap.docs.map((d) => {
-                    const data = d.data() as any;
+                    const data = d.data();
                     return {
                         id: d.id,
                         userId: data.userId ?? "",
@@ -746,11 +844,15 @@ export default function Discover() {
         setResourceSource("website");
         setWebsiteUrl("");
         setPdfFile(null);
-        setShareSubjectId(null);
+        setShareSubjectId(linkedQuestion?.subjectId ?? null);
         setShareTypes(["Notes"]);
-        setShareLevels([]);
+        setShareLevels(
+            linkedQuestion?.level && RESOURCE_LEVELS.includes(linkedQuestion.level as ResourceLevel)
+                ? [linkedQuestion.level as ResourceLevel]
+                : []
+        );
         setTopicDraft("");
-        setShareTopics([]);
+        setShareTopics(linkedQuestion?.topic ? [linkedQuestion.topic.replace(/^#/, "")] : []);
         setThumbnailFile(null);
         setThumbnailPreview((current) => {
             if (current) URL.revokeObjectURL(current);
@@ -766,6 +868,11 @@ export default function Discover() {
     const closeForm = () => {
         setShowForm(false);
         resetForm();
+        if (searchParams.get("share") === "1") {
+            const next = new URLSearchParams(searchParams);
+            next.delete("share");
+            setSearchParams(next, { replace: true });
+        }
     };
 
     const handleSubmit = async () => {
@@ -857,11 +964,24 @@ export default function Discover() {
                 commentCount: 0,
                 ratingAverage: 0,
                 ratingCount: 0,
+                linkedQuestionId: linkedQuestion?.id ?? null,
+                linkedQuestionName: linkedQuestion?.name ?? null,
+                linkedQuestionPracticeUrl: linkedQuestion?.practiceUrl ?? null,
+                linkedQuestionSubjectId: linkedQuestion?.subjectId ?? null,
+                linkedQuestionSubjectLabel: linkedQuestion?.subjectLabel ?? null,
+                linkedQuestionLevel: linkedQuestion?.level ?? null,
+                linkedQuestionTopic: linkedQuestion?.topic ?? null,
+                linkedQuestionSource: linkedQuestion?.source ?? null,
                 timestamp: serverTimestamp(),
             });
 
             resetForm();
             setShowForm(false);
+            if (searchParams.get("share") === "1") {
+                const next = new URLSearchParams(searchParams);
+                next.delete("share");
+                setSearchParams(next, { replace: true });
+            }
             setSubmittedToast(true);
             setTimeout(() => setSubmittedToast(false), 2800);
         } catch (e: any) {
@@ -1000,8 +1120,23 @@ export default function Discover() {
         if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
     };
 
-    const handleVisit = (url: string | undefined) => {
+    const handleVisit = (url: string | undefined, resource?: DiscoverResource) => {
         if (!url) return;
+        if (isDiscoverVideoUrl(url)) {
+            setVideoResource(resource ?? {
+                id: "video-preview",
+                title: resource?.title ?? "Video",
+                subject: resource?.subject ?? "",
+                type: "Videos",
+                description: resource?.description ?? "",
+                sourceName: resource?.sourceName ?? displayHostname(url),
+                tags: resource?.tags ?? [],
+                comments: resource?.comments ?? 0,
+                saves: resource?.saves ?? 0,
+                websiteUrl: url,
+            });
+            return;
+        }
         try {
             window.open(url, "_blank", "noopener,noreferrer");
         } catch (err) {
@@ -1111,10 +1246,16 @@ export default function Discover() {
             >
                 <button
                     type="button"
-                    onClick={() => handleVisit(resource.websiteUrl)}
+                    onClick={() => handleVisit(resource.websiteUrl, resource)}
                     disabled={!resource.websiteUrl}
                     className="block w-full aspect-video color-bg-grey-10 overflow-hidden relative cursor-pointer disabled:cursor-default"
-                    aria-label={`${resource.resourceSource === "pdf" ? "Open" : "Visit"} ${resource.title}`}
+                    aria-label={`${
+                        isDiscoverVideoUrl(resource.websiteUrl)
+                            ? "Watch"
+                            : resource.resourceSource === "pdf"
+                              ? "Open"
+                              : "Visit"
+                    } ${resource.title}`}
                 >
                     {resource.thumbnailUrl && resource.thumbnailUrl !== resource.faviconUrl ? (
                         <img
@@ -1171,6 +1312,17 @@ export default function Discover() {
 
                     <p className="color-txt-sub text-sm line-clamp-3">{resource.description}</p>
 
+                    {resource.note?.linkedQuestionName && (
+                        <button
+                            type="button"
+                            onClick={() => resource.note?.linkedQuestionPracticeUrl && navigate(resource.note.linkedQuestionPracticeUrl)}
+                            disabled={!resource.note.linkedQuestionPracticeUrl}
+                            className="inline-flex w-fit items-center gap-1.5 rounded-xl color-bg-accent color-txt-accent px-2.5 py-1.5 text-xs font-bold hover:opacity-90 disabled:cursor-default cursor-pointer"
+                        >
+                            <LuBookOpen size={13} /> Linked to: {resource.note.linkedQuestionName}
+                        </button>
+                    )}
+
                     <div className="flex flex-wrap gap-2">
                         {resource.tags.slice(0, 3).map((tag) => (
                             <span
@@ -1212,16 +1364,26 @@ export default function Discover() {
                         </div>
                         <button
                             type="button"
-                            onClick={() => handleVisit(resource.websiteUrl)}
+                            onClick={() => handleVisit(resource.websiteUrl, resource)}
                             disabled={!resource.websiteUrl}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg color-bg-accent color-txt-accent text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer shrink-0 disabled:opacity-70 disabled:cursor-default"
                             title={resource.resourceSource === "pdf"
                                 ? "Open PDF"
-                                : resource.websiteUrl ? displayHostname(resource.websiteUrl) : "Preview card"}
+                                : isDiscoverVideoUrl(resource.websiteUrl)
+                                    ? "Watch in app"
+                                    : resource.websiteUrl ? displayHostname(resource.websiteUrl) : "Preview card"}
                         >
-                            <LuExternalLink size={13} />
+                            {isDiscoverVideoUrl(resource.websiteUrl) ? (
+                                <LuCirclePlay size={13} />
+                            ) : (
+                                <LuExternalLink size={13} />
+                            )}
                             {resource.websiteUrl
-                                ? resource.resourceSource === "pdf" ? "Open PDF" : "Visit"
+                                ? resource.resourceSource === "pdf"
+                                    ? "Open PDF"
+                                    : isDiscoverVideoUrl(resource.websiteUrl)
+                                      ? "Watch"
+                                      : "Visit"
                                 : "Preview"}
                         </button>
                     </div>
@@ -1285,6 +1447,10 @@ export default function Discover() {
         </section>
     );
 
+    const visibleQuestionPosts = linkedQuestion
+        ? questionPosts.filter((post) => post.questionId === linkedQuestion.id)
+        : questionPosts;
+
     return (
         <div className="flex w-full h-full color-bg overflow-hidden">
             <main className="flex-1 min-w-0 h-full overflow-y-auto scrollbar-minimal">
@@ -1314,7 +1480,7 @@ export default function Discover() {
                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-semibold cursor-pointer"
                             >
                                 <LuCompass size={15} />
-                                Resources
+                                Discover
                             </button>
                             <button
                                 type="button"
@@ -1332,6 +1498,38 @@ export default function Discover() {
                     <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm color-txt-main">
                         Thanks for sharing. Your resource has been sent to our team for moderation and will appear after approval.
                     </div>
+                )}
+
+                {linkedQuestion && (
+                    <section className="rounded-3xl color-bg-grey-5 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div className="min-w-0">
+                            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide color-txt-sub">
+                                <LuLink size={14} /> Discovering for this question
+                            </p>
+                            <h2 className="mt-1 text-lg font-bold color-txt-main truncate">{linkedQuestion.name}</h2>
+                            <p className="text-sm color-txt-sub">
+                                {[linkedQuestion.subjectLabel, linkedQuestion.level, linkedQuestion.topic].filter(Boolean).join(" · ")}
+                            </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                            {linkedQuestion.practiceUrl && (
+                                <button
+                                    type="button"
+                                    onClick={() => navigate(linkedQuestion.practiceUrl!)}
+                                    className="inline-flex items-center gap-2 rounded-xl color-bg px-4 py-2 text-sm font-bold color-txt-main cursor-pointer"
+                                >
+                                    <LuBookOpen size={15} /> Open question
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setShowForm(true)}
+                                className="inline-flex items-center gap-2 rounded-xl color-bg-accent color-txt-accent px-4 py-2 text-sm font-bold cursor-pointer"
+                            >
+                                <LuPlus size={15} /> Link a resource
+                            </button>
+                        </div>
+                    </section>
                 )}
 
                 <section className="space-y-4">
@@ -1473,6 +1671,44 @@ export default function Discover() {
                     </div>
                 </section>
 
+                {visibleQuestionPosts.length > 0 && (
+                    <section className="space-y-3">
+                        <div>
+                            <h2 className="text-lg font-bold color-txt-main">
+                                {linkedQuestion ? "Question discussion" : "Questions from Practice & Whiteboards"}
+                            </h2>
+                            <p className="text-sm color-txt-sub">
+                                Open a shared question directly in Practice Hub, then join its Discussion or Discover resources.
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {visibleQuestionPosts.map((post) => (
+                                <button
+                                    type="button"
+                                    key={post.id}
+                                    onClick={() => navigate(post.practiceUrl)}
+                                    className="group rounded-2xl color-bg-grey-5 p-4 text-left hover:shadow-md transition-shadow cursor-pointer"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <span className="inline-flex items-center gap-1.5 rounded-full color-bg-accent color-txt-accent px-2.5 py-1 text-[11px] font-bold">
+                                            <LuBookOpen size={12} /> {post.sourceContext === "whiteboard" ? "From Whiteboard" : "From Practice"}
+                                        </span>
+                                        <LuArrowRight size={16} className="color-txt-sub transition-transform group-hover:translate-x-0.5" />
+                                    </div>
+                                    <h3 className="mt-3 line-clamp-2 text-base font-bold color-txt-main">{post.questionName}</h3>
+                                    <p className="mt-1 text-xs color-txt-sub">
+                                        {[post.subjectLabel, post.level, post.topic].filter(Boolean).join(" · ") || "Practice question"}
+                                    </p>
+                                    {post.content && <p className="mt-3 line-clamp-2 text-sm color-txt-sub">“{post.content}”</p>}
+                                    <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold color-txt-accent">
+                                        Go to question in Practice Hub <LuExternalLink size={12} />
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
                 {loading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                         {[...Array(6)].map((_, i) => (
@@ -1496,7 +1732,18 @@ export default function Discover() {
                             )
                         ) : (
                             <>
-                                {renderResourceSection(
+                                {linkedQuestion && renderResourceSection(
+                                    linkedQuestionResources.exact.length
+                                        ? "Linked to this question"
+                                        : `More ${linkedQuestion.subjectLabel ?? "subject"} content`,
+                                    linkedQuestionResources.exact.length
+                                        ? "Resources the community linked directly to this question."
+                                        : "No exact links yet, so here are other relevant resources for the subject.",
+                                    linkedQuestionResources.exact.length
+                                        ? linkedQuestionResources.exact
+                                        : linkedQuestionResources.fallback
+                                )}
+                                {!linkedQuestion && renderResourceSection(
                                     selectedSubject ? `${selectedSubject.label} resources` : "Recommended for you",
                                     notes.length === 0
                                         ? "Starter cards show the shape of the free-resource library while you add real links."
@@ -1544,6 +1791,18 @@ export default function Discover() {
                                 <LuX size={20} />
                             </button>
                         </div>
+
+                        {linkedQuestion && (
+                            <div className="rounded-2xl color-bg-accent px-4 py-3">
+                                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide color-txt-accent">
+                                    <LuLink size={14} /> Linking to this question
+                                </p>
+                                <p className="mt-1 text-sm font-bold color-txt-main">{linkedQuestion.name}</p>
+                                <p className="text-xs color-txt-sub">
+                                    This resource will appear in the question’s Discover tab after moderation.
+                                </p>
+                            </div>
+                        )}
 
                         <div className="space-y-4">
                             <div className="space-y-2">
@@ -1858,6 +2117,14 @@ export default function Discover() {
                 </div>
             )}
 
+            {videoResource?.websiteUrl && (
+                <VideoEmbedModal
+                    url={videoResource.websiteUrl}
+                    title={videoResource.title}
+                    onClose={() => setVideoResource(null)}
+                />
+            )}
+
             {selectedResource && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
@@ -1934,11 +2201,19 @@ export default function Discover() {
                                 <div className="flex flex-wrap items-center gap-3">
                                     <button
                                         type="button"
-                                        onClick={() => handleVisit(selectedResource.websiteUrl)}
+                                        onClick={() => handleVisit(selectedResource.websiteUrl, selectedResource)}
                                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-semibold hover:opacity-90 cursor-pointer"
                                     >
-                                        <LuExternalLink size={15} />
-                                        {selectedResource.resourceSource === "pdf" ? "Open PDF" : "Visit resource"}
+                                        {isDiscoverVideoUrl(selectedResource.websiteUrl) ? (
+                                            <LuCirclePlay size={15} />
+                                        ) : (
+                                            <LuExternalLink size={15} />
+                                        )}
+                                        {selectedResource.resourceSource === "pdf"
+                                            ? "Open PDF"
+                                            : isDiscoverVideoUrl(selectedResource.websiteUrl)
+                                              ? "Watch"
+                                              : "Visit resource"}
                                     </button>
                                     <button
                                         type="button"

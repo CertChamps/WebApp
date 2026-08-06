@@ -49,6 +49,20 @@ export function buildImageAttachment(
       groupKey: grouped.key,
       imagePaths: grouped.images.map((img) => img.storagePath),
       markingSchemePaths: matchedMs.map((f) => f.storagePath),
+      ...(grouped.audioPath
+        ? {
+            audioPath: grouped.audioPath,
+            ...(grouped.audioStartSec != null
+              ? { audioStartSec: grouped.audioStartSec }
+              : {}),
+            ...(grouped.audioEndSec != null
+              ? { audioEndSec: grouped.audioEndSec }
+              : {}),
+            ...(grouped.audioStartLabel
+              ? { audioStartLabel: grouped.audioStartLabel }
+              : {}),
+          }
+        : {}),
     },
   };
 }

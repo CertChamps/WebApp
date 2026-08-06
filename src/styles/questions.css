@@ -92,6 +92,9 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
 .questions-action-button--active {
   @apply color-bg-accent color-txt-accent;
 }
+.questions-action-button--solid-accent {
+  @apply color-bg color-txt-accent;
+}
 .questions-top-bar__dropdown {
   @apply min-w-[140px] rounded-out pl-3 pr-9 py-1.5 text-sm font-medium
     color-bg-grey-5 color-txt-main
@@ -197,6 +200,59 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
 }
 .questions-marking-scheme-button:focus-visible {
   @apply outline-none ring-2 ring-offset-2 ring-blue/40;
+}
+
+/* Listening audio scrubber — filled track + thumb use theme accent */
+.question-audio-slider {
+  @apply w-full appearance-none outline-none cursor-pointer bg-transparent;
+  height: 14px;
+}
+.question-audio-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--theme-txt-accent) 0%,
+    var(--theme-txt-accent) var(--audio-progress, 0%),
+    color-mix(in srgb, var(--theme-txt-sub, #888) 45%, transparent) var(--audio-progress, 0%),
+    color-mix(in srgb, var(--theme-txt-sub, #888) 45%, transparent) 100%
+  );
+}
+.question-audio-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border-radius: 9999px;
+  border: none;
+  background: var(--theme-txt-accent);
+  cursor: pointer;
+  box-shadow: none;
+}
+.question-audio-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--theme-txt-sub, #888) 45%, transparent);
+  border: none;
+}
+.question-audio-slider::-moz-range-progress {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--theme-txt-accent);
+  border: none;
+}
+.question-audio-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  border: none;
+  background: var(--theme-txt-accent);
+  cursor: pointer;
+  box-shadow: none;
+}
+.question-audio-slider:disabled {
+  @apply cursor-default opacity-50;
 }
 
 /* Questions search modal (utility-themed) */

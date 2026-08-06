@@ -1060,7 +1060,10 @@ export default function PracticeHub() {
                         >
                           <span className="txt color-txt-main">{entry.label}</span>
                           <span className="txt-sub color-txt-sub">
-                            {formatLevelDisplay(activeImageLevel)} · {entry.questionCount} question{entry.questionCount !== 1 ? "s" : ""}
+                            {formatLevelDisplay(activeImageLevel)}
+                            {entry.questionCount > 0
+                              ? ` · ${entry.questionCount} question${entry.questionCount !== 1 ? "s" : ""}`
+                              : ""}
                           </span>
                         </button>
                       ))}
@@ -1540,9 +1543,11 @@ function TopicCard({
             <span className="txt color-txt-sub">{levelLabel}</span>
           </div>
           <div className="ml-auto flex flex-col items-end justify-end shrink-0">
-            <span className="txt color-txt-sub">
-              {topic.questionCount} question{topic.questionCount !== 1 ? "s" : ""}
-            </span>
+            {topic.questionCount > 0 && (
+              <span className="txt color-txt-sub">
+                {topic.questionCount} question{topic.questionCount !== 1 ? "s" : ""}
+              </span>
+            )}
           </div>
         </div>
       </div>

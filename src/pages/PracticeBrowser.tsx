@@ -14,7 +14,9 @@ import {
 } from "react-icons/lu";
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
 import type { SidebarPanelId } from "../components/sidebar/SidebarTileManager";
+import { FloatingWidgets } from "../components/floating/FloatingWidgets";
 import QuestionTitlePicker from "../components/questions/QuestionTitlePicker";
+import QuestionAudioPlayer from "../components/questions/QuestionAudioPlayer";
 import { OptionsContext } from "../context/OptionsContext";
 import { TimerProvider } from "../context/TimerContext";
 import {
@@ -218,6 +220,17 @@ function QuestionCard({
         </div>
       </header>
 
+      {question.audioPath && active && (
+        <div className="mb-3" onClick={(event) => event.stopPropagation()}>
+          <QuestionAudioPlayer
+            audioPath={question.audioPath}
+            startSec={question.audioStartSec}
+            startLabel={question.audioStartLabel}
+            autoLoad={false}
+          />
+        </div>
+      )}
+
       <div className="practice-browser__question-images">
         {question.images.map((image) => (
           <img
@@ -244,6 +257,7 @@ function PracticeBrowserInner() {
   const browseMode = (searchParams.get("browse") === "paper" ? "paper" : "topic") as BrowseMode;
   const paperYearParam = searchParams.get("year");
   const paperNumParam = searchParams.get("paper");
+  const targetQuestionKey = searchParams.get("question");
   const selectedPaperYear = paperYearParam ? Number(paperYearParam) : null;
   const selectedPaperNum =
     paperNumParam === "1" || paperNumParam === "2" ? Number(paperNumParam) : null;
@@ -296,6 +310,18 @@ function PracticeBrowserInner() {
     inTopicFeed ? selectedTopicName : null,
     cycle
   );
+
+  const selectedPaperGroup: ImagePaperGroup | null = useMemo(() => {
+    if (!inPaperFeed || selectedPaperYear == null) return null;
+    return (
+      paperGroups.find(
+        (p) =>
+          p.year === selectedPaperYear &&
+          (selectedPaperNum == null ? p.paper == null : p.paper === selectedPaperNum)
+      ) ?? null
+    );
+  }, [inPaperFeed, paperGroups, selectedPaperYear, selectedPaperNum]);
+
   const {
     grouped: paperGrouped,
     loading: paperQuestionsLoading,
@@ -305,7 +331,8 @@ function PracticeBrowserInner() {
     inPaperFeed ? selectedLevel : null,
     inPaperFeed ? selectedPaperYear : null,
     inPaperFeed ? selectedPaperNum : null,
-    cycle
+    cycle,
+    selectedPaperGroup ? selectedPaperGroup.paperType : undefined
   );
 
   const unsortedQuestions = inPaperFeed ? paperGrouped : topicGrouped;
@@ -357,16 +384,6 @@ function PracticeBrowserInner() {
     [subjectId]
   );
   const selectedTopic = topics.find((topic) => topic.name === selectedTopicName) ?? null;
-  const selectedPaperGroup: ImagePaperGroup | null = useMemo(() => {
-    if (!inPaperFeed || selectedPaperYear == null) return null;
-    return (
-      paperGroups.find(
-        (p) =>
-          p.year === selectedPaperYear &&
-          (selectedPaperNum == null ? p.paper == null : p.paper === selectedPaperNum)
-      ) ?? null
-    );
-  }, [inPaperFeed, paperGroups, selectedPaperYear, selectedPaperNum]);
 
   const filteredSubjects = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -434,6 +451,14 @@ function PracticeBrowserInner() {
     setActiveQuestionIndex(0);
     questionElements.current.clear();
   }, [subjectId, selectedLevel, selectedTopicName, selectedPaperYear, selectedPaperNum, browseMode, cycle]);
+
+  useEffect(() => {
+    if (!targetQuestionKey || grouped.length === 0) return;
+    const index = grouped.findIndex((question) => question.key === targetQuestionKey);
+    if (index < 0) return;
+    setActiveQuestionIndex(index);
+    questionElements.current.get(targetQuestionKey)?.scrollIntoView({ block: "start" });
+  }, [grouped, targetQuestionKey]);
 
   useEffect(() => {
     const root = scrollRef.current;
@@ -635,9 +660,26 @@ function PracticeBrowserInner() {
             question={
               activeQuestion
                 ? {
-                    id: `practice_${storageSubject}_${selectedLevel}_${selectedTopicName}_${activeQuestion.key}`,
+                    id: `image_${storageSubject}_${selectedLevel}_${activeQuestion.topic ?? selectedTopicName ?? "paper"}_${activeQuestion.key}`,
                     properties: { name: activeQuestion.displayName },
                     imageUrls: activeQuestion.images.map((image) => image.downloadUrl),
+                    _discoverId: `image_${storageSubject}_${selectedLevel}_${activeQuestion.topic ?? selectedTopicName ?? "paper"}_${activeQuestion.key}`,
+                    _discoverName: activeQuestion.displayName,
+                    _discoverSubjectId: subjectId,
+                    _discoverSubjectLabel: selectedSubject?.label,
+                    _discoverLevel: selectedLevel,
+                    _discoverTopic: activeQuestion.topic ?? selectedTopicName,
+                    _discoverSource: "practice",
+                    _practiceUrl: `/practice?${new URLSearchParams({
+                      subject: subjectId ?? "",
+                      level: selectedLevel ?? "",
+                      browse: browseMode,
+                      ...(selectedTopicName ? { topic: selectedTopicName } : {}),
+                      ...(selectedPaperYear != null ? { year: String(selectedPaperYear) } : {}),
+                      ...(selectedPaperNum != null ? { paper: String(selectedPaperNum) } : {}),
+                      question: activeQuestion.key,
+                      cycle,
+                    }).toString()}`,
                   }
                 : undefined
             }
@@ -653,6 +695,19 @@ function PracticeBrowserInner() {
             markingSchemeQuestionName={activeQuestion?.displayName}
           />
         </div>
+
+        <FloatingWidgets
+          leftHandMode={options.leftHandMode}
+          spotifyTabVisible={sidebarOpen && sidebarPanel === "spotify"}
+          onOpenTimer={() => {
+            setSidebarOpen(true);
+            setSidebarPanel("timer");
+          }}
+          onOpenSpotify={() => {
+            setSidebarOpen(true);
+            setSidebarPanel("spotify");
+          }}
+        />
 
         {canvasAttachment && subjectId && (
           <SaveQuestionToCanvasModal
@@ -894,7 +949,11 @@ function PracticeBrowserInner() {
                           <h3>{topic.displayName}</h3>
                         </div>
                         <div className="practice-browser__topic-count">
-                          <span>{topic.questionCount} questions</span>
+                          <span>
+                            {topic.questionCount > 0
+                              ? `${topic.questionCount} questions`
+                              : "Open topic"}
+                          </span>
                           <LuChevronRight size={17} />
                         </div>
                       </button>

@@ -37,7 +37,7 @@ import {
 import { parseExamCycle } from "../lib/examCycle";
 import SaveQuestionToCanvasModal from "../components/whiteboards/SaveQuestionToCanvasModal";
 import { buildImageAttachment, buildPaperAttachment } from "../lib/whiteboardAttachments";
-import { getPracticeSubjectId } from "../data/practiceHubSubjects";
+import { getPracticeSubjectId, getSubjectLabel } from "../data/practiceHubSubjects";
 
 // Components
 import { createPortal } from "react-dom";
@@ -54,6 +54,7 @@ import PaperPdfPlaceholder, { getQuestionScrollOffset } from "../components/ques
 import PaperQuestionRegionPanel from "../components/questions/PaperQuestionRegionPanel";
 import CroppedPdfRegions from "../components/questions/CroppedPdfRegions";
 import ZoomableQuestionImage from "../components/questions/ZoomableQuestionImage";
+import QuestionAudioPlayer from "../components/questions/QuestionAudioPlayer";
 import FloatingLogTables from "../components/FloatingLogTables";
 import FloatingCalculator from "../components/calculator/FloatingCalculator";
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
@@ -275,7 +276,9 @@ function TopicSwitcher({ topics, value, onChange }: { topics: ImageTopic[]; valu
                                     }}
                                 >
                                     <span className="truncate flex-1 min-w-0">{t.displayName}</span>
-                                    <span className="shrink-0 text-xs color-txt-sub">{t.questionCount}</span>
+                                    {t.questionCount > 0 && (
+                                      <span className="shrink-0 text-xs color-txt-sub">{t.questionCount}</span>
+                                    )}
                                 </button>
                             ))
                         )}
@@ -1736,7 +1739,7 @@ export default function Questions() {
                                 <button
                                     type="button"
                                     aria-label="Check my answer"
-                                    className="questions-action-button questions-action-button--active disabled:opacity-60 disabled:cursor-not-allowed"
+                                    className="questions-action-button questions-action-button--solid-accent border color-shadow disabled:opacity-60 disabled:cursor-not-allowed"
                                     onClick={handleCheckMyAnswer}
                                     disabled={!canCheckNow}
                                     title="Check my answer with AI"
@@ -1814,17 +1817,64 @@ export default function Questions() {
                                 storagePath: selectedPaper.storagePath,
                                 pageRange: currentPaperQuestion.pageRange,
                                 pageRegions: currentPaperQuestion.pageRegions,
+                                _discoverId: `${selectedPaper.id}_${currentPaperQuestion.id}`,
+                                _discoverName: currentPaperQuestion.questionName,
+                                _discoverSubjectId: getPracticeSubjectId(selectedPaper.subject ?? ""),
+                                _discoverSubjectLabel: getSubjectLabel(selectedPaper.subject ?? ""),
+                                _discoverLevel: selectedPaper.level,
+                                _discoverTopic: currentPaperQuestion.tags?.[0],
+                                _discoverSource: "practice",
+                                _practiceUrl: `/practice/session?${new URLSearchParams({
+                                    mode: "pastpaper",
+                                    subject: getPracticeSubjectId(selectedPaper.subject ?? ""),
+                                    level: selectedPaper.level ?? "",
+                                    paperId: selectedPaper.id,
+                                    questionId: currentPaperQuestion.id,
+                                }).toString()}`,
                             }
                             : undefined)
                         : mode === "imagequestions"
                             ? (currentGroupedQuestion
                                 ? {
-                                    id: activeCanvasQuestionId ?? currentGroupedQuestion.key,
+                                    id: `image_${normalizedUrlSubject}_${normalizedUrlLevel}_${imageQuestionTopic ?? "paper"}_${currentGroupedQuestion.key}`,
                                     properties: { name: currentGroupedQuestion.displayName },
                                     imageUrls: currentGroupedQuestion.images.map((img) => img.downloadUrl),
+                                    _discoverId: `image_${normalizedUrlSubject}_${normalizedUrlLevel}_${imageQuestionTopic ?? "paper"}_${currentGroupedQuestion.key}`,
+                                    _discoverName: currentGroupedQuestion.displayName,
+                                    _discoverSubjectId: getPracticeSubjectId(normalizedUrlSubject),
+                                    _discoverSubjectLabel: getSubjectLabel(normalizedUrlSubject),
+                                    _discoverLevel: normalizedUrlLevel,
+                                    _discoverTopic: imageQuestionTopic ?? currentGroupedQuestion.topic,
+                                    _discoverSource: "practice",
+                                    _practiceUrl: `/practice?${new URLSearchParams({
+                                        subject: getPracticeSubjectId(normalizedUrlSubject),
+                                        level: normalizedUrlLevel,
+                                        browse: imageBrowseByPaper ? "paper" : "topic",
+                                        ...(imageQuestionTopic ? { topic: imageQuestionTopic } : {}),
+                                        ...(urlImageYear != null ? { year: String(urlImageYear) } : {}),
+                                        ...(urlImagePaper != null ? { paper: String(urlImagePaper) } : {}),
+                                        question: currentGroupedQuestion.key,
+                                    }).toString()}`,
                                   }
                                 : undefined)
-                            : currentQuestion}
+                            : (currentQuestion
+                                ? {
+                                    ...currentQuestion,
+                                    _discoverId: currentQuestion.id,
+                                    _discoverName: currentQuestion.properties?.name ?? currentQuestion.questionName,
+                                    _discoverSubjectId: getPracticeSubjectId(urlSubject ?? subjectFilter ?? ""),
+                                    _discoverSubjectLabel: getSubjectLabel(urlSubject ?? subjectFilter ?? ""),
+                                    _discoverLevel: urlLevel ?? undefined,
+                                    _discoverTopic: currentQuestion.properties?.topic ?? selectedSubTopics[0],
+                                    _discoverSource: "practice",
+                                    _practiceUrl: `/practice/session?${new URLSearchParams({
+                                        mode: "certchamps",
+                                        questionId: String(currentQuestion.id),
+                                        ...(urlSubject ? { subject: urlSubject } : {}),
+                                        ...(urlLevel ? { level: urlLevel } : {}),
+                                    }).toString()}`,
+                                  }
+                                : undefined)}
                     getDrawingSnapshot={getDrawingSnapshot}
                     getStaveAnalysis={getStaveAnalysis}
                     getPaperSnapshot={getPaperSnapshot}
@@ -2336,7 +2386,16 @@ export default function Questions() {
                                     )}
                                 <div className="flex-1 min-h-0 relative pt-4 pointer-events-none">
                                     <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-28 items-center pointer-events-auto">
-                                        <div className="flex flex-col items-center w-full" style={{ maxWidth: snippetWidth }}>
+                                        <div className="flex flex-col items-center w-full gap-3" style={{ maxWidth: snippetWidth }}>
+                                            {currentGroupedQuestion.audioPath && (
+                                                <QuestionAudioPlayer
+                                                    audioPath={currentGroupedQuestion.audioPath}
+                                                    startSec={currentGroupedQuestion.audioStartSec}
+                                                    startLabel={currentGroupedQuestion.audioStartLabel}
+                                                    className="w-full"
+                                                    autoLoad={false}
+                                                />
+                                            )}
                                             <ZoomableQuestionImage
                                                 images={currentGroupedQuestion.images.map((img, idx) => ({
                                                     key: img.storagePath,

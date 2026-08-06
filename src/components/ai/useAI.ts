@@ -23,6 +23,8 @@ export type GetDrawingSnapshot = () => string | null;
 export type GetStaveAnalysis = () => string | null;
 /** Optional: return current exam paper (first page) as image data URL so the AI can see the paper. */
 export type GetPaperSnapshot = () => string | null;
+/** Optional: return live workspace text (e.g. document editor contents). */
+export type GetWorkspaceText = () => string | null;
 
 function isIOSLikeDevice(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -83,7 +85,11 @@ Bass clef mapping: L1=G2, S1=A2, L2=B2, S2=C3, L3=D3, S3=E3, L4=F3, S4=G3, L5=A3
 
 Determine the clef from the question context. Use the position labels visible on the stave image AND the programmatic note detection below to identify note pitches accurately.`;
 
-function buildQuestionContext(question: any, staveAnalysis?: string | null): string | undefined {
+function buildQuestionContext(
+  question: any,
+  staveAnalysis?: string | null,
+  workspaceText?: string | null,
+): string | undefined {
   const name = question?.properties?.name ?? question?.questionName;
   const tags = question?.properties?.tags ?? question?.tags;
   const rawContent = Array.isArray(question?.content) ? question.content : [];
@@ -112,6 +118,13 @@ function buildQuestionContext(question: any, staveAnalysis?: string | null): str
     parts.push(STAVE_CONTEXT);
     parts.push(staveAnalysis);
   }
+  const trimmedWorkspace = workspaceText?.trim();
+  if (trimmedWorkspace) {
+    parts.push(
+      "The student's current document / written work is included below. Use it when answering.",
+      `<student_work>\n${trimmedWorkspace.slice(0, 30_000)}\n</student_work>`,
+    );
+  }
   return parts.length ? parts.join("\n") : undefined;
 }
 
@@ -120,7 +133,8 @@ export function useAI(
   getDrawingSnapshot?: GetDrawingSnapshot | null,
   getStaveAnalysis?: GetStaveAnalysis | null,
   getPaperSnapshot?: GetPaperSnapshot | null,
-  injectedExchange?: InjectedExchange | null
+  injectedExchange?: InjectedExchange | null,
+  getWorkspaceText?: GetWorkspaceText | null,
 ) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [streamingContent, setStreamingContent] = useState("");
@@ -191,6 +205,7 @@ export function useAI(
       const drawingDataUrl = getDrawingSnapshot?.() ?? null;
       const staveAnalysis = getStaveAnalysis?.() ?? null;
       const paperDataUrl = getPaperSnapshot?.() ?? null;
+      const workspaceText = getWorkspaceText?.() ?? null;
       const questionImageUrls: string[] = Array.isArray(question?.imageUrls) ? question.imageUrls : [];
       const apiMessages = [...messages, userMessage].map((m) => ({
         role: m.role,
@@ -207,7 +222,7 @@ export function useAI(
           ],
         } as any;
       }
-      const context = buildQuestionContext(question, staveAnalysis);
+      const context = buildQuestionContext(question, staveAnalysis, workspaceText);
       const res = await authenticatedAiFetch(
         METERED_CHAT_API_URL,
         { messages: apiMessages, context },
@@ -269,7 +284,7 @@ export function useAI(
         inputRef.current?.focus();
       }
     }
-  }, [messages, question, loading, getDrawingSnapshot, getStaveAnalysis, getPaperSnapshot]);
+  }, [messages, question, loading, getDrawingSnapshot, getStaveAnalysis, getPaperSnapshot, getWorkspaceText]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

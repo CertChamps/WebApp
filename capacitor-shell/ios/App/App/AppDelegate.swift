@@ -1,14 +1,20 @@
 import UIKit
+import WebKit
 import Capacitor
 import GoogleSignIn
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, UIPencilInteractionDelegate {
 
     var window: UIWindow?
+    private var pencilInteraction: UIPencilInteraction?
+    private var lastPencilTapTime: TimeInterval = 0
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        DispatchQueue.main.async { [weak self] in
+            self?.installPencilInteractionIfNeeded()
+        }
         return true
     }
 
@@ -37,6 +43,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        installPencilInteractionIfNeeded()
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
@@ -58,6 +65,55 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Feel free to add additional processing here, but if you want the App API to support
         // tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
+    }
+
+    private func installPencilInteractionIfNeeded() {
+        guard UIDevice.current.userInterfaceIdiom == .pad,
+              pencilInteraction == nil,
+              let rootView = window?.rootViewController?.view else { return }
+
+        let interaction = UIPencilInteraction()
+        interaction.delegate = self
+        rootView.addInteraction(interaction)
+        pencilInteraction = interaction
+    }
+
+    private func dispatchWebEvent(_ name: String) {
+        guard let rootView = window?.rootViewController?.view,
+              let webView = findWebView(in: rootView) else { return }
+        webView.evaluateJavaScript("window.dispatchEvent(new Event('\(name)'));", completionHandler: nil)
+    }
+
+    private func findWebView(in view: UIView) -> WKWebView? {
+        if let webView = view as? WKWebView { return webView }
+        for subview in view.subviews {
+            if let webView = findWebView(in: subview) { return webView }
+        }
+        return nil
+    }
+
+    // Supports Apple Pencil double-tap on iPadOS 15 through 17.4.
+    func pencilInteractionDidTap(_ interaction: UIPencilInteraction) {
+        dispatchPencilDoubleTap()
+    }
+
+    @available(iOS 17.5, *)
+    func pencilInteraction(_ interaction: UIPencilInteraction, didReceiveTap tap: UIPencilInteraction.Tap) {
+        dispatchPencilDoubleTap()
+    }
+
+    @available(iOS 17.5, *)
+    func pencilInteraction(_ interaction: UIPencilInteraction, didReceiveSqueeze squeeze: UIPencilInteraction.Squeeze) {
+        guard squeeze.phase == .ended else { return }
+        dispatchWebEvent("certchamps:pencil-squeeze")
+    }
+
+    private func dispatchPencilDoubleTap() {
+        // Newer SDKs may also surface the deprecated callback; suppress duplicates.
+        let now = ProcessInfo.processInfo.systemUptime
+        guard now - lastPencilTapTime > 0.25 else { return }
+        lastPencilTapTime = now
+        dispatchWebEvent("certchamps:pencil-double-tap")
     }
 
 }

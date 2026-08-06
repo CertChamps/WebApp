@@ -2,7 +2,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { LuGripVertical, LuX } from "react-icons/lu";
 import { OptionsContext } from "../context/OptionsContext";
-import LogTables, { type LogTablesHandle } from "./logtables";
+import LogTables from "./logtables";
 
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 400;
@@ -32,12 +32,8 @@ type FloatingLogTablesProps = {
   file?: Blob | null;
 };
 
-const isNullPage = (p: string) => !p || p === "null" || p === "NaN" || p === "0";
-const effectivePage = (p: string) => (isNullPage(p) ? "1" : p);
-
 export default function FloatingLogTables({ pgNumber, onClose, file }: FloatingLogTablesProps) {
   const { options } = useContext(OptionsContext);
-  const logTablesRef = useRef<LogTablesHandle>(null);
   const [pos, setPos] = useState(getDefaultPosition);
   const [size, setSize] = useState({
     width: DEFAULT_WIDTH,
@@ -155,21 +151,6 @@ export default function FloatingLogTables({ pgNumber, onClose, file }: FloatingL
           <span className="text-sm font-semibold color-txt-main truncate">Log tables</span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {!isNullPage(pgNumber) && (
-            <>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  logTablesRef.current?.scrollToCurrentPage();
-                }}
-                className="px-2.5 py-1 text-xs font-medium rounded-lg color-bg-grey-10 color-txt-main hover:opacity-80 transition-all"
-              >
-                Jump to Pg {effectivePage(pgNumber)}
-              </button>
-              <span className="text-xs color-txt-accent font-medium">← this is the page you want!</span>
-            </>
-          )}
           {onClose && (
             <button
               type="button"
@@ -188,7 +169,7 @@ export default function FloatingLogTables({ pgNumber, onClose, file }: FloatingL
 
       {/* Content: fills remaining height */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <LogTables ref={logTablesRef} pgNumber={pgNumber} embedded file={file} />
+        <LogTables pgNumber={pgNumber} embedded file={file} />
       </div>
 
       {/* Resize handle */}

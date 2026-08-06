@@ -29,17 +29,23 @@ export default function ImageMarkingScheme({
           {questionName}
         </div>
       )}
-      <div className="flex flex-col items-center gap-4 p-2 w-full">
-        {images.map((img, idx) => (
-          <img
-            key={img.storagePath}
-            src={img.downloadUrl}
-            alt={idx === 0 ? questionName ?? "Marking scheme" : `${questionName ?? "Marking scheme"} part ${idx + 1}`}
-            className="w-full h-auto rounded-lg color-shadow"
-            style={{ objectFit: "contain", display: "block" }}
-            draggable={false}
-          />
-        ))}
+      <div className="flex flex-col items-center p-2 w-full">
+        <div className="w-full overflow-hidden color-shadow rounded-[10px]">
+          {images.map((img, idx) => (
+            <img
+              key={img.storagePath}
+              src={img.downloadUrl}
+              alt={
+                idx === 0
+                  ? questionName ?? "Marking scheme"
+                  : `${questionName ?? "Marking scheme"} part ${idx + 1}`
+              }
+              className="w-full h-auto block"
+              style={{ objectFit: "contain", display: "block" }}
+              draggable={false}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

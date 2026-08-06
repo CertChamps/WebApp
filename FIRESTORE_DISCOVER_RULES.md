@@ -21,6 +21,20 @@ Document fields:
 | `thumbnailUrl` | string | Firebase Storage download URL |
 | `thumbnailPath` | string | Storage path for cleanup on delete |
 | `timestamp` | server timestamp | Created at |
+| `linkedQuestionId` | string \| null | Stable Practice Hub question key when the resource was shared from a question |
+| `linkedQuestionName` | string \| null | Cached question title for Discover cards |
+| `linkedQuestionPracticeUrl` | string \| null | Internal `/practice…` deep link back to the exact question |
+| `linkedQuestionSubjectId` | string \| null | Canonical Practice Hub subject slug |
+| `linkedQuestionSubjectLabel` | string \| null | Cached subject display label |
+| `linkedQuestionLevel` | string \| null | Question level, when available |
+| `linkedQuestionTopic` | string \| null | Question topic, when available |
+| `linkedQuestionSource` | string \| null | `practice` or `whiteboard` |
+
+Question discussion posts continue to use the existing `posts` collection. New
+question posts include `isQuestionPost`, `discoverQuestionId`, `questionName`,
+subject metadata, `sourceContext`, and an internal `practiceUrl`. This lets the
+Discover page show whiteboard-originated discussions without publishing the
+private whiteboard itself.
 
 ### Suggested rules
 
