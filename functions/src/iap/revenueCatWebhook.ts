@@ -50,10 +50,12 @@ import fetch from "node-fetch";
 /** RevenueCat entitlement that grants ACE — must match the dashboard
  *  entitlement identifier exactly (including the space). */
 const ACE_ENTITLEMENT_ID = "CertChamps ACE";
+const REVENUECAT_ACE_PRODUCT_IDS = new Set(["CertChamps_TEST", "CertChamps_ACE"]);
 
 /** Firestore mirror of the App Store originalTransactionId → Firebase
  *  uid mapping. Mirrors the existing `stripe_subscriptions` collection. */
 const APPLE_SUBSCRIPTION_MAP_COLLECTION = "apple_subscriptions";
+const REVENUECAT_NATIVE_STORES = new Set(["APP_STORE", "MAC_APP_STORE", "PLAY_STORE"]);
 
 /** Webhook event types that should grant / refresh access. */
 const ACTIVATION_EVENTS = new Set([
@@ -154,11 +156,13 @@ async function writeActiveSubscription(args: {
     productId: string | null;
     originalTransactionId: string | null;
     expirationAtMs: number | null;
+    store?: string | null;
 }): Promise<void> {
-    const { uid, productId, originalTransactionId, expirationAtMs } = args;
+    const { uid, productId, originalTransactionId, expirationAtMs, store } = args;
+    const paymentProvider = store === "PLAY_STORE" ? "google" : "apple";
     const update: Record<string, unknown> = {
         isPro: true,
-        paymentProvider: "apple",
+        paymentProvider,
     };
     if (typeof expirationAtMs === "number" && expirationAtMs > 0) {
         update.subscriptionPeriodEnd = Math.floor(expirationAtMs / 1000);
@@ -168,6 +172,9 @@ async function writeActiveSubscription(args: {
     }
     if (productId) {
         update.appleProductId = productId;
+    }
+    if (paymentProvider === "google" && productId) {
+        update.googleProductId = productId;
     }
     await admin.firestore().doc(`user-data/${uid}`).set(update, { merge: true });
 
@@ -231,10 +238,9 @@ export const revenueCatWebhook = functions.https.onRequest(
             return;
         }
 
-        // We only care about App Store events. The same webhook would
-        // fire for any store RC is integrated with, but we route Stripe
-        // through its own webhook to keep the two paths independent.
-        if (event.store && event.store !== "APP_STORE" && event.store !== "MAC_APP_STORE") {
+        // We only care about native store events handled by RevenueCat.
+        // Stripe goes through its own webhook.
+        if (event.store && !REVENUECAT_NATIVE_STORES.has(event.store)) {
             res.status(200).send("ok"); // ignore but ack
             return;
         }
@@ -262,13 +268,14 @@ export const revenueCatWebhook = functions.https.onRequest(
                 await writeActiveSubscription({
                     uid,
                     productId: event.product_id ?? null,
-                    originalTransactionId: event.original_transaction_id ?? null,
+                    originalTransactionId: event.original_transaction_id ?? event.transaction_id ?? null,
                     expirationAtMs: event.expiration_at_ms ?? null,
+                    store: event.store ?? null,
                 });
             } else if (REVOCATION_EVENTS.has(event.type)) {
                 await writeRevokedSubscription({
                     uid,
-                    originalTransactionId: event.original_transaction_id ?? null,
+                    originalTransactionId: event.original_transaction_id ?? event.transaction_id ?? null,
                 });
             } else if (event.type === "CANCELLATION") {
                 // Auto-renew turned off but user keeps access until
@@ -332,7 +339,7 @@ export const verifyAppleEntitlement = functions.https.onRequest(
             return;
         }
 
-        const { idToken } = (req.body || {}) as { idToken?: string };
+        const { idToken, platform } = (req.body || {}) as { idToken?: string; platform?: string };
         if (!idToken) {
             res.status(400).json({ error: "idToken required" });
             return;
@@ -355,7 +362,7 @@ export const verifyAppleEntitlement = functions.https.onRequest(
                 headers: {
                     Authorization: `Bearer ${apiKey}`,
                     Accept: "application/json",
-                    "X-Platform": "ios",
+                    "X-Platform": platform === "android" ? "android" : "ios",
                 },
             });
             if (!rcRes.ok) {
@@ -368,13 +375,21 @@ export const verifyAppleEntitlement = functions.https.onRequest(
             const ent = data.subscriber?.entitlements?.[ACE_ENTITLEMENT_ID];
             const expiresMs = toMillis(ent?.expires_date ?? null);
             const isActive = !!ent && (expiresMs == null || expiresMs > Date.now());
+            const fallbackSubscriptionEntry = Object.entries(data.subscriber?.subscriptions ?? {}).find(
+                ([productId, subscription]) =>
+                    REVENUECAT_ACE_PRODUCT_IDS.has(productId) &&
+                    ((toMillis(subscription.expires_date ?? null) ?? Number.POSITIVE_INFINITY) > Date.now())
+            );
+            const fallbackProductId = fallbackSubscriptionEntry?.[0] ?? null;
+            const fallbackSubscription = fallbackSubscriptionEntry?.[1];
+            const fallbackExpiresMs = toMillis(fallbackSubscription?.expires_date ?? null);
 
-            if (isActive) {
+            if (isActive || fallbackProductId) {
                 // Pull the originalTransactionId out of the matching
                 // subscription record. RC keys subscriptions by product
                 // identifier; we just take the one whose expires_date
                 // matches the entitlement's.
-                const productId = ent?.product_identifier ?? null;
+                const productId = ent?.product_identifier ?? fallbackProductId;
                 const sub =
                     (productId && data.subscriber?.subscriptions?.[productId]) ||
                     Object.values(data.subscriber?.subscriptions ?? {}).find(
@@ -391,9 +406,13 @@ export const verifyAppleEntitlement = functions.https.onRequest(
                         // try common field names from richer plans
                         ((sub as { original_transaction_id?: string } | undefined)?.original_transaction_id) ??
                         null,
-                    expirationAtMs: expiresMs,
+                    expirationAtMs: expiresMs ?? fallbackExpiresMs,
+                    store: platform === "android" ? "PLAY_STORE" : "APP_STORE",
                 });
-                res.status(200).json({ isPro: true, subscriptionPeriodEnd: expiresMs ? Math.floor(expiresMs / 1000) : null });
+                res.status(200).json({
+                    isPro: true,
+                    subscriptionPeriodEnd: (expiresMs ?? fallbackExpiresMs) ? Math.floor((expiresMs ?? fallbackExpiresMs)! / 1000) : null,
+                });
                 return;
             }
 
