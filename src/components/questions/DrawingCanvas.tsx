@@ -1170,9 +1170,9 @@ export default function DrawingCanvas({
 	const [secondaryStrokeColor, setSecondaryStrokeColor] = useState("");
 	const [gridColor, setGridColor] = useState("");
 	const [accentColor, setAccentColor] = useState("");
-	const [accentBgColor, setAccentBgColor] = useState("");
+	const [, setAccentBgColor] = useState("");
 	const [mutedBgColor, setMutedBgColor] = useState("");
-	const [popupBgColor, setPopupBgColor] = useState("");
+	const [, setPopupBgColor] = useState("");
 	const [activePenColorIndex, setActivePenColorIndex] = useState(0);
 	const [activePenThicknessIndex, setActivePenThicknessIndex] = useState(DEFAULT_PEN_THICKNESS_INDEX);
 	const [isPenPopoverOpen, setIsPenPopoverOpen] = useState(false);

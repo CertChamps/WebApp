@@ -1636,7 +1636,7 @@ function WhiteboardPageViewInner() {
                     aria-label="Check Answer"
                     className="questions-action-button questions-action-button--solid-accent border color-shadow disabled:opacity-60 disabled:cursor-not-allowed"
                     onClick={() => {
-                      if (page.pageType === "document") {
+                      if (isDocumentPage) {
                         setDocumentChecking(true);
                         void documentCheckAnswerRef.current?.()
                           .catch(() => undefined)
@@ -1645,17 +1645,17 @@ function WhiteboardPageViewInner() {
                       }
                       void handleCheckAnswer();
                     }}
-                    disabled={page.pageType === "document" ? documentChecking : !canCheckNow}
+                    disabled={isDocumentPage ? documentChecking : !canCheckNow}
                     title="Check Answer with AI"
                   >
                     <LuCircleCheck size={14} strokeWidth={2} />
                     <span>
-                      {page.pageType === "document"
+                      {isDocumentPage
                         ? (documentChecking ? "Checking…" : "Check Answer")
                         : (!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check Answer")}
                     </span>
                   </button>
-                  {page.pageType !== "document" && checkAnswerStatus && (
+                  {!isDocumentPage && checkAnswerStatus && (
                     <div className="absolute bottom-full mb-2 max-w-[280px] text-xs color-txt-sub bg-[var(--grey-5)]/90 rounded-md px-2 py-1 z-20 flex items-center gap-2">
                       <span>{checkAnswerStatus}</span>
                       {gradingStatus === "error" && (

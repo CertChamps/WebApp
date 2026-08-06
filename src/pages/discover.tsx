@@ -1125,14 +1125,14 @@ export default function Discover() {
         if (isDiscoverVideoUrl(url)) {
             setVideoResource(resource ?? {
                 id: "video-preview",
-                title: resource?.title ?? "Video",
-                subject: resource?.subject ?? "",
+                title: "Video",
+                subject: "",
                 type: "Videos",
-                description: resource?.description ?? "",
-                sourceName: resource?.sourceName ?? displayHostname(url),
-                tags: resource?.tags ?? [],
-                comments: resource?.comments ?? 0,
-                saves: resource?.saves ?? 0,
+                description: "",
+                sourceName: displayHostname(url),
+                tags: [],
+                comments: 0,
+                saves: 0,
                 websiteUrl: url,
             });
             return;

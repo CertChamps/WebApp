@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LuCheck,
-  LuLoaderCircle,
   LuRotateCcw,
 } from "react-icons/lu";
 import { z } from "zod";
