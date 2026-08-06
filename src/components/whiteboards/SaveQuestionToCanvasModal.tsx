@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   LuCheck,
   LuFileText,
+  LuLayoutPanelTop,
   LuLoaderCircle,
   LuPlus,
   LuSearch,
@@ -18,6 +19,7 @@ type Props = {
 };
 
 type DestinationMode = "existing" | "new";
+type NewPageType = WhiteboardPage["pageType"];
 
 function attachmentIdentity(attachment: AttachedQuestion): string {
   if (attachment.source === "bank" && attachment.bank) {
@@ -47,6 +49,7 @@ export default function SaveQuestionToCanvasModal({
   const [mode, setMode] = useState<DestinationMode>("existing");
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [newPageName, setNewPageName] = useState(attachment.label);
+  const [newPageType, setNewPageType] = useState<NewPageType>("whiteboard");
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +74,7 @@ export default function SaveQuestionToCanvasModal({
       if (mode === "existing") {
         const target = pages.find((page) => page.id === selectedPageId);
         if (!target) {
-          setError("Choose a canvas first.");
+          setError("Choose a page first.");
           return;
         }
 
@@ -91,6 +94,7 @@ export default function SaveQuestionToCanvasModal({
         name: newPageName.trim() || attachment.label,
         subject,
         attachedQuestions: [attachment],
+        pageType: newPageType,
       });
       onClose();
       navigate(`/whiteboards/page/${created.id}?q=${encodeURIComponent(attachment.id)}`);
@@ -108,7 +112,7 @@ export default function SaveQuestionToCanvasModal({
 
   return (
     <WhiteboardModal
-      title="Add question to canvas"
+      title="Add question to page"
       onClose={onClose}
       maxWidthClass="max-w-lg"
       footer={
@@ -124,8 +128,8 @@ export default function SaveQuestionToCanvasModal({
             {saving
               ? "Adding question…"
               : mode === "existing"
-                ? "Add and open canvas"
-                : "Create and open canvas"}
+                ? "Add and open page"
+                : "Create and open page"}
           </button>
         </div>
       }
@@ -151,7 +155,7 @@ export default function SaveQuestionToCanvasModal({
             }}
           >
             <LuCheck size={15} />
-            Existing canvas
+            Existing page
           </button>
           <button
             type="button"
@@ -164,7 +168,7 @@ export default function SaveQuestionToCanvasModal({
             }}
           >
             <LuPlus size={15} />
-            New canvas
+            New page
           </button>
         </div>
 
@@ -176,7 +180,7 @@ export default function SaveQuestionToCanvasModal({
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search your canvases…"
+                placeholder="Search your pages…"
                 className="w-full rounded-xl color-bg-grey-5 py-2 pl-9 pr-3 text-sm color-txt-main outline-none placeholder:color-txt-sub"
                 autoComplete="off"
               />
@@ -186,19 +190,19 @@ export default function SaveQuestionToCanvasModal({
               {loading ? (
                 <div className="flex items-center justify-center gap-2 py-8 text-sm color-txt-sub">
                   <LuLoaderCircle size={16} className="animate-spin" />
-                  Loading canvases…
+                  Loading pages…
                 </div>
               ) : visiblePages.length === 0 ? (
                 <div className="py-8 text-center">
                   <p className="text-sm font-semibold color-txt-main">
-                    {pages.length === 0 ? "No canvases for this subject yet" : "No canvases match"}
+                    {pages.length === 0 ? "No pages for this subject yet" : "No pages match"}
                   </p>
                   <button
                     type="button"
                     className="mt-2 text-sm font-semibold color-txt-accent"
                     onClick={() => setMode("new")}
                   >
-                    Create a new canvas
+                    Create a new page
                   </button>
                 </div>
               ) : (
@@ -219,13 +223,19 @@ export default function SaveQuestionToCanvasModal({
                         setError(null);
                       }}
                     >
-                      <span className="text-base" aria-hidden>{page.emoji ?? "📄"}</span>
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg color-bg-grey-5" aria-hidden>
+                        {page.emoji
+                          ? <span className="text-base">{page.emoji}</span>
+                          : page.pageType === "document"
+                            ? <LuFileText size={17} />
+                            : <LuLayoutPanelTop size={17} />}
+                      </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">{page.name}</span>
                         <span className={`block text-xs ${selected ? "opacity-75" : "color-txt-sub"}`}>
                           {alreadyAdded
                             ? "Question already added"
-                            : `${page.attachedQuestions.length} question${page.attachedQuestions.length === 1 ? "" : "s"}`}
+                            : `${page.pageType === "document" ? "Document" : "Whiteboard"} · ${page.attachedQuestions.length} question${page.attachedQuestions.length === 1 ? "" : "s"}`}
                         </span>
                       </span>
                       {selected && <LuCheck size={17} className="shrink-0" />}
@@ -236,23 +246,45 @@ export default function SaveQuestionToCanvasModal({
             </div>
           </>
         ) : (
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-semibold color-txt-main">Canvas name</span>
-            <input
-              type="text"
-              value={newPageName}
-              onChange={(event) => setNewPageName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && canSave) void save();
-              }}
-              placeholder="Untitled canvas"
-              className="w-full rounded-xl color-bg-grey-5 px-3 py-2.5 text-sm color-txt-main outline-none placeholder:color-txt-sub"
-              autoFocus
-            />
-            <span className="text-xs color-txt-sub">
-              A new canvas will be created for this subject with the question attached.
-            </span>
-          </label>
+          <div className="flex flex-col gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold color-txt-main">Page name</span>
+              <input
+                type="text"
+                value={newPageName}
+                onChange={(event) => setNewPageName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && canSave) void save();
+                }}
+                placeholder="Untitled page"
+                className="w-full rounded-xl color-bg-grey-5 px-3 py-2.5 text-sm color-txt-main outline-none placeholder:color-txt-sub"
+                autoFocus
+              />
+            </label>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold color-txt-main">Page type</span>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { id: "whiteboard" as const, label: "Whiteboard", Icon: LuLayoutPanelTop },
+                  { id: "document" as const, label: "Document", Icon: LuFileText },
+                ]).map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+                      newPageType === id ? "color-bg-accent color-txt-accent" : "color-bg-grey-5 color-txt-main hover:color-bg-grey-10"
+                    }`}
+                    onClick={() => setNewPageType(id)}
+                    aria-pressed={newPageType === id}
+                  >
+                    <Icon size={16} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </WhiteboardModal>

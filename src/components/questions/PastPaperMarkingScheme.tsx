@@ -96,52 +96,39 @@ export default function PastPaperMarkingScheme({
         </div>
       )}
       <div ref={fillWidth ? scrollRef : undefined} className="flex-1 min-h-0 overflow-y-auto py-1 w-full">
-        <Document
-          file={file}
-          onLoadSuccess={({ numPages: n }) => {
-            setNumPages(n);
-            setLoadError(null);
-          }}
-          onLoadError={(err) => {
-            console.error("Marking scheme PDF load error:", err);
-            setLoadError(err?.message ?? "Failed to load marking scheme");
-          }}
+        <div
+          className="mx-auto overflow-hidden rounded-[10px] color-shadow color-bg-grey-5/50"
+          style={{ width: effectiveWidth }}
         >
-          {numPages > 0 &&
-            Array.from({ length: pageCount }, (_, i) => {
-              const pageNum = startPage + i;
-              if (pageNum > numPages) return null;
-              const isFirstVisible = i === 0;
-              const isLastVisible = i === pageCount - 1 || pageNum === numPages;
-              const hasMultipleVisible = pageCount > 1;
-              return (
-                <div
-                  key={`ms_page_${pageNum}`}
-                  className="flex flex-col items-center my-4"
-                >
+          <Document
+            file={file}
+            onLoadSuccess={({ numPages: n }) => {
+              setNumPages(n);
+              setLoadError(null);
+            }}
+            onLoadError={(err) => {
+              console.error("Marking scheme PDF load error:", err);
+              setLoadError(err?.message ?? "Failed to load marking scheme");
+            }}
+          >
+            {numPages > 0 &&
+              Array.from({ length: pageCount }, (_, i) => {
+                const pageNum = startPage + i;
+                if (pageNum > numPages) return null;
+                return (
                   <div
-                    className="color-shadow overflow-hidden color-bg-grey-5/50"
-                    style={{
-                      borderTopLeftRadius: !hasMultipleVisible || isFirstVisible ? 10 : 0,
-                      borderTopRightRadius: !hasMultipleVisible || isFirstVisible ? 10 : 0,
-                      borderBottomLeftRadius: !hasMultipleVisible || isLastVisible ? 10 : 0,
-                      borderBottomRightRadius: !hasMultipleVisible || isLastVisible ? 10 : 0,
-                    }}
+                    key={`ms_page_${pageNum}`}
+                    className="flex flex-col items-center"
                   >
                     <PdfThemeWrapper
                       pageNumber={pageNum}
                       width={effectiveWidth}
                     />
                   </div>
-                  {pageCount > 1 && (
-                    <span className="mt-2 text-xs color-txt-sub font-medium">
-                      Page {pageNum} of marking scheme
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-        </Document>
+                );
+              })}
+          </Document>
+        </div>
       </div>
       {numPages === 0 && !loadError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center color-bg rounded-xl">

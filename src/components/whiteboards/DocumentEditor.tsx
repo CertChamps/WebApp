@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   LuCheck,
-  LuLoaderCircle,
   LuRotateCcw,
 } from "react-icons/lu";
 import { z } from "zod";
@@ -443,11 +442,19 @@ export default function DocumentEditor({
       editor.innerHTML = safe || "<p><br></p>";
       const pendingQuestions = pendingQuestionsRef.current;
       pendingQuestionsRef.current = [];
+      const attachedQuestionIdsInDocument = new Set(
+        Array.from(editor.querySelectorAll("[data-question-id]"))
+          .map((node) => (node as HTMLElement).dataset.questionId)
+          .filter((id): id is string => Boolean(id))
+      );
+      const missingAttachedQuestions = attachedQuestionsRef.current.filter(
+        (attachment) => !attachedQuestionIdsInDocument.has(attachment.id)
+      );
       const shouldSeedQuestions = stored === null && !page.documentContent && !hasRecoverableDraft &&
         attachedQuestionsRef.current.length > 0;
       const questionBlocks = shouldSeedQuestions
         ? [...attachedQuestionsRef.current, ...pendingQuestions]
-        : pendingQuestions;
+        : [...missingAttachedQuestions, ...pendingQuestions];
       for (const attachment of new Map(questionBlocks.map((item) => [item.id, item])).values()) {
         editor.append(createQuestionBlock(attachment));
       }
