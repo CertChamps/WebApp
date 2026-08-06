@@ -1,23 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  LuBold,
   LuCheck,
-  LuCircleCheck,
-  LuFileText,
-  LuImage,
-  LuItalic,
-  LuList,
   LuLoaderCircle,
-  LuPenLine,
-  LuRedo2,
   LuRotateCcw,
-  LuUndo2,
 } from "react-icons/lu";
 import { z } from "zod";
 import DrawingCanvas, {
   type CanvasObject,
   type RegisterDrawingSnapshot,
   type RegisterGetGradingCapture,
+  type ToolMode,
 } from "../questions/DrawingCanvas";
 import type { AttachedQuestion, WhiteboardPage } from "../../data/whiteboards";
 import { useDocumentStorage } from "../../hooks/useDocumentStorage";
@@ -29,6 +21,11 @@ import {
   createAiUsageId,
   METERED_CHAT_API_URL,
 } from "../../lib/aiApi";
+import {
+  applyThemeTextColor,
+  isThemeTextColorClass,
+  stripBakedColorStyles,
+} from "../../lib/themeTextColor";
 
 export type DocumentCanvasStroke = {
   points: { x: number; y: number; pressure: number }[];
@@ -51,11 +48,15 @@ type Props = {
   onUploadImage: (blob: Blob) => Promise<string>;
   registerDrawingSnapshot?: RegisterDrawingSnapshot;
   registerGetGradingCapture?: RegisterGetGradingCapture;
+  registerGetDocumentText?: (fn: (() => string) | null) => void;
+  registerCheckAnswer?: (fn: (() => Promise<void>) | null) => void;
   onTouch: () => Promise<void> | void;
-  onRequestAddQuestion: () => void;
   registerQuestionInserter: (pageId: string, insert: ((attachments: AttachedQuestion[]) => void) | null) => void;
   onOpenQuestion: (attachmentId: string) => void;
   viewportClassName?: string;
+  toolbarCenterX?: number | null;
+  toolbarCenterAnimated?: boolean;
+  onToolbarCenterChange?: (centerX: number | null) => void;
 };
 
 const resultSchema = z.object({
@@ -69,8 +70,8 @@ const ALLOWED_TAGS = new Set([
 ]);
 const ALLOWED_ATTRS: Record<string, Set<string>> = {
   "*": new Set(["class"]),
-  FONT: new Set(["color", "size"]),
-  SPAN: new Set(["style"]),
+  FONT: new Set(["size"]),
+  SPAN: new Set(["style", "data-theme-ink"]),
   DIV: new Set(["data-question-id", "contenteditable", "class"]),
   IMG: new Set(["src", "alt", "class", "width", "height"]),
 };
@@ -86,10 +87,10 @@ const SAVE_DELAY_MS = 900;
 const MAX_AI_ESSAY_CHARS = 30_000;
 
 function sanitizeStyle(value: string): string {
-  return value
+  return stripBakedColorStyles(value)
     .split(";")
     .map((part) => part.trim())
-    .filter((part) => /^(color|font-size|font-weight|font-style|text-decoration|text-align)\s*:/i.test(part))
+    .filter((part) => /^(font-size|font-weight|font-style|text-decoration|text-align)\s*:/i.test(part))
     .filter((part) => !/(?:url|expression|var|calc)\s*\(/i.test(part))
     .filter((part) => {
       if (!/^font-size\s*:/i.test(part)) return true;
@@ -113,9 +114,21 @@ function sanitizeHtml(raw: string, externalPaste = false): string {
     }
     for (const attribute of Array.from(element.attributes)) {
       if (attribute.name === "class") {
-        const safeClasses = attribute.value.split(/\s+/).filter((name) => ALLOWED_CONTENT_CLASSES.has(name));
+        const safeClasses = attribute.value.split(/\s+/).filter((name) =>
+          ALLOWED_CONTENT_CLASSES.has(name) || isThemeTextColorClass(name)
+        );
         if (externalPaste || safeClasses.length === 0) element.removeAttribute("class");
         else element.setAttribute("class", safeClasses.join(" "));
+        continue;
+      }
+      if (attribute.name === "data-theme-ink") {
+        if (externalPaste || element.tagName !== "SPAN") {
+          element.removeAttribute(attribute.name);
+          continue;
+        }
+        const index = Number(attribute.value);
+        if (!Number.isFinite(index) || index < 0 || index > 2) element.removeAttribute(attribute.name);
+        else element.setAttribute("data-theme-ink", String(Math.round(index)));
         continue;
       }
       if (externalPaste && ["data-question-id", "contenteditable"].includes(attribute.name)) {
@@ -247,29 +260,6 @@ function parseAiResult(text: string) {
   return resultSchema.parse(JSON.parse(unfenced.slice(start, end + 1)));
 }
 
-function Button({ title, active = false, disabled = false, onClick, children }: {
-  title: string;
-  active?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={title}
-      aria-pressed={active || undefined}
-      title={title}
-      disabled={disabled}
-      onPointerDown={(event) => event.preventDefault()}
-      onClick={onClick}
-      className={`rounded-[var(--radius-in)] p-1.5 transition-colors color-txt-main disabled:cursor-not-allowed disabled:opacity-35 ${active ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10"}`}
-    >
-      {children}
-    </button>
-  );
-}
-
 function createQuestionBlock(attachment: AttachedQuestion): HTMLDivElement {
   const block = document.createElement("div");
   block.dataset.questionId = attachment.id;
@@ -285,6 +275,13 @@ function createQuestionBlock(attachment: AttachedQuestion): HTMLDivElement {
   return block;
 }
 
+const DOCUMENT_FONT_SIZE_OPTIONS = [
+  { value: "2", label: "Small" },
+  { value: "3", label: "Normal" },
+  { value: "4", label: "Large" },
+  { value: "5", label: "Heading" },
+];
+
 export default function DocumentEditor({
   page,
   canvasStrokes,
@@ -294,11 +291,15 @@ export default function DocumentEditor({
   onUploadImage,
   registerDrawingSnapshot,
   registerGetGradingCapture,
+  registerGetDocumentText,
+  registerCheckAnswer,
   onTouch,
-  onRequestAddQuestion,
   registerQuestionInserter,
   onOpenQuestion,
   viewportClassName,
+  toolbarCenterX = null,
+  toolbarCenterAnimated = false,
+  onToolbarCenterChange,
 }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -322,6 +323,7 @@ export default function DocumentEditor({
   const { loadDocument, saveDocument } = useDocumentStorage();
 
   const [mode, setMode] = useState<EditorMode>("text");
+  const [canvasTool, setCanvasTool] = useState<ToolMode>("pen");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading");
   const [loadError, setLoadError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -331,6 +333,12 @@ export default function DocumentEditor({
   const [rewrite, setRewrite] = useState("");
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState("");
+  const [formatState, setFormatState] = useState({
+    bold: false,
+    italic: false,
+    bullet: false,
+    fontSize: "3",
+  });
 
   const draftKey = `document-draft:${page.id}`;
 
@@ -474,6 +482,26 @@ export default function DocumentEditor({
     if (editor.contains(range.commonAncestorContainer)) savedRangeRef.current = range.cloneRange();
   }, []);
 
+  const syncFormatState = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const selection = window.getSelection();
+    if (!selection?.rangeCount || !editor.contains(selection.anchorNode)) return;
+    let fontSize = "3";
+    try {
+      const value = document.queryCommandValue("fontSize");
+      if (value) fontSize = value;
+    } catch {
+      // queryCommandValue can throw in some browsers for unsupported commands
+    }
+    setFormatState({
+      bold: document.queryCommandState("bold"),
+      italic: document.queryCommandState("italic"),
+      bullet: document.queryCommandState("insertUnorderedList"),
+      fontSize,
+    });
+  }, []);
+
   const restoreSelection = useCallback(() => {
     const editor = editorRef.current;
     const range = savedRangeRef.current;
@@ -490,8 +518,9 @@ export default function DocumentEditor({
     restoreSelection();
     document.execCommand(command, false, value);
     rememberSelection();
+    syncFormatState();
     handleUserMutation();
-  }, [handleUserMutation, rememberSelection, restoreSelection]);
+  }, [handleUserMutation, rememberSelection, restoreSelection, syncFormatState]);
 
   const insertNode = useCallback((node: Node) => {
     restoreSelection();
@@ -524,6 +553,15 @@ export default function DocumentEditor({
     registerQuestionInserter(page.id, insertQuestions);
     return () => registerQuestionInserter(page.id, null);
   }, [insertQuestions, page.id, registerQuestionInserter]);
+
+  useEffect(() => {
+    if (!registerGetDocumentText) return;
+    registerGetDocumentText(() => {
+      const editor = editorRef.current;
+      return editor ? documentText(editor) : "";
+    });
+    return () => registerGetDocumentText(null);
+  }, [registerGetDocumentText]);
 
   const handleFiles = useCallback(async (files: FileList | null) => {
     const file = files?.[0];
@@ -702,6 +740,12 @@ export default function DocumentEditor({
     }
   }, [applyFeedbackMarks, checking, clearFeedbackMarks, page.id]);
 
+  useEffect(() => {
+    if (!registerCheckAnswer) return;
+    registerCheckAnswer(() => checkAnswer());
+    return () => registerCheckAnswer(null);
+  }, [registerCheckAnswer, checkAnswer]);
+
   const applyRewrite = useCallback(() => {
     const editor = editorRef.current;
     if (!editor || !rewrite) return;
@@ -761,10 +805,10 @@ export default function DocumentEditor({
             aria-label={`${page.name} document`}
             aria-multiline="true"
             spellCheck
-            onInput={handleUserMutation}
-            onMouseUp={rememberSelection}
-            onKeyUp={rememberSelection}
-            onFocus={rememberSelection}
+            onInput={() => { handleUserMutation(); syncFormatState(); }}
+            onMouseUp={() => { rememberSelection(); syncFormatState(); }}
+            onKeyUp={() => { rememberSelection(); syncFormatState(); }}
+            onFocus={() => { rememberSelection(); syncFormatState(); }}
             onPaste={(event) => {
               event.preventDefault();
               const html = event.clipboardData.getData("text/html");
@@ -772,11 +816,12 @@ export default function DocumentEditor({
               if (html) document.execCommand("insertHTML", false, sanitizeHtml(html, true));
               else document.execCommand("insertText", false, text);
               handleUserMutation();
+              syncFormatState();
             }}
             onClick={handleEditorClick}
             className={`relative z-10 min-h-[1056px] px-8 py-12 text-[16px] leading-7 color-txt-main outline-none sm:px-14 sm:py-16 [&_blockquote]:border-l-2 [&_blockquote]:pl-4 [&_figcaption]:color-txt-sub [&_img]:h-auto [&_img]:max-w-full [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 ${mode === "text" ? "cursor-text" : "pointer-events-none select-none"}`}
           />
-          <div className={`absolute inset-0 z-20 ${mode === "pen" ? "pointer-events-auto" : "pointer-events-none"}`}>
+          <div className={`absolute inset-0 z-20 ${mode === "pen" || canvasTool === "lasso" ? "pointer-events-auto" : "pointer-events-none"}`}>
             <DrawingCanvas
               initialStrokes={canvasStrokes}
               initialObjects={canvasObjects}
@@ -788,54 +833,50 @@ export default function DocumentEditor({
               registerGetGradingCapture={registerGetGradingCapture}
               wrapperClassName="bg-transparent"
               defaultGridMode="off"
+              editorMode={mode}
+              onToolChange={setCanvasTool}
               onRequestTextMode={() => setMode("text")}
+              onRequestPenMode={() => setMode("pen")}
+              onAttachRequest={() => {
+                rememberSelection();
+                fileInputRef.current?.click();
+              }}
+              suppressToolbar={Boolean(loadError) || saveStatus === "loading"}
+              textFormat={{
+                bold: formatState.bold,
+                italic: formatState.italic,
+                bullet: formatState.bullet,
+                fontSize: formatState.fontSize,
+                fontSizeOptions: DOCUMENT_FONT_SIZE_OPTIONS,
+                onToggleBold: () => runCommand("bold"),
+                onToggleItalic: () => runCommand("italic"),
+                onToggleBullet: () => runCommand("insertUnorderedList"),
+                onFontSizeChange: (value) => runCommand("fontSize", String(value)),
+                onColorChange: (colorIndex) => {
+                  restoreSelection();
+                  applyThemeTextColor(colorIndex);
+                  rememberSelection();
+                  handleUserMutation();
+                },
+                onUndo: () => runCommand("undo"),
+                onRedo: () => runCommand("redo"),
+              }}
               toolbarFixed
+              toolbarCenterX={toolbarCenterX}
+              toolbarCenterAnimated={toolbarCenterAnimated}
+              onToolbarCenterChange={onToolbarCenterChange}
               allowViewportNavigation={false}
-              readOnly={mode === "text"}
+              readOnly={mode === "text" && canvasTool !== "lasso"}
             />
           </div>
         </div>
       </div>
 
-      {mode === "text" && !loadError && saveStatus !== "loading" && (
-        <div className="absolute bottom-4 left-1/2 z-40 flex max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-1 rounded-[var(--radius-out)] color-bg color-shadow border px-2 py-1.5">
-          <Button title="Switch to pen" onClick={() => { rememberSelection(); setMode("pen"); }}><LuPenLine size={18} /></Button>
-          <Button title="Undo" onClick={() => runCommand("undo")}><LuUndo2 size={18} /></Button>
-          <Button title="Redo" onClick={() => runCommand("redo")}><LuRedo2 size={18} /></Button>
-          <Button title="Bold" onClick={() => runCommand("bold")}><LuBold size={18} /></Button>
-          <Button title="Italic" onClick={() => runCommand("italic")}><LuItalic size={18} /></Button>
-          <Button title="Bullet list" onClick={() => runCommand("insertUnorderedList")}><LuList size={18} /></Button>
-          <select
-            aria-label="Text size"
-            title="Text size"
-            defaultValue="3"
-            onPointerDown={(event) => { rememberSelection(); event.stopPropagation(); }}
-            onChange={(event) => runCommand("fontSize", event.target.value)}
-            className="h-8 rounded-[var(--radius-in)] color-bg-grey-5 px-2 text-xs font-semibold color-txt-main outline-none"
-          >
-            <option value="2">Small</option><option value="3">Normal</option><option value="4">Large</option><option value="5">Heading</option>
-          </select>
-          <label className="flex size-8 cursor-pointer items-center justify-center rounded-[var(--radius-in)] color-txt-main hover:color-bg-grey-10" title="Text colour">
-            <input type="color" aria-label="Text colour" className="size-4 cursor-pointer border-0 bg-transparent p-0" onPointerDown={rememberSelection} onChange={(event) => runCommand("foreColor", event.target.value)} />
-          </label>
-          <Button title="Insert image or PDF" disabled={Boolean(importStatus)} onClick={() => { rememberSelection(); fileInputRef.current?.click(); }}>
-            {importStatus ? <LuLoaderCircle size={18} className="animate-spin" /> : <LuImage size={18} />}
-          </Button>
-          <Button title="Insert question" onClick={() => { rememberSelection(); onRequestAddQuestion(); }}><LuFileText size={18} /></Button>
-          <Button title="Check my answer" disabled={checking} onClick={() => void checkAnswer()}>
-            {checking ? <LuLoaderCircle size={18} className="animate-spin color-txt-accent" /> : <LuCircleCheck size={18} className="color-txt-accent" />}
-          </Button>
-        </div>
-      )}
-
-
-      {(saveStatus !== "saved" || loadError || importStatus || checkError || activeFeedback) && (
+      {(loadError || importStatus || checkError || activeFeedback) && (
         <div className="absolute bottom-16 left-1/2 z-50 max-w-sm -translate-x-1/2 rounded-lg color-bg color-shadow border px-3 py-2 text-xs color-txt-sub">
-          {activeFeedback?.message || loadError || checkError || importStatus || (saveStatus === "saving" ? "Saving…" : saveStatus === "dirty" ? "Unsaved changes" : saveStatus === "error" ? "Couldn’t save. Tap to retry." : "Loading document…")}
+          {activeFeedback?.message || loadError || checkError || importStatus}
           {loadError ? (
             <button type="button" className="ml-2 font-semibold color-txt-accent" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry</button>
-          ) : saveStatus === "error" ? (
-            <button type="button" className="ml-2 font-semibold color-txt-accent" onClick={() => void flushSave()}>Retry</button>
           ) : null}
         </div>
       )}

@@ -7,6 +7,7 @@ import { LuPen } from "react-icons/lu";
 import Cropper from "react-easy-crop";
 import Rank1 from "../../assets/Rank2-CCOkr3g2.png"
 import { prepareProfileImagePreview, revokeProfileImagePreview } from "../../lib/profileImage";
+import { needsOnboarding } from "../../lib/onboarding";
 export default function UsernamePrompt() {
     const { user, setUser } = useContext(UserContext); 
     const [showPrompt, setShowPrompt] = useState<boolean>(false); 
@@ -23,6 +24,11 @@ export default function UsernamePrompt() {
     const [croppedAvatarUrl, setCroppedAvatarUrl] = useState<string>('');
 
     useEffect(() => {
+        // Profile setup lives in onboarding for new users — don't stack prompts.
+        if (needsOnboarding(user)) {
+            setShowPrompt(false);
+            return;
+        }
         if (user?.username?.length < 1) setShowPrompt(true);
         else setShowPrompt(false);
     }, [user]);

@@ -12,17 +12,21 @@ type Props = {
 
 export default function OnboardingShell({
   step,
-  totalSteps = 3,
+  totalSteps = 4,
   title,
   subtitle,
   children,
   footer,
 }: Props) {
   return (
-    <div className="h-full flex justify-center items-center w-full color-bg-grey-5 overflow-hidden px-4">
-      <div className="w-full max-w-lg py-8 px-6 color-shadow border-2 rounded-out color-bg flex flex-col max-h-[90vh]">
-        <img src={crown} alt="" className="w-24 h-20 m-auto object-cover" />
-        <div className="flex justify-center gap-2 my-4" aria-label={`Step ${step} of ${totalSteps}`}>
+    <div className="h-full flex justify-center items-center w-full color-bg-grey-5 overflow-y-auto px-4 py-6">
+      <div className="w-full max-w-lg py-8 px-6 color-shadow border-2 rounded-out color-bg flex flex-col max-h-[min(90vh,100%)] my-auto">
+        <img
+          src={crown}
+          alt=""
+          className="w-24 h-20 mx-auto shrink-0 object-contain"
+        />
+        <div className="flex justify-center gap-2 my-4 shrink-0" aria-label={`Step ${step} of ${totalSteps}`}>
           {Array.from({ length: totalSteps }, (_, i) => (
             <span
               key={i}
@@ -32,11 +36,11 @@ export default function OnboardingShell({
             />
           ))}
         </div>
-        <h1 className="txt-heading-colour text-center text-2xl mb-2">{title}</h1>
+        <h1 className="txt-heading-colour text-center text-2xl mb-2 shrink-0">{title}</h1>
         {subtitle ? (
-          <p className="txt-sub color-txt-sub text-center mb-6 leading-relaxed">{subtitle}</p>
+          <p className="txt-sub color-txt-sub text-center mb-6 leading-relaxed shrink-0">{subtitle}</p>
         ) : (
-          <div className="mb-6" />
+          <div className="mb-6 shrink-0" />
         )}
         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-minimal">{children}</div>
         {footer ? <div className="mt-6 shrink-0">{footer}</div> : null}

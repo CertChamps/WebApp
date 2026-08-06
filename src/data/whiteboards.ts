@@ -30,6 +30,7 @@ export type AttachedBankRef = {
   markingSchemePaths?: string[];
   audioPath?: string;
   audioStartSec?: number;
+  audioEndSec?: number;
   audioStartLabel?: string;
 };
 
@@ -391,6 +392,11 @@ export function setLastWhiteboardsSubject(subjectId: string | null): void {
 /** Canvas storage id for a whiteboard page (namespaced so it can't collide with question ids). */
 export function whiteboardCanvasId(pageId: string): string {
   return `whiteboard_${pageId}`;
+}
+
+/** Per-question canvas on a whiteboard page (drawings + attachments are isolated per question). */
+export function whiteboardQuestionCanvasId(pageId: string, attachmentId: string): string {
+  return `whiteboard_${pageId}_q_${attachmentId}`;
 }
 
 /** Ink storage id for a document page. Text content is stored independently. */

@@ -33,7 +33,12 @@ type questionType = {
   paperLabel?: string;
   questionName?: string;
   subject?: string;
+  subjectLabel?: string;
   level?: string;
+  topic?: string;
+  discoverQuestionId?: string;
+  practiceUrl?: string;
+  sourceContext?: "practice" | "whiteboard";
   indexInPaper?: number;
   storagePath?: string;
   pageRange?: [number, number];
@@ -166,6 +171,17 @@ const QThread = (props: questionType) => {
 
     try {
       const image = props.paperThread ? '' : await getImage();
+      const discoverMetadata = {
+        isQuestionPost: true,
+        discoverQuestionId: props.discoverQuestionId ?? threadDocId,
+        questionName: props.questionName ?? '',
+        subject: props.subject ?? '',
+        subjectLabel: props.subjectLabel ?? '',
+        level: props.level ?? '',
+        topic: props.topic ?? '',
+        practiceUrl: props.practiceUrl ?? '',
+        sourceContext: props.sourceContext ?? 'practice',
+      };
 
       if (replyingTo && replyingTo.type === 'reply') {
         await addDoc(
@@ -200,13 +216,12 @@ const QThread = (props: questionType) => {
             paperQuestionId: props.paperQuestionId,
             paperQuestionName: props.questionName ?? '',
             paperLabel: props.paperLabel ?? '',
-            subject: props.subject ?? '',
-            level: props.level ?? '',
             indexInPaper: props.indexInPaper ?? 0,
             storagePath: props.storagePath ?? '',
             pageRange: props.pageRange ?? null,
             pageRegions: props.pageRegions ?? null,
             replyId: practiceReplyDoc.id,
+            ...discoverMetadata,
           });
         } else {
           await addDoc(collection(db, 'posts'), {
@@ -218,6 +233,7 @@ const QThread = (props: questionType) => {
             isFlashcard: true,
             flashcardId: props.questionId,
             replyId: practiceReplyDoc.id,
+            ...discoverMetadata,
           });
         }
       }
@@ -268,6 +284,11 @@ const QThread = (props: questionType) => {
 
       {/* Composer: flex-none so it doesn't grow; will sit below the scrollable list */}
       <div className="composer-container flex-none p-3">
+        {props.sourceContext === 'whiteboard' && props.practiceUrl && !replyingTo && (
+          <div className="mb-2 rounded-xl color-bg-grey-5 px-3 py-2 text-xs color-txt-sub">
+            Starting a discussion also adds this question to Discover, with a direct Practice Hub link.
+          </div>
+        )}
         {replyingTo && (
           <div className="composer-replyTo-wrapper flex items-center justify-between mb-2">
             <span className="composer-replyTo-username text-sm text-muted">

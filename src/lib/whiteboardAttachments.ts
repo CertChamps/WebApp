@@ -55,6 +55,9 @@ export function buildImageAttachment(
             ...(grouped.audioStartSec != null
               ? { audioStartSec: grouped.audioStartSec }
               : {}),
+            ...(grouped.audioEndSec != null
+              ? { audioEndSec: grouped.audioEndSec }
+              : {}),
             ...(grouped.audioStartLabel
               ? { audioStartLabel: grouped.audioStartLabel }
               : {}),

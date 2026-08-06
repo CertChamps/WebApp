@@ -15,6 +15,8 @@ type AIChatProps = {
   getStaveAnalysis?: (() => string | null) | null;
   /** Optional: return current exam paper (first page) as image so the AI can see the paper. */
   getPaperSnapshot?: (() => string | null) | null;
+  /** Optional: return live document / workspace text for chat context. */
+  getWorkspaceText?: (() => string | null) | null;
   /** Optional: externally injected exchange (e.g. from Check My Answer). */
   injectedExchange?: InjectedExchange | null;
   /** Optional action for grading flow (full-marks completion CTA). */
@@ -35,7 +37,7 @@ const AI_PLACEHOLDERS = [
   "No question is a stupid question:)",
 ];
 
-export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPaperSnapshot, injectedExchange, onMarkCompleteFromGrading }: AIChatProps) {
+export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPaperSnapshot, getWorkspaceText, injectedExchange, onMarkCompleteFromGrading }: AIChatProps) {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
   const [aiPlaceholder] = useState(() => AI_PLACEHOLDERS[Math.floor(Math.random() * AI_PLACEHOLDERS.length)]);
@@ -53,7 +55,7 @@ export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPape
     messagesEndRef,
     inputRef,
     hasQuestion,
-  } = useAI(question, getDrawingSnapshot, getStaveAnalysis, getPaperSnapshot, injectedExchange);
+  } = useAI(question, getDrawingSnapshot, getStaveAnalysis, getPaperSnapshot, injectedExchange, getWorkspaceText);
 
   const displayName = user?.username?.trim() || "there";
   const emptyMessage = hasQuestion

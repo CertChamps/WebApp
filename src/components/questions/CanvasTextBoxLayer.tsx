@@ -11,32 +11,57 @@ import type {
 	PointerEvent as ReactPointerEvent,
 } from "react";
 import { GripHorizontal, Trash2 } from "lucide-react";
+import {
+	clampThemeColorIndex,
+	isThemeTextColorClass,
+	stripBakedColorStyles,
+	themeTextColorClass,
+} from "../../lib/themeTextColor";
 
 export type CanvasTextBox = {
 	id: string;
+	/** May contain a small set of inline HTML tags (bold/italic/lists). */
 	text: string;
 	x: number;
 	y: number;
 	width: number;
 	height: number;
 	fontSize: number;
-	color: string;
+	/** Theme palette slot (main / sub / accent). */
+	colorIndex: number;
 	fontWeight: "normal" | "bold";
 	fontStyle: "normal" | "italic";
 	listStyle: "none" | "bullet";
+};
+
+export type CanvasTextDefaults = {
+	fontSize: number;
+	colorIndex: number;
+	fontWeight: "normal" | "bold";
+	fontStyle: "normal" | "italic";
+	listStyle: "none" | "bullet";
+};
+
+export type CanvasTextFormatState = {
+	bold: boolean;
+	italic: boolean;
+	bullet: boolean;
 };
 
 export type CanvasTextBoxLayerProps = {
 	boxes: CanvasTextBox[];
 	pan: { x: number; y: number };
 	scale: number;
-	/** Whether the whiteboard is currently in Text mode. */
-	active: boolean;
+	/** Create new boxes and edit text content. */
+	editing: boolean;
+	/** Select, move, and resize existing boxes. */
+	selectable: boolean;
 	selectedId: string | null;
 	onSelectedIdChange: (id: string | null) => void;
 	/** Receives the complete collection after a box is created or changed. */
 	onCreateChange: (boxes: CanvasTextBox[]) => void;
-	defaultColor: string;
+	defaults: CanvasTextDefaults;
+	onFormatStateChange?: (state: CanvasTextFormatState) => void;
 };
 
 type BoxInteraction = {
@@ -55,9 +80,13 @@ const MIN_BOX_HEIGHT = 48;
 const NEW_BOX_WIDTH = 280;
 const NEW_BOX_HEIGHT = 88;
 const DEFAULT_FONT_SIZE = 18;
+/** Matches DrawingCanvas essay ruled-line gap so text sits on the lines. */
+const TEXT_LINE_GAP = 32;
 const MAX_TEXT_BOXES = 200;
 const MAX_TEXT_LENGTH = 100_000;
 const MIN_VIEW_SCALE = 0.01;
+
+const ALLOWED_TAGS = new Set(["B", "STRONG", "I", "EM", "BR", "DIV", "P", "SPAN", "UL", "OL", "LI"]);
 
 function finiteOr(value: number, fallback: number): number {
 	return Number.isFinite(value) ? value : fallback;
@@ -75,8 +104,71 @@ function makeBoxId(boxes: CanvasTextBox[]): string {
 	return id;
 }
 
-function readEditableText(element: HTMLElement): string {
-	return element.innerText.replace(/\r\n?/g, "\n").replace(/\u00a0/g, " ").slice(0, MAX_TEXT_LENGTH);
+export function htmlToPlainText(html: string): string {
+	if (!html) return "";
+	if (typeof document === "undefined") {
+		return html.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">");
+	}
+	const host = document.createElement("div");
+	host.innerHTML = html;
+	return host.innerText.replace(/\r\n?/g, "\n").replace(/\u00a0/g, " ").slice(0, MAX_TEXT_LENGTH);
+}
+
+function readEditableHtml(element: HTMLElement): string {
+	return element.innerHTML.slice(0, MAX_TEXT_LENGTH);
+}
+
+function looksLikeHtml(value: string): boolean {
+	return /<\/?[a-z][\s\S]*>/i.test(value);
+}
+
+function sanitizeStyle(value: string): string {
+	return stripBakedColorStyles(value)
+		.split(";")
+		.map((part) => part.trim())
+		.filter((part) => /^(font-size|font-weight|font-style)\s*:/i.test(part))
+		.filter((part) => !/(?:url|expression|var|calc)\s*\(/i.test(part))
+		.join("; ");
+}
+
+function sanitizeHtml(html: string): string {
+	if (typeof document === "undefined") return htmlToPlainText(html);
+	const template = document.createElement("template");
+	template.innerHTML = html;
+	const walk = (node: Node) => {
+		const children = Array.from(node.childNodes);
+		for (const child of children) {
+			if (child.nodeType === Node.TEXT_NODE) continue;
+			if (child.nodeType !== Node.ELEMENT_NODE) {
+				child.parentNode?.removeChild(child);
+				continue;
+			}
+			const element = child as HTMLElement;
+			if (!ALLOWED_TAGS.has(element.tagName)) {
+				while (element.firstChild) element.parentNode?.insertBefore(element.firstChild, element);
+				element.remove();
+				continue;
+			}
+			for (const attr of Array.from(element.attributes)) {
+				if (attr.name === "style") {
+					const next = sanitizeStyle(attr.value);
+					if (next) element.setAttribute("style", next);
+					else element.removeAttribute(attr.name);
+				} else if (attr.name === "class") {
+					const safe = attr.value.split(/\s+/).filter((name) => isThemeTextColorClass(name));
+					if (safe.length) element.setAttribute("class", safe.join(" "));
+					else element.removeAttribute(attr.name);
+				} else if (attr.name === "data-theme-ink" && element.tagName === "SPAN") {
+					element.setAttribute("data-theme-ink", String(clampThemeColorIndex(Number(attr.value))));
+				} else {
+					element.removeAttribute(attr.name);
+				}
+			}
+			walk(element);
+		}
+	};
+	walk(template.content);
+	return template.innerHTML.slice(0, MAX_TEXT_LENGTH);
 }
 
 function placeCaretAtEnd(element: HTMLElement): void {
@@ -123,15 +215,40 @@ function releasePointerCapture(interaction: BoxInteraction): void {
 	}
 }
 
+function measureEditorWorldHeight(element: HTMLElement, viewScale: number): number {
+	const previousHeight = element.style.height;
+	const previousMinHeight = element.style.minHeight;
+	element.style.height = "auto";
+	element.style.minHeight = "0px";
+	const contentHeight = Math.max(MIN_BOX_HEIGHT, element.scrollHeight / viewScale);
+	element.style.height = previousHeight;
+	element.style.minHeight = previousMinHeight;
+	return contentHeight;
+}
+
+function readFormatState(): CanvasTextFormatState {
+	try {
+		return {
+			bold: document.queryCommandState("bold"),
+			italic: document.queryCommandState("italic"),
+			bullet: document.queryCommandState("insertUnorderedList"),
+		};
+	} catch {
+		return { bold: false, italic: false, bullet: false };
+	}
+}
+
 export default function CanvasTextBoxLayer({
 	boxes,
 	pan,
 	scale,
-	active,
+	editing,
+	selectable,
 	selectedId,
 	onSelectedIdChange,
 	onCreateChange,
-	defaultColor,
+	defaults,
+	onFormatStateChange,
 }: CanvasTextBoxLayerProps) {
 	const layerRef = useRef<HTMLDivElement>(null);
 	const editorRefs = useRef(new Map<string, HTMLDivElement>());
@@ -139,6 +256,7 @@ export default function CanvasTextBoxLayer({
 	const boxesRef = useRef(boxes);
 	const onCreateChangeRef = useRef(onCreateChange);
 	const onSelectedIdChangeRef = useRef(onSelectedIdChange);
+	const onFormatStateChangeRef = useRef(onFormatStateChange);
 	const interactionRef = useRef<BoxInteraction | null>(null);
 	const interactionPreviewRef = useRef<CanvasTextBox[] | null>(null);
 	const pendingFocusIdRef = useRef<string | null>(null);
@@ -147,12 +265,14 @@ export default function CanvasTextBoxLayer({
 	boxesRef.current = boxes;
 	onCreateChangeRef.current = onCreateChange;
 	onSelectedIdChangeRef.current = onSelectedIdChange;
+	onFormatStateChangeRef.current = onFormatStateChange;
 
 	const viewScale = Math.max(MIN_VIEW_SCALE, Math.abs(finiteOr(scale, 1)));
 	const panX = finiteOr(pan.x, 0);
 	const panY = finiteOr(pan.y, 0);
+	const interactive = editing || selectable;
 	const visibleBoxes =
-		active && interactionRef.current && interactionPreview
+		interactive && interactionRef.current && interactionPreview
 			? interactionPreview
 			: boxes;
 
@@ -161,25 +281,44 @@ export default function CanvasTextBoxLayer({
 		onCreateChangeRef.current(nextBoxes);
 	}, []);
 
-	const commitEditorText = useCallback((id: string, element: HTMLElement) => {
-		const text = readEditableText(element);
+	const emitFormatState = useCallback(() => {
+		onFormatStateChangeRef.current?.(readFormatState());
+	}, []);
+
+	const commitEditorHtml = useCallback((id: string, element: HTMLElement) => {
+		const html = readEditableHtml(element);
+		const contentHeight = measureEditorWorldHeight(element, viewScale);
 		const currentBoxes = boxesRef.current;
 		const box = currentBoxes.find((candidate) => candidate.id === id);
-		if (!box || box.text === text) return;
+		if (!box) return;
+		const heightChanged = Math.abs(box.height - contentHeight) > 0.5;
+		if (box.text === html && !heightChanged) return;
 		publish(
 			currentBoxes.map((candidate) =>
-				candidate.id === id ? { ...candidate, text } : candidate,
+				candidate.id === id
+					? { ...candidate, text: html, height: contentHeight }
+					: candidate,
 			),
 		);
-	}, [publish]);
+	}, [publish, viewScale]);
 
 	useLayoutEffect(() => {
 		for (const box of visibleBoxes) {
 			const editor = editorRefs.current.get(box.id);
 			if (!editor || composingIdsRef.current.has(box.id)) continue;
-			if (readEditableText(editor) !== box.text) {
-				editor.textContent = box.text;
+			const current = readEditableHtml(editor);
+			if (current !== box.text) {
+				if (looksLikeHtml(box.text)) editor.innerHTML = box.text;
+				else editor.textContent = box.text;
 				if (document.activeElement === editor) placeCaretAtEnd(editor);
+			}
+			const contentHeight = measureEditorWorldHeight(editor, viewScale);
+			if (Math.abs(box.height - contentHeight) > 0.5) {
+				publish(
+					boxesRef.current.map((candidate) =>
+						candidate.id === box.id ? { ...candidate, height: contentHeight } : candidate,
+					),
+				);
 			}
 		}
 
@@ -190,16 +329,17 @@ export default function CanvasTextBoxLayer({
 		pendingFocusIdRef.current = null;
 		editor.focus({ preventScroll: true });
 		placeCaretAtEnd(editor);
-	}, [visibleBoxes]);
+		emitFormatState();
+	}, [visibleBoxes, emitFormatState, publish, viewScale]);
 
 	useEffect(() => {
-		if (active) return;
+		if (interactive) return;
 		const interaction = interactionRef.current;
 		if (!interaction) return;
 		interactionRef.current = null;
 		interactionPreviewRef.current = null;
 		releasePointerCapture(interaction);
-	}, [active]);
+	}, [interactive]);
 
 	useEffect(() => {
 		return () => {
@@ -211,7 +351,7 @@ export default function CanvasTextBoxLayer({
 	}, []);
 
 	const handleBlankPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-		if (!active || event.target !== event.currentTarget) return;
+		if (!editing || event.target !== event.currentTarget) return;
 		if (event.pointerType === "mouse" && event.button !== 0) return;
 
 		const rect = event.currentTarget.getBoundingClientRect();
@@ -226,8 +366,8 @@ export default function CanvasTextBoxLayer({
 			y: worldY,
 			width: NEW_BOX_WIDTH,
 			height: NEW_BOX_HEIGHT,
-			fontSize: DEFAULT_FONT_SIZE,
-			color: defaultColor,
+			fontSize: defaults.fontSize,
+			colorIndex: clampThemeColorIndex(defaults.colorIndex),
 			fontWeight: "normal",
 			fontStyle: "normal",
 			listStyle: "none",
@@ -244,7 +384,7 @@ export default function CanvasTextBoxLayer({
 		box: CanvasTextBox,
 		kind: BoxInteraction["kind"],
 	) => {
-		if (!active) return;
+		if (!selectable && !editing) return;
 		if (event.pointerType === "mouse" && event.button !== 0) return;
 
 		event.preventDefault();
@@ -318,28 +458,26 @@ export default function CanvasTextBoxLayer({
 	const handleLostPointerCapture = (event: ReactPointerEvent<HTMLElement>) => {
 		const interaction = interactionRef.current;
 		if (!interaction || interaction.pointerId !== event.pointerId) return;
-		const nextBoxes = interactionPreviewRef.current ?? interaction.startBoxes;
 		interactionRef.current = null;
 		interactionPreviewRef.current = null;
 		setInteractionPreview(null);
-		publish(nextBoxes);
 	};
 
 	const deleteBox = (id: string) => {
-		const currentBoxes = boxesRef.current;
-		const nextBoxes = currentBoxes.filter((box) => box.id !== id);
-		if (nextBoxes.length === currentBoxes.length) return;
-		composingIdsRef.current.delete(id);
-		editorRefs.current.delete(id);
+		const next = boxesRef.current.filter((box) => box.id !== id);
 		if (selectedId === id) onSelectedIdChangeRef.current(null);
-		publish(nextBoxes);
+		publish(next);
 	};
 
 	const handlePaste = (event: ReactClipboardEvent<HTMLDivElement>, id: string) => {
-		if (!active) return;
 		event.preventDefault();
-		insertPlainText(event.currentTarget, event.clipboardData.getData("text/plain"));
-		commitEditorText(id, event.currentTarget);
+		const editor = event.currentTarget;
+		const html = event.clipboardData.getData("text/html");
+		const text = event.clipboardData.getData("text/plain");
+		if (html) document.execCommand("insertHTML", false, sanitizeHtml(html));
+		else insertPlainText(editor, text);
+		commitEditorHtml(id, editor);
+		emitFormatState();
 	};
 
 	const handleCompositionStart = (
@@ -355,47 +493,56 @@ export default function CanvasTextBoxLayer({
 		id: string,
 	) => {
 		composingIdsRef.current.delete(id);
-		commitEditorText(id, event.currentTarget);
+		commitEditorHtml(id, event.currentTarget);
+		emitFormatState();
 	};
 
 	return (
 		<div
 			ref={layerRef}
-			className={`absolute inset-0 ${active ? "pointer-events-auto" : "pointer-events-none"}`}
-			style={{ touchAction: active ? "none" : "auto" }}
+			className={`absolute inset-0 ${editing ? "pointer-events-auto" : "pointer-events-none"}`}
+			style={{ touchAction: editing ? "none" : "auto" }}
 			onPointerDown={handleBlankPointerDown}
-			aria-hidden={!active && boxes.length === 0 ? true : undefined}
+			aria-hidden={!interactive && boxes.length === 0 ? true : undefined}
 		>
 			{visibleBoxes.map((box) => {
-				const selected = active && selectedId === box.id;
+				const selected = interactive && selectedId === box.id;
+				const showChrome = selected && (selectable || editing);
 				const boxWidth = Math.max(MIN_BOX_WIDTH, finiteOr(box.width, MIN_BOX_WIDTH));
 				const boxHeight = Math.max(MIN_BOX_HEIGHT, finiteOr(box.height, MIN_BOX_HEIGHT));
 				return (
 					<div
 						key={box.id}
 						data-canvas-text-box-id={box.id}
-						className={`group absolute rounded-[var(--radius-in)] border transition-[border-color] duration-150 ${
-							active ? "pointer-events-auto" : "pointer-events-none"
-						} ${
+						className={`group absolute rounded-in border transition-[border-color] duration-150 pointer-events-auto ${
 							selected
 								? "border-current color-txt-accent"
-								: active
+								: editing
 									? "border-transparent color-txt-sub hover:border-current"
-									: "border-transparent"
+									: selectable
+										? "border-transparent color-txt-sub hover:border-current"
+										: "border-transparent"
 						}`}
 						style={{
 							left: finiteOr(box.x, 0) * viewScale + panX,
 							top: finiteOr(box.y, 0) * viewScale + panY,
 							width: boxWidth * viewScale,
 							height: boxHeight * viewScale,
-							touchAction: active ? "none" : "auto",
+							touchAction: interactive ? "none" : "auto",
 							zIndex: selected ? 2 : 1,
 						}}
 						onPointerDown={(event) => {
-							if (!active) return;
+							if (!interactive) return;
 							event.stopPropagation();
 							onSelectedIdChangeRef.current(box.id);
+							if (selectable && !editing) {
+								beginInteraction(event, box, "move");
+							}
 						}}
+						onPointerMove={handleInteractionMove}
+						onPointerUp={(event) => finishInteraction(event, false)}
+						onPointerCancel={(event) => finishInteraction(event, true)}
+						onLostPointerCapture={handleLostPointerCapture}
 					>
 						<div
 							ref={(element) => {
@@ -405,46 +552,53 @@ export default function CanvasTextBoxLayer({
 							role="textbox"
 							aria-label="Whiteboard text"
 							aria-multiline="true"
-							contentEditable={active ? "plaintext-only" : false}
+							contentEditable={editing}
 							suppressContentEditableWarning
 							spellCheck
-							tabIndex={active ? 0 : -1}
-							className={`h-full w-full overflow-auto rounded-[var(--radius-in)] outline-none whitespace-pre-wrap break-words ${
-								active ? "cursor-text select-text" : "select-none"
+							tabIndex={editing ? 0 : -1}
+							className={`w-full overflow-hidden rounded-in outline-none break-words [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 ${themeTextColorClass(box.colorIndex ?? defaults.colorIndex)} ${
+								editing ? "cursor-text select-text" : "select-none"
 							}`}
 							style={{
+								minHeight: "100%",
 								padding: `${6 * viewScale}px ${8 * viewScale}px`,
 								fontSize: Math.max(1, finiteOr(box.fontSize, DEFAULT_FONT_SIZE) * viewScale),
-								lineHeight: 1.4,
-								color: box.color || defaultColor,
-								fontWeight: box.fontWeight,
-								fontStyle: box.fontStyle,
-								listStyleType: box.listStyle === "bullet" ? "disc" : "none",
-								listStylePosition: "inside",
-								display: box.listStyle === "bullet" ? "list-item" : "block",
-								WebkitUserSelect: active ? "text" : "none",
-								userSelect: active ? "text" : "none",
-								touchAction: active ? "manipulation" : "auto",
+								lineHeight: `${TEXT_LINE_GAP * viewScale}px`,
+								WebkitUserSelect: editing ? "text" : "none",
+								userSelect: editing ? "text" : "none",
+								touchAction: editing ? "manipulation" : "auto",
 							}}
-							onFocus={() => onSelectedIdChangeRef.current(box.id)}
-							onPointerDown={(event) => event.stopPropagation()}
+							onFocus={() => {
+								onSelectedIdChangeRef.current(box.id);
+								emitFormatState();
+							}}
+							onPointerDown={(event) => {
+								if (!editing) {
+									event.preventDefault();
+									return;
+								}
+								event.stopPropagation();
+							}}
+							onMouseUp={emitFormatState}
+							onKeyUp={emitFormatState}
 							onInput={(event) => {
 								if (
 									(event.nativeEvent as InputEvent).isComposing ||
 									composingIdsRef.current.has(box.id)
 								) return;
-								commitEditorText(box.id, event.currentTarget);
+								commitEditorHtml(box.id, event.currentTarget);
+								emitFormatState();
 							}}
 							onBlur={(event) => {
 								composingIdsRef.current.delete(box.id);
-								commitEditorText(box.id, event.currentTarget);
+								commitEditorHtml(box.id, event.currentTarget);
 							}}
 							onPaste={(event) => handlePaste(event, box.id)}
 							onCompositionStart={(event) => handleCompositionStart(event, box.id)}
 							onCompositionEnd={(event) => handleCompositionEnd(event, box.id)}
 						/>
 
-						{selected && (
+						{showChrome && (
 							<>
 								<button
 									type="button"

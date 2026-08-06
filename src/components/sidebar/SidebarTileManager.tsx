@@ -1,9 +1,10 @@
 import { useState, useCallback, useContext } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose, LuClipboardList } from "react-icons/lu";
+import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose, LuClipboardList, LuCompass } from "react-icons/lu";
 import { AIChat } from "../ai";
 import type { InjectedExchange } from "../ai/useAI";
 import QThread from "../questions/q_thread";
+import QuestionDiscover from "../questions/QuestionDiscover";
 import Timer from "../timer";
 import SpotifyPanel from "../spotify/SpotifyPanel";
 import { SpotifyLogo } from "../spotify/SpotifyLogo";
@@ -47,6 +48,8 @@ export type SidebarTileManagerProps = {
   getStaveAnalysis?: (() => string | null) | null;
   /** Optional: return current exam paper (first page) as image data URL so AI can see the paper. */
   getPaperSnapshot?: (() => string | null) | null;
+  /** Optional: return live document / workspace text for AI chat context. */
+  getWorkspaceText?: (() => string | null) | null;
   /** Optional: past paper marking scheme — when provided, marking scheme tab is shown. */
   markingSchemeBlob?: Blob | null;
   markingSchemePageRange?: MarkingSchemePageRange | null;
@@ -70,6 +73,7 @@ export function SidebarTileManager({
   getDrawingSnapshot,
   getStaveAnalysis,
   getPaperSnapshot,
+  getWorkspaceText,
   markingSchemeBlob,
   markingSchemePageRange,
   markingSchemeQuestionName,
@@ -164,6 +168,7 @@ export function SidebarTileManager({
                   getDrawingSnapshot={getDrawingSnapshot}
                   getStaveAnalysis={getStaveAnalysis}
                   getPaperSnapshot={getPaperSnapshot}
+                  getWorkspaceText={getWorkspaceText}
                   markingSchemeBlob={markingSchemeBlob}
                   markingSchemePageRange={markingSchemePageRange}
                   markingSchemeQuestionName={markingSchemeQuestionName}
@@ -199,6 +204,7 @@ function TileContent({
   getDrawingSnapshot,
   getStaveAnalysis,
   getPaperSnapshot,
+  getWorkspaceText,
   markingSchemeBlob,
   markingSchemePageRange,
   markingSchemeQuestionName,
@@ -213,6 +219,7 @@ function TileContent({
   getDrawingSnapshot?: (() => string | null) | null;
   getStaveAnalysis?: (() => string | null) | null;
   getPaperSnapshot?: (() => string | null) | null;
+  getWorkspaceText?: (() => string | null) | null;
   markingSchemeBlob?: Blob | null;
   markingSchemePageRange?: MarkingSchemePageRange | null;
   markingSchemeQuestionName?: string;
@@ -233,6 +240,7 @@ function TileContent({
           getDrawingSnapshot={getDrawingSnapshot}
           getStaveAnalysis={getStaveAnalysis}
           getPaperSnapshot={getPaperSnapshot}
+          getWorkspaceText={getWorkspaceText}
           injectedExchange={aiInjectedExchange}
           onMarkCompleteFromGrading={onMarkCompleteFromGrading}
         />
@@ -306,6 +314,7 @@ function TileContent({
 
 function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionId: string; part: number; isPaperThread: boolean; question?: any }) {
   const { user } = useContext(UserContext);
+  const [threadView, setThreadView] = useState<"discover" | "discussion">("discover");
 
   if (!canUseAceFeature(user, "threads")) {
     return (
@@ -328,28 +337,64 @@ function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionI
   }
 
   return (
-    <div className="h-full overflow-auto color-bg">
-      {questionId ? (
-        <QThread
-          questionId={questionId}
-          part={part}
-          paperThread={isPaperThread}
-          paperId={isPaperThread ? question.paperId : undefined}
-          paperQuestionId={isPaperThread ? question.paperQuestionId : undefined}
-          paperLabel={isPaperThread ? question.paperLabel : undefined}
-          questionName={isPaperThread ? question.questionName : undefined}
-          subject={isPaperThread ? question.subject : undefined}
-          level={isPaperThread ? question.level : undefined}
-          indexInPaper={isPaperThread ? question.indexInPaper : undefined}
-          storagePath={isPaperThread ? question.storagePath : undefined}
-          pageRange={isPaperThread ? question.pageRange : undefined}
-          pageRegions={isPaperThread ? question.pageRegions : undefined}
-        />
-      ) : (
-        <div className="flex h-full items-center justify-center p-4 text-sm color-txt-sub">
-          Select a question to view threads.
+    <div className="flex h-full min-h-0 flex-col overflow-hidden color-bg">
+      <div className="shrink-0 p-2 pb-1">
+        <div className="grid grid-cols-2 gap-1 rounded-2xl color-bg-grey-5 p-1" role="tablist" aria-label="Question threads">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={threadView === "discover"}
+            onClick={() => setThreadView("discover")}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-colors cursor-pointer ${
+              threadView === "discover" ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-txt-main"
+            }`}
+          >
+            <LuCompass size={14} /> Discover
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={threadView === "discussion"}
+            onClick={() => setThreadView("discussion")}
+            className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-colors cursor-pointer ${
+              threadView === "discussion" ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-txt-main"
+            }`}
+          >
+            <LuMessageSquare size={14} /> Discussion
+          </button>
         </div>
-      )}
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {threadView === "discover" ? (
+          <QuestionDiscover question={question} />
+        ) : questionId ? (
+          <QThread
+            questionId={questionId}
+            part={part}
+            paperThread={isPaperThread}
+            paperId={isPaperThread ? question.paperId : undefined}
+            paperQuestionId={isPaperThread ? question.paperQuestionId : undefined}
+            paperLabel={isPaperThread ? question.paperLabel : undefined}
+            questionName={question?._discoverName ?? question?.questionName ?? question?.properties?.name}
+            subject={question?._discoverSubjectId ?? question?.subject}
+            subjectLabel={question?._discoverSubjectLabel}
+            level={question?._discoverLevel ?? question?.level}
+            topic={question?._discoverTopic}
+            discoverQuestionId={question?._discoverId ?? questionId}
+            practiceUrl={question?._practiceUrl}
+            sourceContext={question?._discoverSource}
+            indexInPaper={isPaperThread ? question.indexInPaper : undefined}
+            storagePath={isPaperThread ? question.storagePath : undefined}
+            pageRange={isPaperThread ? question.pageRange : undefined}
+            pageRegions={isPaperThread ? question.pageRegions : undefined}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center p-4 text-sm color-txt-sub">
+            Select a question to view threads.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

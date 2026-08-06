@@ -16,6 +16,8 @@ export type CanvasObject = {
   y: number;
   width: number;
   height: number;
+  /** When true, object is shown in the side panel instead of on the board. */
+  pinnedToSide?: boolean;
 };
 
 export type SavedCanvasData = {
@@ -61,7 +63,11 @@ function validTextBoxes(value: unknown): CanvasTextBox[] {
       width: Math.max(120, Math.min(10_000, width)),
       height: Math.max(48, Math.min(10_000, height)),
       fontSize: Math.max(8, Math.min(256, fontSize)),
-      color: typeof box.color === "string" && /^#[0-9a-f]{6}$/i.test(box.color) ? box.color : "#222222",
+      colorIndex:
+        typeof (box as { colorIndex?: unknown }).colorIndex === "number" &&
+        Number.isFinite((box as { colorIndex: number }).colorIndex)
+          ? Math.max(0, Math.min(2, Math.round((box as { colorIndex: number }).colorIndex)))
+          : 0,
       fontWeight: box.fontWeight === "bold" ? "bold" : "normal",
       fontStyle: box.fontStyle === "italic" ? "italic" : "normal",
       listStyle: box.listStyle === "bullet" ? "bullet" : "none",

@@ -6,7 +6,7 @@
  *
  * Fields: year, paper, "paper type", topic, imagePath, questionName, fileName, source,
  *         markingSchemePath, markingSchemePaths (optional; backfilled by migrate script),
- *         audioPath, audioStartSec, audioStartLabel (optional; attach_audio_to_questions.py)
+ *         audioPath, audioStartSec, audioEndSec, audioStartLabel (optional; attach_audio_to_questions.py)
  */
 
 import {
@@ -47,8 +47,13 @@ export type CatalogueQuestion = {
   audioPath?: string;
   /** Seek offset into the shared listening MP3 (seconds). */
   audioStartSec?: number;
+  /** Exclusive end offset (seconds); often inferred from the next question on the same track. */
+  audioEndSec?: number;
   audioStartLabel?: string;
 };
+
+/** In-memory Storage download URL cache (avoids repeated getDownloadURL RPCs). */
+const downloadUrlCache = new Map<string, Promise<string>>();
 
 export type CatalogueTopic = {
   name: string;
@@ -308,6 +313,10 @@ function parseQuestionDoc(
     typeof data.audioStartSec === "number" && Number.isFinite(data.audioStartSec)
       ? Math.max(0, data.audioStartSec)
       : undefined;
+  const audioEndSec =
+    typeof data.audioEndSec === "number" && Number.isFinite(data.audioEndSec)
+      ? Math.max(0, data.audioEndSec)
+      : undefined;
   const audioStartLabel =
     typeof data.audioStartLabel === "string" && data.audioStartLabel.trim()
       ? data.audioStartLabel.trim()
@@ -333,6 +342,7 @@ function parseQuestionDoc(
     ...(markingSchemePaths.length > 0 ? { markingSchemePaths } : {}),
     ...(audioPath ? { audioPath } : {}),
     ...(audioStartSec != null ? { audioStartSec } : {}),
+    ...(audioEndSec != null ? { audioEndSec } : {}),
     ...(audioStartLabel ? { audioStartLabel } : {}),
   };
 }
@@ -345,7 +355,9 @@ export async function listCatalogueQuestions(
     cycle?: ExamCycleId;
     topic?: string | null;
     year?: number | null;
+    /** `1` / `2` for that paper; `null` = questions with no paper number only. Omit to skip filtering. */
     paper?: number | null;
+    paperType?: string | null;
   }
 ): Promise<CatalogueQuestion[]> {
   const cycle = opts?.cycle ?? DEFAULT_EXAM_CYCLE;
@@ -354,10 +366,25 @@ export async function listCatalogueQuestions(
 
   const topicFilter = opts?.topic?.trim() || null;
   const yearFilter = opts?.year ?? null;
-  const paperFilter = opts?.paper ?? null;
+  const hasPaperFilter = opts != null && Object.prototype.hasOwnProperty.call(opts, "paper");
+  const paperFilter = hasPaperFilter ? (opts.paper ?? null) : undefined;
+  const hasPaperTypeFilter = opts != null && Object.prototype.hasOwnProperty.call(opts, "paperType");
+  const paperTypeFilter = hasPaperTypeFilter
+    ? (opts.paperType?.trim() || null)
+    : undefined;
 
+  const fullCacheKey = `${cycle}:${subject}:${level}:*`;
   const cacheKey = `${cycle}:${subject}:${level}:${topicFilter ?? "*"}`;
   let all = getCached(questionsCache, cacheKey);
+
+  // Reuse a full subject+level catalogue when a topic slice is requested.
+  if (!all && topicFilter) {
+    const full = getCached(questionsCache, fullCacheKey);
+    if (full) {
+      all = full.filter((q) => q.topic === topicFilter);
+      setCached(questionsCache, cacheKey, all);
+    }
+  }
 
   if (!all) {
     const constraints: QueryConstraint[] = [];
@@ -381,8 +408,16 @@ export async function listCatalogueQuestions(
   }
 
   const filtered = all.filter((q) => {
+    if (topicFilter && q.topic !== topicFilter) return false;
     if (yearFilter != null && q.year !== yearFilter) return false;
-    if (paperFilter != null && q.paper !== paperFilter) return false;
+    if (paperFilter !== undefined) {
+      const actual = q.paper ?? null;
+      if (actual !== paperFilter) return false;
+    }
+    if (paperTypeFilter !== undefined) {
+      const actual = q.paperType?.trim() || null;
+      if (actual !== paperTypeFilter) return false;
+    }
     return true;
   });
 
@@ -408,7 +443,22 @@ export async function listCatalogueTopics(
     ? (levelSnap.data()!.topics as unknown[]).filter((t): t is string => typeof t === "string")
     : [];
 
-  // Always count from questions for accurate questionCount + thumbnail
+  // Prefer the level doc's topics list so opening a subject does not wait on
+  // downloading every question document (large language subjects).
+  if (topicsFromDoc.length > 0) {
+    const topics: CatalogueTopic[] = topicsFromDoc.map((name) => ({
+      name,
+      displayName: prettifyName(name),
+      questionCount: 0,
+      thumbnailPath: null,
+    }));
+    topics.sort((a, b) =>
+      a.displayName.localeCompare(b.displayName, undefined, { sensitivity: "base" })
+    );
+    return setCached(topicListCache, cacheKey, topics);
+  }
+
+  // Fallback: derive topics from the question catalogue when the level doc has none.
   const questions = await listCatalogueQuestions(subject, level, { cycle });
   const byTopic = new Map<string, CatalogueQuestion[]>();
   for (const q of questions) {
@@ -417,25 +467,17 @@ export async function listCatalogueTopics(
     byTopic.set(q.topic, list);
   }
 
-  const names =
-    topicsFromDoc.length > 0
-      ? topicsFromDoc
-      : [...byTopic.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-
-  // Ensure topics that only appear in questions are included
-  for (const name of byTopic.keys()) {
-    if (!names.includes(name)) names.push(name);
-  }
-
-  const topics: CatalogueTopic[] = names.map((name) => {
-    const qs = byTopic.get(name) ?? [];
-    return {
-      name,
-      displayName: prettifyName(name),
-      questionCount: qs.length,
-      thumbnailPath: qs[0]?.imagePath ?? null,
-    };
-  });
+  const topics: CatalogueTopic[] = [...byTopic.keys()]
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+    .map((name) => {
+      const qs = byTopic.get(name) ?? [];
+      return {
+        name,
+        displayName: prettifyName(name),
+        questionCount: qs.length,
+        thumbnailPath: qs[0]?.imagePath ?? null,
+      };
+    });
 
   topics.sort((a, b) =>
     a.displayName.localeCompare(b.displayName, undefined, { sensitivity: "base" })
@@ -517,21 +559,32 @@ export async function listCatalogueSubjectAvailability(
   cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
 ): Promise<{ storageName: string; levels: string[] }[]> {
   const subjects = await listCatalogueSubjectIds(cycle);
-  const out: { storageName: string; levels: string[] }[] = [];
-  for (const subject of subjects) {
-    try {
-      const levels = await listCatalogueLevels(subject, cycle);
-      if (levels.length > 0) out.push({ storageName: subject, levels });
-    } catch {
-      // skip broken subjects
-    }
-  }
-  return out;
+  const results = await Promise.all(
+    subjects.map(async (subject) => {
+      try {
+        const levels = await listCatalogueLevels(subject, cycle);
+        if (levels.length === 0) return null;
+        return { storageName: subject, levels };
+      } catch {
+        return null;
+      }
+    })
+  );
+  return results.filter((row): row is { storageName: string; levels: string[] } => row != null);
 }
 
-/** Resolve a download URL for a storage path (cached by browser HTTP cache). */
+/** Resolve a download URL for a storage path (in-memory + browser HTTP cache). */
 export async function resolveImageDownloadUrl(imagePath: string): Promise<string> {
-  return getDownloadURL(ref(storage, imagePath));
+  const path = imagePath.trim();
+  if (!path) throw new Error("empty storage path");
+  const existing = downloadUrlCache.get(path);
+  if (existing) return existing;
+  const pending = getDownloadURL(ref(storage, path)).catch((err) => {
+    downloadUrlCache.delete(path);
+    throw err;
+  });
+  downloadUrlCache.set(path, pending);
+  return pending;
 }
 
 /** Clear in-memory catalogue caches (e.g. after admin migration). */
@@ -541,4 +594,5 @@ export function clearCatalogueCaches(): void {
   topicListCache.clear();
   questionsCache.clear();
   resolvedSubjectCache.clear();
+  downloadUrlCache.clear();
 }

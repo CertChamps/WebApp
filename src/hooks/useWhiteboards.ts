@@ -20,6 +20,7 @@ import {
   ORDER_STEP,
   UNSET_ORDER,
   whiteboardCanvasId,
+  whiteboardQuestionCanvasId,
   type AttachedQuestion,
   type ResolvedMove,
   type SidebarDragItem,
@@ -267,7 +268,14 @@ export function useWhiteboards(subject: string | null) {
       if (!uid) throw new Error("Not signed in");
       await deleteDoc(doc(db, "user-data", uid, PAGES_COLLECTION, page.id));
       // Best-effort cleanup of canvas/document payloads and their uploaded assets.
-      const storageIds = [whiteboardCanvasId(page.id), documentCanvasId(page.id), documentContentStorageId(page.id)];
+      const storageIds = [
+        whiteboardCanvasId(page.id),
+        documentCanvasId(page.id),
+        documentContentStorageId(page.id),
+        ...page.attachedQuestions.map((attachment) =>
+          whiteboardQuestionCanvasId(page.id, attachment.id)
+        ),
+      ];
       storageIds.forEach((storageId) => {
         void deleteDoc(doc(db, "user-data", uid, "question-data", storageId)).catch(() => {});
         void deleteObject(ref(storage, `question-data/${uid}/${storageId}.json`)).catch(() => {});

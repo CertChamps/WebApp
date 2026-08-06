@@ -28,7 +28,7 @@ export function FloatingWidgetStack({ slots, side = "right", className = "" }: F
   const sideClass = side === "left" ? "left-20 items-start" : "right-3 items-end";
 
   return (
-    <div className={`pointer-events-none fixed bottom-3 z-10 flex flex-col gap-2 ${sideClass} ${className}`.trim()}>
+    <div className={`pointer-events-none fixed bottom-3 z-40 flex flex-col gap-2 ${sideClass} ${className}`.trim()}>
       <AnimatePresence initial={false}>
         {visible.map((slot) => (
           <motion.div

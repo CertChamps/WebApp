@@ -11,6 +11,7 @@ Uploads are expected at:
 Firestore fields written (merge):
   audioPath       — Storage path
   audioStartSec   — number (0 when scrape had null)
+  audioEndSec     — number | omitted; next question's start on the same MP3
   audioStartLabel — string | omitted when absent
 
 Matching:
@@ -48,6 +49,7 @@ STORAGE_AUDIO_PREFIX = "exam-audio"
 
 FIELD_AUDIO_PATH = "audioPath"
 FIELD_AUDIO_START_SEC = "audioStartSec"
+FIELD_AUDIO_END_SEC = "audioEndSec"
 FIELD_AUDIO_START_LABEL = "audioStartLabel"
 
 CYCLES = {
@@ -326,6 +328,31 @@ def run_attach(
     batch_count = 0
     preview_left = 30
 
+    # Infer clip ends: for each shared MP3, end = next question's start.
+    end_by_key: dict[tuple[str, str, str, str, str], float] = {}
+    by_mp3: dict[str, list[AudioLink]] = defaultdict(list)
+    for link in links:
+        by_mp3[link.storage_path].append(link)
+    for group in by_mp3.values():
+        ordered = sorted(
+            group,
+            key=lambda L: (
+                0.0 if L.start_sec is None else float(L.start_sec),
+                L.question_slug,
+            ),
+        )
+        for i, link in enumerate(ordered):
+            if i + 1 >= len(ordered):
+                continue
+            cur_start = 0.0 if link.start_sec is None else float(link.start_sec)
+            next_start = (
+                0.0 if ordered[i + 1].start_sec is None else float(ordered[i + 1].start_sec)
+            )
+            if next_start > cur_start:
+                end_by_key[
+                    (link.cycle, link.subject, link.level, link.topic, link.question_slug)
+                ] = next_start
+
     for link in links:
         by_sl_topic, by_sl = indexes[link.cycle]
         refs = find_matching_docs(link, by_sl_topic, by_sl)
@@ -354,6 +381,11 @@ def run_attach(
             FIELD_AUDIO_PATH: link.storage_path,
             FIELD_AUDIO_START_SEC: start_sec,
         }
+        end_sec = end_by_key.get(
+            (link.cycle, link.subject, link.level, link.topic, link.question_slug)
+        )
+        if end_sec is not None and end_sec > start_sec:
+            payload[FIELD_AUDIO_END_SEC] = end_sec
         if link.start_label:
             payload[FIELD_AUDIO_START_LABEL] = link.start_label
 
@@ -361,10 +393,11 @@ def run_attach(
             stats.docs_would_update += 1
             if dry_run:
                 if preview_left > 0:
+                    end_txt = f" endSec={end_sec}" if end_sec is not None else ""
                     print(f"DRY  {ref.path}")
                     print(
                         f"       slug={link.question_slug!r} "
-                        f"audioPath={link.storage_path!r} startSec={start_sec}"
+                        f"audioPath={link.storage_path!r} startSec={start_sec}{end_txt}"
                     )
                     preview_left -= 1
                 continue

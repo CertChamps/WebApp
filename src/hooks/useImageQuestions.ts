@@ -45,6 +45,7 @@ export type ImageQuestion = {
   markingSchemePaths?: string[];
   audioPath?: string;
   audioStartSec?: number;
+  audioEndSec?: number;
   audioStartLabel?: string;
 };
 
@@ -60,6 +61,7 @@ export type GroupedImageQuestion = {
   markingSchemePaths?: string[];
   audioPath?: string;
   audioStartSec?: number;
+  audioEndSec?: number;
   audioStartLabel?: string;
 };
 
@@ -262,7 +264,7 @@ export function groupImageQuestions(flat: ImageQuestion[]): GroupedImageQuestion
 
   keyOrder.sort(naturalCompare);
 
-  return keyOrder.map((key) => {
+  const grouped = keyOrder.map((key) => {
     const images = map.get(key)!;
     // Within a multipart group, collapse duplicate part filenames from other topics
     const stemSeen = new Set<string>();
@@ -292,11 +294,53 @@ export function groupImageQuestions(flat: ImageQuestion[]): GroupedImageQuestion
       ...audio,
     };
   });
+
+  return inferAudioEndSecs(grouped);
+}
+
+/**
+ * Fill missing audioEndSec from the next question that shares the same exam MP3
+ * (sorted by audioStartSec). Stops each clip when the next question begins.
+ */
+export function inferAudioEndSecs<
+  T extends { audioPath?: string; audioStartSec?: number; audioEndSec?: number }
+>(items: T[]): T[] {
+  const byPath = new Map<string, number[]>();
+  items.forEach((item, index) => {
+    const path = item.audioPath?.trim();
+    if (!path) return;
+    const list = byPath.get(path) ?? [];
+    list.push(index);
+    byPath.set(path, list);
+  });
+
+  if (byPath.size === 0) return items;
+
+  const out = items.slice();
+  for (const indices of byPath.values()) {
+    indices.sort((a, b) => {
+      const sa = out[a].audioStartSec ?? 0;
+      const sb = out[b].audioStartSec ?? 0;
+      return sa - sb || a - b;
+    });
+    for (let i = 0; i < indices.length - 1; i++) {
+      const idx = indices[i];
+      const cur = out[idx];
+      const start = cur.audioStartSec ?? 0;
+      if (typeof cur.audioEndSec === "number" && cur.audioEndSec > start) continue;
+      const nextStart = out[indices[i + 1]].audioStartSec;
+      if (typeof nextStart === "number" && nextStart > start) {
+        out[idx] = { ...cur, audioEndSec: nextStart };
+      }
+    }
+  }
+  return out;
 }
 
 function pickGroupedAudio(images: ImageQuestion[]): {
   audioPath?: string;
   audioStartSec?: number;
+  audioEndSec?: number;
   audioStartLabel?: string;
 } {
   for (const img of images) {
@@ -305,6 +349,7 @@ function pickGroupedAudio(images: ImageQuestion[]): {
     return {
       audioPath: path,
       ...(img.audioStartSec != null ? { audioStartSec: img.audioStartSec } : {}),
+      ...(img.audioEndSec != null ? { audioEndSec: img.audioEndSec } : {}),
       ...(img.audioStartLabel ? { audioStartLabel: img.audioStartLabel } : {}),
     };
   }
@@ -346,6 +391,7 @@ async function catalogueToImageQuestions(rows: CatalogueQuestion[]): Promise<Ima
           : {}),
         ...(q.audioPath ? { audioPath: q.audioPath } : {}),
         ...(q.audioStartSec != null ? { audioStartSec: q.audioStartSec } : {}),
+        ...(q.audioEndSec != null ? { audioEndSec: q.audioEndSec } : {}),
         ...(q.audioStartLabel ? { audioStartLabel: q.audioStartLabel } : {}),
       } satisfies ImageQuestion;
     })
@@ -379,25 +425,15 @@ export async function listTopicsForSubjectLevel(
   if (cached) return cached;
 
   const topics = await listCatalogueTopics(subject, level, cycle);
-  const mapped: ImageTopic[] = await Promise.all(
-    topics.map(async (t) => {
-      let thumbnailUrl: string | null = null;
-      if (t.thumbnailPath) {
-        try {
-          thumbnailUrl = await resolveImageDownloadUrl(t.thumbnailPath);
-        } catch {
-          thumbnailUrl = null;
-        }
-      }
-      return {
-        name: t.name,
-        displayName: t.displayName,
-        path: t.name,
-        questionCount: t.questionCount,
-        thumbnailUrl,
-      };
-    })
-  );
+  // Skip thumbnail URL resolution here — it was N Storage RPCs per subject open.
+  // Topic cards render fine without thumbs; question images resolve on topic open.
+  const mapped: ImageTopic[] = topics.map((t) => ({
+    name: t.name,
+    displayName: t.displayName,
+    path: t.name,
+    questionCount: t.questionCount,
+    thumbnailUrl: null,
+  }));
 
   topicCache.set(key, { data: mapped, ts: Date.now() });
   return mapped;
@@ -583,16 +619,19 @@ export async function listQuestionsForPaper(
   level: string,
   year: number,
   paper: number | null,
-  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE,
+  paperType?: string | null
 ): Promise<ImageQuestion[]> {
-  const key = `${cycle}:${subject}/${level}/paper:${year}:${paper ?? "x"}`;
+  const typeKey = paperType === undefined ? "*" : paperType?.trim() || "";
+  const key = `${cycle}:${subject}/${level}/paper:${year}:${paper ?? "x"}:${typeKey}`;
   const cached = getCached(questionCache, key);
   if (cached) return cached;
 
   const rows = await listCatalogueQuestions(subject, level, {
     cycle,
     year,
-    paper: paper ?? null,
+    paper,
+    ...(paperType !== undefined ? { paperType } : {}),
   });
   // Same exam scan often lives under several topic folders — show once on paper view.
   const questions = await catalogueToImageQuestions(dedupeCatalogueByFileStem(rows));
@@ -841,13 +880,14 @@ export function useImageQuestionsForTopic(
   return { questions, grouped, loading, error };
 }
 
-/** Load questions for a year (+ optional paper number) across all topics. */
+/** Load questions for a year (+ optional paper number / type) across all topics. */
 export function useImageQuestionsForPaper(
   subject: string | null,
   level: string | null,
   year: number | null,
   paper: number | null,
-  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE,
+  paperType?: string | null
 ): UseImageQuestionsResult {
   const [questions, setQuestions] = useState<ImageQuestion[]>([]);
   const [grouped, setGrouped] = useState<GroupedImageQuestion[]>([]);
@@ -868,7 +908,7 @@ export function useImageQuestionsForPaper(
     setLoading(true);
     setError(null);
 
-    listQuestionsForPaper(subject, level, year, paper, cycle)
+    listQuestionsForPaper(subject, level, year, paper, cycle, paperType)
       .then((qs) => {
         if (id !== abortRef.current) return;
         setQuestions(qs);
@@ -883,7 +923,7 @@ export function useImageQuestionsForPaper(
       .finally(() => {
         if (id === abortRef.current) setLoading(false);
       });
-  }, [subject, level, year, paper, cycle]);
+  }, [subject, level, year, paper, cycle, paperType]);
 
   return { questions, grouped, loading, error };
 }

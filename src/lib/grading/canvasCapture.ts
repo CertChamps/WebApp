@@ -31,9 +31,18 @@ export function drawCaptureTextBoxes(
   boxes: CaptureTextBox[],
 ): void {
   for (const box of boxes) {
-    if (!box.text.trim() || box.width <= 0 || box.height <= 0) continue;
+    const plainText = box.text
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|li)>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/\n{3,}/g, "\n\n");
+    if (!plainText.trim() || box.width <= 0 || box.height <= 0) continue;
     const fontSize = Math.max(8, Math.min(256, box.fontSize || 18));
-    const lineHeight = fontSize * 1.4;
+    const lineHeight = 32;
     const maxWidth = Math.max(1, box.width - 16);
     const maxY = box.y + box.height - 6;
     ctx.save();
@@ -44,7 +53,7 @@ export function drawCaptureTextBoxes(
     ctx.textBaseline = "top";
     ctx.font = `${box.fontStyle === "italic" ? "italic " : ""}${box.fontWeight === "bold" ? "bold " : ""}${fontSize}px sans-serif`;
     let drawY = box.y + 6;
-    const sourceLines = box.text.slice(0, 100_000).split("\n");
+    const sourceLines = plainText.slice(0, 100_000).split("\n");
     for (const rawLine of sourceLines) {
       if (drawY + lineHeight > maxY) break;
       const prefix = box.listStyle === "bullet" ? "• " : "";

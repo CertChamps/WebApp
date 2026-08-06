@@ -1,6 +1,7 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import {
   LuArrowLeft,
+  LuBookOpen,
   LuCheck,
   LuChevronRight,
   LuFileText,
@@ -18,10 +19,13 @@ import {
 } from "../../hooks/useExamPapers";
 import {
   useImageTopics,
+  useImagePapers,
+  useImageQuestionsForPaper,
   listQuestionsForTopic,
   groupImageQuestions,
   listMarkingSchemeFilesForTopic,
   type ImageTopic,
+  type ImagePaperGroup,
   type GroupedImageQuestion,
   type MarkingSchemeFile,
 } from "../../hooks/useImageQuestions";
@@ -35,37 +39,86 @@ type Props = {
   subject: string;
   onAdd: (attachments: AttachedQuestion[]) => Promise<void> | void;
   onClose: () => void;
+  /** Attach mode places question media on the open canvas instead of adding page questions. */
+  mode?: "add" | "attach";
 };
 
 type Tab = "bank" | "upload";
+type ImageBrowse = "topic" | "paper";
 
-export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
+function topicStub(name: string): ImageTopic {
+  const trimmed = name.trim() || "topic";
+  return {
+    name: trimmed,
+    displayName: trimmed,
+    path: trimmed,
+    questionCount: 0,
+    thumbnailUrl: null,
+  };
+}
+
+function imageQuestionKey(
+  storageFolder: string,
+  level: string,
+  scope: string,
+  groupedKey: string
+): string {
+  return `image_${storageFolder}_${level}_${scope}_${groupedKey}`;
+}
+
+export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add" }: Props) {
   const { user } = useContext(UserContext);
   const [tab, setTab] = useState<Tab>("bank");
   const [search, setSearch] = useState("");
 
-  // ---- Bank: past papers ----
-  const { papers, loading: papersLoading, getPaperQuestions } = useExamPapers(subject);
-  const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
-  const [paperQuestions, setPaperQuestions] = useState<PaperQuestion[]>([]);
-  const [questionsLoading, setQuestionsLoading] = useState(false);
-
-  const isImageMode = !papersLoading && papers.length === 0;
-  const storageFolder = useMemo(() => getStorageFolderName(subject), [subject]);
-
-  // ---- Bank: image questions (subjects without papers) ----
+  // ---- Bank: image catalogue (topics + papers) — preferred when available ----
+  const [imageBrowse, setImageBrowse] = useState<ImageBrowse>("topic");
   const [imageLevel, setImageLevel] = useState<string | null>(null);
+  const storageFolder = useMemo(() => getStorageFolderName(subject), [subject]);
   const {
     topics: imageTopics,
     levels: imageLevels,
     loading: topicsLoading,
-  } = useImageTopics(isImageMode ? storageFolder : null, imageLevel);
-  // Mirror useImageTopics' fallback so the level we record matches the topics shown.
+  } = useImageTopics(storageFolder, imageLevel);
   const activeImageLevel =
     (imageLevel && imageLevels.includes(imageLevel) ? imageLevel : imageLevels[0]) ?? null;
+  const hasImageBank = imageLevels.length > 0;
+
+  // ---- Bank: legacy PDF past papers (only when no image catalogue) ----
+  const { papers, loading: papersLoading, getPaperQuestions } = useExamPapers(
+    topicsLoading || hasImageBank ? null : subject
+  );
+  const [selectedPaper, setSelectedPaper] = useState<ExamPaper | null>(null);
+  const [paperQuestions, setPaperQuestions] = useState<PaperQuestion[]>([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+
+  const isImageMode = hasImageBank || (!topicsLoading && !papersLoading && papers.length === 0);
+  const bankLoading = topicsLoading || (!hasImageBank && papersLoading);
+
   const [selectedTopic, setSelectedTopic] = useState<ImageTopic | null>(null);
+  const [selectedImagePaper, setSelectedImagePaper] = useState<ImagePaperGroup | null>(null);
   const [groupedQuestions, setGroupedQuestions] = useState<GroupedImageQuestion[]>([]);
   const [topicMsFiles, setTopicMsFiles] = useState<MarkingSchemeFile[]>([]);
+
+  const {
+    papers: imagePapers,
+    loading: imagePapersLoading,
+  } = useImagePapers(
+    isImageMode && imageBrowse === "paper" ? storageFolder : null,
+    isImageMode && imageBrowse === "paper" ? activeImageLevel : null
+  );
+
+  const {
+    grouped: imagePaperGrouped,
+    loading: imagePaperQuestionsLoading,
+  } = useImageQuestionsForPaper(
+    selectedImagePaper ? storageFolder : null,
+    selectedImagePaper ? activeImageLevel : null,
+    selectedImagePaper?.year ?? null,
+    selectedImagePaper ? selectedImagePaper.paper : null,
+    undefined,
+    selectedImagePaper ? selectedImagePaper.paperType : undefined
+  );
 
   // ---- Selection ----
   const [selection, setSelection] = useState<Map<string, AttachedQuestion>>(new Map());
@@ -134,6 +187,11 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
 
   const toggleSelection = (key: string, build: () => AttachedQuestion) => {
     setSelection((prev) => {
+      if (mode === "attach") {
+        return prev.has(key)
+          ? new Map<string, AttachedQuestion>()
+          : new Map<string, AttachedQuestion>([[key, build()]]);
+      }
       const next = new Map(prev);
       if (next.has(key)) next.delete(key);
       else next.set(key, build());
@@ -158,10 +216,89 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
     if (!searchLower) return imageTopics;
     return imageTopics.filter((t) => t.displayName.toLowerCase().includes(searchLower));
   }, [imageTopics, searchLower]);
+  const filteredImagePapers = useMemo(() => {
+    if (!searchLower) return imagePapers;
+    return imagePapers.filter((p) =>
+      `${p.label} ${p.topics.join(" ")}`.toLowerCase().includes(searchLower)
+    );
+  }, [imagePapers, searchLower]);
   const filteredGrouped = useMemo(() => {
     if (!searchLower) return groupedQuestions;
     return groupedQuestions.filter((g) => g.displayName.toLowerCase().includes(searchLower));
   }, [groupedQuestions, searchLower]);
+  const filteredImagePaperGrouped = useMemo(() => {
+    if (!searchLower) return imagePaperGrouped;
+    return imagePaperGrouped.filter((g) =>
+      `${g.displayName} ${g.topic ?? ""}`.toLowerCase().includes(searchLower)
+    );
+  }, [imagePaperGrouped, searchLower]);
+
+  const visibleSelectable = useMemo(() => {
+    if (selectedPaper) {
+      return filteredPaperQuestions.map((question) => {
+        const key = `paper_${selectedPaper.subject}_${selectedPaper.level}_${selectedPaper.id}_${question.id}`;
+        return { key, build: () => buildPaperAttachment(selectedPaper, question) };
+      });
+    }
+    if (selectedTopic && activeImageLevel) {
+      return filteredGrouped.map((grouped) => {
+        const key = imageQuestionKey(
+          storageFolder,
+          activeImageLevel,
+          selectedTopic.name,
+          grouped.key
+        );
+        return {
+          key,
+          build: () =>
+            buildImageAttachment(
+              storageFolder,
+              activeImageLevel,
+              selectedTopic,
+              grouped,
+              topicMsFiles
+            ),
+        };
+      });
+    }
+    if (selectedImagePaper && activeImageLevel) {
+      return filteredImagePaperGrouped.map((grouped) => {
+        const scope = selectedImagePaper.key;
+        const key = imageQuestionKey(storageFolder, activeImageLevel, scope, grouped.key);
+        const topic = topicStub(grouped.topic || selectedImagePaper.topics[0] || "topic");
+        return {
+          key,
+          build: () => buildImageAttachment(storageFolder, activeImageLevel, topic, grouped, []),
+        };
+      });
+    }
+    return [];
+  }, [
+    selectedPaper,
+    filteredPaperQuestions,
+    selectedTopic,
+    activeImageLevel,
+    filteredGrouped,
+    storageFolder,
+    topicMsFiles,
+    selectedImagePaper,
+    filteredImagePaperGrouped,
+  ]);
+
+  const allVisibleSelected =
+    visibleSelectable.length > 0 && visibleSelectable.every((item) => selection.has(item.key));
+
+  const toggleSelectAllVisible = () => {
+    setSelection((prev) => {
+      const next = new Map(prev);
+      if (allVisibleSelected) {
+        for (const item of visibleSelectable) next.delete(item.key);
+      } else {
+        for (const item of visibleSelectable) next.set(item.key, item.build());
+      }
+      return next;
+    });
+  };
 
   const handleAddSelection = async () => {
     if (selection.size === 0 || uploading) return;
@@ -172,7 +309,11 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
       onClose();
     } catch (error) {
       console.error("[AddQuestionModal] add failed:", error);
-      setUploadError("Those questions couldn’t be added. Please retry.");
+      setUploadError(
+        mode === "attach"
+          ? "That question couldn’t be attached. Please retry."
+          : "Those questions couldn’t be added. Please retry."
+      );
     } finally {
       setUploading(false);
     }
@@ -210,6 +351,13 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
     }
   };
 
+  const goBackToBankRoot = () => {
+    setSelectedPaper(null);
+    setSelectedTopic(null);
+    setSelectedImagePaper(null);
+    setSearch("");
+  };
+
   const listRow =
     "flex w-full items-center gap-2 px-3 py-2.5 rounded-xl text-left text-sm color-txt-main color-bg-grey-5 hover:color-bg-grey-10 transition-colors cursor-pointer";
 
@@ -224,9 +372,30 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
     </span>
   );
 
+  const viewingQuestionList = Boolean(selectedPaper || selectedTopic || selectedImagePaper);
+  const questionListLoading = selectedPaper || selectedTopic
+    ? questionsLoading
+    : selectedImagePaper
+      ? imagePaperQuestionsLoading
+      : false;
+
+  const searchPlaceholder = viewingQuestionList
+    ? "Search questions…"
+    : isImageMode
+      ? imageBrowse === "paper"
+        ? "Search papers…"
+        : "Search topics…"
+      : "Search papers…";
+
+  const backLabel = selectedPaper
+    ? selectedPaper.label
+    : selectedTopic
+      ? selectedTopic.displayName
+      : selectedImagePaper?.label;
+
   return (
     <WhiteboardModal
-      title="Add question"
+      title={mode === "attach" ? "Attach CertChamps question" : "Add question"}
       onClose={onClose}
       maxWidthClass="max-w-xl"
       footer={
@@ -240,10 +409,10 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
               disabled={selection.size === 0 || uploading}
             >
               {uploading
-                ? "Adding…"
+                ? mode === "attach" ? "Attaching…" : "Adding…"
                 : selection.size === 0
-                  ? "Select questions to add"
-                  : `Add ${selection.size} question${selection.size === 1 ? "" : "s"}`}
+                  ? `Select questions to ${mode === "attach" ? "attach" : "add"}`
+                  : `${mode === "attach" ? "Attach" : "Add"} ${selection.size} question${selection.size === 1 ? "" : "s"}`}
             </button>
           </div>
         ) : (
@@ -262,7 +431,7 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
       }
     >
       <div className="flex flex-col gap-3">
-        <div className="flex gap-1 rounded-xl color-bg-grey-5 p-1">
+        {mode === "add" && <div className="flex gap-1 rounded-xl color-bg-grey-5 p-1">
           {(
             [
               { id: "bank", label: "Question bank", icon: LuFileText },
@@ -281,7 +450,7 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
               {label}
             </button>
           ))}
-        </div>
+        </div>}
 
         {tab === "bank" && (
           <>
@@ -291,31 +460,36 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={
-                  selectedPaper || selectedTopic ? "Search questions…" : isImageMode ? "Search topics…" : "Search papers…"
-                }
+                placeholder={searchPlaceholder}
                 className="w-full pl-9 pr-3 py-2 rounded-xl text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none"
                 autoComplete="off"
               />
             </div>
 
-            {(selectedPaper || selectedTopic) && (
-              <button
-                type="button"
-                className="flex items-center gap-1.5 self-start rounded-lg px-2 py-1 text-sm font-semibold color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
-                onClick={() => {
-                  setSelectedPaper(null);
-                  setSelectedTopic(null);
-                  setSearch("");
-                }}
-              >
-                <LuArrowLeft size={14} />
-                {selectedPaper ? selectedPaper.label : selectedTopic?.displayName}
-              </button>
+            {viewingQuestionList && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-semibold color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
+                  onClick={goBackToBankRoot}
+                >
+                  <LuArrowLeft size={14} className="shrink-0" />
+                  <span className="truncate">{backLabel}</span>
+                </button>
+                {mode === "add" && !questionListLoading && visibleSelectable.length > 0 && (
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold color-txt-accent hover:color-bg-grey-5 transition-colors cursor-pointer"
+                    onClick={toggleSelectAllVisible}
+                  >
+                    {allVisibleSelected ? "Deselect all" : "Select all"}
+                  </button>
+                )}
+              </div>
             )}
 
             <div className="flex flex-col gap-1.5 min-h-[200px]">
-              {papersLoading && (
+              {bankLoading && (
                 <>
                   {[1, 2, 3, 4].map((i) => (
                     <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
@@ -323,8 +497,8 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
                 </>
               )}
 
-              {/* Paper mode: paper list */}
-              {!papersLoading && !isImageMode && !selectedPaper &&
+              {/* PDF paper mode: paper list */}
+              {!bankLoading && !isImageMode && !selectedPaper &&
                 filteredPapers.map((paper) => (
                   <button
                     key={`${paper.subject}_${paper.level}_${paper.id}`}
@@ -341,8 +515,8 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
                   </button>
                 ))}
 
-              {/* Paper mode: question list */}
-              {!papersLoading && selectedPaper && (
+              {/* PDF paper mode: question list */}
+              {!bankLoading && selectedPaper && (
                 questionsLoading ? (
                   [1, 2, 3, 4].map((i) => (
                     <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
@@ -372,8 +546,8 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
                 )
               )}
 
-              {/* Image mode: level chips + topic list */}
-              {!papersLoading && isImageMode && !selectedTopic && (
+              {/* Image catalogue: level chips + browse toggle + lists */}
+              {!bankLoading && isImageMode && !selectedTopic && !selectedImagePaper && (
                 <>
                   {imageLevels.length > 1 && (
                     <div className="flex gap-1.5 pb-1">
@@ -389,6 +563,7 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
                           onClick={() => {
                             setImageLevel(level);
                             setSelectedTopic(null);
+                            setSelectedImagePaper(null);
                           }}
                         >
                           {formatLevelCode(level)}
@@ -396,44 +571,119 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
                       ))}
                     </div>
                   )}
-                  {topicsLoading &&
-                    [1, 2, 3, 4].map((i) => (
-                      <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
-                    ))}
-                  {!topicsLoading &&
-                    filteredTopics.map((topic) => (
+
+                  <div className="flex gap-1 rounded-xl color-bg-grey-5 p-1 mb-0.5">
+                    {(
+                      [
+                        { id: "topic" as const, label: "By topic" },
+                        { id: "paper" as const, label: "By paper" },
+                      ]
+                    ).map(({ id, label }) => (
                       <button
-                        key={topic.path}
+                        key={id}
                         type="button"
-                        className={listRow}
+                        className={`flex flex-1 items-center justify-center rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors cursor-pointer ${
+                          imageBrowse === id ? "color-bg color-txt-main" : "color-txt-sub hover:color-txt-main"
+                        }`}
                         onClick={() => {
-                          setSelectedTopic(topic);
+                          setImageBrowse(id);
+                          setSelectedTopic(null);
+                          setSelectedImagePaper(null);
                           setSearch("");
                         }}
                       >
-                        <LuImage size={16} className="shrink-0 color-txt-sub" />
-                        <span className="min-w-0 flex-1 truncate font-semibold">{topic.displayName}</span>
-                        <span className="shrink-0 text-xs color-txt-sub">{topic.questionCount} questions</span>
-                        <LuChevronRight size={16} className="shrink-0 color-txt-sub" />
+                        {label}
                       </button>
                     ))}
-                  {!topicsLoading && filteredTopics.length === 0 && (
-                    <p className="py-6 text-center text-sm color-txt-sub">
-                      No questions available for this subject yet.
-                    </p>
+                  </div>
+
+                  {imageBrowse === "topic" && (
+                    <>
+                      {topicsLoading &&
+                        [1, 2, 3, 4].map((i) => (
+                          <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
+                        ))}
+                      {!topicsLoading &&
+                        filteredTopics.map((topic) => (
+                          <button
+                            key={topic.path}
+                            type="button"
+                            className={listRow}
+                            onClick={() => {
+                              setSelectedTopic(topic);
+                              setSearch("");
+                            }}
+                          >
+                            <LuImage size={16} className="shrink-0 color-txt-sub" />
+                            <span className="min-w-0 flex-1 truncate font-semibold">{topic.displayName}</span>
+                            {topic.questionCount > 0 && (
+                              <span className="shrink-0 text-xs color-txt-sub">{topic.questionCount} questions</span>
+                            )}
+                            <LuChevronRight size={16} className="shrink-0 color-txt-sub" />
+                          </button>
+                        ))}
+                      {!topicsLoading && filteredTopics.length === 0 && (
+                        <p className="py-6 text-center text-sm color-txt-sub">
+                          No questions available for this subject yet.
+                        </p>
+                      )}
+                    </>
+                  )}
+
+                  {imageBrowse === "paper" && (
+                    <>
+                      {imagePapersLoading &&
+                        [1, 2, 3, 4].map((i) => (
+                          <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
+                        ))}
+                      {!imagePapersLoading &&
+                        filteredImagePapers.map((paper) => (
+                          <button
+                            key={paper.key}
+                            type="button"
+                            className={listRow}
+                            onClick={() => {
+                              setSelectedImagePaper(paper);
+                              setSearch("");
+                            }}
+                          >
+                            <LuBookOpen size={16} className="shrink-0 color-txt-sub" />
+                            <span className="min-w-0 flex-1 truncate font-semibold">{paper.label}</span>
+                            {(paper.paper === 1 || paper.paper === 2) && (
+                              <span className="shrink-0 rounded-md color-bg-grey-10 px-1.5 py-0.5 text-[11px] font-semibold color-txt-sub">
+                                P{paper.paper}
+                              </span>
+                            )}
+                            <span className="shrink-0 text-xs color-txt-sub">
+                              {paper.questionCount} questions
+                            </span>
+                            <LuChevronRight size={16} className="shrink-0 color-txt-sub" />
+                          </button>
+                        ))}
+                      {!imagePapersLoading && filteredImagePapers.length === 0 && (
+                        <p className="py-6 text-center text-sm color-txt-sub">
+                          No papers match your search.
+                        </p>
+                      )}
+                    </>
                   )}
                 </>
               )}
 
-              {/* Image mode: grouped question list */}
-              {!papersLoading && isImageMode && selectedTopic && (
+              {/* Image topic questions */}
+              {!bankLoading && isImageMode && selectedTopic && (
                 questionsLoading ? (
                   [1, 2, 3, 4].map((i) => (
                     <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
                   ))
                 ) : (
                   filteredGrouped.map((grouped) => {
-                    const key = `image_${storageFolder}_${activeImageLevel}_${selectedTopic.name}_${grouped.key}`;
+                    const key = imageQuestionKey(
+                      storageFolder,
+                      activeImageLevel ?? "higher",
+                      selectedTopic.name,
+                      grouped.key
+                    );
                     const checked = selection.has(key);
                     return (
                       <button
@@ -461,7 +711,56 @@ export default function AddQuestionModal({ subject, onAdd, onClose }: Props) {
                 )
               )}
 
-              {!papersLoading && !isImageMode && !selectedPaper && filteredPapers.length === 0 && (
+              {/* Image paper questions */}
+              {!bankLoading && isImageMode && selectedImagePaper && (
+                imagePaperQuestionsLoading ? (
+                  [1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
+                  ))
+                ) : filteredImagePaperGrouped.length === 0 ? (
+                  <p className="py-6 text-center text-sm color-txt-sub">No questions in this paper.</p>
+                ) : (
+                  filteredImagePaperGrouped.map((grouped) => {
+                    const key = imageQuestionKey(
+                      storageFolder,
+                      activeImageLevel ?? "higher",
+                      selectedImagePaper.key,
+                      grouped.key
+                    );
+                    const checked = selection.has(key);
+                    const topic = topicStub(grouped.topic || selectedImagePaper.topics[0] || "topic");
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        className={listRow}
+                        onClick={() =>
+                          toggleSelection(key, () =>
+                            buildImageAttachment(
+                              storageFolder,
+                              activeImageLevel ?? "higher",
+                              topic,
+                              grouped,
+                              []
+                            )
+                          )
+                        }
+                        aria-pressed={checked}
+                      >
+                        {renderCheck(checked)}
+                        <span className="min-w-0 flex-1 truncate">{grouped.displayName}</span>
+                        {grouped.topic && (
+                          <span className="shrink-0 max-w-[40%] truncate text-xs color-txt-sub">
+                            {grouped.topic}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                )
+              )}
+
+              {!bankLoading && !isImageMode && !selectedPaper && filteredPapers.length === 0 && (
                 <p className="py-6 text-center text-sm color-txt-sub">No papers match your search.</p>
               )}
             </div>
