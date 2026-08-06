@@ -2,7 +2,7 @@ import type { CanvasCapturePayload } from "./GradingTypes";
 
 type CapturePoint = { x: number; y: number; pressure?: number };
 type CaptureStroke = { tool: "pen" | "eraser"; points: CapturePoint[] };
-export type CaptureTextBox = { text: string; x: number; y: number; width: number; height: number; fontSize: number; fontWeight?: "normal" | "bold"; fontStyle?: "normal" | "italic"; listStyle?: "none" | "bullet" };
+export type CaptureTextBox = { id?: string; text: string; x: number; y: number; width: number; height: number; fontSize: number; fontWeight?: "normal" | "bold"; fontStyle?: "normal" | "italic"; listStyle?: "none" | "bullet" };
 
 const MIN_LONGEST_AXIS = 2400;
 const JPEG_QUALITY = 0.92;

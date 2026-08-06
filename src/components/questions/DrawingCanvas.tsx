@@ -6,6 +6,13 @@ import { buildCapturePayload, drawCaptureTextBoxes, type CaptureTextBox } from "
 import { renderPdfPages } from "../../utils/pdfPagesToImages";
 import type { CanvasObject } from "../../hooks/useCanvasStorage";
 import { getThemedPortalTarget } from "../../utils/themedPortal";
+import { isIPad } from "../../utils/isIPad";
+import {
+	CANVAS_FINGER_POINTER_EVENT,
+	CANVAS_FINGER_SELECT_EVENT,
+	PENCIL_DOUBLE_TAP_EVENT,
+	type CanvasFingerPointerDetail,
+} from "../../utils/pencilEvents";
 import RenderMath from "../math/mathdisplay";
 
 export type { CanvasObject } from "../../hooks/useCanvasStorage";
@@ -859,6 +866,8 @@ type DrawingCanvasProps = {
 	onViewportChange?: (viewport: { pan: { x: number; y: number }; scale: number }) => void;
 	/** Optional persisted text boxes included in snapshots and grading captures. */
 	captureTextBoxes?: CaptureTextBox[];
+	/** Selects a text box when an iPad finger taps it through the canvas layer. */
+	onSelectTextBox?: (id: string | null) => void;
 };
 
 function getStrokeBounds(stroke: Stroke): { minX: number; maxX: number; minY: number; maxY: number } | null {
@@ -996,6 +1005,7 @@ export default function DrawingCanvas({
 	allowViewportNavigation = true,
 	onViewportChange,
 	captureTextBoxes = [],
+	onSelectTextBox,
 }: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1154,6 +1164,7 @@ export default function DrawingCanvas({
 	useEffect(() => {
 		onToolChange?.(tool);
 	}, [tool, onToolChange]);
+
 	const [gridMode, setGridMode] = useState<GridMode>(defaultGridMode);
 	const [strokeColor, setStrokeColor] = useState("");
 	const [secondaryStrokeColor, setSecondaryStrokeColor] = useState("");
@@ -1175,6 +1186,19 @@ export default function DrawingCanvas({
 	const [selectedStrokeIndexes, setSelectedStrokeIndexes] = useState<number[]>([]);
 	const [transformSession, setTransformSession] = useState<TransformSession | null>(null);
 	const penPalette = [strokeColor, secondaryStrokeColor, accentColor].filter(Boolean);
+
+	useEffect(() => {
+		const toggleEraser = () => {
+			setIsPenPopoverOpen(false);
+			setIsEraserPopoverOpen(false);
+			setIsGridPopoverOpen(false);
+			setIsAttachPopoverOpen(false);
+			onRequestPenMode?.();
+			setTool((current) => (current === "eraser" ? "pen" : "eraser"));
+		};
+		window.addEventListener(PENCIL_DOUBLE_TAP_EVENT, toggleEraser);
+		return () => window.removeEventListener(PENCIL_DOUBLE_TAP_EVENT, toggleEraser);
+	}, [onRequestPenMode]);
 
 	// Attached image / PDF-page objects placed on the canvas.
 	const [objects, setObjects] = useState<CanvasObject[]>(() => initialObjects ?? []);
@@ -1367,6 +1391,20 @@ export default function DrawingCanvas({
 	const lastPointRef = useRef<Point | null>(null);
 	const pinchStartRef = useRef<{ distance: number; center: { x: number; y: number }; scale: number; pan: { x: number; y: number } } | null>(null);
 	const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+	const fingerTapRef = useRef<{
+		pointerId: number;
+		startX: number;
+		startY: number;
+		world: Point;
+		moved: boolean;
+	} | null>(null);
+	const externalFingerPanRef = useRef<{
+		pointerId: number;
+		startX: number;
+		startY: number;
+		panX: number;
+		panY: number;
+	} | null>(null);
 	const pointerIdsRef = useRef<Map<number, { x: number; y: number }>>(new Map());
 	const holdStraightenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const currentStrokeRef = useRef<Stroke | null>(null);
@@ -2256,6 +2294,98 @@ export default function DrawingCanvas({
 		);
 	}, []);
 
+	const selectAtWorldPoint = useCallback((world: Point) => {
+		const textHit = [...captureTextBoxes].reverse().find((box) =>
+			Boolean(
+				box.id &&
+				world.x >= box.x &&
+				world.x <= box.x + box.width &&
+				world.y >= box.y &&
+				world.y <= box.y + box.height
+			)
+		);
+		if (textHit?.id) {
+			setSelectedObjectId(null);
+			setSelectedStrokeIndexes([]);
+			onSelectTextBox?.(textHit.id);
+			setTool("lasso");
+			return true;
+		}
+
+		const hitRadius = 12 / Math.max(scaleRef.current, 0.01);
+		const hitRadiusSquared = hitRadius * hitRadius;
+		for (let index = strokesRef.current.length - 1; index >= 0; index -= 1) {
+			const stroke = strokesRef.current[index];
+			if (stroke.tool !== "pen" || stroke.points.length === 0) continue;
+			const hit = stroke.points.length === 1
+				? Math.hypot(world.x - stroke.points[0].x, world.y - stroke.points[0].y) <= hitRadius
+				: stroke.points.slice(1).some((point, pointIndex) =>
+						distanceSquaredPointToSegment(world, stroke.points[pointIndex], point) <= hitRadiusSquared
+					);
+			if (!hit) continue;
+			setSelectedObjectId(null);
+			onSelectTextBox?.(null);
+			setSelectedStrokeIndexes([index]);
+			setTool("lasso");
+			return true;
+		}
+
+		const objectHit = [...objectsRef.current].reverse().find((object) =>
+			!object.pinnedToSide &&
+			world.x >= object.x &&
+			world.x <= object.x + object.width &&
+			world.y >= object.y &&
+			world.y <= object.y + object.height
+		);
+		if (objectHit) {
+			setSelectedStrokeIndexes([]);
+			onSelectTextBox?.(null);
+			setSelectedObjectId(objectHit.id);
+			setTool("lasso");
+			return true;
+		}
+
+		setSelectedObjectId(null);
+		setSelectedStrokeIndexes([]);
+		onSelectTextBox?.(null);
+		return false;
+	}, [captureTextBoxes, onSelectTextBox]);
+
+	useEffect(() => {
+		const enterSelectMode = () => setTool("lasso");
+		const handleExternalFingerPointer = (event: Event) => {
+			const detail = (event as CustomEvent<CanvasFingerPointerDetail>).detail;
+			if (!detail) return;
+			if (detail.phase === "start") {
+				const currentPan = panRef.current;
+				externalFingerPanRef.current = {
+					pointerId: detail.pointerId,
+					startX: detail.clientX,
+					startY: detail.clientY,
+					panX: currentPan.x,
+					panY: currentPan.y,
+				};
+				return;
+			}
+			const session = externalFingerPanRef.current;
+			if (!session || session.pointerId !== detail.pointerId) return;
+			if (detail.phase === "move") {
+				setPan({
+					x: session.panX + detail.clientX - session.startX,
+					y: session.panY + detail.clientY - session.startY,
+				});
+			} else {
+				externalFingerPanRef.current = null;
+			}
+		};
+		window.addEventListener(CANVAS_FINGER_SELECT_EVENT, enterSelectMode);
+		window.addEventListener(CANVAS_FINGER_POINTER_EVENT, handleExternalFingerPointer);
+		return () => {
+			window.removeEventListener(CANVAS_FINGER_SELECT_EVENT, enterSelectMode);
+			window.removeEventListener(CANVAS_FINGER_POINTER_EVENT, handleExternalFingerPointer);
+		};
+	}, []);
+
 	const commitTransformSession = useCallback(() => {
 		const session = transformSessionRef.current;
 		if (!session) return;
@@ -2283,8 +2413,9 @@ export default function DrawingCanvas({
 			if (!canvas) return;
 
 			const rect = canvas.getBoundingClientRect();
+			const isIPadFinger = e.pointerType === "touch" && isIPad();
 
-			if (readOnly && tool !== "lasso") return;
+			if (readOnly && tool !== "lasso" && !isIPadFinger) return;
 			canvas.setPointerCapture(e.pointerId);
 			const world = screenToWorld(e.clientX, e.clientY);
 			world.pressure = getPressure(e.nativeEvent);
@@ -2294,6 +2425,7 @@ export default function DrawingCanvas({
 
 			if (pointers.size === 2) {
 				// Start pinch
+				fingerTapRef.current = null;
 				if (holdStraightenTimerRef.current) {
 					clearTimeout(holdStraightenTimerRef.current);
 				}
@@ -2311,10 +2443,21 @@ export default function DrawingCanvas({
 			}
 
 			if (pointers.size === 1) {
-				// Pen, mouse, or 1 finger = draw. 2 fingers = pan/zoom.
+				// On iPad, fingers navigate/select and Apple Pencil is the drawing input.
 				const isPen = e.pointerType === "pen";
 				const isMouse = e.pointerType === "mouse";
 				const isTouch = e.pointerType === "touch";
+				if (isIPadFinger) {
+					fingerTapRef.current = {
+						pointerId: e.pointerId,
+						startX: e.clientX,
+						startY: e.clientY,
+						world,
+						moved: false,
+					};
+					panStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+					return;
+				}
 				if (tool === "lasso" && (isPen || isMouse || isTouch)) {
 					const hitMode = resolveSelectionHit(world);
 					if (hitMode && selectedStrokeIndexesRef.current.length > 0) {
@@ -2364,12 +2507,18 @@ export default function DrawingCanvas({
 		(e: React.PointerEvent) => {
 			if (!allowViewportNavigation && e.pointerType === "touch") return;
 			e.preventDefault();
-			if (readOnly && tool !== "lasso") return;
+			const isIPadFinger = e.pointerType === "touch" && isIPad();
+			if (readOnly && tool !== "lasso" && !isIPadFinger) return;
 			const pointers = pointerIdsRef.current;
 			const rect = canvasRef.current?.getBoundingClientRect();
 			if (!rect) return;
 
 			pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+			const fingerTap = fingerTapRef.current;
+			if (fingerTap?.pointerId === e.pointerId) {
+				const distance = Math.hypot(e.clientX - fingerTap.startX, e.clientY - fingerTap.startY);
+				if (distance > 8) fingerTap.moved = true;
+			}
 
 			if (pointers.size === 2 && pinchStartRef.current) {
 				const [a, b] = Array.from(pointers.entries());
@@ -2452,6 +2601,10 @@ export default function DrawingCanvas({
 		(e: React.PointerEvent) => {
 			if (!allowViewportNavigation && e.pointerType === "touch") return;
 			e.preventDefault();
+			const completedFingerTap =
+				e.pointerType === "touch" && fingerTapRef.current?.pointerId === e.pointerId
+					? fingerTapRef.current
+					: null;
 			const canvas = canvasRef.current;
 			if (canvas) canvas.releasePointerCapture(e.pointerId);
 			pointerIdsRef.current.delete(e.pointerId);
@@ -2510,9 +2663,13 @@ export default function DrawingCanvas({
 					lastPenSampleRef.current = null;
 				}
 				isDrawingRef.current = false;
+				if (completedFingerTap && !completedFingerTap.moved) {
+					selectAtWorldPoint(completedFingerTap.world);
+				}
+				fingerTapRef.current = null;
 			}
 		},
-		[currentStroke, cancelHoldStraighten, commitStrokeChange, tool, lassoPath, commitTransformSession, eraserMode, allowViewportNavigation]
+		[currentStroke, cancelHoldStraighten, commitStrokeChange, tool, lassoPath, commitTransformSession, eraserMode, allowViewportNavigation, selectAtWorldPoint]
 	);
 
 	const handleWheel = useCallback(
@@ -2886,6 +3043,34 @@ export default function DrawingCanvas({
 			const target = objectsRef.current.find((o) => o.id === id);
 			if (!target) return;
 			setSelectedObjectId(id);
+			setSelectedStrokeIndexes([]);
+			onSelectTextBox?.(null);
+
+			if (e.pointerType === "touch" && isIPad()) {
+				const pointerId = e.pointerId;
+				const startX = e.clientX;
+				const startY = e.clientY;
+				const startPan = panRef.current;
+				const onMove = (event: PointerEvent) => {
+					if (event.pointerId !== pointerId) return;
+					event.preventDefault();
+					setPan({
+						x: startPan.x + event.clientX - startX,
+						y: startPan.y + event.clientY - startY,
+					});
+				};
+				const onUp = (event: PointerEvent) => {
+					if (event.pointerId !== pointerId) return;
+					window.removeEventListener("pointermove", onMove);
+					window.removeEventListener("pointerup", onUp);
+					window.removeEventListener("pointercancel", onUp);
+				};
+				window.addEventListener("pointermove", onMove, { passive: false });
+				window.addEventListener("pointerup", onUp);
+				window.addEventListener("pointercancel", onUp);
+				return;
+			}
+
 			objectDragRef.current = {
 				id,
 				mode,
@@ -2925,7 +3110,7 @@ export default function DrawingCanvas({
 			window.addEventListener("pointerup", onUp);
 			window.addEventListener("pointercancel", onUp);
 		},
-		[]
+		[onSelectTextBox]
 	);
 
 	const undo = useCallback(() => {

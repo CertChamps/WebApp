@@ -1501,6 +1501,7 @@ function WhiteboardPageViewInner() {
                 onAttachQuestions={() => setQuestionModalMode("attach")}
                 initialObjects={canvasObjects}
                 captureTextBoxes={canvasTextBoxes}
+                onSelectTextBox={setSelectedCanvasTextBoxId}
                 onObjectsChange={handleObjectsChange}
                 onUploadImage={handleUploadImage}
                 onToolbarCenterChange={setToolbarFollowX}

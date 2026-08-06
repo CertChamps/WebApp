@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { LuPanelRightOpen, LuPanelLeftOpen } from "react-icons/lu";
 import { SidebarTileManager } from "./SidebarTileManager";
 import type { SidebarTileManagerProps } from "./SidebarTileManager";
+import { PENCIL_SQUEEZE_EVENT } from "../../utils/pencilEvents";
 
 const SIDEBAR_TRANSITION = { type: "tween" as const, duration: 0.3, ease: [0.25, 0.1, 0.25, 1] as const };
 const SWIPE_THRESHOLD_PX = 80;
@@ -61,6 +62,15 @@ export const CollapsibleSidebar: FC<CollapsibleSidebarProps> = function Collapsi
     if (isControlled) onOpenChange?.(false);
     else setInternalOpen(false);
   }, [isControlled, onOpenChange]);
+
+  useEffect(() => {
+    const toggleFromPencil = () => {
+      if (isControlled) onOpenChange?.(!isOpen);
+      else setInternalOpen((current) => !current);
+    };
+    window.addEventListener(PENCIL_SQUEEZE_EVENT, toggleFromPencil);
+    return () => window.removeEventListener(PENCIL_SQUEEZE_EVENT, toggleFromPencil);
+  }, [isControlled, isOpen, onOpenChange]);
 
   const handleDragEnd = useCallback(
     (_: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {

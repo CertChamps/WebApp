@@ -11,6 +11,11 @@ import type {
 	PointerEvent as ReactPointerEvent,
 } from "react";
 import { GripHorizontal, Trash2 } from "lucide-react";
+import { isIPad } from "../../utils/isIPad";
+import {
+	dispatchCanvasFingerPointer,
+	requestCanvasFingerSelectMode,
+} from "../../utils/pencilEvents";
 import {
 	clampThemeColorIndex,
 	isThemeTextColorClass,
@@ -72,6 +77,11 @@ type BoxInteraction = {
 	startClientY: number;
 	startBox: CanvasTextBox;
 	startBoxes: CanvasTextBox[];
+	captureTarget: HTMLElement;
+};
+
+type FingerNavigation = {
+	pointerId: number;
 	captureTarget: HTMLElement;
 };
 
@@ -258,6 +268,7 @@ export default function CanvasTextBoxLayer({
 	const onSelectedIdChangeRef = useRef(onSelectedIdChange);
 	const onFormatStateChangeRef = useRef(onFormatStateChange);
 	const interactionRef = useRef<BoxInteraction | null>(null);
+	const fingerNavigationRef = useRef<FingerNavigation | null>(null);
 	const interactionPreviewRef = useRef<CanvasTextBox[] | null>(null);
 	const pendingFocusIdRef = useRef<string | null>(null);
 	const [interactionPreview, setInteractionPreview] = useState<CanvasTextBox[] | null>(null);
@@ -347,11 +358,85 @@ export default function CanvasTextBoxLayer({
 			interactionRef.current = null;
 			interactionPreviewRef.current = null;
 			if (interaction) releasePointerCapture(interaction);
+			const fingerNavigation = fingerNavigationRef.current;
+			if (fingerNavigation) {
+				try {
+					if (fingerNavigation.captureTarget.hasPointerCapture(fingerNavigation.pointerId)) {
+						fingerNavigation.captureTarget.releasePointerCapture(fingerNavigation.pointerId);
+					}
+				} catch {
+					// Pointer capture may already have ended.
+				}
+			}
 		};
 	}, []);
 
+	const beginFingerNavigation = (
+		event: ReactPointerEvent<HTMLElement>,
+		boxId: string | null,
+	) => {
+		if (event.pointerType !== "touch" || !isIPad()) return false;
+		event.preventDefault();
+		event.stopPropagation();
+		if (boxId) onSelectedIdChangeRef.current(boxId);
+		requestCanvasFingerSelectMode();
+		fingerNavigationRef.current = {
+			pointerId: event.pointerId,
+			captureTarget: event.currentTarget,
+		};
+		event.currentTarget.setPointerCapture(event.pointerId);
+		dispatchCanvasFingerPointer({
+			phase: "start",
+			pointerId: event.pointerId,
+			clientX: event.clientX,
+			clientY: event.clientY,
+		});
+		return true;
+	};
+
+	const handleFingerNavigationMove = (event: ReactPointerEvent<HTMLElement>) => {
+		const navigation = fingerNavigationRef.current;
+		if (!navigation || navigation.pointerId !== event.pointerId) return false;
+		event.preventDefault();
+		event.stopPropagation();
+		dispatchCanvasFingerPointer({
+			phase: "move",
+			pointerId: event.pointerId,
+			clientX: event.clientX,
+			clientY: event.clientY,
+		});
+		return true;
+	};
+
+	const finishFingerNavigation = (
+		event: ReactPointerEvent<HTMLElement>,
+		cancelled: boolean,
+	) => {
+		const navigation = fingerNavigationRef.current;
+		if (!navigation || navigation.pointerId !== event.pointerId) return false;
+		event.preventDefault();
+		event.stopPropagation();
+		fingerNavigationRef.current = null;
+		try {
+			if (navigation.captureTarget.hasPointerCapture(navigation.pointerId)) {
+				navigation.captureTarget.releasePointerCapture(navigation.pointerId);
+			}
+		} catch {
+			// Pointer capture may already have ended.
+		}
+		dispatchCanvasFingerPointer({
+			phase: cancelled ? "cancel" : "end",
+			pointerId: event.pointerId,
+			clientX: event.clientX,
+			clientY: event.clientY,
+		});
+		return true;
+	};
+
 	const handleBlankPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-		if (!editing || event.target !== event.currentTarget) return;
+		if (event.target !== event.currentTarget) return;
+		if (interactive && beginFingerNavigation(event, null)) return;
+		if (!editing) return;
 		if (event.pointerType === "mouse" && event.button !== 0) return;
 
 		const rect = event.currentTarget.getBoundingClientRect();
@@ -386,6 +471,7 @@ export default function CanvasTextBoxLayer({
 	) => {
 		if (!selectable && !editing) return;
 		if (event.pointerType === "mouse" && event.button !== 0) return;
+		if (beginFingerNavigation(event, box.id)) return;
 
 		event.preventDefault();
 		event.stopPropagation();
@@ -503,6 +589,9 @@ export default function CanvasTextBoxLayer({
 			className={`absolute inset-0 ${editing ? "pointer-events-auto" : "pointer-events-none"}`}
 			style={{ touchAction: editing ? "none" : "auto" }}
 			onPointerDown={handleBlankPointerDown}
+			onPointerMove={(event) => { handleFingerNavigationMove(event); }}
+			onPointerUp={(event) => { finishFingerNavigation(event, false); }}
+			onPointerCancel={(event) => { finishFingerNavigation(event, true); }}
 			aria-hidden={!interactive && boxes.length === 0 ? true : undefined}
 		>
 			{visibleBoxes.map((box) => {
@@ -533,15 +622,22 @@ export default function CanvasTextBoxLayer({
 						}}
 						onPointerDown={(event) => {
 							if (!interactive) return;
+							if (beginFingerNavigation(event, box.id)) return;
 							event.stopPropagation();
 							onSelectedIdChangeRef.current(box.id);
 							if (selectable && !editing) {
 								beginInteraction(event, box, "move");
 							}
 						}}
-						onPointerMove={handleInteractionMove}
-						onPointerUp={(event) => finishInteraction(event, false)}
-						onPointerCancel={(event) => finishInteraction(event, true)}
+						onPointerMove={(event) => {
+							if (!handleFingerNavigationMove(event)) handleInteractionMove(event);
+						}}
+						onPointerUp={(event) => {
+							if (!finishFingerNavigation(event, false)) finishInteraction(event, false);
+						}}
+						onPointerCancel={(event) => {
+							if (!finishFingerNavigation(event, true)) finishInteraction(event, true);
+						}}
 						onLostPointerCapture={handleLostPointerCapture}
 					>
 						<div
@@ -573,6 +669,7 @@ export default function CanvasTextBoxLayer({
 								emitFormatState();
 							}}
 							onPointerDown={(event) => {
+								if (beginFingerNavigation(event, box.id)) return;
 								if (!editing) {
 									event.preventDefault();
 									return;
@@ -606,9 +703,15 @@ export default function CanvasTextBoxLayer({
 									title="Move text box"
 									aria-label="Move text box"
 									onPointerDown={(event) => beginInteraction(event, box, "move")}
-									onPointerMove={handleInteractionMove}
-									onPointerUp={(event) => finishInteraction(event, false)}
-									onPointerCancel={(event) => finishInteraction(event, true)}
+									onPointerMove={(event) => {
+										if (!handleFingerNavigationMove(event)) handleInteractionMove(event);
+									}}
+									onPointerUp={(event) => {
+										if (!finishFingerNavigation(event, false)) finishInteraction(event, false);
+									}}
+									onPointerCancel={(event) => {
+										if (!finishFingerNavigation(event, true)) finishInteraction(event, true);
+									}}
 									onLostPointerCapture={handleLostPointerCapture}
 								>
 									<GripHorizontal size={14} strokeWidth={2} aria-hidden />
@@ -635,9 +738,15 @@ export default function CanvasTextBoxLayer({
 									title="Resize text box"
 									aria-label="Resize text box"
 									onPointerDown={(event) => beginInteraction(event, box, "resize")}
-									onPointerMove={handleInteractionMove}
-									onPointerUp={(event) => finishInteraction(event, false)}
-									onPointerCancel={(event) => finishInteraction(event, true)}
+									onPointerMove={(event) => {
+										if (!handleFingerNavigationMove(event)) handleInteractionMove(event);
+									}}
+									onPointerUp={(event) => {
+										if (!finishFingerNavigation(event, false)) finishInteraction(event, false);
+									}}
+									onPointerCancel={(event) => {
+										if (!finishFingerNavigation(event, true)) finishInteraction(event, true);
+									}}
 									onLostPointerCapture={handleLostPointerCapture}
 								/>
 							</>
