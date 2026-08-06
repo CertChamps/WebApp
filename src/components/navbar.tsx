@@ -6,7 +6,7 @@ import '../styles/navbar.css'
 import { isIPad } from '../utils/isIPad'
 
 // ======================= ICON IMPORTS ======================== // 
-import { LuPencil, LuPenTool, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText } from "react-icons/lu";
+import { LuPencil, LuPenTool, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText, LuSearch } from "react-icons/lu";
 import type { IconType } from 'react-icons';
 
 const showNavTooltips = !isIPad();
@@ -87,10 +87,10 @@ export default function Navbar () {
                 aria-label={label}
             >
                 <Icon
-                    strokeWidth={strokewidth}
+                    strokeWidth={isSelected ? 2.35 : strokewidth}
                     size={iconSize}
                     className={isSelected ? 'nav-icon-selected' : 'nav-icon'}
-                    fill={isSelected ? 'currentColor' : 'none'}
+                    fill="none"
                 />
                 {showNavTooltips && (
                     <span className="nav-tooltip" role="tooltip">
@@ -122,7 +122,7 @@ export default function Navbar () {
             {renderNavItem('nav-whiteboards', 'Whiteboards', LuPenTool, 'whiteboards')}
         
             {/* ============================= COMMUNITY ICON ================================ */}
-            {renderNavItem('nav-community', 'Community', LuUsers, 'community')}
+            {renderNavItem('nav-community', 'Community', LuSearch, 'community')}
 
             {renderNavItem('nav-progress', 'Progress', LuChartSpline, 'progress')}
 

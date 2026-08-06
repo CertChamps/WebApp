@@ -1479,7 +1479,7 @@ export default function Discover() {
                                 type="button"
                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-semibold cursor-pointer"
                             >
-                                <LuCompass size={15} />
+                                <LuSearch size={15} />
                                 Discover
                             </button>
                             <button

@@ -15,7 +15,7 @@ import { addDoc, collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, q
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 
 // CSS
-import { LuCompass, LuImage, LuUsers } from "react-icons/lu";
+import { LuImage, LuSearch, LuUsers } from "react-icons/lu";
 import "../../styles/social.css"
 import ProGate from "../../components/ProGate"
 import { canUseAceFeature } from "../../lib/contentAccess";
@@ -341,7 +341,7 @@ export default function Social() {
                                 onClick={() => navigate("/discover")}
                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-txt-sub hover:color-txt-main text-sm font-semibold cursor-pointer"
                             >
-                                <LuCompass size={15} />
+                                <LuSearch size={15} />
                                 Resources
                             </button>
                             <button

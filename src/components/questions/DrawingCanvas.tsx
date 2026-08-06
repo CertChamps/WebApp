@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2, FileText, Ban, Paperclip, LoaderCircle, Type, Bold, Italic, List, Pin, Upload, BookOpen } from "lucide-react";
 import type { CanvasAnnotation, CanvasCapturePayload } from "../../lib/grading/GradingTypes";
@@ -853,6 +853,8 @@ type DrawingCanvasProps = {
 	toolbarExtras?: ReactNode;
 	/** Toolbar position/style. Top mode docks the tools inside the top of the canvas area. */
 	toolbarPlacement?: CanvasToolbarPlacement;
+	/** Optional element whose full bounds define the top toolbar, instead of the canvas itself. */
+	toolbarAnchorRef?: RefObject<HTMLElement | null>;
 	/** Hide the floating toolbar even when it would otherwise show. */
 	suppressToolbar?: boolean;
 	/** Keep the drawing toolbar anchored to the viewport while a document page scrolls. */
@@ -1001,6 +1003,7 @@ export default function DrawingCanvas({
 	textFormat,
 	toolbarExtras,
 	toolbarPlacement = "floating-bottom",
+	toolbarAnchorRef,
 	suppressToolbar = false,
 	toolbarFixed = false,
 	toolbarCenterX = null,
@@ -1046,7 +1049,7 @@ export default function DrawingCanvas({
 		const update = () => {
 			window.cancelAnimationFrame(frame);
 			frame = window.requestAnimationFrame(() => {
-				const rect = containerRef.current?.getBoundingClientRect();
+				const rect = (toolbarAnchorRef?.current ?? containerRef.current)?.getBoundingClientRect();
 				if (!rect) return;
 				if (topToolbar) {
 					setTopToolbarBounds({ left: rect.left, top: rect.top, width: rect.width });
@@ -1067,7 +1070,7 @@ export default function DrawingCanvas({
 			document.removeEventListener("scroll", update, true);
 			resizeObserver?.disconnect();
 		};
-	}, [portalToolbar, toolbarCenterX, topToolbar]);
+	}, [portalToolbar, toolbarAnchorRef, toolbarCenterX, topToolbar]);
 	const resolvedToolbarLeft = toolbarCenterX ?? fixedToolbarLeft;
 	const animateToolbarLeft = Boolean(toolbarCenterX != null && toolbarCenterAnimated);
 	useLayoutEffect(() => {
@@ -1184,9 +1187,7 @@ export default function DrawingCanvas({
 	const [secondaryStrokeColor, setSecondaryStrokeColor] = useState("");
 	const [gridColor, setGridColor] = useState("");
 	const [accentColor, setAccentColor] = useState("");
-	const [, setAccentBgColor] = useState("");
 	const [mutedBgColor, setMutedBgColor] = useState("");
-	const [, setPopupBgColor] = useState("");
 	const [activePenColorIndex, setActivePenColorIndex] = useState(0);
 	const [activePenThicknessIndex, setActivePenThicknessIndex] = useState(DEFAULT_PEN_THICKNESS_INDEX);
 	const [isPenPopoverOpen, setIsPenPopoverOpen] = useState(false);
@@ -1797,6 +1798,37 @@ export default function DrawingCanvas({
 	useEffect(() => {
 		drawObjects();
 	}, [drawObjects]);
+
+	// Canvas bitmap dimensions do not automatically follow CSS dimensions. When a
+	// surrounding sidebar animates, the browser otherwise stretches the previous
+	// bitmap until the next pointer interaction happens to trigger a redraw.
+	useLayoutEffect(() => {
+		const container = toolbarAnchorRef?.current ?? containerRef.current;
+		if (!container) return;
+
+		let frame = 0;
+		const redrawAtCurrentSize = () => {
+			window.cancelAnimationFrame(frame);
+			frame = window.requestAnimationFrame(() => {
+				drawObjects();
+				draw();
+			});
+		};
+
+		redrawAtCurrentSize();
+		window.addEventListener("resize", redrawAtCurrentSize);
+		const resizeObserver =
+			typeof ResizeObserver === "undefined"
+				? null
+				: new ResizeObserver(redrawAtCurrentSize);
+		resizeObserver?.observe(container);
+
+		return () => {
+			window.cancelAnimationFrame(frame);
+			window.removeEventListener("resize", redrawAtCurrentSize);
+			resizeObserver?.disconnect();
+		};
+	}, [draw, drawObjects]);
 
 	useEffect(() => {
 		setSelectedStrokeIndexes((previous) => {

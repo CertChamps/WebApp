@@ -645,7 +645,7 @@ function PracticeBrowserInner() {
         </main>
 
         <div
-          className={`practice-browser__sidebar ${options.leftHandMode ? "left-0" : "right-0"}`}
+          className={`ai-session-sidebar practice-browser__sidebar ${options.leftHandMode ? "left-0" : "right-0"}`}
           style={{
             clipPath: sidebarOpen
               ? "inset(0 0 0 0)"

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   LuCheck,
   LuRotateCcw,
@@ -10,7 +10,7 @@ import DrawingCanvas, {
   type RegisterGetGradingCapture,
   type ToolMode,
 } from "../questions/DrawingCanvas";
-import type { AttachedQuestion, WhiteboardPage } from "../../data/whiteboards";
+import type { WhiteboardPage } from "../../data/whiteboards";
 import { useDocumentStorage } from "../../hooks/useDocumentStorage";
 import { renderPdfPages } from "../../utils/pdfPagesToImages";
 import {
@@ -50,12 +50,11 @@ type Props = {
   registerGetDocumentText?: (fn: (() => string) | null) => void;
   registerCheckAnswer?: (fn: (() => Promise<void>) | null) => void;
   onTouch: () => Promise<void> | void;
-  registerQuestionInserter: (pageId: string, insert: ((attachments: AttachedQuestion[]) => void) | null) => void;
-  onOpenQuestion: (attachmentId: string) => void;
   viewportClassName?: string;
   toolbarCenterX?: number | null;
   toolbarCenterAnimated?: boolean;
   onToolbarCenterChange?: (centerX: number | null) => void;
+  toolbarExtras?: ReactNode;
 };
 
 const resultSchema = z.object({
@@ -259,21 +258,6 @@ function parseAiResult(text: string) {
   return resultSchema.parse(JSON.parse(unfenced.slice(start, end + 1)));
 }
 
-function createQuestionBlock(attachment: AttachedQuestion): HTMLDivElement {
-  const block = document.createElement("div");
-  block.dataset.questionId = attachment.id;
-  block.contentEditable = "false";
-  block.className = "my-3 flex items-center gap-2 rounded-xl color-bg-grey-5 px-3 py-3 color-txt-main cursor-pointer";
-  const badge = document.createElement("span");
-  badge.className = "rounded-md color-bg-accent color-txt-accent px-2 py-1 text-xs font-semibold";
-  badge.textContent = "Question";
-  const label = document.createElement("span");
-  label.className = "text-sm font-semibold";
-  label.textContent = attachment.label;
-  block.append(badge, label);
-  return block;
-}
-
 const DOCUMENT_FONT_SIZE_OPTIONS = [
   { value: "2", label: "Small" },
   { value: "3", label: "Normal" },
@@ -293,14 +277,14 @@ export default function DocumentEditor({
   registerGetDocumentText,
   registerCheckAnswer,
   onTouch,
-  registerQuestionInserter,
-  onOpenQuestion,
   viewportClassName,
   toolbarCenterX = null,
   toolbarCenterAnimated = false,
   onToolbarCenterChange,
+  toolbarExtras,
 }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const documentViewportRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -315,10 +299,7 @@ export default function DocumentEditor({
   const checkedRangeRef = useRef<Range | null>(null);
   const onTouchRef = useRef(onTouch);
   onTouchRef.current = onTouch;
-  const attachedQuestionsRef = useRef(page.attachedQuestions);
   const loadReadyRef = useRef(false);
-  const pendingQuestionsRef = useRef<AttachedQuestion[]>([]);
-  attachedQuestionsRef.current = page.attachedQuestions;
   const { loadDocument, saveDocument } = useDocumentStorage();
 
   const [mode, setMode] = useState<EditorMode>("text");
@@ -440,27 +421,13 @@ export default function DocumentEditor({
       if (cancelled || pageIdRef.current !== page.id) return;
       const safe = sanitizeHtml(initial);
       editor.innerHTML = safe || "<p><br></p>";
-      const pendingQuestions = pendingQuestionsRef.current;
-      pendingQuestionsRef.current = [];
-      const attachedQuestionIdsInDocument = new Set(
-        Array.from(editor.querySelectorAll("[data-question-id]"))
-          .map((node) => (node as HTMLElement).dataset.questionId)
-          .filter((id): id is string => Boolean(id))
-      );
-      const missingAttachedQuestions = attachedQuestionsRef.current.filter(
-        (attachment) => !attachedQuestionIdsInDocument.has(attachment.id)
-      );
-      const shouldSeedQuestions = stored === null && !page.documentContent && !hasRecoverableDraft &&
-        attachedQuestionsRef.current.length > 0;
-      const questionBlocks = shouldSeedQuestions
-        ? [...attachedQuestionsRef.current, ...pendingQuestions]
-        : [...missingAttachedQuestions, ...pendingQuestions];
-      for (const attachment of new Map(questionBlocks.map((item) => [item.id, item])).values()) {
-        editor.append(createQuestionBlock(attachment));
-      }
+      // Questions are displayed in the document side panel, never inside the
+      // editable page. Remove legacy marker boxes from previously saved docs.
+      const legacyQuestionBlocks = Array.from(editor.querySelectorAll("[data-question-id]"));
+      legacyQuestionBlocks.forEach((node) => node.remove());
       htmlRef.current = serializableHtml(editor);
       loadReadyRef.current = true;
-      const needsInitialSave = hasRecoverableDraft || questionBlocks.length > 0;
+      const needsInitialSave = hasRecoverableDraft || legacyQuestionBlocks.length > 0;
       setSaveStatus(needsInitialSave ? "dirty" : "saved");
       if (needsInitialSave) {
         revisionRef.current = 1;
@@ -545,21 +512,6 @@ export default function DocumentEditor({
     } else editor?.append(node);
     handleUserMutation();
   }, [handleUserMutation, restoreSelection]);
-
-  const insertQuestions = useCallback((attachments: AttachedQuestion[]) => {
-    if (!loadReadyRef.current) {
-      pendingQuestionsRef.current = [...pendingQuestionsRef.current, ...attachments];
-      return;
-    }
-    for (const attachment of attachments) {
-      insertNode(createQuestionBlock(attachment));
-    }
-  }, [insertNode]);
-
-  useEffect(() => {
-    registerQuestionInserter(page.id, insertQuestions);
-    return () => registerQuestionInserter(page.id, null);
-  }, [insertQuestions, page.id, registerQuestionInserter]);
 
   useEffect(() => {
     if (!registerGetDocumentText) return;
@@ -796,12 +748,10 @@ export default function DocumentEditor({
       setActiveFeedback(feedback.find((item) => item.id === mark.getAttribute("data-document-feedback")) ?? null);
       return;
     }
-    const question = target.closest<HTMLElement>("[data-question-id]");
-    if (question?.dataset.questionId) onOpenQuestion(question.dataset.questionId);
-  }, [feedback, onOpenQuestion]);
+  }, [feedback]);
 
   return (
-    <div className="relative h-full min-h-0 w-full overflow-hidden color-bg-grey-5">
+    <div ref={documentViewportRef} className="relative h-full min-h-0 w-full overflow-hidden color-bg-grey-5">
       <div className={`h-full overflow-auto px-3 pb-24 pt-5 scrollbar-minimal sm:px-8 sm:pt-8 ${viewportClassName ?? ""}`}>
         <div className="relative mx-auto min-h-[1056px] w-full max-w-[816px] overflow-hidden rounded-sm color-bg color-shadow border sm:min-w-[640px]">
           <div
@@ -868,7 +818,9 @@ export default function DocumentEditor({
                 onUndo: () => runCommand("undo"),
                 onRedo: () => runCommand("redo"),
               }}
-              toolbarFixed
+              toolbarPlacement="top"
+              toolbarAnchorRef={documentViewportRef}
+              toolbarExtras={toolbarExtras}
               toolbarCenterX={toolbarCenterX}
               toolbarCenterAnimated={toolbarCenterAnimated}
               onToolbarCenterChange={onToolbarCenterChange}

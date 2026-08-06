@@ -1135,11 +1135,6 @@ function WhiteboardPageViewInner() {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [questionModalMode, setQuestionModalMode] = useState<"add" | "attach" | null>(null);
 
-  const documentQuestionInserterRef = useRef<((attachments: AttachedQuestion[]) => void) | null>(null);
-  const registerDocumentQuestionInserter = useCallback((_pageId: string, insert: ((attachments: AttachedQuestion[]) => void) | null) => {
-    documentQuestionInserterRef.current = insert;
-  }, []);
-
   const handleAddAttachments = useCallback(
     async (added: AttachedQuestion[]) => {
       if (!page) return;
@@ -1148,7 +1143,6 @@ function WhiteboardPageViewInner() {
       }
       await updatePage(page.id, { attachedQuestions: [...page.attachedQuestions, ...added] });
       setAttachmentIndex(page.attachedQuestions.length);
-      if (page.pageType === "document") documentQuestionInserterRef.current?.(added);
     },
     [page, updatePage]
   );
@@ -1243,13 +1237,20 @@ function WhiteboardPageViewInner() {
 
   const canvasAreaRef = useRef<HTMLDivElement>(null);
   const [chromeCenterX, setChromeCenterX] = useState<number | null>(null);
-  const [toolbarFollowX, setToolbarFollowX] = useState<number | null>(null);
+  const [, setToolbarFollowX] = useState<number | null>(null);
   /** Only animate left for discrete inset changes (session/paper), not folders width resize. */
   const [chromeLeftAnimated, setChromeLeftAnimated] = useState(false);
   const chromeInsetKeyRef = useRef("");
   const chromeAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDocumentPage = page?.pageType === "document";
-  const chromeInsetKey = `${sessionSidebarOpen}|${Boolean(pinnedSideObject)}|${options.leftHandMode}`;
+  const documentSideImages = isDocumentPage
+    ? media.questionImages.map((image) => ({ src: image.src, alt: image.alt, key: image.key }))
+    : [];
+  const sidePanelImages = isDocumentPage ? documentSideImages : pinnedSideImages;
+  const hasSideQuestionPanel = isDocumentPage
+    ? Boolean(currentAttachment && sidePanelImages.length > 0)
+    : Boolean(pinnedSideObject && sidePanelImages.length > 0);
+  const chromeInsetKey = `${sessionSidebarOpen}|${hasSideQuestionPanel}|${options.leftHandMode}`;
 
   useLayoutEffect(() => {
     if (!isDocumentPage) {
@@ -1287,7 +1288,7 @@ function WhiteboardPageViewInner() {
           if (options.leftHandMode) leftInset += sidebarInset;
           else rightInset += sidebarInset;
         }
-        if (isXl && pinnedSideObject) {
+        if (isXl && hasSideQuestionPanel) {
           const paperInset = 384; // xl:pl-96 / xl:pr-96
           if (options.leftHandMode) rightInset += paperInset;
           else leftInset += paperInset;
@@ -1314,7 +1315,7 @@ function WhiteboardPageViewInner() {
     chromeInsetKey,
     sessionSidebarOpen,
     foldersSidebarOpen,
-    pinnedSideObject,
+    hasSideQuestionPanel,
     options.leftHandMode,
     pageId,
     canvasLoading,
@@ -1336,7 +1337,7 @@ function WhiteboardPageViewInner() {
   }
 
   const activeToolbarPage = page?.id === pageId && !canvasLoading && !canvasLoadError ? page : null;
-  const whiteboardToolbarExtras = activeToolbarPage && activeToolbarPage.pageType !== "document" ? (
+  const pageToolbarExtras = activeToolbarPage ? (
     <>
       <span className="mx-1 h-6 w-px shrink-0 color-bg-grey-10" aria-hidden />
       <div className="relative">
@@ -1344,14 +1345,27 @@ function WhiteboardPageViewInner() {
           type="button"
           aria-label="Check Answer"
           className="flex h-[30px] items-center gap-1.5 rounded-in px-2 text-sm font-semibold color-txt-main hover:color-bg-grey-10 disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => void handleCheckAnswer()}
-          disabled={!canCheckNow}
+          onClick={() => {
+            if (isDocumentPage) {
+              setDocumentChecking(true);
+              void documentCheckAnswerRef.current?.()
+                .catch(() => undefined)
+                .finally(() => setDocumentChecking(false));
+              return;
+            }
+            void handleCheckAnswer();
+          }}
+          disabled={isDocumentPage ? documentChecking : !canCheckNow}
           title="Check Answer with AI"
         >
           <LuCircleCheck size={16} strokeWidth={2} />
-          <span>{!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check Answer"}</span>
+          <span>
+            {isDocumentPage
+              ? (documentChecking ? "Checking…" : "Check Answer")
+              : (!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check Answer")}
+          </span>
         </button>
-        {checkAnswerStatus && (
+        {!isDocumentPage && checkAnswerStatus && (
           <div className="absolute left-1/2 top-full z-20 mt-2 flex max-w-[280px] -translate-x-1/2 items-center gap-2 rounded-md bg-[var(--grey-5)]/90 px-2 py-1 text-xs color-txt-sub">
             <span>{checkAnswerStatus}</span>
             {gradingStatus === "error" && (
@@ -1519,13 +1533,12 @@ function WhiteboardPageViewInner() {
               registerGetDocumentText={registerGetDocumentText}
               registerCheckAnswer={registerDocumentCheckAnswer}
               onTouch={() => updatePage(page.id, {})}
-              registerQuestionInserter={registerDocumentQuestionInserter}
-              onOpenQuestion={(attachmentId) => openQuestion(page, attachmentId)}
               toolbarCenterX={chromeCenterX}
               toolbarCenterAnimated={chromeLeftAnimated}
               onToolbarCenterChange={setToolbarFollowX}
+              toolbarExtras={pageToolbarExtras}
               viewportClassName={[
-                pinnedSideObject
+                hasSideQuestionPanel
                   ? options.leftHandMode ? "xl:pr-96" : "xl:pl-96"
                   : "",
                 sessionSidebarOpen
@@ -1555,7 +1568,7 @@ function WhiteboardPageViewInner() {
                 onUploadImage={handleUploadImage}
                 onToolbarCenterChange={setToolbarFollowX}
                 toolbarPlacement="top"
-                toolbarExtras={whiteboardToolbarExtras}
+                toolbarExtras={pageToolbarExtras}
                 wrapperClassName={`bg-transparent ${editorMode === "pen" || selectActive ? "z-20" : "z-10"}`}
                 readOnly={editorMode === "text" && !selectActive}
                 editorMode={editorMode}
@@ -1671,73 +1684,6 @@ function WhiteboardPageViewInner() {
               </div>
             </div>
           ) : null}
-          {activeToolbarPage?.pageType === "document" && (
-              <div
-                className="pointer-events-auto fixed z-30 bottom-16 flex -translate-x-1/2 items-center gap-2"
-                style={{
-                  left: (isDocumentPage ? chromeCenterX : toolbarFollowX) ?? "50%",
-                  ...(isDocumentPage && chromeLeftAnimated
-                    ? { transition: "left 300ms cubic-bezier(0.25, 0.1, 0.25, 1)" }
-                    : null),
-                }}
-              >
-                <div className="relative">
-                  <button
-                    type="button"
-                    aria-label="Check Answer"
-                    className="questions-action-button questions-action-button--solid-accent border color-shadow disabled:opacity-60 disabled:cursor-not-allowed"
-                    onClick={() => {
-                      if (isDocumentPage) {
-                        setDocumentChecking(true);
-                        void documentCheckAnswerRef.current?.()
-                          .catch(() => undefined)
-                          .finally(() => setDocumentChecking(false));
-                        return;
-                      }
-                      void handleCheckAnswer();
-                    }}
-                    disabled={isDocumentPage ? documentChecking : !canCheckNow}
-                    title="Check Answer with AI"
-                  >
-                    <LuCircleCheck size={14} strokeWidth={2} />
-                    <span>
-                      {isDocumentPage
-                        ? (documentChecking ? "Checking…" : "Check Answer")
-                        : (!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check Answer")}
-                    </span>
-                  </button>
-                  {!isDocumentPage && checkAnswerStatus && (
-                    <div className="absolute bottom-full mb-2 max-w-[280px] text-xs color-txt-sub bg-[var(--grey-5)]/90 rounded-md px-2 py-1 z-20 flex items-center gap-2">
-                      <span>{checkAnswerStatus}</span>
-                      {gradingStatus === "error" && (
-                        <button
-                          type="button"
-                          onClick={() => void handleCheckAnswer()}
-                          className="text-[11px] font-semibold color-txt-accent hover:opacity-80"
-                        >
-                          Retry
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {markingSchemeImages.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSessionSidebarOpen(true);
-                      setSidebarOpenPanel("markingscheme");
-                    }}
-                    className="questions-action-button questions-action-button--solid-accent border color-shadow"
-                    aria-label="Reveal marking scheme"
-                    title="Reveal marking scheme"
-                  >
-                    <LuClipboardList size={14} strokeWidth={2} />
-                    <span>Marking scheme</span>
-                  </button>
-                )}
-              </div>
-          )}
           {canvasLoading && (
             <div className="absolute inset-0 z-0 flex items-center justify-center">
               <LuLoaderCircle size={22} className="animate-spin color-txt-sub" />
@@ -1788,9 +1734,9 @@ function WhiteboardPageViewInner() {
             }`}
           >
             <AnimatePresence initial={false} mode="popLayout">
-              {pinnedSideObject && pinnedSideImages.length > 0 ? (
+              {hasSideQuestionPanel ? (
                 <motion.div
-                  key="pinned-side-panel"
+                  key={isDocumentPage ? `document-question-${currentAttachment?.id ?? "none"}` : "pinned-side-panel"}
                   initial={{ opacity: 0, x: options.leftHandMode ? 16 : -16 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: options.leftHandMode ? 16 : -16 }}
@@ -1802,9 +1748,8 @@ function WhiteboardPageViewInner() {
                   <div className="min-h-0 min-w-0 h-full flex flex-col pl-2 pr-1 overflow-hidden pointer-events-none">
                     <div className="flex-1 min-h-0 relative pt-4 pointer-events-none">
                       <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-8 items-center pointer-events-auto">
-                        {pinnedSideObject &&
-                          currentAttachment &&
-                          pinnedSideObject.id === questionAttachmentObjectId(currentAttachment.id) &&
+                        {currentAttachment &&
+                          (isDocumentPage || pinnedSideObject?.id === questionAttachmentObjectId(currentAttachment.id)) &&
                           !media.loading &&
                           !media.error &&
                           media.audioPath && (
@@ -1822,21 +1767,23 @@ function WhiteboardPageViewInner() {
                           className="flex flex-col items-center w-full gap-2"
                           style={{ maxWidth: snippetWidth }}
                         >
-                          <button
-                            type="button"
-                            onClick={handleUnpinFromSide}
-                            className="self-start flex items-center gap-1 rounded-md color-bg color-txt-main color-shadow border px-2 py-1 hover:color-bg-grey-10 transition-colors"
-                            style={{
-                              borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
-                            }}
-                            aria-label="Unpin from side"
-                            title="Unpin from side"
-                          >
-                            <LuPin size={12} strokeWidth={2} />
-                            <span className="text-[10px] font-semibold leading-none">Unpin</span>
-                          </button>
+                          {!isDocumentPage && (
+                            <button
+                              type="button"
+                              onClick={handleUnpinFromSide}
+                              className="self-start flex items-center gap-1 rounded-md color-bg color-txt-main color-shadow border px-2 py-1 hover:color-bg-grey-10 transition-colors"
+                              style={{
+                                borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
+                              }}
+                              aria-label="Unpin from side"
+                              title="Unpin from side"
+                            >
+                              <LuPin size={12} strokeWidth={2} />
+                              <span className="text-[10px] font-semibold leading-none">Unpin</span>
+                            </button>
+                          )}
                           <ZoomableQuestionImage
-                            images={pinnedSideImages}
+                            images={sidePanelImages}
                             className="w-full h-auto"
                             roundStack
                           />
@@ -1851,7 +1798,7 @@ function WhiteboardPageViewInner() {
 
           {/* Practice-style collapsible sidebar (AI / threads / timer / marking scheme) */}
           <div
-            className={`absolute bottom-0 top-10 z-20 overflow-hidden pointer-events-none ${
+            className={`ai-session-sidebar absolute bottom-0 top-10 z-20 overflow-hidden pointer-events-none ${
               options.leftHandMode ? "left-0" : "right-0"
             } w-[35%]`}
             style={{

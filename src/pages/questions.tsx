@@ -1788,7 +1788,7 @@ export default function Questions() {
             {/* Sidebar: left or right depending on left-hand mode */}
             <div
                 ref={sidebarTutorialRef}
-                className={`absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-none ${options.leftHandMode ? "left-0" : "right-0"} w-[35%]`}
+                className={`ai-session-sidebar absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-none ${options.leftHandMode ? "left-0" : "right-0"} w-[35%]`}
                 style={{
                     transition: "clip-path 300ms cubic-bezier(0.25,0.1,0.25,1)",
                     clipPath: sidebarOpen
