@@ -493,8 +493,8 @@
 }
 
 .practice-browser__marking-images {
-  gap: 0.75rem;
-  align-items: center;
+  gap: 0;
+  align-items: stretch;
 }
 
 .practice-browser__question-image {
@@ -521,6 +521,18 @@
 }
 
 .practice-browser__marking-images .practice-browser__question-image {
+  border-radius: 0;
+}
+
+.practice-browser__marking-images > .practice-browser__question-image:first-of-type {
+  border-radius: var(--pb-radius-in) var(--pb-radius-in) 0 0;
+}
+
+.practice-browser__marking-images > .practice-browser__question-image:last-of-type {
+  border-radius: 0 0 var(--pb-radius-in) var(--pb-radius-in);
+}
+
+.practice-browser__marking-images > .practice-browser__question-image:only-of-type {
   border-radius: var(--pb-radius-in);
 }
 

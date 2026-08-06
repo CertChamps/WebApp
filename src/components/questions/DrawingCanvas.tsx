@@ -21,6 +21,7 @@ type Point = { x: number; y: number; pressure: number };
 type Stroke = { points: Point[]; tool: "pen" | "eraser"; colorIndex?: number; thicknessIndex?: number; color?: string };
 export type ToolMode = "pen" | "eraser" | "lasso";
 export type CanvasEditorMode = "pen" | "text";
+export type CanvasToolbarPlacement = "floating-bottom" | "top";
 
 export type DrawingCanvasTextFormat = {
 	bold: boolean;
@@ -850,6 +851,8 @@ type DrawingCanvasProps = {
 	textFormat?: DrawingCanvasTextFormat;
 	/** Extra trailing controls (e.g. document insert-question / check-answer). */
 	toolbarExtras?: ReactNode;
+	/** Toolbar position/style. Top mode docks the tools inside the top of the canvas area. */
+	toolbarPlacement?: CanvasToolbarPlacement;
 	/** Hide the floating toolbar even when it would otherwise show. */
 	suppressToolbar?: boolean;
 	/** Keep the drawing toolbar anchored to the viewport while a document page scrolls. */
@@ -997,6 +1000,7 @@ export default function DrawingCanvas({
 	onToolChange,
 	textFormat,
 	toolbarExtras,
+	toolbarPlacement = "floating-bottom",
 	suppressToolbar = false,
 	toolbarFixed = false,
 	toolbarCenterX = null,
@@ -1018,19 +1022,24 @@ export default function DrawingCanvas({
 	const eraserPopoverRef = useRef<HTMLDivElement>(null);
 	const gridPopoverRef = useRef<HTMLDivElement>(null);
 	const attachPopoverRef = useRef<HTMLDivElement>(null);
-	const popupBgSampleRef = useRef<HTMLDivElement>(null);
 	const colorSampleRef = useRef<HTMLDivElement>(null);
 	const gridColorSampleRef = useRef<HTMLDivElement>(null);
 	const accentColorSampleRef = useRef<HTMLDivElement>(null);
-	const accentBgSampleRef = useRef<HTMLDivElement>(null);
 	const mutedBgSampleRef = useRef<HTMLDivElement>(null);
 	const secondaryColorSampleRef = useRef<HTMLDivElement>(null);
 
 	const [fixedToolbarLeft, setFixedToolbarLeft] = useState<number | null>(null);
-	const portalToolbar = toolbarFixed || (editorMode != null && Boolean(onRequestTextMode));
+	const [topToolbarBounds, setTopToolbarBounds] = useState<{
+		left: number;
+		top: number;
+		width: number;
+	} | null>(null);
+	const topToolbar = toolbarPlacement === "top";
+	const portalToolbar = topToolbar || toolbarFixed || (editorMode != null && Boolean(onRequestTextMode));
 	useLayoutEffect(() => {
-		if (!portalToolbar || toolbarCenterX != null) {
+		if (!portalToolbar || (toolbarCenterX != null && !topToolbar)) {
 			if (toolbarCenterX == null && !portalToolbar) setFixedToolbarLeft(null);
+			if (!topToolbar) setTopToolbarBounds(null);
 			return;
 		}
 		let frame = 0;
@@ -1038,7 +1047,12 @@ export default function DrawingCanvas({
 			window.cancelAnimationFrame(frame);
 			frame = window.requestAnimationFrame(() => {
 				const rect = containerRef.current?.getBoundingClientRect();
-				if (rect) setFixedToolbarLeft(rect.left + rect.width / 2);
+				if (!rect) return;
+				if (topToolbar) {
+					setTopToolbarBounds({ left: rect.left, top: rect.top, width: rect.width });
+				} else {
+					setFixedToolbarLeft(rect.left + rect.width / 2);
+				}
 			});
 		};
 		update();
@@ -1053,7 +1067,7 @@ export default function DrawingCanvas({
 			document.removeEventListener("scroll", update, true);
 			resizeObserver?.disconnect();
 		};
-	}, [portalToolbar, toolbarCenterX]);
+	}, [portalToolbar, toolbarCenterX, topToolbar]);
 	const resolvedToolbarLeft = toolbarCenterX ?? fixedToolbarLeft;
 	const animateToolbarLeft = Boolean(toolbarCenterX != null && toolbarCenterAnimated);
 	useLayoutEffect(() => {
@@ -1443,10 +1457,8 @@ export default function DrawingCanvas({
 		const secondaryEl = secondaryColorSampleRef.current;
 		const gridEl = gridColorSampleRef.current;
 		const accentEl = accentColorSampleRef.current;
-		const accentBgEl = accentBgSampleRef.current;
 		const mutedBgEl = mutedBgSampleRef.current;
-		const popupBgEl = popupBgSampleRef.current;
-		if (!strokeEl || !secondaryEl || !gridEl || !accentEl || !accentBgEl || !mutedBgEl || !popupBgEl) return;
+		if (!strokeEl || !secondaryEl || !gridEl || !accentEl || !mutedBgEl) return;
 		const updateColors = () => {
 			const primary = getComputedStyle(strokeEl).color;
 			const secondary = getComputedStyle(secondaryEl).color;
@@ -1454,12 +1466,8 @@ export default function DrawingCanvas({
 			setStrokeColor(primary);
 			setSecondaryStrokeColor(secondary);
 			setAccentColor(accent);
-			setAccentBgColor(getComputedStyle(accentBgEl).backgroundColor);
 			setMutedBgColor(getComputedStyle(mutedBgEl).backgroundColor);
 			setGridColor(getComputedStyle(gridEl).backgroundColor);
-			const containerBg = containerRef.current ? getComputedStyle(containerRef.current).backgroundColor : "";
-			const sampledBg = getComputedStyle(popupBgEl).backgroundColor;
-			setPopupBgColor(containerBg && containerBg !== "rgba(0, 0, 0, 0)" ? containerBg : sampledBg);
 		};
 		updateColors();
 		const observer = new MutationObserver(updateColors);
@@ -3186,6 +3194,12 @@ export default function DrawingCanvas({
 	const eraserButtonRect = eraserButtonRef.current?.getBoundingClientRect() ?? null;
 	const gridButtonRect = gridButtonRef.current?.getBoundingClientRect() ?? null;
 	const attachButtonRect = attachButtonRef.current?.getBoundingClientRect() ?? null;
+	const popoverAnchorStyle = (rect: DOMRect) => ({
+		left: rect.left + rect.width / 2,
+		top: topToolbar ? rect.bottom + 10 : rect.top - 10,
+		transform: topToolbar ? "translateX(-50%)" : "translate(-50%, -100%)",
+		zIndex: 2147483646,
+	});
 	const showAttachPopover = enableAttachments && !onAttachRequest;
 	const selectionDeleteAnchor = (() => {
 		if (tool !== "lasso" || selectedStrokeIndexes.length === 0) return null;
@@ -3240,10 +3254,8 @@ export default function DrawingCanvas({
 			{/* Hidden elements to sample theme colors (pen: color-txt-main, grid: color-bg-grey-5) */}
 			<div ref={colorSampleRef} className="color-txt-main absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			<div ref={secondaryColorSampleRef} className="color-txt-sub absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
-			<div ref={popupBgSampleRef} className="color-bg absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			<div ref={gridColorSampleRef} className="color-bg-grey-10 absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			<div ref={accentColorSampleRef} className="color-txt-accent absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
-			<div ref={accentBgSampleRef} className="color-bg-accent absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			<div ref={mutedBgSampleRef} className="color-bg-grey-5 absolute opacity-0 w-0 h-0 pointer-events-none" aria-hidden />
 			{enableAttachments && (
 				<input
@@ -3427,19 +3439,36 @@ export default function DrawingCanvas({
 						</button>
 					</div>
 				)}
-				{/* Floating bar — portaled for unified/document so overlays don't steal clicks */}
+				{/* Portaled toolbar is measured against the canvas so overlay layers cannot steal clicks. */}
 				{showToolbar && (() => {
+				const toolbarClassName = topToolbar
+					? "drawing-canvas-toolbar pointer-events-auto fixed z-[2000] flex min-h-10 items-center justify-center gap-1 overflow-x-auto color-bg px-3 py-0.5 scrollbar-minimal"
+					: `drawing-canvas-toolbar pointer-events-auto ${portalToolbar ? "fixed" : "absolute"} bottom-4 left-1/2 -translate-x-1/2 z-[2000] flex max-w-[calc(100%-1rem)] items-center justify-center gap-1 py-1.5 px-2 rounded-out color-bg color-shadow border`;
+				const toolbarSurfaceClassName = topToolbar
+					? "flex min-w-0 max-w-full items-center justify-center gap-1 overflow-x-auto rounded-full color-bg-grey-5 px-4 py-[3px] scrollbar-minimal"
+					: "contents";
+				const toolbarStyle = topToolbar
+					? {
+						left: topToolbarBounds?.left ?? 0,
+						top: topToolbarBounds?.top ?? 0,
+						width: topToolbarBounds?.width ?? 0,
+						visibility: topToolbarBounds ? "visible" as const : "hidden" as const,
+					}
+					: portalToolbar
+						? {
+							left: resolvedToolbarLeft ?? "50%",
+							bottom: 16,
+							...(animateToolbarLeft
+								? { transition: "left 300ms cubic-bezier(0.25, 0.1, 0.25, 1)" }
+								: null),
+						}
+						: undefined;
 				const toolbar = (
 				<div
-					className={`drawing-canvas-toolbar pointer-events-auto ${portalToolbar ? "fixed" : "absolute"} bottom-4 left-1/2 -translate-x-1/2 z-[2000] flex max-w-[calc(100%-1rem)] items-center justify-center gap-1 py-1.5 px-2 rounded-out color-bg color-shadow border`}
-					style={portalToolbar ? {
-						left: resolvedToolbarLeft ?? "50%",
-						bottom: 16,
-						...(animateToolbarLeft
-							? { transition: "left 300ms cubic-bezier(0.25, 0.1, 0.25, 1)" }
-							: null),
-					} : undefined}
+					className={toolbarClassName}
+					style={toolbarStyle}
 				>
+				<div className={toolbarSurfaceClassName}>
 				{hasUnifiedEditor && (
 					<>
 						<button
@@ -3722,6 +3751,7 @@ export default function DrawingCanvas({
 					</button>
 				)}
 				</div>
+				</div>
 				);
 				return portalToolbar ? createPortal(toolbar, getThemedPortalTarget()) : toolbar;
 				})()}
@@ -3729,12 +3759,7 @@ export default function DrawingCanvas({
 					<div
 						ref={penPopoverRef}
 						className={`fixed flex flex-col items-stretch gap-2 px-3 py-2 rounded-in color-bg color-txt-main color-shadow border transition-all duration-180 ease-out ${isPenPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
-						style={{
-							left: penButtonRect.left + penButtonRect.width / 2,
-							top: penButtonRect.top - 10,
-							transform: "translate(-50%, -100%)",
-							zIndex: 2147483646,
-						}}
+						style={popoverAnchorStyle(penButtonRect)}
 					>
 						<div className="w-[58px] flex justify-center">
 							<input
@@ -3775,12 +3800,7 @@ export default function DrawingCanvas({
 					<div
 						ref={eraserPopoverRef}
 						className={`fixed flex flex-col items-stretch gap-2 px-3 py-2 rounded-in color-bg color-txt-main color-shadow border transition-all duration-180 ease-out ${isEraserPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
-						style={{
-							left: eraserButtonRect.left + eraserButtonRect.width / 2,
-							top: eraserButtonRect.top - 10,
-							transform: "translate(-50%, -100%)",
-							zIndex: 2147483646,
-						}}
+						style={popoverAnchorStyle(eraserButtonRect)}
 					>
 						<div className="flex items-center gap-1">
 							<button
@@ -3826,12 +3846,7 @@ export default function DrawingCanvas({
 					<div
 						ref={gridPopoverRef}
 						className={`fixed flex flex-col items-stretch gap-2 px-3 py-2 rounded-in color-bg color-txt-main color-shadow border transition-all duration-180 ease-out ${isGridPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
-						style={{
-							left: gridButtonRect.left + gridButtonRect.width / 2,
-							top: gridButtonRect.top - 10,
-							transform: "translate(-50%, -100%)",
-							zIndex: 2147483646,
-						}}
+						style={popoverAnchorStyle(gridButtonRect)}
 					>
 						<div className="grid grid-cols-3 gap-1.5">
 							{GRID_MODE_OPTIONS.map(({ mode, label, Icon }) => {
@@ -3881,12 +3896,7 @@ export default function DrawingCanvas({
 					<div
 						ref={attachPopoverRef}
 						className={`fixed flex flex-col items-stretch gap-1 px-2 py-2 rounded-in color-bg color-txt-main color-shadow border transition-all duration-180 ease-out ${isAttachPopoverOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"}`}
-						style={{
-							left: attachButtonRect.left + attachButtonRect.width / 2,
-							top: attachButtonRect.top - 10,
-							transform: "translate(-50%, -100%)",
-							zIndex: 2147483646,
-						}}
+						style={popoverAnchorStyle(attachButtonRect)}
 					>
 						<button
 							type="button"
