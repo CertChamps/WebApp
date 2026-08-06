@@ -27,19 +27,46 @@ import {
   LuSearch,
   LuX,
 } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
 import { db } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
 import VideoEmbedModal from "../discover/VideoEmbedModal";
 import { isDiscoverVideoUrl } from "../../lib/discoverMedia";
 import {
-  buildDiscoverQuestionUrl,
   getQuestionDiscoveryContext,
+  type QuestionDiscoveryContext,
 } from "../../lib/questionDiscovery";
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
 type ResourceSource = "website" | "pdf";
+
+const MAX_COMMENT = 500;
+const MAX_TITLE = 80;
+const MAX_DESCRIPTION = 500;
+const LINK_PREVIEW_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/fetchLinkPreview";
+const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
+const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
+
+function normaliseUrl(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  try {
+    const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const url = new URL(withProtocol);
+    if (!["http:", "https:"].includes(url.protocol)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function displayHostname(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
 
 type DiscoverNote = {
   id: string;
@@ -102,18 +129,6 @@ type DiscoverResource = {
   timestamp?: number | null;
   note?: DiscoverNote;
 };
-
-const MAX_COMMENT = 500;
-const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
-const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
-
-function displayHostname(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
 
 function timeAgo(seconds: number | null): string {
   if (!seconds) return "";
@@ -190,7 +205,6 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
 }
 
 export default function QuestionDiscover({ question }: { question?: unknown }) {
-  const navigate = useNavigate();
   const { user } = useContext(UserContext);
   const context = useMemo(() => getQuestionDiscoveryContext(question), [question]);
   const [notes, setNotes] = useState<DiscoverNote[]>([]);
@@ -202,6 +216,14 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [userRating, setUserRating] = useState<number | null>(null);
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [showShareForm, setShowShareForm] = useState(false);
+  const [shareTitle, setShareTitle] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareDescription, setShareDescription] = useState("");
+  const [shareType, setShareType] = useState<ResourceType>("Notes");
+  const [shareSubmitting, setShareSubmitting] = useState(false);
+  const [shareError, setShareError] = useState("");
+  const [shareToast, setShareToast] = useState(false);
 
   useEffect(() => {
     const resourcesQuery = query(
@@ -298,12 +320,16 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
   }, [selectedResource?.id, selectedResource?.note, user?.uid]);
 
   const visible = useMemo(() => {
-    if (!context) return { items: [] as DiscoverResource[], exact: false };
     const approved = notes
       .filter((note) => note.moderationStatus === "approved")
       .map(noteToResource);
+
+    if (!context) {
+      return { items: approved.slice(0, 12), exact: false, mode: "recommended" as const };
+    }
+
     const exact = approved.filter((resource) => resource.note?.linkedQuestionId === context.id);
-    if (exact.length) return { items: exact.slice(0, 12), exact: true };
+    if (exact.length) return { items: exact.slice(0, 12), exact: true, mode: "exact" as const };
 
     const subjectId = context.subjectId?.toLowerCase();
     const subjectLabel = context.subjectLabel?.toLowerCase();
@@ -311,8 +337,107 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
       (subjectId && resource.note?.subjectId?.toLowerCase() === subjectId) ||
       (subjectLabel && resource.subject.toLowerCase() === subjectLabel)
     );
-    return { items: relevant.slice(0, 12), exact: false };
+    if (relevant.length) {
+      return { items: relevant.slice(0, 12), exact: false, mode: "subject" as const };
+    }
+    return { items: approved.slice(0, 12), exact: false, mode: "recommended" as const };
   }, [context, notes]);
+
+  const openShareForm = () => {
+    setShareError("");
+    setShareTitle("");
+    setShareUrl("");
+    setShareDescription("");
+    setShareType("Notes");
+    setShowShareForm(true);
+  };
+
+  const handleShareSubmit = async () => {
+    if (!user?.uid) {
+      setShareError("Sign in to share a resource.");
+      return;
+    }
+    const trimmedTitle = shareTitle.trim();
+    const trimmedDescription = shareDescription.trim();
+    const validUrl = normaliseUrl(shareUrl);
+    if (!trimmedTitle) {
+      setShareError("Add a title so people know what this is.");
+      return;
+    }
+    if (trimmedTitle.length > MAX_TITLE) {
+      setShareError(`Title is too long (max ${MAX_TITLE} characters).`);
+      return;
+    }
+    if (trimmedDescription.length > MAX_DESCRIPTION) {
+      setShareError(`Description is too long (max ${MAX_DESCRIPTION} characters).`);
+      return;
+    }
+    if (!validUrl) {
+      setShareError("Add a valid link (https://...).");
+      return;
+    }
+
+    setShareSubmitting(true);
+    setShareError("");
+    try {
+      let preview: { url?: string; title?: string; imageUrl?: string; faviconUrl?: string; siteName?: string } | null = null;
+      try {
+        const res = await fetch(LINK_PREVIEW_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: validUrl }),
+        });
+        if (res.ok) preview = await res.json();
+      } catch {
+        /* preview is optional */
+      }
+
+      const linkContext: QuestionDiscoveryContext | null = context;
+      await addDoc(collection(db, "discover-notes"), {
+        userId: user.uid,
+        username: user.username ?? "",
+        userPicture: user.picture ?? null,
+        title: trimmedTitle,
+        description: trimmedDescription,
+        websiteUrl: preview?.url || validUrl,
+        resourceSource: "website",
+        thumbnailUrl: preview?.imageUrl ?? preview?.faviconUrl ?? "",
+        uploadedThumbnailUrl: "",
+        uploadedThumbnailPath: null,
+        thumbnailStatus: "none",
+        moderationStatus: "pending",
+        faviconUrl: preview?.faviconUrl ?? "",
+        siteName: preview?.siteName ?? displayHostname(validUrl),
+        subjectId: linkContext?.subjectId ?? null,
+        subjectLabel: linkContext?.subjectLabel ?? null,
+        levels: [],
+        resourceTypes: [shareType],
+        resourceType: shareType,
+        topics: linkContext?.topic ? [linkContext.topic] : [],
+        likeCount: 0,
+        commentCount: 0,
+        ratingAverage: 0,
+        ratingCount: 0,
+        linkedQuestionId: linkContext?.id ?? null,
+        linkedQuestionName: linkContext?.name ?? null,
+        linkedQuestionPracticeUrl: linkContext?.practiceUrl ?? null,
+        linkedQuestionSubjectId: linkContext?.subjectId ?? null,
+        linkedQuestionSubjectLabel: linkContext?.subjectLabel ?? null,
+        linkedQuestionLevel: linkContext?.level ?? null,
+        linkedQuestionTopic: linkContext?.topic ?? null,
+        linkedQuestionSource: linkContext?.source ?? "whiteboard",
+        timestamp: serverTimestamp(),
+      });
+      setShowShareForm(false);
+      setShareToast(true);
+      window.setTimeout(() => setShareToast(false), 2800);
+    } catch (error) {
+      console.error("Failed to share discover resource:", error);
+      setShareError("Couldn't publish. Try again in a moment.");
+    } finally {
+      setShareSubmitting(false);
+    }
+  };
 
   const openResource = (resource: DiscoverResource) => {
     if (isDiscoverVideoUrl(resource.websiteUrl)) {
@@ -412,14 +537,6 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
     }
   };
 
-  if (!context) {
-    return (
-      <div className="flex h-full items-center justify-center p-5 text-center text-sm color-txt-sub">
-        Select a question to discover linked resources.
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-full min-h-0 flex-col color-bg">
       <div className="shrink-0 px-3 pt-2 pb-1 space-y-2">
@@ -428,14 +545,18 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
             <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide color-txt-sub">
               <LuCompass size={12} /> Discover
             </p>
-            <h3 className="mt-0.5 line-clamp-2 text-sm font-bold color-txt-main">{context.name}</h3>
+            <h3 className="mt-0.5 line-clamp-2 text-sm font-bold color-txt-main">
+              {context?.name ?? "Recommended for you"}
+            </h3>
             <p className="mt-0.5 text-[11px] color-txt-sub">
-              {[context.subjectLabel, context.level, context.topic].filter(Boolean).join(" · ") || "Question resources"}
+              {context
+                ? [context.subjectLabel, context.level, context.topic].filter(Boolean).join(" · ") || "Question resources"
+                : "Popular resources from the community"}
             </p>
           </div>
           <button
             type="button"
-            onClick={() => navigate(buildDiscoverQuestionUrl(context, { share: true }))}
+            onClick={openShareForm}
             className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl color-bg-accent color-txt-accent px-3 py-2 text-xs font-bold hover:opacity-90 cursor-pointer"
           >
             <LuPlus size={14} /> Add
@@ -446,12 +567,18 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-minimal p-3 space-y-3">
         <div>
           <h4 className="text-sm font-bold color-txt-main">
-            {visible.exact ? "Linked to this question" : "Relevant subject resources"}
+            {visible.mode === "exact"
+              ? "Linked to this question"
+              : visible.mode === "subject"
+                ? "Relevant subject resources"
+                : "Recommended"}
           </h4>
           <p className="text-xs color-txt-sub">
-            {visible.exact
+            {visible.mode === "exact"
               ? "Resources shared specifically for this question."
-              : `No exact links yet, showing other ${context.subjectLabel ?? "subject"} content.`}
+              : visible.mode === "subject"
+                ? `No exact links yet, showing other ${context?.subjectLabel ?? "subject"} content.`
+                : "Fresh community picks while you work."}
           </p>
         </div>
 
@@ -605,10 +732,10 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
           <div className="rounded-2xl border border-dashed border-color-border color-bg-grey-5 p-5 text-center">
             <LuSearch size={22} className="mx-auto color-txt-sub" />
             <p className="mt-2 text-sm font-bold color-txt-main">No resources yet</p>
-            <p className="mt-1 text-xs color-txt-sub">Be the first to link something useful to this question.</p>
+            <p className="mt-1 text-xs color-txt-sub">Be the first to link something useful here.</p>
             <button
               type="button"
-              onClick={() => navigate(buildDiscoverQuestionUrl(context, { share: true }))}
+              onClick={openShareForm}
               className="mt-3 inline-flex items-center gap-1.5 rounded-xl color-bg-accent color-txt-accent px-3 py-2 text-xs font-bold cursor-pointer"
             >
               <LuLink size={13} /> Link a resource
@@ -623,16 +750,16 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
           onClick={() => setSelectedResource(null)}
         >
           <div
-            className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl color-bg shadow-md scrollbar-minimal"
+            className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl color-bg shadow-md scrollbar-minimal"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="grid grid-cols-1 md:grid-cols-[240px_1fr]">
+            <div className="flex flex-col">
               <div className="color-bg-grey-5">
                 <button
                   type="button"
                   onClick={() => openResource(selectedResource)}
                   disabled={!selectedResource.websiteUrl}
-                  className="aspect-video w-full overflow-hidden color-bg-grey-10 md:aspect-auto md:min-h-[220px] md:h-full cursor-pointer disabled:cursor-default"
+                  className="aspect-video w-full overflow-hidden color-bg-grey-10 cursor-pointer disabled:cursor-default"
                 >
                   {selectedResource.thumbnailUrl && selectedResource.thumbnailUrl !== selectedResource.faviconUrl ? (
                     <img
@@ -641,7 +768,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-full min-h-[180px] flex-col items-center justify-center gap-3 px-5 text-center color-txt-sub">
+                    <div className="flex h-full min-h-[160px] flex-col items-center justify-center gap-3 px-5 text-center color-txt-sub">
                       {selectedResource.faviconUrl ? (
                         <img
                           src={selectedResource.faviconUrl}
@@ -735,7 +862,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
 
                 <div className="space-y-3">
                   <h3 className="font-bold color-txt-main text-sm">Comments</h3>
-                  <div className="max-h-48 space-y-2 overflow-y-auto scrollbar-minimal pr-1">
+                  <div className="max-h-64 space-y-2 overflow-y-auto scrollbar-minimal pr-1">
                     {comments.length === 0 ? (
                       <p className="text-sm color-txt-sub">
                         No comments yet. Add context for the next student.
@@ -793,6 +920,108 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {showShareForm && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => !shareSubmitting && setShowShareForm(false)}
+        >
+          <div
+            className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl color-bg shadow-md scrollbar-minimal p-5 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold color-txt-main">Add a resource</h2>
+                <p className="mt-1 text-xs color-txt-sub">
+                  {context
+                    ? `Share something useful for ${context.name}. Stays on this board.`
+                    : "Share something useful with the community. Stays on this board."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !shareSubmitting && setShowShareForm(false)}
+                className="color-txt-sub hover:color-txt-main cursor-pointer"
+                aria-label="Close"
+              >
+                <LuX size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">Title</label>
+              <input
+                type="text"
+                value={shareTitle}
+                onChange={(e) => setShareTitle(e.target.value.slice(0, MAX_TITLE))}
+                placeholder="e.g. Macbeth essay structure"
+                className="w-full rounded-xl color-bg-grey-5 color-txt-main px-3 py-2.5 text-sm outline-none placeholder:color-txt-sub"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">Link</label>
+              <input
+                type="url"
+                value={shareUrl}
+                onChange={(e) => setShareUrl(e.target.value)}
+                placeholder="https://"
+                className="w-full rounded-xl color-bg-grey-5 color-txt-main px-3 py-2.5 text-sm outline-none placeholder:color-txt-sub"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">Description</label>
+              <textarea
+                value={shareDescription}
+                onChange={(e) => setShareDescription(e.target.value.slice(0, MAX_DESCRIPTION))}
+                placeholder="Why is this helpful?"
+                rows={3}
+                className="w-full resize-none rounded-xl color-bg-grey-5 color-txt-main px-3 py-2.5 text-sm outline-none placeholder:color-txt-sub"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">Type</label>
+              <div className="flex flex-wrap gap-2">
+                {RESOURCE_TYPES.map((type) => (
+                  <button
+                    type="button"
+                    key={type}
+                    onClick={() => setShareType(type)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                      shareType === type
+                        ? "color-bg-accent color-txt-accent"
+                        : "color-bg-grey-5 color-txt-main hover:opacity-90"
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {shareError && <p className="text-xs text-red-500">{shareError}</p>}
+
+            <button
+              type="button"
+              onClick={() => void handleShareSubmit()}
+              disabled={shareSubmitting}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl color-bg-accent color-txt-accent px-3.5 py-2.5 text-sm font-bold hover:opacity-90 cursor-pointer disabled:opacity-50"
+            >
+              {shareSubmitting && <LuLoader size={14} className="animate-spin" />}
+              Publish for review
+            </button>
+          </div>
+        </div>
+      )}
+
+      {shareToast && (
+        <div className="fixed bottom-20 left-1/2 z-[80] -translate-x-1/2 rounded-xl color-bg color-shadow border px-4 py-2 text-xs font-semibold color-txt-main">
+          Submitted — it'll show after review.
         </div>
       )}
 

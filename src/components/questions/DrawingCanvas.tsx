@@ -3230,7 +3230,8 @@ export default function DrawingCanvas({
 		left: rect.left + rect.width / 2,
 		top: topToolbar ? rect.bottom + 10 : rect.top - 10,
 		transform: topToolbar ? "translateX(-50%)" : "translate(-50%, -100%)",
-		zIndex: 2147483646,
+		// Below modal overlays (z-50+) so backdrop blur covers the toolbar chrome.
+		zIndex: 45,
 	});
 	const showAttachPopover = enableAttachments && !onAttachRequest;
 	const selectionDeleteAnchor = (() => {
@@ -3474,8 +3475,8 @@ export default function DrawingCanvas({
 				{/* Portaled toolbar is measured against the canvas so overlay layers cannot steal clicks. */}
 				{showToolbar && (() => {
 				const toolbarClassName = topToolbar
-					? "drawing-canvas-toolbar pointer-events-auto fixed z-[2000] flex min-h-10 items-center justify-center gap-1 overflow-x-auto color-bg px-3 py-0.5 scrollbar-minimal"
-					: `drawing-canvas-toolbar pointer-events-auto ${portalToolbar ? "fixed" : "absolute"} bottom-4 left-1/2 -translate-x-1/2 z-[2000] flex max-w-[calc(100%-1rem)] items-center justify-center gap-1 py-1.5 px-2 rounded-out color-bg color-shadow border`;
+					? "drawing-canvas-toolbar pointer-events-auto fixed z-40 flex min-h-10 items-center justify-center gap-1 overflow-x-auto color-bg px-3 py-0.5 scrollbar-minimal"
+					: `drawing-canvas-toolbar pointer-events-auto ${portalToolbar ? "fixed" : "absolute"} bottom-4 left-1/2 -translate-x-1/2 z-40 flex max-w-[calc(100%-1rem)] items-center justify-center gap-1 py-1.5 px-2 rounded-out color-bg color-shadow border`;
 				const toolbarSurfaceClassName = topToolbar
 					? "flex min-w-0 max-w-full items-center justify-center gap-1 overflow-x-auto rounded-full color-bg-grey-5 px-4 py-[3px] scrollbar-minimal"
 					: "contents";
@@ -3642,7 +3643,6 @@ export default function DrawingCanvas({
 							aria-label="Text size"
 							title="Text size"
 							value={String(textFormat.fontSize)}
-							onPointerDown={(event) => event.preventDefault()}
 							onChange={(event) => {
 								const raw = event.target.value;
 								const asNumber = Number(raw);

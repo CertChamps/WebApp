@@ -17,6 +17,8 @@ import {
   LuChevronRight,
   LuCircleCheck,
   LuClipboardList,
+  LuEye,
+  LuEyeOff,
   LuFileText,
   LuLoaderCircle,
   LuPanelLeftClose,
@@ -145,6 +147,90 @@ function gradingStatusLabel(status: GradingStatus): string {
     default:
       return "Check Answer";
   }
+}
+
+function PaperPanelToggle({
+  visible,
+  onToggle,
+  className = "",
+}: {
+  visible: boolean;
+  onToggle: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      className={`questions-paper-toggle color-shadow ${className}`}
+      onClick={onToggle}
+      aria-label={visible ? "Hide question paper" : "Show question paper"}
+      aria-pressed={visible}
+      title={visible ? "Hide question paper" : "Show question paper"}
+    >
+      {visible ? <LuEyeOff size={16} strokeWidth={2} /> : <LuEye size={16} strokeWidth={2} />}
+    </button>
+  );
+}
+
+/** Fixed eye control for documents — sits above the portaled top toolbar. */
+function DocumentPaperEye({
+  visible,
+  onToggle,
+  leftHandMode,
+}: {
+  visible: boolean;
+  onToggle: () => void;
+  leftHandMode: boolean;
+}) {
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const update = () => {
+      const area = document.querySelector("[data-wb-canvas-area]") as HTMLElement | null;
+      if (!area) {
+        setPos(null);
+        return;
+      }
+      const rect = area.getBoundingClientRect();
+      const top = Math.max(8, rect.top + 12);
+      if (leftHandMode) {
+        setPos({ top, right: Math.max(8, window.innerWidth - rect.right + 12) });
+      } else {
+        setPos({ top, left: Math.max(8, rect.left + 12) });
+      }
+    };
+    update();
+    window.addEventListener("resize", update);
+    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    const area = document.querySelector("[data-wb-canvas-area]");
+    if (area) ro?.observe(area);
+    return () => {
+      window.removeEventListener("resize", update);
+      ro?.disconnect();
+    };
+  }, [leftHandMode]);
+
+  if (typeof document === "undefined" || !pos) return null;
+
+  return createPortal(
+    <div
+      className="pointer-events-auto"
+      style={{
+        position: "fixed",
+        top: pos.top,
+        left: pos.left,
+        right: pos.right,
+        zIndex: 40,
+      }}
+    >
+      <PaperPanelToggle
+        visible={visible}
+        onToggle={onToggle}
+        className={visible ? "" : "questions-paper-toggle--active"}
+      />
+    </div>,
+    getThemedPortalTarget()
+  );
 }
 
 function ToolSquare({
@@ -386,6 +472,7 @@ function WhiteboardPageViewInner() {
   const attachments = useMemo(() => page?.attachedQuestions ?? [], [page]);
   const [attachmentIndex, setAttachmentIndex] = useState(0);
   const [pinnedSideObject, setPinnedSideObject] = useState<CanvasObject | null>(null);
+  const [paperPanelVisible, setPaperPanelVisible] = useState(true);
   const [sessionSidebarOpen, setSessionSidebarOpen] = useState(true);
   const [sidebarOpenPanel, setSidebarOpenPanel] = useState<SidebarPanelId | null>("ai");
   const pendingQuestionSeedsRef = useRef(new Set<string>());
@@ -408,6 +495,7 @@ function WhiteboardPageViewInner() {
   useEffect(() => {
     setAttachmentIndex(0);
     setPinnedSideObject(null);
+    setPaperPanelVisible(true);
     setSidebarOpenPanel("ai");
     pendingQuestionSeedsRef.current = new Set();
     seedingInFlightRef.current = new Set();
@@ -1143,6 +1231,7 @@ function WhiteboardPageViewInner() {
       }
       await updatePage(page.id, { attachedQuestions: [...page.attachedQuestions, ...added] });
       setAttachmentIndex(page.attachedQuestions.length);
+      if (page.pageType === "document") setPaperPanelVisible(true);
     },
     [page, updatePage]
   );
@@ -1172,6 +1261,7 @@ function WhiteboardPageViewInner() {
         if (index >= 0) {
           setAttachmentIndex(index);
           pendingQuestionSeedsRef.current.add(attachmentId);
+          if (target.pageType === "document") setPaperPanelVisible(true);
         }
         return;
       }
@@ -1181,27 +1271,45 @@ function WhiteboardPageViewInner() {
   );
 
   const sidebarQuestion = useMemo(() => {
-    if (!currentAttachment || !page) return undefined;
-    const bank = currentAttachment.bank;
-    const rawSubject = bank?.subject ?? page.subject;
+    if (!page) return undefined;
+    const rawSubject = page.subject;
     const subjectId = getPracticeSubjectId(rawSubject);
     const subjectLabel = getSubjectLabel(rawSubject);
+
+    if (!currentAttachment) {
+      return {
+        id: `whiteboard_${page.id}`,
+        properties: { name: page.name },
+        questionName: page.name,
+        subject: subjectId,
+        _discoverId: `whiteboard_${page.id}`,
+        _discoverName: page.name,
+        _discoverSubjectId: subjectId,
+        _discoverSubjectLabel: subjectLabel,
+        _discoverSource: "whiteboard",
+      };
+    }
+
+    const bank = currentAttachment.bank;
+    const attachmentSubject = bank?.subject ?? page.subject;
+    const attachmentSubjectId = getPracticeSubjectId(attachmentSubject);
+    const attachmentSubjectLabel = getSubjectLabel(attachmentSubject);
     const discoverId = bank?.kind === "paper" && bank.paperId && bank.questionId
       ? `${bank.paperId}_${bank.questionId}`
       : bank?.kind === "image" && bank.groupKey
-        ? `image_${rawSubject}_${bank.level}_${bank.topic ?? "topic"}_${bank.groupKey}`
+        ? `image_${attachmentSubject}_${bank.level}_${bank.topic ?? "topic"}_${bank.groupKey}`
         : `whiteboard_${page.id}_${currentAttachment.id}`;
     const practiceUrl = bank?.kind === "paper" && bank.paperId && bank.questionId
       ? `/practice/session?${new URLSearchParams({
           mode: "pastpaper",
-          subject: subjectId,
+          subject: attachmentSubjectId,
           level: bank.level,
           paperId: bank.paperId,
           questionId: bank.questionId,
         }).toString()}`
       : bank?.kind === "image" && bank.groupKey && bank.topic
         ? `/practice?${new URLSearchParams({
-            subject: subjectId,
+            subject: attachmentSubjectId,
             level: bank.level,
             browse: "topic",
             topic: bank.topic,
@@ -1217,15 +1325,15 @@ function WhiteboardPageViewInner() {
       paperQuestionId: bank?.questionId,
       paperLabel: currentAttachment.label,
       questionName: currentAttachment.label,
-      subject: subjectId,
+      subject: attachmentSubjectId,
       level: bank?.level,
       storagePath: bank?.paperStoragePath,
       pageRange: bank?.pageRange,
       pageRegions: bank?.pageRegions,
       _discoverId: discoverId,
       _discoverName: currentAttachment.label,
-      _discoverSubjectId: subjectId,
-      _discoverSubjectLabel: subjectLabel,
+      _discoverSubjectId: attachmentSubjectId,
+      _discoverSubjectLabel: attachmentSubjectLabel,
       _discoverLevel: bank?.level,
       _discoverTopic: bank?.topic,
       _discoverSource: "whiteboard",
@@ -1247,10 +1355,13 @@ function WhiteboardPageViewInner() {
     ? media.questionImages.map((image) => ({ src: image.src, alt: image.alt, key: image.key }))
     : [];
   const sidePanelImages = isDocumentPage ? documentSideImages : pinnedSideImages;
+  // Documents: show the panel whenever a question is attached (even while images load).
+  const documentHasQuestion = isDocumentPage && Boolean(currentAttachment);
   const hasSideQuestionPanel = isDocumentPage
-    ? Boolean(currentAttachment && sidePanelImages.length > 0)
+    ? documentHasQuestion && paperPanelVisible
     : Boolean(pinnedSideObject && sidePanelImages.length > 0);
-  const chromeInsetKey = `${sessionSidebarOpen}|${hasSideQuestionPanel}|${options.leftHandMode}`;
+  // Documents ignore the side question for chrome centering — overlap is intentional.
+  const chromeInsetKey = `${sessionSidebarOpen}|${options.leftHandMode}`;
 
   useLayoutEffect(() => {
     if (!isDocumentPage) {
@@ -1288,11 +1399,6 @@ function WhiteboardPageViewInner() {
           if (options.leftHandMode) leftInset += sidebarInset;
           else rightInset += sidebarInset;
         }
-        if (isXl && hasSideQuestionPanel) {
-          const paperInset = 384; // xl:pl-96 / xl:pr-96
-          if (options.leftHandMode) rightInset += paperInset;
-          else leftInset += paperInset;
-        }
         const visibleWidth = Math.max(0, rect.width - leftInset - rightInset);
         setChromeCenterX(rect.left + leftInset + visibleWidth / 2);
       });
@@ -1315,7 +1421,6 @@ function WhiteboardPageViewInner() {
     chromeInsetKey,
     sessionSidebarOpen,
     foldersSidebarOpen,
-    hasSideQuestionPanel,
     options.leftHandMode,
     pageId,
     canvasLoading,
@@ -1428,7 +1533,7 @@ function WhiteboardPageViewInner() {
 
       <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* ---- Top bar (kept) ---- */}
-        <div className="relative z-40 flex h-10 shrink-0 items-center gap-1 px-2">
+        <div className="relative z-40 flex h-10 shrink-0 items-center gap-1 px-2 color-bg">
           <button
             type="button"
             className="shrink-0 rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
@@ -1518,7 +1623,7 @@ function WhiteboardPageViewInner() {
         </div>
 
         {/* ---- Canvas (full bleed, same as practice) ---- */}
-        <div ref={canvasAreaRef} className="relative min-h-0 flex-1">
+        <div ref={canvasAreaRef} data-wb-canvas-area className="relative min-h-0 flex-1 overflow-hidden">
           {page && page.id === pageId && page.pageType === "document" && !canvasLoading && !canvasLoadError ? (
             <DocumentEditor
               key={page.id}
@@ -1537,14 +1642,13 @@ function WhiteboardPageViewInner() {
               toolbarCenterAnimated={chromeLeftAnimated}
               onToolbarCenterChange={setToolbarFollowX}
               toolbarExtras={pageToolbarExtras}
-              viewportClassName={[
-                hasSideQuestionPanel
-                  ? options.leftHandMode ? "xl:pr-96" : "xl:pl-96"
-                  : "",
+              viewportClassName={
                 sessionSidebarOpen
-                  ? options.leftHandMode ? "xl:pl-[35%]" : "xl:pr-[35%]"
-                  : "",
-              ].filter(Boolean).join(" ")}
+                  ? options.leftHandMode
+                    ? "xl:pl-[35%]"
+                    : "xl:pr-[35%]"
+                  : ""
+              }
             />
           ) : page?.id === pageId && !canvasLoading && !canvasLoadError ? (
             <div className="absolute inset-0 z-0 color-bg">
@@ -1729,10 +1833,17 @@ function WhiteboardPageViewInner() {
 
           {/* Pinned attachment — side paper panel */}
           <div
-            className={`absolute bottom-0 top-0 z-10 flex pointer-events-none ${
-              options.leftHandMode ? "right-0 justify-end" : "left-0 justify-start"
-            }`}
+            className={`absolute bottom-0 flex pointer-events-none ${
+              isDocumentPage ? "top-0 z-50" : "top-0 z-10"
+            } ${options.leftHandMode ? "right-0 justify-end" : "left-0 justify-start"}`}
           >
+            {isDocumentPage && documentHasQuestion && (
+              <DocumentPaperEye
+                visible={paperPanelVisible}
+                onToggle={() => setPaperPanelVisible((v) => !v)}
+                leftHandMode={options.leftHandMode}
+              />
+            )}
             <AnimatePresence initial={false} mode="popLayout">
               {hasSideQuestionPanel ? (
                 <motion.div
@@ -1741,13 +1852,18 @@ function WhiteboardPageViewInner() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: options.leftHandMode ? 16 : -16 }}
                   transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                  className={`relative flex h-full max-h-full min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-none ${
+                  className={`relative flex h-full max-h-full min-h-0 w-full max-w-sm shrink-0 flex-col pointer-events-none ${
                     options.leftHandMode ? "ml-auto" : ""
                   }`}
                 >
                   <div className="min-h-0 min-w-0 h-full flex flex-col pl-2 pr-1 overflow-hidden pointer-events-none">
-                    <div className="flex-1 min-h-0 relative pt-4 pointer-events-none">
+                    <div className={`flex-1 min-h-0 relative pointer-events-none ${isDocumentPage ? "pt-12" : "pt-4"}`}>
                       <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-8 items-center pointer-events-auto">
+                        {isDocumentPage && media.loading && sidePanelImages.length === 0 && (
+                          <div className="flex h-40 w-full items-center justify-center" style={{ maxWidth: snippetWidth }}>
+                            <LuLoaderCircle size={20} className="animate-spin color-txt-sub" />
+                          </div>
+                        )}
                         {currentAttachment &&
                           (isDocumentPage || pinnedSideObject?.id === questionAttachmentObjectId(currentAttachment.id)) &&
                           !media.loading &&
@@ -1782,11 +1898,13 @@ function WhiteboardPageViewInner() {
                               <span className="text-[10px] font-semibold leading-none">Unpin</span>
                             </button>
                           )}
-                          <ZoomableQuestionImage
-                            images={sidePanelImages}
-                            className="w-full h-auto"
-                            roundStack
-                          />
+                          {sidePanelImages.length > 0 && (
+                            <ZoomableQuestionImage
+                              images={sidePanelImages}
+                              className="w-full h-auto"
+                              roundStack
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
