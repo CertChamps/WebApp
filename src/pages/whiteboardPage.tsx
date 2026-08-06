@@ -1335,6 +1335,55 @@ function WhiteboardPageViewInner() {
     );
   }
 
+  const activeToolbarPage = page?.id === pageId && !canvasLoading && !canvasLoadError ? page : null;
+  const whiteboardToolbarExtras = activeToolbarPage && activeToolbarPage.pageType !== "document" ? (
+    <>
+      <span className="mx-1 h-6 w-px shrink-0 color-bg-grey-10" aria-hidden />
+      <div className="relative">
+        <button
+          type="button"
+          aria-label="Check Answer"
+          className="flex h-[30px] items-center gap-1.5 rounded-in px-2 text-sm font-semibold color-txt-main hover:color-bg-grey-10 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => void handleCheckAnswer()}
+          disabled={!canCheckNow}
+          title="Check Answer with AI"
+        >
+          <LuCircleCheck size={16} strokeWidth={2} />
+          <span>{!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check Answer"}</span>
+        </button>
+        {checkAnswerStatus && (
+          <div className="absolute left-1/2 top-full z-20 mt-2 flex max-w-[280px] -translate-x-1/2 items-center gap-2 rounded-md bg-[var(--grey-5)]/90 px-2 py-1 text-xs color-txt-sub">
+            <span>{checkAnswerStatus}</span>
+            {gradingStatus === "error" && (
+              <button
+                type="button"
+                onClick={() => void handleCheckAnswer()}
+                className="text-[11px] font-semibold color-txt-accent hover:opacity-80"
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      {markingSchemeImages.length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            setSessionSidebarOpen(true);
+            setSidebarOpenPanel("markingscheme");
+          }}
+          className="flex h-[30px] items-center gap-1.5 rounded-in px-2 text-sm font-semibold color-txt-main hover:color-bg-grey-10"
+          aria-label="Reveal marking scheme"
+          title="Reveal marking scheme"
+        >
+          <LuClipboardList size={16} strokeWidth={2} />
+          <span>Marking scheme</span>
+        </button>
+      )}
+    </>
+  ) : null;
+
 
   return (
     <div className="flex min-h-0 h-full w-full">
@@ -1365,7 +1414,7 @@ function WhiteboardPageViewInner() {
 
       <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* ---- Top bar (kept) ---- */}
-        <div className="relative z-40 flex h-11 shrink-0 items-center gap-1 px-2">
+        <div className="relative z-40 flex h-10 shrink-0 items-center gap-1 px-2">
           <button
             type="button"
             className="shrink-0 rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
@@ -1505,6 +1554,8 @@ function WhiteboardPageViewInner() {
                 onObjectsChange={handleObjectsChange}
                 onUploadImage={handleUploadImage}
                 onToolbarCenterChange={setToolbarFollowX}
+                toolbarPlacement="top"
+                toolbarExtras={whiteboardToolbarExtras}
                 wrapperClassName={`bg-transparent ${editorMode === "pen" || selectActive ? "z-20" : "z-10"}`}
                 readOnly={editorMode === "text" && !selectActive}
                 editorMode={editorMode}
@@ -1620,7 +1671,7 @@ function WhiteboardPageViewInner() {
               </div>
             </div>
           ) : null}
-          {page?.id === pageId && !canvasLoading && !canvasLoadError && (
+          {activeToolbarPage?.pageType === "document" && (
               <div
                 className="pointer-events-auto fixed z-30 bottom-16 flex -translate-x-1/2 items-center gap-2"
                 style={{
@@ -1636,39 +1687,17 @@ function WhiteboardPageViewInner() {
                     aria-label="Check Answer"
                     className="questions-action-button questions-action-button--solid-accent border color-shadow disabled:opacity-60 disabled:cursor-not-allowed"
                     onClick={() => {
-                      if (page.pageType === "document") {
-                        setDocumentChecking(true);
-                        void documentCheckAnswerRef.current?.()
-                          .catch(() => undefined)
-                          .finally(() => setDocumentChecking(false));
-                        return;
-                      }
-                      void handleCheckAnswer();
+                      setDocumentChecking(true);
+                      void documentCheckAnswerRef.current?.()
+                        .catch(() => undefined)
+                        .finally(() => setDocumentChecking(false));
                     }}
-                    disabled={page.pageType === "document" ? documentChecking : !canCheckNow}
+                    disabled={documentChecking}
                     title="Check Answer with AI"
                   >
                     <LuCircleCheck size={14} strokeWidth={2} />
-                    <span>
-                      {page.pageType === "document"
-                        ? (documentChecking ? "Checking…" : "Check Answer")
-                        : (!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check Answer")}
-                    </span>
+                    <span>{documentChecking ? "Checking…" : "Check Answer"}</span>
                   </button>
-                  {page.pageType !== "document" && checkAnswerStatus && (
-                    <div className="absolute bottom-full mb-2 max-w-[280px] text-xs color-txt-sub bg-[var(--grey-5)]/90 rounded-md px-2 py-1 z-20 flex items-center gap-2">
-                      <span>{checkAnswerStatus}</span>
-                      {gradingStatus === "error" && (
-                        <button
-                          type="button"
-                          onClick={() => void handleCheckAnswer()}
-                          className="text-[11px] font-semibold color-txt-accent hover:opacity-80"
-                        >
-                          Retry
-                        </button>
-                      )}
-                    </div>
-                  )}
                 </div>
                 {markingSchemeImages.length > 0 && (
                   <button
@@ -1800,7 +1829,7 @@ function WhiteboardPageViewInner() {
 
           {/* Practice-style collapsible sidebar (AI / threads / timer / marking scheme) */}
           <div
-            className={`absolute bottom-0 top-0 z-20 overflow-hidden pointer-events-none ${
+            className={`absolute bottom-0 top-10 z-20 overflow-hidden pointer-events-none ${
               options.leftHandMode ? "left-0" : "right-0"
             } w-[35%]`}
             style={{
