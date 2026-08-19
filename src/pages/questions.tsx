@@ -1839,6 +1839,7 @@ export default function Questions() {
                                     id: `image_${normalizedUrlSubject}_${normalizedUrlLevel}_${imageQuestionTopic ?? "paper"}_${currentGroupedQuestion.key}`,
                                     properties: { name: currentGroupedQuestion.displayName },
                                     imageUrls: currentGroupedQuestion.images.map((img) => img.downloadUrl),
+                                    markingSchemeImageUrls: currentImageMarkingSchemes.map((img) => img.downloadUrl),
                                     _discoverId: `image_${normalizedUrlSubject}_${normalizedUrlLevel}_${imageQuestionTopic ?? "paper"}_${currentGroupedQuestion.key}`,
                                     _discoverName: currentGroupedQuestion.displayName,
                                     _discoverSubjectId: getPracticeSubjectId(normalizedUrlSubject),

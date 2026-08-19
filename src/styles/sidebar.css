@@ -29,6 +29,12 @@
   flex-shrink: 0;
 }
 
+.ai-chat-composer__input {
+  touch-action: manipulation;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 .ai-chat-notice {
   display: flex;
   align-items: flex-start;

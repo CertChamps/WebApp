@@ -11,6 +11,11 @@ export default defineConfig({
   ],
   server: {
     host: true,
+    port: 5173,
+    // Live-reload from iPad uses the LAN Host header, which Vite 6+ blocks
+    // unless allowed. `true` permits any host (dev-only server).
+    allowedHosts: true,
+    strictPort: process.env.CAPACITOR_LIVE === '1',
     // Don't let Vite recurse into the Capacitor shell or its baked-in
     // copy of an old build (where stale minified JS confuses the scanner).
     fs: {

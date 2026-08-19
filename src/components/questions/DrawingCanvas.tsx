@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2, FileText, Ban, Paperclip, LoaderCircle, Type, Bold, Italic, List, Pin, Upload, BookOpen } from "lucide-react";
+import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2, FileText, Ban, Paperclip, LoaderCircle, Type, Bold, Italic, List, Pin, Upload, BookOpen, Move } from "lucide-react";
 import type { CanvasAnnotation, CanvasCapturePayload } from "../../lib/grading/GradingTypes";
-import { buildCapturePayload, drawCaptureTextBoxes, type CaptureTextBox } from "../../lib/grading/canvasCapture";
+import { buildCapturePayload, drawCaptureTextBoxes } from "../../lib/grading/canvasCapture";
 import { renderPdfPages } from "../../utils/pdfPagesToImages";
 import type { CanvasObject } from "../../hooks/useCanvasStorage";
 import { getThemedPortalTarget } from "../../utils/themedPortal";
@@ -14,6 +14,12 @@ import {
 	type CanvasFingerPointerDetail,
 } from "../../utils/pencilEvents";
 import RenderMath from "../math/mathdisplay";
+import {
+	createBlankCanvasTextBox,
+	getTextContentBounds,
+	type CanvasTextBox,
+	type CanvasTextDefaults,
+} from "./CanvasTextBoxLayer";
 
 export type { CanvasObject } from "../../hooks/useCanvasStorage";
 
@@ -156,8 +162,7 @@ const TOOL_LONG_PRESS_MS = 420;
 /** Hold still for this long (ms) to snap stroke to straight line */
 const HOLD_TO_STRAIGHTEN_MS = 600;
 const LASSO_MIN_POINTS = 3;
-const SELECTION_HANDLE_RADIUS_PX = 8;
-const SELECTION_HIT_PADDING_PX = 10;
+const TAP_SELECT_MOVE_PX = 8;
 const MIN_SELECTION_SCALE = 0.08;
 
 function seededUnit(seed: number): number {
@@ -349,6 +354,23 @@ function pointInPolygon(point: Point, polygon: Point[]): boolean {
 	return inside;
 }
 
+function rectFullyInsidePolygon(
+	x: number,
+	y: number,
+	width: number,
+	height: number,
+	polygon: Point[],
+): boolean {
+	if (polygon.length < 3 || width <= 0 || height <= 0) return false;
+	const corners: Point[] = [
+		{ x, y, pressure: 0 },
+		{ x: x + width, y, pressure: 0 },
+		{ x: x + width, y: y + height, pressure: 0 },
+		{ x, y: y + height, pressure: 0 },
+	];
+	return corners.every((corner) => pointInPolygon(corner, polygon));
+}
+
 function strokeIntersectsPolygon(stroke: Stroke, polygon: Point[]): boolean {
 	if (stroke.tool !== "pen" || stroke.points.length === 0 || polygon.length < 3) return false;
 	if (stroke.points.some((point) => pointInPolygon(point, polygon))) return true;
@@ -382,6 +404,18 @@ function getSelectionBounds(strokes: Stroke[], selectedIndexes: number[]): Selec
 		}
 	}
 	return hasPoint ? { minX, minY, maxX, maxY } : null;
+}
+
+function unionRect(bounds: SelectionBounds | null, x: number, y: number, width: number, height: number): SelectionBounds {
+	const maxX = x + width;
+	const maxY = y + height;
+	if (!bounds) return { minX: x, minY: y, maxX, maxY };
+	return {
+		minX: Math.min(bounds.minX, x),
+		minY: Math.min(bounds.minY, y),
+		maxX: Math.max(bounds.maxX, maxX),
+		maxY: Math.max(bounds.maxY, maxY),
+	};
 }
 
 function transformPoint(point: Point, center: { x: number; y: number }, dx: number, dy: number, scaleFactor: number, rotation: number): Point {
@@ -618,18 +652,6 @@ function strokesEqual(a: Stroke[] | null | undefined, b: Stroke[] | null | undef
 	return true;
 }
 
-function applyVisualTransform(point: { x: number; y: number }, session: TransformSession): { x: number; y: number } {
-	const transformed = transformPoint(
-		{ x: point.x, y: point.y, pressure: 1 },
-		session.center,
-		session.previewDx,
-		session.previewDy,
-		session.previewScale,
-		session.previewRotation
-	);
-	return { x: transformed.x, y: transformed.y };
-}
-
 /** Call with a function that returns the current drawing as PNG data URL, or null. Called on mount, cleared on unmount. */
 export type RegisterDrawingSnapshot = (getSnapshot: (() => string | null) | null) => void;
 /** Call with a function that returns the number of visual line clusters detected on the canvas. Called on mount, cleared on unmount. */
@@ -656,6 +678,10 @@ export type DrawingStroke = Stroke;
 /** Stable canvas object id for an auto-placed question attachment. */
 export function questionAttachmentObjectId(attachmentId: string): string {
 	return `wb-q-${attachmentId}`;
+}
+
+function isQuestionAttachmentObjectId(id: string): boolean {
+	return id.startsWith("wb-q-");
 }
 
 async function loadHtmlImage(url: string): Promise<{ img: HTMLImageElement; revoke?: () => void }> {
@@ -870,9 +896,15 @@ type DrawingCanvasProps = {
 	/** Reports the current whiteboard transform so overlay layers stay aligned. */
 	onViewportChange?: (viewport: { pan: { x: number; y: number }; scale: number }) => void;
 	/** Optional persisted text boxes included in snapshots and grading captures. */
-	captureTextBoxes?: CaptureTextBox[];
-	/** Selects a text box when an iPad finger taps it through the canvas layer. */
-	onSelectTextBox?: (id: string | null) => void;
+	captureTextBoxes?: CanvasTextBox[];
+	/** Currently selected whiteboard text boxes. */
+	selectedTextBoxIds?: string[];
+	/** Selects one or more text boxes from canvas hit-testing / lasso. */
+	onSelectTextBoxes?: (ids: string[]) => void;
+	/** Applies a full text-box collection after a group move. */
+	onTextBoxesChange?: (boxes: CanvasTextBox[]) => void;
+	/** Defaults used when a tap in text mode creates a new box. */
+	textBoxDefaults?: CanvasTextDefaults;
 };
 
 function getStrokeBounds(stroke: Stroke): { minX: number; maxX: number; minY: number; maxY: number } | null {
@@ -1012,7 +1044,10 @@ export default function DrawingCanvas({
 	allowViewportNavigation = true,
 	onViewportChange,
 	captureTextBoxes = [],
-	onSelectTextBox,
+	selectedTextBoxIds = [],
+	onSelectTextBoxes,
+	onTextBoxesChange,
+	textBoxDefaults,
 }: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1196,7 +1231,7 @@ export default function DrawingCanvas({
 	const [isAttachPopoverOpen, setIsAttachPopoverOpen] = useState(false);
 	const [eraserMode, setEraserMode] = useState<"point" | "stroke">("stroke");
 	const [activeEraserSizeIndex, setActiveEraserSizeIndex] = useState(DEFAULT_ERASER_SIZE_INDEX);
-	const [gridOpacity, setGridOpacity] = useState(0.7);
+	const [gridOpacity, setGridOpacity] = useState(0.28);
 	const [lassoPath, setLassoPath] = useState<Point[] | null>(null);
 	const [selectedStrokeIndexes, setSelectedStrokeIndexes] = useState<number[]>([]);
 	const [transformSession, setTransformSession] = useState<TransformSession | null>(null);
@@ -1217,7 +1252,7 @@ export default function DrawingCanvas({
 
 	// Attached image / PDF-page objects placed on the canvas.
 	const [objects, setObjects] = useState<CanvasObject[]>(() => initialObjects ?? []);
-	const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+	const [selectedObjectIds, setSelectedObjectIds] = useState<string[]>([]);
 	const [isAttaching, setIsAttaching] = useState(false);
 	const [attachError, setAttachError] = useState<string | null>(null);
 	/** Bumped when an attached image finishes decoding so the canvas redraws. */
@@ -1238,18 +1273,15 @@ export default function DrawingCanvas({
 	}, []);
 	const objectsRef = useRef(objects);
 	objectsRef.current = objects;
+	const captureTextBoxesRef = useRef(captureTextBoxes);
+	captureTextBoxesRef.current = captureTextBoxes;
+	const selectedObjectIdsRef = useRef(selectedObjectIds);
+	selectedObjectIdsRef.current = selectedObjectIds;
+	const selectedTextBoxIdsRef = useRef(selectedTextBoxIds);
+	selectedTextBoxIdsRef.current = selectedTextBoxIds;
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const objectImageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
 	const localBlobUrlsRef = useRef<Set<string>>(new Set());
-	const objectDragRef = useRef<{
-		id: string;
-		mode: "move" | "resize";
-		startClientX: number;
-		startClientY: number;
-		start: CanvasObject;
-		aspect: number;
-		base: CanvasObject[];
-	} | null>(null);
 	const onObjectsChangeRef = useRef(onObjectsChange);
 	onObjectsChangeRef.current = onObjectsChange;
 	const objectsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1272,7 +1304,7 @@ export default function DrawingCanvas({
 			replaced = true;
 			return incoming;
 		});
-		if (replaced) setSelectedObjectId(null);
+		if (replaced) setSelectedObjectIds([]);
 	}, [initialObjects]);
 
 	const preloadObjectImage = useCallback((src: string) => {
@@ -1406,13 +1438,20 @@ export default function DrawingCanvas({
 	const lastPointRef = useRef<Point | null>(null);
 	const pinchStartRef = useRef<{ distance: number; center: { x: number; y: number }; scale: number; pan: { x: number; y: number } } | null>(null);
 	const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
-	const fingerTapRef = useRef<{
-		pointerId: number;
+	const lassoTapRef = useRef<{
 		startX: number;
 		startY: number;
 		world: Point;
 		moved: boolean;
 	} | null>(null);
+	const textTapRef = useRef<{
+		startX: number;
+		startY: number;
+		world: Point;
+		moved: boolean;
+	} | null>(null);
+	const textBoxDefaultsRef = useRef(textBoxDefaults);
+	textBoxDefaultsRef.current = textBoxDefaults;
 	const externalFingerPanRef = useRef<{
 		pointerId: number;
 		startX: number;
@@ -1568,37 +1607,11 @@ export default function DrawingCanvas({
 
 		const selectionBounds = getSelectionBounds(strokes, selectedStrokeIndexes);
 		if (selectionBounds && selectedStrokeIndexes.length > 0) {
-			const handleRadius = SELECTION_HANDLE_RADIUS_PX / scale;
-			const activeSession = transformSession;
-			const baseBounds = activeSession?.baseBounds ?? selectionBounds;
-			const rawHandlePoints = [
-				{ x: baseBounds.minX, y: baseBounds.minY },
-				{ x: baseBounds.maxX, y: baseBounds.minY },
-				{ x: baseBounds.maxX, y: baseBounds.maxY },
-				{ x: baseBounds.minX, y: baseBounds.maxY },
-			];
-			const handlePoints = activeSession ? rawHandlePoints.map((point) => applyVisualTransform(point, activeSession)) : rawHandlePoints;
+			const selectedIndexSetGlow = selectedIndexSet;
 			ctx.save();
 			ctx.strokeStyle = accentColor || strokeColor || "#2563EB";
-			ctx.fillStyle = accentColor || strokeColor || "#2563EB";
-			ctx.lineWidth = 1.5 / scale;
-			ctx.setLineDash([6 / scale, 4 / scale]);
-			ctx.beginPath();
-			ctx.moveTo(handlePoints[0].x, handlePoints[0].y);
-			for (let i = 1; i < handlePoints.length; i += 1) ctx.lineTo(handlePoints[i].x, handlePoints[i].y);
-			ctx.closePath();
-			ctx.stroke();
-			ctx.setLineDash([]);
-			for (const point of handlePoints) {
-				ctx.beginPath();
-				ctx.arc(point.x, point.y, handleRadius, 0, Math.PI * 2);
-				ctx.fillStyle = "#ffffff";
-				ctx.fill();
-				ctx.strokeStyle = accentColor || strokeColor || "#2563EB";
-				ctx.stroke();
-			}
 			for (let index = 0; index < strokes.length; index += 1) {
-				if (!selectedIndexSet.has(index)) continue;
+				if (!selectedIndexSetGlow.has(index)) continue;
 				const stroke = strokes[index];
 				if (stroke.tool !== "pen" || stroke.points.length < 2) continue;
 				ctx.strokeStyle = accentColor || strokeColor || "#2563EB";
@@ -1845,7 +1858,7 @@ export default function DrawingCanvas({
 		if (selectedStrokeIndexesRef.current.length > 0) setSelectedStrokeIndexes([]);
 		if (lassoPath) setLassoPath(null);
 		if (transformSessionRef.current) setTransformSession(null);
-		setSelectedObjectId(null);
+		setSelectedObjectIds([]);
 	}, [tool, lassoPath]);
 
 	const clearToolLongPressTimer = useCallback(() => {
@@ -2246,58 +2259,6 @@ export default function DrawingCanvas({
 		}
 	}
 
-	const startTransformSession = useCallback(
-		(mode: TransformMode, startPointer: Point) => {
-			const selectedIndexes = selectedStrokeIndexesRef.current;
-			if (selectedIndexes.length === 0) return;
-			const bounds = getSelectionBounds(strokesRef.current, selectedIndexes);
-			if (!bounds) return;
-			const center = { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 };
-			const baseDistance = Math.hypot(startPointer.x - center.x, startPointer.y - center.y);
-			const startAngle = Math.atan2(startPointer.y - center.y, startPointer.x - center.x);
-			setTransformSession({
-				mode,
-				startPointer,
-				baseStrokes: strokesRef.current,
-				selectedIndexes,
-				center,
-				baseBounds: bounds,
-				baseDistance,
-				startAngle,
-				previewDx: 0,
-				previewDy: 0,
-				previewScale: 1,
-				previewRotation: 0,
-			});
-		},
-		[]
-	);
-
-	const resolveSelectionHit = useCallback(
-		(pointer: Point): TransformMode | null => {
-			const bounds = getSelectionBounds(strokesRef.current, selectedStrokeIndexesRef.current);
-			if (!bounds) return null;
-			const handleRadius = SELECTION_HANDLE_RADIUS_PX / scaleRef.current;
-			const hitPadding = SELECTION_HIT_PADDING_PX / scaleRef.current;
-			const handlePoints = [
-				{ x: bounds.minX, y: bounds.minY },
-				{ x: bounds.maxX, y: bounds.minY },
-				{ x: bounds.maxX, y: bounds.maxY },
-				{ x: bounds.minX, y: bounds.maxY },
-			];
-			for (const point of handlePoints) {
-				if (Math.hypot(pointer.x - point.x, pointer.y - point.y) <= handleRadius + hitPadding) return "scale";
-			}
-			const insideBounds =
-				pointer.x >= bounds.minX - hitPadding &&
-				pointer.x <= bounds.maxX + hitPadding &&
-				pointer.y >= bounds.minY - hitPadding &&
-				pointer.y <= bounds.maxY + hitPadding;
-			return insideBounds ? "move" : null;
-		},
-		[]
-	);
-
 	const applyTransformFromSession = useCallback((pointer: Point) => {
 		const session = transformSessionRef.current;
 		if (!session) return;
@@ -2345,10 +2306,9 @@ export default function DrawingCanvas({
 			)
 		);
 		if (textHit?.id) {
-			setSelectedObjectId(null);
+			setSelectedObjectIds([]);
 			setSelectedStrokeIndexes([]);
-			onSelectTextBox?.(textHit.id);
-			setTool("lasso");
+			onSelectTextBoxes?.([textHit.id]);
 			return true;
 		}
 
@@ -2363,10 +2323,9 @@ export default function DrawingCanvas({
 						distanceSquaredPointToSegment(world, stroke.points[pointIndex], point) <= hitRadiusSquared
 					);
 			if (!hit) continue;
-			setSelectedObjectId(null);
-			onSelectTextBox?.(null);
+			setSelectedObjectIds([]);
+			onSelectTextBoxes?.([]);
 			setSelectedStrokeIndexes([index]);
-			setTool("lasso");
 			return true;
 		}
 
@@ -2379,17 +2338,16 @@ export default function DrawingCanvas({
 		);
 		if (objectHit) {
 			setSelectedStrokeIndexes([]);
-			onSelectTextBox?.(null);
-			setSelectedObjectId(objectHit.id);
-			setTool("lasso");
+			onSelectTextBoxes?.([]);
+			setSelectedObjectIds([objectHit.id]);
 			return true;
 		}
 
-		setSelectedObjectId(null);
+		setSelectedObjectIds([]);
 		setSelectedStrokeIndexes([]);
-		onSelectTextBox?.(null);
+		onSelectTextBoxes?.([]);
 		return false;
-	}, [captureTextBoxes, onSelectTextBox]);
+	}, [captureTextBoxes, onSelectTextBoxes]);
 
 	useEffect(() => {
 		const enterSelectMode = () => setTool("lasso");
@@ -2454,8 +2412,9 @@ export default function DrawingCanvas({
 
 			const rect = canvas.getBoundingClientRect();
 			const isIPadFinger = e.pointerType === "touch" && isIPad();
+			const isTextPlaceMode = editorMode === "text" && tool !== "lasso";
 
-			if (readOnly && tool !== "lasso" && !isIPadFinger) return;
+			if (readOnly && tool !== "lasso" && !isIPadFinger && !isTextPlaceMode) return;
 			canvas.setPointerCapture(e.pointerId);
 			const world = screenToWorld(e.clientX, e.clientY);
 			world.pressure = getPressure(e.nativeEvent);
@@ -2465,7 +2424,8 @@ export default function DrawingCanvas({
 
 			if (pointers.size === 2) {
 				// Start pinch
-				fingerTapRef.current = null;
+				lassoTapRef.current = null;
+				textTapRef.current = null;
 				if (holdStraightenTimerRef.current) {
 					clearTimeout(holdStraightenTimerRef.current);
 				}
@@ -2477,38 +2437,46 @@ export default function DrawingCanvas({
 				const center = { x: (a[1].x + b[1].x) / 2 - rect.left, y: (a[1].y + b[1].y) / 2 - rect.top };
 				isDrawingRef.current = false;
 				setCurrentStroke(null);
+				setLassoPath(null);
 				panStartRef.current = null;
 				pinchStartRef.current = { distance, center, scale, pan };
 				return;
 			}
 
 			if (pointers.size === 1) {
-				// On iPad, fingers navigate/select and Apple Pencil is the drawing input.
+				// Outside select mode, iPad fingers pan. In select mode, pencil and touch both select.
 				const isPen = e.pointerType === "pen";
 				const isMouse = e.pointerType === "mouse";
 				const isTouch = e.pointerType === "touch";
-				if (isIPadFinger) {
-					fingerTapRef.current = {
-						pointerId: e.pointerId,
+				if (isTextPlaceMode) {
+					textTapRef.current = {
 						startX: e.clientX,
 						startY: e.clientY,
 						world,
 						moved: false,
 					};
+					if (isTouch) {
+						panStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+					}
+					return;
+				}
+				if (isIPadFinger && tool !== "lasso") {
 					panStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
 					return;
 				}
 				if (tool === "lasso" && (isPen || isMouse || isTouch)) {
-					const hitMode = resolveSelectionHit(world);
-					if (hitMode && selectedStrokeIndexesRef.current.length > 0) {
-						startTransformSession(hitMode, world);
-					} else {
-						setTransformSession(null);
-						setSelectedStrokeIndexes([]);
-						setSelectedObjectId(null);
-						setLassoPath([world]);
-						isDrawingRef.current = true;
-					}
+					lassoTapRef.current = {
+						startX: e.clientX,
+						startY: e.clientY,
+						world,
+						moved: false,
+					};
+					setTransformSession(null);
+					setSelectedStrokeIndexes([]);
+					setSelectedObjectIds([]);
+					onSelectTextBoxes?.([]);
+					setLassoPath(null);
+					isDrawingRef.current = false;
 					return;
 				}
 
@@ -2540,7 +2508,7 @@ export default function DrawingCanvas({
 				}
 			}
 		},
-		[pan, scale, screenToWorld, tool, readOnly, onEditInteraction, resolveSelectionHit, startTransformSession, eraserMode, activePenColorIndex, activePenThicknessIndex, allowViewportNavigation]
+		[pan, scale, screenToWorld, tool, readOnly, editorMode, onEditInteraction, eraserMode, activePenColorIndex, activePenThicknessIndex, allowViewportNavigation, onSelectTextBoxes]
 	);
 
 	const handlePointerMove = useCallback(
@@ -2548,16 +2516,28 @@ export default function DrawingCanvas({
 			if (!allowViewportNavigation && e.pointerType === "touch") return;
 			e.preventDefault();
 			const isIPadFinger = e.pointerType === "touch" && isIPad();
-			if (readOnly && tool !== "lasso" && !isIPadFinger) return;
+			const isTextPlaceMode = editorMode === "text" && tool !== "lasso";
+			if (readOnly && tool !== "lasso" && !isIPadFinger && !isTextPlaceMode) return;
 			const pointers = pointerIdsRef.current;
 			const rect = canvasRef.current?.getBoundingClientRect();
 			if (!rect) return;
 
 			pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-			const fingerTap = fingerTapRef.current;
-			if (fingerTap?.pointerId === e.pointerId) {
-				const distance = Math.hypot(e.clientX - fingerTap.startX, e.clientY - fingerTap.startY);
-				if (distance > 8) fingerTap.moved = true;
+			const lassoTap = lassoTapRef.current;
+			if (lassoTap && !lassoTap.moved) {
+				const distance = Math.hypot(e.clientX - lassoTap.startX, e.clientY - lassoTap.startY);
+				if (distance > TAP_SELECT_MOVE_PX) {
+					lassoTap.moved = true;
+					const world = screenToWorld(e.clientX, e.clientY);
+					setLassoPath([lassoTap.world, world]);
+					isDrawingRef.current = true;
+					return;
+				}
+			}
+			const textTap = textTapRef.current;
+			if (textTap && !textTap.moved) {
+				const distance = Math.hypot(e.clientX - textTap.startX, e.clientY - textTap.startY);
+				if (distance > TAP_SELECT_MOVE_PX) textTap.moved = true;
 			}
 
 			if (pointers.size === 2 && pinchStartRef.current) {
@@ -2634,22 +2614,38 @@ export default function DrawingCanvas({
 				if (currentStroke.tool === "pen") scheduleHoldStraighten();
 			}
 		},
-		[currentStroke, screenToWorld, scheduleHoldStraighten, readOnly, tool, lassoPath, applyTransformFromSession, eraserMode, allowViewportNavigation]
+		[currentStroke, screenToWorld, scheduleHoldStraighten, readOnly, editorMode, tool, lassoPath, applyTransformFromSession, eraserMode, allowViewportNavigation]
 	);
 
 	const handlePointerUp = useCallback(
 		(e: React.PointerEvent) => {
 			if (!allowViewportNavigation && e.pointerType === "touch") return;
 			e.preventDefault();
-			const completedFingerTap =
-				e.pointerType === "touch" && fingerTapRef.current?.pointerId === e.pointerId
-					? fingerTapRef.current
-					: null;
 			const canvas = canvasRef.current;
 			if (canvas) canvas.releasePointerCapture(e.pointerId);
 			pointerIdsRef.current.delete(e.pointerId);
 
 			if (pointerIdsRef.current.size === 0) {
+				const textTap = textTapRef.current;
+				if (editorMode === "text" && tool !== "lasso" && textTap && !textTap.moved) {
+					const created = createBlankCanvasTextBox(
+						captureTextBoxesRef.current,
+						textTap.world.x,
+						textTap.world.y,
+						textBoxDefaultsRef.current ?? {
+							fontSize: 18,
+							colorIndex: 0,
+							fontWeight: "normal",
+							fontStyle: "normal",
+							listStyle: "none",
+						},
+					);
+					if (created) {
+						onTextBoxesChange?.([...captureTextBoxesRef.current, created]);
+						onSelectTextBoxes?.([created.id]);
+					}
+				}
+				textTapRef.current = null;
 				pinchStartRef.current = null;
 				panStartRef.current = null;
 				cancelHoldStraighten();
@@ -2664,16 +2660,41 @@ export default function DrawingCanvas({
 					pointEraseBaseRef.current = null;
 					pointEraseChangedRef.current = false;
 				}
-				if (tool === "lasso" && isDrawingRef.current && lassoPath) {
-					if (lassoPath.length >= LASSO_MIN_POINTS) {
+				if (tool === "lasso") {
+					const lassoTap = lassoTapRef.current;
+					if (lassoTap && !lassoTap.moved) {
+						selectAtWorldPoint(lassoTap.world);
+					} else if (isDrawingRef.current && lassoPath && lassoPath.length >= LASSO_MIN_POINTS) {
 						const selected = strokesRef.current
 							.map((stroke, index) => ({ stroke, index }))
 							.filter(({ stroke }) => stroke.tool === "pen")
 							.filter(({ stroke }) => strokeIntersectsPolygon(stroke, lassoPath))
 							.map(({ index }) => index);
 						setSelectedStrokeIndexes(selected);
+						const containedObjects = objectsRef.current.filter((object) =>
+							!object.pinnedToSide &&
+							rectFullyInsidePolygon(object.x, object.y, object.width, object.height, lassoPath)
+						);
+						setSelectedObjectIds(containedObjects.map((object) => object.id));
+						const containedTextIds = captureTextBoxes
+							.filter((box) => {
+								if (!box.id) return false;
+								const content = getTextContentBounds({
+									text: box.text,
+									x: box.x,
+									y: box.y,
+									width: box.width,
+									height: box.height,
+									fontSize: box.fontSize,
+								});
+								return Boolean(content && rectFullyInsidePolygon(content.x, content.y, content.width, content.height, lassoPath));
+							})
+							.map((box) => box.id)
+							.filter((id): id is string => Boolean(id));
+						onSelectTextBoxes?.(containedTextIds);
 					}
 					setLassoPath(null);
+					lassoTapRef.current = null;
 				}
 				if (isDrawingRef.current && currentStroke && currentStroke.points.length > 0) {
 					const world = screenToWorld(e.clientX, e.clientY);
@@ -2703,20 +2724,17 @@ export default function DrawingCanvas({
 					lastPenSampleRef.current = null;
 				}
 				isDrawingRef.current = false;
-				if (completedFingerTap && !completedFingerTap.moved) {
-					selectAtWorldPoint(completedFingerTap.world);
-				}
-				fingerTapRef.current = null;
+				if (tool !== "lasso") lassoTapRef.current = null;
 			}
 		},
-		[currentStroke, cancelHoldStraighten, commitStrokeChange, tool, lassoPath, commitTransformSession, eraserMode, allowViewportNavigation, selectAtWorldPoint]
+		[currentStroke, cancelHoldStraighten, commitStrokeChange, tool, lassoPath, commitTransformSession, eraserMode, allowViewportNavigation, selectAtWorldPoint, captureTextBoxes, onSelectTextBoxes, editorMode, onTextBoxesChange]
 	);
 
 	const handleWheel = useCallback(
 		(e: React.WheelEvent) => {
 			if (!allowViewportNavigation) return;
 			e.preventDefault();
-			if (readOnly) return;
+			if (readOnly && editorMode !== "text") return;
 			const canvas = canvasRef.current;
 			if (!canvas) return;
 			const rect = canvas.getBoundingClientRect();
@@ -2730,7 +2748,7 @@ export default function DrawingCanvas({
 			setScale(newScale);
 			setPan({ x: newPanX, y: newPanY });
 		},
-		[pan, scale, readOnly, allowViewportNavigation]
+		[pan, scale, readOnly, editorMode, allowViewportNavigation]
 	);
 
 	const clearCanvas = useCallback(() => {
@@ -2752,6 +2770,23 @@ export default function DrawingCanvas({
 		setTransformSession(null);
 		setLassoPath(null);
 	}, [commitStrokeChange]);
+
+	const deleteSelection = useCallback(() => {
+		deleteSelectedStrokes();
+		const objectIds = selectedObjectIdsRef.current;
+		const removable = objectIds.filter((id) => !isQuestionAttachmentObjectId(id));
+		if (removable.length > 0) {
+			const remove = new Set(removable);
+			setObjects((previous) => previous.filter((object) => !remove.has(object.id)));
+		}
+		setSelectedObjectIds(objectIds.filter((id) => isQuestionAttachmentObjectId(id)));
+		const textIds = selectedTextBoxIdsRef.current;
+		if (textIds.length > 0) {
+			const remove = new Set(textIds);
+			onTextBoxesChange?.(captureTextBoxesRef.current.filter((box) => !box.id || !remove.has(box.id)));
+			onSelectTextBoxes?.([]);
+		}
+	}, [deleteSelectedStrokes, onTextBoxesChange, onSelectTextBoxes]);
 
 	// --- Attached objects (images / PDF pages) ---
 
@@ -2903,7 +2938,7 @@ export default function DrawingCanvas({
 				if (created.length > 0) {
 					setObjects((prev) => [...prev, ...created]);
 					setTool("lasso");
-					setSelectedObjectId(created[0].id);
+					setSelectedObjectIds([created[0].id]);
 				}
 
 				if (unsupported.length > 0 || failed.length > 0 || tooLarge.length > 0) {
@@ -3071,77 +3106,78 @@ export default function DrawingCanvas({
 		return () => registerAttachFiles(null);
 	}, [registerAttachFiles, handleAttachFiles]);
 
-	const deleteObject = useCallback((id: string) => {
-		setObjects((prev) => prev.filter((o) => o.id !== id));
-		setSelectedObjectId((current) => (current === id ? null : current));
-	}, []);
+	const pinSelectionToSide = useCallback(() => {
+		if (!onPinObjectToSide) return;
+		const selected = new Set(selectedObjectIdsRef.current);
+		const toPin = objectsRef.current.filter((object) => selected.has(object.id) && !object.pinnedToSide);
+		if (toPin.length === 0) return;
+		const pinIds = new Set(toPin.map((object) => object.id));
+		setObjects((previous) =>
+			previous.map((object) => (pinIds.has(object.id) ? { ...object, pinnedToSide: true } : object))
+		);
+		setSelectedObjectIds((ids) => ids.filter((id) => !pinIds.has(id)));
+		for (const object of toPin) {
+			onPinObjectToSide({ ...object, pinnedToSide: true });
+		}
+	}, [onPinObjectToSide]);
 
-	const beginObjectDrag = useCallback(
-		(e: React.PointerEvent, id: string, mode: "move" | "resize") => {
+	const beginGroupMove = useCallback(
+		(e: React.PointerEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
-			const target = objectsRef.current.find((o) => o.id === id);
-			if (!target) return;
-			setSelectedObjectId(id);
-			setSelectedStrokeIndexes([]);
-			onSelectTextBox?.(null);
-
-			if (e.pointerType === "touch" && isIPad()) {
-				const pointerId = e.pointerId;
-				const startX = e.clientX;
-				const startY = e.clientY;
-				const startPan = panRef.current;
-				const onMove = (event: PointerEvent) => {
-					if (event.pointerId !== pointerId) return;
-					event.preventDefault();
-					setPan({
-						x: startPan.x + event.clientX - startX,
-						y: startPan.y + event.clientY - startY,
-					});
-				};
-				const onUp = (event: PointerEvent) => {
-					if (event.pointerId !== pointerId) return;
-					window.removeEventListener("pointermove", onMove);
-					window.removeEventListener("pointerup", onUp);
-					window.removeEventListener("pointercancel", onUp);
-				};
-				window.addEventListener("pointermove", onMove, { passive: false });
-				window.addEventListener("pointerup", onUp);
-				window.addEventListener("pointercancel", onUp);
-				return;
-			}
-
-			objectDragRef.current = {
-				id,
-				mode,
-				startClientX: e.clientX,
-				startClientY: e.clientY,
-				start: target,
-				aspect: target.height === 0 ? 1 : target.width / target.height,
-				base: objectsRef.current,
-			};
+			const startStrokes = strokesRef.current;
+			const startObjects = objectsRef.current;
+			const startTextBoxes = captureTextBoxesRef.current;
+			const strokeIndexes = [...selectedStrokeIndexesRef.current];
+			const objectIds = [...selectedObjectIdsRef.current];
+			const textIds = [...selectedTextBoxIdsRef.current];
+			if (strokeIndexes.length === 0 && objectIds.length === 0 && textIds.length === 0) return;
+			const startClientX = e.clientX;
+			const startClientY = e.clientY;
+			const objectIdSet = new Set(objectIds);
+			const textIdSet = new Set(textIds);
 
 			const onMove = (ev: PointerEvent) => {
-				const drag = objectDragRef.current;
-				if (!drag) return;
 				const currentScale = scaleRef.current || 1;
-				const dxWorld = (ev.clientX - drag.startClientX) / currentScale;
-				const dyWorld = (ev.clientY - drag.startClientY) / currentScale;
-				setObjects((prev) =>
-					prev.map((o) => {
-						if (o.id !== drag.id) return o;
-						if (drag.mode === "move") {
-							return { ...o, x: drag.start.x + dxWorld, y: drag.start.y + dyWorld };
-						}
-						const deltaW = Math.max(dxWorld, dyWorld * drag.aspect);
-						const width = Math.max(40, drag.start.width + deltaW);
-						const height = width / drag.aspect;
-						return { ...o, width, height };
-					})
-				);
+				const dxWorld = (ev.clientX - startClientX) / currentScale;
+				const dyWorld = (ev.clientY - startClientY) / currentScale;
+				if (strokeIndexes.length > 0) {
+					const bounds = getSelectionBounds(startStrokes, strokeIndexes);
+					const center = bounds
+						? { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2 }
+						: { x: 0, y: 0 };
+					setStrokes(transformSelectedStrokes(startStrokes, strokeIndexes, center, { dx: dxWorld, dy: dyWorld }));
+				}
+				if (objectIds.length > 0) {
+					setObjects(
+						startObjects.map((object) =>
+							objectIdSet.has(object.id)
+								? { ...object, x: object.x + dxWorld, y: object.y + dyWorld }
+								: object
+						)
+					);
+				}
+				if (textIds.length > 0) {
+					onTextBoxesChange?.(
+						startTextBoxes.map((box) =>
+							box.id && textIdSet.has(box.id)
+								? { ...box, x: box.x + dxWorld, y: box.y + dyWorld }
+								: box
+						)
+					);
+				}
 			};
 			const onUp = () => {
-				objectDragRef.current = null;
+				if (strokeIndexes.length > 0) {
+					const after = strokesRef.current;
+					const changed =
+						after.length !== startStrokes.length ||
+						after.some((stroke, index) => stroke !== startStrokes[index]);
+					if (changed) {
+						setUndoStack((history) => [...history, startStrokes]);
+						setRedoStack([]);
+					}
+				}
 				window.removeEventListener("pointermove", onMove);
 				window.removeEventListener("pointerup", onUp);
 				window.removeEventListener("pointercancel", onUp);
@@ -3150,7 +3186,7 @@ export default function DrawingCanvas({
 			window.addEventListener("pointerup", onUp);
 			window.addEventListener("pointercancel", onUp);
 		},
-		[onSelectTextBox]
+		[onTextBoxesChange]
 	);
 
 	const undo = useCallback(() => {
@@ -3193,35 +3229,48 @@ export default function DrawingCanvas({
 	const isEmbedded = onClose == null;
 	const isTextEditorMode = editorMode === "text";
 	const hasUnifiedEditor = editorMode != null && Boolean(onRequestTextMode);
+	const isSelectMode = tool === "lasso";
+	const isTextMode = Boolean(hasUnifiedEditor && isTextEditorMode && !isSelectMode);
+	const isEraseMode = !isTextMode && tool === "eraser";
+	const isPenMode = !isTextMode && !isSelectMode && tool === "pen";
 	const showToolbar = !suppressToolbar && (hasUnifiedEditor || !readOnly);
 	const interactionLocked = readOnly && tool !== "lasso";
-	const canUndo = isTextEditorMode ? true : undoStack.length > 0;
-	const canRedo = isTextEditorMode ? true : redoStack.length > 0;
+	const canUndo = isTextMode ? true : undoStack.length > 0;
+	const canRedo = isTextMode ? true : redoStack.length > 0;
 	const handleUndo = () => {
-		if (isTextEditorMode && textFormat?.onUndo) {
+		if (isTextMode && textFormat?.onUndo) {
 			textFormat.onUndo();
 			return;
 		}
 		undo();
 	};
 	const handleRedo = () => {
-		if (isTextEditorMode && textFormat?.onRedo) {
+		if (isTextMode && textFormat?.onRedo) {
 			textFormat.onRedo();
 			return;
 		}
 		redo();
+	};
+	const closeToolPopovers = () => {
+		setIsPenPopoverOpen(false);
+		setIsEraserPopoverOpen(false);
+		setIsGridPopoverOpen(false);
+		setIsAttachPopoverOpen(false);
 	};
 	const ensurePenMode = () => {
 		if (isTextEditorMode) onRequestPenMode?.();
 	};
 	const selectPenColor = (index: number) => {
 		setActivePenColorIndex(index);
-		if (isTextEditorMode) textFormat?.onColorChange?.(index);
+		if (isTextMode) textFormat?.onColorChange?.(index);
 	};
-	const activeColour = penPalette[activePenColorIndex] || penPalette[0] || strokeColor || "#111827";
-	const toolbarButtonClass = "p-1.5 rounded-in transition-colors color-txt-main hover:color-bg-grey-10 disabled:opacity-40 disabled:cursor-not-allowed";
+	const toolbarButtonClass = "flex h-7 w-7 shrink-0 items-center justify-center rounded-in transition-colors color-txt-main hover:color-bg-grey-10 disabled:opacity-40 disabled:cursor-not-allowed";
 	const toolbarActiveClass = "color-bg-accent color-txt-accent";
-	const toolbarSeparator = <span className="mx-1 h-5 w-px shrink-0 color-bg-grey-10" aria-hidden />;
+	const toolbarSeparator = <span className="mx-1 h-4 w-px shrink-0 color-bg-grey-10" aria-hidden />;
+	const toolbarSliderStyle = {
+		["--slider-track-color" as string]: mutedBgColor || "rgba(128, 128, 128, 0.3)",
+		["--slider-thumb-color" as string]: accentColor || strokeColor || "#2563EB",
+	};
 	const penButtonRect = penButtonRef.current?.getBoundingClientRect() ?? null;
 	const eraserButtonRect = eraserButtonRef.current?.getBoundingClientRect() ?? null;
 	const gridButtonRect = gridButtonRef.current?.getBoundingClientRect() ?? null;
@@ -3234,16 +3283,45 @@ export default function DrawingCanvas({
 		zIndex: 45,
 	});
 	const showAttachPopover = enableAttachments && !onAttachRequest;
-	const selectionDeleteAnchor = (() => {
-		if (tool !== "lasso" || selectedStrokeIndexes.length === 0) return null;
-		const bounds = getSelectionBounds(strokes, selectedStrokeIndexes);
-		if (!bounds) return null;
-		const topCenter = { x: (bounds.minX + bounds.maxX) / 2, y: bounds.minY };
+	const groupSelectionBounds = (() => {
+		if (tool !== "lasso") return null;
+		let bounds = getSelectionBounds(strokes, selectedStrokeIndexes);
+		for (const object of objects) {
+			if (object.pinnedToSide || !selectedObjectIds.includes(object.id)) continue;
+			bounds = unionRect(bounds, object.x, object.y, object.width, object.height);
+		}
+		for (const box of captureTextBoxes) {
+			if (!box.id || !selectedTextBoxIds.includes(box.id)) continue;
+			bounds = unionRect(bounds, box.x, box.y, box.width, box.height);
+		}
+		return bounds;
+	})();
+	const groupSelectionScreen = (() => {
+		if (!groupSelectionBounds) return null;
+		const rect = canvasRef.current?.getBoundingClientRect();
+		if (!rect) return null;
+		const pad = 8;
+		const left = rect.left + groupSelectionBounds.minX * scale + pan.x - pad;
+		const top = rect.top + groupSelectionBounds.minY * scale + pan.y - pad;
+		const width = (groupSelectionBounds.maxX - groupSelectionBounds.minX) * scale + pad * 2;
+		const height = (groupSelectionBounds.maxY - groupSelectionBounds.minY) * scale + pad * 2;
 		return {
-			screenX: topCenter.x * scale + pan.x,
-			screenY: topCenter.y * scale + pan.y - 28,
+			left,
+			top,
+			width,
+			height,
+			centerX: left + width / 2,
+			centerY: top + height / 2,
 		};
 	})();
+	const canDeleteSelection =
+		selectedStrokeIndexes.length > 0 ||
+		selectedTextBoxIds.length > 0 ||
+		selectedObjectIds.some((id) => !isQuestionAttachmentObjectId(id));
+	const canPinSelection =
+		Boolean(onPinObjectToSide) &&
+		objects.some((object) => selectedObjectIds.includes(object.id) && !object.pinnedToSide);
+	const groupChromeAccent = accentColor || strokeColor || "#2563EB";
 	const overlayBubbles = badgeLayoutsRef.current.map((badge) => {
 		const expanded = expandedCommentId === badge.id;
 		
@@ -3335,123 +3413,84 @@ export default function DrawingCanvas({
 						WebkitTapHighlightColor: "transparent",
 					}}
 				/>
-				{/* Object manipulation layer — only in select mode so drawing passes through otherwise */}
-				{!readOnly && enableAttachments && tool === "lasso" && objects.filter((o) => !o.pinnedToSide).map((o) => {
-					const left = o.x * scale + pan.x;
-					const top = o.y * scale + pan.y;
-					const width = o.width * scale;
-					const height = o.height * scale;
-					const selected = selectedObjectId === o.id;
-					const accent = accentColor || strokeColor || "#2563EB";
-					return (
+				{!interactionLocked && groupSelectionScreen && createPortal(
+					<>
 						<div
-							key={o.id}
-							onPointerDown={(e) => beginObjectDrag(e, o.id, "move")}
-							className="absolute z-[1500]"
+							className="fixed z-[2090] pointer-events-none rounded-[4px]"
 							style={{
-								left,
-								top,
-								width,
-								height,
+								left: groupSelectionScreen.left,
+								top: groupSelectionScreen.top,
+								width: groupSelectionScreen.width,
+								height: groupSelectionScreen.height,
+								border: `1.5px solid ${groupChromeAccent}`,
+							}}
+						/>
+						{(canDeleteSelection || canPinSelection) && (
+							<div
+								className="fixed z-[2100] flex items-center gap-1"
+								style={{
+									left: groupSelectionScreen.centerX,
+									top: groupSelectionScreen.top - 8,
+									transform: "translate(-50%, -100%)",
+								}}
+							>
+								{canPinSelection && (
+									<button
+										type="button"
+										onPointerDown={(e) => e.stopPropagation()}
+										onClick={(e) => {
+											e.stopPropagation();
+											pinSelectionToSide();
+										}}
+										className="flex h-7 items-center gap-1 rounded-full color-bg color-shadow border color-txt-main px-2 hover:color-bg-grey-10"
+										style={{
+											borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
+										}}
+										title="Pin to side"
+										aria-label="Pin to side"
+									>
+										<Pin size={14} strokeWidth={2} />
+									</button>
+								)}
+								{canDeleteSelection && (
+									<button
+										type="button"
+										onPointerDown={(e) => e.stopPropagation()}
+										onClick={(e) => {
+											e.stopPropagation();
+											deleteSelection();
+										}}
+										className="flex h-7 w-7 items-center justify-center rounded-full color-bg color-shadow border color-txt-main hover:color-bg-grey-10"
+										style={{
+											borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
+										}}
+										title="Delete selection"
+										aria-label="Delete selection"
+									>
+										<Trash2 size={14} strokeWidth={2} />
+									</button>
+								)}
+							</div>
+						)}
+						<button
+							type="button"
+							onPointerDown={beginGroupMove}
+							className="fixed z-[2100] flex h-7 w-7 items-center justify-center rounded-full color-bg color-shadow border color-txt-main hover:color-bg-grey-10"
+							style={{
+								left: groupSelectionScreen.centerX,
+								top: groupSelectionScreen.centerY,
+								transform: "translate(-50%, -50%)",
 								cursor: "move",
 								touchAction: "none",
-								borderRadius: 4,
-								border: selected
-									? `1.5px solid ${accent}`
-									: "1.5px dashed rgba(128, 128, 128, 0.55)",
-								pointerEvents: "auto",
+								borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
 							}}
+							title="Move selection"
+							aria-label="Move selection"
 						>
-							{selected && (
-								<>
-									<div
-										onPointerDown={(e) => beginObjectDrag(e, o.id, "resize")}
-										className="absolute"
-										style={{
-											right: -7,
-											bottom: -7,
-											width: 14,
-											height: 14,
-											borderRadius: "9999px",
-											background: "#ffffff",
-											border: `2px solid ${accent}`,
-											cursor: "nwse-resize",
-											touchAction: "none",
-										}}
-									/>
-									<div
-										className="absolute flex items-center gap-1"
-										style={{ right: -11, top: -30 }}
-										onPointerDown={(e) => e.stopPropagation()}
-									>
-										{onPinObjectToSide && (
-											<button
-												type="button"
-												onClick={(e) => {
-													e.stopPropagation();
-													const pinned = { ...o, pinnedToSide: true };
-													setObjects((prev) =>
-														prev.map((item) => (item.id === o.id ? pinned : item))
-													);
-													setSelectedObjectId(null);
-													onPinObjectToSide(pinned);
-												}}
-												className="flex items-center gap-1 rounded-md color-bg color-txt-main color-shadow border px-2 py-1 hover:color-bg-grey-10 transition-colors"
-												style={{
-													borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
-												}}
-												title="Pin to side"
-												aria-label="Pin to side question"
-											>
-												<Pin size={11} strokeWidth={2} />
-												<span className="text-[10px] font-semibold leading-none whitespace-nowrap">
-													Pin to side
-												</span>
-											</button>
-										)}
-										<button
-											type="button"
-											onClick={(e) => {
-												e.stopPropagation();
-												deleteObject(o.id);
-											}}
-											className="flex items-center justify-center rounded-md color-bg color-txt-main color-shadow border hover:color-bg-grey-10 transition-colors"
-											style={{
-												width: 22,
-												height: 22,
-												borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
-											}}
-											title="Remove attachment"
-											aria-label="Remove attachment"
-										>
-											<Trash2 size={12} strokeWidth={2} />
-										</button>
-									</div>
-								</>
-							)}
-						</div>
-					);
-				})}
-				{!interactionLocked && selectionDeleteAnchor && (
-					<button
-						type="button"
-						onPointerDown={(e) => e.stopPropagation()}
-						onClick={(e) => {
-							e.stopPropagation();
-							deleteSelectedStrokes();
-						}}
-						className="absolute z-[2100] flex items-center justify-center w-7 h-7 rounded-full color-bg color-shadow border color-txt-main hover:color-bg-grey-10 transition-colors pointer-events-auto"
-						style={{
-							left: selectionDeleteAnchor.screenX,
-							top: selectionDeleteAnchor.screenY,
-							transform: "translate(-50%, -100%)",
-							borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
-						}}
-						title="Delete selection"
-						aria-label="Delete selection"
-					>
-						<Trash2 size={14} strokeWidth={2} />
-					</button>
+							<Move size={14} strokeWidth={2} />
+						</button>
+					</>,
+					getThemedPortalTarget()
 				)}
 				{/* Attachment error toast (unsupported file types / failed loads) */}
 				{!readOnly && enableAttachments && attachError && (
@@ -3475,10 +3514,10 @@ export default function DrawingCanvas({
 				{/* Portaled toolbar is measured against the canvas so overlay layers cannot steal clicks. */}
 				{showToolbar && (() => {
 				const toolbarClassName = topToolbar
-					? "drawing-canvas-toolbar pointer-events-auto fixed z-40 flex min-h-10 items-center justify-center gap-1 overflow-x-auto color-bg px-3 py-0.5 scrollbar-minimal"
-					: `drawing-canvas-toolbar pointer-events-auto ${portalToolbar ? "fixed" : "absolute"} bottom-4 left-1/2 -translate-x-1/2 z-40 flex max-w-[calc(100%-1rem)] items-center justify-center gap-1 py-1.5 px-2 rounded-out color-bg color-shadow border`;
+					? "drawing-canvas-toolbar pointer-events-auto fixed z-40 flex h-8 items-center justify-center gap-0.5 overflow-x-auto color-bg px-3 scrollbar-minimal"
+					: `drawing-canvas-toolbar pointer-events-auto ${portalToolbar ? "fixed" : "absolute"} bottom-4 left-1/2 -translate-x-1/2 z-40 flex h-8 max-w-[calc(100%-1rem)] items-center justify-center gap-0.5 px-1.5 rounded-out color-bg color-shadow border`;
 				const toolbarSurfaceClassName = topToolbar
-					? "flex min-w-0 max-w-full items-center justify-center gap-1 overflow-x-auto rounded-full color-bg-grey-5 px-4 py-[3px] scrollbar-minimal"
+					? "flex h-8 min-w-0 max-w-full flex-nowrap items-center justify-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full color-bg-grey-5 px-2 scrollbar-minimal"
 					: "contents";
 				const toolbarStyle = topToolbar
 					? {
@@ -3506,80 +3545,245 @@ export default function DrawingCanvas({
 					<>
 						<button
 							type="button"
-							onPointerDown={(event) => { if (isTextEditorMode) event.preventDefault(); }}
+							onPointerDown={(event) => { if (isTextMode) event.preventDefault(); }}
 							onClick={() => {
-								setIsPenPopoverOpen(false);
-								setIsEraserPopoverOpen(false);
-								setIsGridPopoverOpen(false);
-								setTool("pen");
-								onRequestPenMode?.();
-							}}
-							className={`${toolbarButtonClass} ${!isTextEditorMode ? toolbarActiveClass : ""}`}
-							title="Draw"
-							aria-label="Draw"
-							aria-pressed={!isTextEditorMode}
-						>
-							<Pencil size={18} strokeWidth={2} />
-						</button>
-						<button
-							type="button"
-							onPointerDown={(event) => { if (isTextEditorMode) event.preventDefault(); }}
-							onClick={() => {
-								setIsPenPopoverOpen(false);
-								setIsEraserPopoverOpen(false);
-								setIsGridPopoverOpen(false);
+								closeToolPopovers();
 								setTool("pen");
 								onRequestTextMode?.();
 							}}
-							className={`${toolbarButtonClass} ${isTextEditorMode ? toolbarActiveClass : ""}`}
+							className={`${toolbarButtonClass} ${isTextMode ? toolbarActiveClass : ""}`}
 							title="Text"
 							aria-label="Text"
-							aria-pressed={isTextEditorMode}
+							aria-pressed={isTextMode}
 						>
-							<Type size={18} strokeWidth={2} />
+							<Type size={16} strokeWidth={2} />
+						</button>
+						<button
+							type="button"
+							onPointerDown={(event) => { if (isTextMode) event.preventDefault(); }}
+							onClick={() => {
+								closeToolPopovers();
+								setTool("pen");
+								onRequestPenMode?.();
+							}}
+							className={`${toolbarButtonClass} ${isPenMode ? toolbarActiveClass : ""}`}
+							title="Draw"
+							aria-label="Draw"
+							aria-pressed={isPenMode}
+						>
+							<Pencil size={16} strokeWidth={2} />
+						</button>
+						<button
+							type="button"
+							onPointerDown={(event) => { if (isTextMode) event.preventDefault(); }}
+							onClick={() => {
+								closeToolPopovers();
+								setTool("eraser");
+								onRequestPenMode?.();
+							}}
+							className={`${toolbarButtonClass} ${isEraseMode ? toolbarActiveClass : ""}`}
+							title="Eraser"
+							aria-label="Eraser"
+							aria-pressed={isEraseMode}
+						>
+							<Eraser size={16} strokeWidth={2} />
+						</button>
+						<button
+							type="button"
+							onPointerDown={(event) => { if (isTextMode) event.preventDefault(); }}
+							onClick={() => {
+								closeToolPopovers();
+								setTool("lasso");
+							}}
+							className={`${toolbarButtonClass} ${isSelectMode ? toolbarActiveClass : ""}`}
+							title="Select"
+							aria-label="Select"
+							aria-pressed={isSelectMode}
+						>
+							<MousePointer2 size={16} strokeWidth={2} />
 						</button>
 						{toolbarSeparator}
+						{isTextMode && textFormat ? (
+							<>
+								<div className="flex h-7 shrink-0 items-center justify-center gap-1.5 px-0.5">
+									{penPalette.map((color, index) => (
+										<button
+											key={`${color}-${index}`}
+											type="button"
+											onPointerDown={(event) => event.preventDefault()}
+											onClick={() => selectPenColor(index)}
+											className={`size-4 shrink-0 rounded-full border-0 p-0 appearance-none transition-transform ${activePenColorIndex === index ? "scale-110 ring-2 ring-current/40" : ""}`}
+											style={{ backgroundColor: color }}
+											aria-label="Set colour"
+											title="Set colour"
+										/>
+									))}
+								</div>
+								<button
+									type="button"
+									aria-pressed={textFormat.bold}
+									className={`${toolbarButtonClass} ${textFormat.bold ? toolbarActiveClass : ""}`}
+									onPointerDown={(event) => event.preventDefault()}
+									onClick={textFormat.onToggleBold}
+									title="Bold"
+									aria-label="Bold"
+								>
+									<Bold size={16} strokeWidth={2} />
+								</button>
+								<button
+									type="button"
+									aria-pressed={textFormat.italic}
+									className={`${toolbarButtonClass} ${textFormat.italic ? toolbarActiveClass : ""}`}
+									onPointerDown={(event) => event.preventDefault()}
+									onClick={textFormat.onToggleItalic}
+									title="Italic"
+									aria-label="Italic"
+								>
+									<Italic size={16} strokeWidth={2} />
+								</button>
+								<button
+									type="button"
+									aria-pressed={textFormat.bullet}
+									className={`${toolbarButtonClass} ${textFormat.bullet ? toolbarActiveClass : ""}`}
+									onPointerDown={(event) => event.preventDefault()}
+									onClick={textFormat.onToggleBullet}
+									title="Bullet list"
+									aria-label="Bullet list"
+								>
+									<List size={16} strokeWidth={2} />
+								</button>
+								<select
+									aria-label="Text size"
+									title="Text size"
+									value={String(textFormat.fontSize)}
+									onPointerDown={(event) => event.preventDefault()}
+									onChange={(event) => {
+										const raw = event.target.value;
+										const asNumber = Number(raw);
+										textFormat.onFontSizeChange(Number.isFinite(asNumber) && String(asNumber) === raw ? asNumber : raw);
+									}}
+									className="h-7 min-h-7 max-h-7 shrink-0 rounded-in color-bg-grey-10 px-1.5 text-[11px] font-semibold color-txt-main outline-none"
+								>
+									{textFormat.fontSizeOptions.map((option) => (
+										<option key={String(option.value)} value={String(option.value)}>{option.label}</option>
+									))}
+								</select>
+								{toolbarSeparator}
+							</>
+						) : null}
+						{isPenMode ? (
+							<>
+								<div className="flex h-7 w-[4.5rem] shrink-0 items-center px-0.5">
+									<input
+										type="range"
+										min={0}
+										max={PEN_THICKNESS_LEVELS.length - 1}
+										step={1}
+										value={activePenThicknessIndex}
+										onChange={(e) => setActivePenThicknessIndex(Number(e.target.value))}
+										className="pen-thickness-slider w-full"
+										style={{
+											...toolbarSliderStyle,
+											["--slider-thumb-size" as string]: `${10 + activePenThicknessIndex * 1.5}px`,
+										}}
+										aria-label="Pen thickness"
+									/>
+								</div>
+								<div className="flex h-7 shrink-0 items-center justify-center gap-1.5 px-0.5">
+									{penPalette.map((color, index) => (
+										<button
+											key={`${color}-${index}`}
+											type="button"
+											onClick={() => selectPenColor(index)}
+											className={`size-4 shrink-0 rounded-full border-0 p-0 appearance-none transition-transform ${activePenColorIndex === index ? "scale-110 ring-2 ring-current/40" : ""}`}
+											style={{ backgroundColor: color }}
+											aria-label="Set colour"
+											title="Set colour"
+										/>
+									))}
+								</div>
+								{toolbarSeparator}
+							</>
+						) : null}
+						{isEraseMode ? (
+							<>
+								<div className="flex h-7 shrink-0 items-center gap-0.5">
+									<button
+										type="button"
+										onClick={() => setEraserMode("point")}
+										className={`h-7 rounded-in px-1.5 text-[10px] font-semibold ${eraserMode === "point" ? toolbarActiveClass : "color-txt-main hover:color-bg-grey-10"}`}
+										aria-pressed={eraserMode === "point"}
+									>
+										Point
+									</button>
+									<button
+										type="button"
+										onClick={() => setEraserMode("stroke")}
+										className={`h-7 rounded-in px-1.5 text-[10px] font-semibold ${eraserMode === "stroke" ? toolbarActiveClass : "color-txt-main hover:color-bg-grey-10"}`}
+										aria-pressed={eraserMode === "stroke"}
+									>
+										Stroke
+									</button>
+								</div>
+								<div className="flex h-7 w-[4.5rem] shrink-0 items-center px-0.5">
+									<input
+										type="range"
+										min={0}
+										max={ERASER_SIZE_LEVELS.length - 1}
+										step={1}
+										value={activeEraserSizeIndex}
+										onChange={(e) => setActiveEraserSizeIndex(Number(e.target.value))}
+										className="pen-thickness-slider w-full"
+										style={{
+											...toolbarSliderStyle,
+											["--slider-thumb-size" as string]: `${10 + activeEraserSizeIndex * 1.5}px`,
+										}}
+										aria-label="Eraser size"
+									/>
+								</div>
+								{toolbarSeparator}
+							</>
+						) : null}
 					</>
 				)}
 				<button
 					type="button"
-					onPointerDown={(event) => { if (isTextEditorMode) event.preventDefault(); }}
+					onPointerDown={(event) => { if (isTextMode) event.preventDefault(); }}
 					onClick={handleUndo}
 					disabled={!canUndo}
 					className={toolbarButtonClass}
 					title="Undo"
 					aria-label="Undo"
 				>
-					<Undo2 size={18} strokeWidth={2} />
+					<Undo2 size={16} strokeWidth={2} />
 				</button>
 				<button
 					type="button"
-					onPointerDown={(event) => { if (isTextEditorMode) event.preventDefault(); }}
+					onPointerDown={(event) => { if (isTextMode) event.preventDefault(); }}
 					onClick={handleRedo}
 					disabled={!canRedo}
 					className={toolbarButtonClass}
 					title="Redo"
 					aria-label="Redo"
 				>
-					<Redo2 size={18} strokeWidth={2} />
+					<Redo2 size={16} strokeWidth={2} />
 				</button>
+				{!hasUnifiedEditor && (
+					<>
 				<div className="relative">
 					<button
 						ref={penButtonRef}
 						type="button"
-						onPointerDown={(event) => {
-							if (isTextEditorMode) event.preventDefault();
-							if (!hasUnifiedEditor) startToolLongPress("pen");
-						}}
-						onPointerUp={hasUnifiedEditor ? undefined : clearToolLongPressTimer}
-						onPointerLeave={hasUnifiedEditor ? undefined : clearToolLongPressTimer}
-						onPointerCancel={hasUnifiedEditor ? undefined : clearToolLongPressTimer}
+						onPointerDown={() => startToolLongPress("pen")}
+						onPointerUp={clearToolLongPressTimer}
+						onPointerLeave={clearToolLongPressTimer}
+						onPointerCancel={clearToolLongPressTimer}
 						onClick={() => {
-							if (!hasUnifiedEditor && longPressHandledRef.current) {
+							if (longPressHandledRef.current) {
 								longPressHandledRef.current = false;
 								return;
 							}
-							if (!hasUnifiedEditor && tool !== "pen") {
+							if (tool !== "pen") {
 								setTool("pen");
 								setIsPenPopoverOpen(false);
 							} else {
@@ -3588,74 +3792,14 @@ export default function DrawingCanvas({
 							setIsEraserPopoverOpen(false);
 							setIsGridPopoverOpen(false);
 						}}
-						className={`${toolbarButtonClass} ${isPenPopoverOpen || (!hasUnifiedEditor && tool === "pen") ? toolbarActiveClass : ""}`}
+						className={`${toolbarButtonClass} ${isPenPopoverOpen || tool === "pen" ? toolbarActiveClass : ""}`}
 						title="Colour and thickness"
 						aria-label="Colour and thickness"
 						aria-expanded={isPenPopoverOpen}
 					>
-						{hasUnifiedEditor ? (
-							<span
-								className="block size-4 rounded-full border border-current/25 shadow-sm"
-								style={{ backgroundColor: activeColour }}
-								aria-hidden
-							/>
-						) : (
-							<Pencil size={18} strokeWidth={2} />
-						)}
+						<Pencil size={16} strokeWidth={2} />
 					</button>
 				</div>
-				{isTextEditorMode && textFormat ? (
-					<>
-						<button
-							type="button"
-							aria-pressed={textFormat.bold}
-							className={`${toolbarButtonClass} ${textFormat.bold ? toolbarActiveClass : ""}`}
-							onPointerDown={(event) => event.preventDefault()}
-							onClick={textFormat.onToggleBold}
-							title="Bold"
-							aria-label="Bold"
-						>
-							<Bold size={18} strokeWidth={2} />
-						</button>
-						<button
-							type="button"
-							aria-pressed={textFormat.italic}
-							className={`${toolbarButtonClass} ${textFormat.italic ? toolbarActiveClass : ""}`}
-							onPointerDown={(event) => event.preventDefault()}
-							onClick={textFormat.onToggleItalic}
-							title="Italic"
-							aria-label="Italic"
-						>
-							<Italic size={18} strokeWidth={2} />
-						</button>
-						<button
-							type="button"
-							aria-pressed={textFormat.bullet}
-							className={`${toolbarButtonClass} ${textFormat.bullet ? toolbarActiveClass : ""}`}
-							onPointerDown={(event) => event.preventDefault()}
-							onClick={textFormat.onToggleBullet}
-							title="Bullet list"
-							aria-label="Bullet list"
-						>
-							<List size={18} strokeWidth={2} />
-						</button>
-						<select
-							aria-label="Text size"
-							title="Text size"
-							value={String(textFormat.fontSize)}
-							onChange={(event) => {
-								const raw = event.target.value;
-								const asNumber = Number(raw);
-								textFormat.onFontSizeChange(Number.isFinite(asNumber) && String(asNumber) === raw ? asNumber : raw);
-							}}
-							className="h-8 rounded-in color-bg-grey-5 px-2 text-xs font-semibold color-txt-main outline-none"
-						>
-							{textFormat.fontSizeOptions.map((option) => (
-								<option key={String(option.value)} value={String(option.value)}>{option.label}</option>
-							))}
-						</select>
-					</>
-				) : (
 					<div className="relative">
 						<button
 							ref={eraserButtonRef}
@@ -3669,7 +3813,6 @@ export default function DrawingCanvas({
 									longPressHandledRef.current = false;
 									return;
 								}
-								if (hasUnifiedEditor) ensurePenMode();
 								if (tool === "eraser") {
 									setIsEraserPopoverOpen((open) => !open);
 								} else {
@@ -3683,13 +3826,11 @@ export default function DrawingCanvas({
 							title="Eraser"
 							aria-label="Eraser"
 						>
-							<Eraser size={18} strokeWidth={2} />
+							<Eraser size={16} strokeWidth={2} />
 						</button>
 					</div>
-				)}
 				<button
 					type="button"
-					onPointerDown={(event) => { if (isTextEditorMode) event.preventDefault(); }}
 					onClick={() => {
 						setTool("lasso");
 						setIsPenPopoverOpen(false);
@@ -3701,13 +3842,15 @@ export default function DrawingCanvas({
 					aria-label="Select"
 					aria-pressed={tool === "lasso"}
 				>
-					<MousePointer2 size={18} strokeWidth={2} />
+					<MousePointer2 size={16} strokeWidth={2} />
 				</button>
+					</>
+				)}
 				<div className="relative">
 				<button
 					ref={gridButtonRef}
 					type="button"
-					onPointerDown={(event) => { if (isTextEditorMode) event.preventDefault(); }}
+					onPointerDown={(event) => { if (isTextMode) event.preventDefault(); }}
 					onClick={() => {
 						setIsPenPopoverOpen(false);
 						setIsEraserPopoverOpen(false);
@@ -3725,7 +3868,7 @@ export default function DrawingCanvas({
 				>
 					{(() => {
 						const { Icon } = getGridModeOption(gridMode);
-						return <Icon size={18} strokeWidth={2} />;
+						return <Icon size={16} strokeWidth={2} />;
 					})()}
 				</button>
 				</div>
@@ -3734,7 +3877,7 @@ export default function DrawingCanvas({
 					<button
 						ref={attachButtonRef}
 						type="button"
-						onPointerDown={(event) => { if (isTextEditorMode) event.preventDefault(); }}
+						onPointerDown={(event) => { if (isTextMode) event.preventDefault(); }}
 						onClick={() => {
 							if (onAttachRequest) {
 								onAttachRequest();
@@ -3754,22 +3897,22 @@ export default function DrawingCanvas({
 						aria-haspopup={showAttachPopover ? "true" : undefined}
 					>
 						{isAttaching ? (
-							<LoaderCircle size={18} strokeWidth={2} className="animate-spin" />
+							<LoaderCircle size={16} strokeWidth={2} className="animate-spin" />
 						) : (
-							<Paperclip size={18} strokeWidth={2} />
+							<Paperclip size={16} strokeWidth={2} />
 						)}
 					</button>
 					</div>
 				)}
 				<button
 					type="button"
-					onPointerDown={(event) => { if (isTextEditorMode) event.preventDefault(); }}
+					onPointerDown={(event) => { if (isTextMode) event.preventDefault(); }}
 					onClick={clearCanvas}
 					className={toolbarButtonClass}
 					title="Clear canvas"
 					aria-label="Clear canvas"
 				>
-					<Trash2 size={18} strokeWidth={2} />
+					<Trash2 size={16} strokeWidth={2} />
 				</button>
 				{toolbarExtras}
 				{onClose && (
@@ -3779,7 +3922,7 @@ export default function DrawingCanvas({
 						className={`${toolbarButtonClass} ml-1`}
 						title="Close whiteboard"
 					>
-						<X size={18} strokeWidth={2} />
+						<X size={16} strokeWidth={2} />
 					</button>
 				)}
 				</div>

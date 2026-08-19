@@ -76,6 +76,71 @@ function parsePartIndexFromName(name: string | undefined): number | null {
   return null;
 }
 
+/**
+ * Attachment and history budgets. The chat endpoint rejects anything larger, so
+ * the payload is trimmed here by priority rather than letting a multi-page
+ * question fail the whole request.
+ */
+const MAX_ATTACHED_IMAGES = 6;
+const MAX_QUESTION_IMAGES = 4;
+const MAX_MARKING_SCHEME_IMAGES = 2;
+const MAX_HISTORY_MESSAGES = 16;
+const MAX_MESSAGE_CHARACTERS = 8_000;
+
+type AttachmentKind = "question" | "work" | "markingScheme" | "paper";
+
+const ATTACHMENT_LABELS: Record<AttachmentKind, string> = {
+  question: "the current question",
+  work: "the student's own handwritten work",
+  markingScheme: "the official marking scheme for this question",
+  paper: "the exam paper the student has open",
+};
+
+function selectAttachments(sources: {
+  questionImageUrls: string[];
+  markingSchemeImageUrls: string[];
+  drawingDataUrl: string | null;
+  paperDataUrl: string | null;
+}): { url: string; kind: AttachmentKind }[] {
+  const tiers: { kind: AttachmentKind; urls: (string | null)[]; limit: number }[] = [
+    { kind: "question", urls: sources.questionImageUrls, limit: MAX_QUESTION_IMAGES },
+    { kind: "work", urls: [sources.drawingDataUrl], limit: 1 },
+    { kind: "markingScheme", urls: sources.markingSchemeImageUrls, limit: MAX_MARKING_SCHEME_IMAGES },
+    { kind: "paper", urls: [sources.paperDataUrl], limit: 1 },
+  ];
+
+  const seen = new Set<string>();
+  const selected: { url: string; kind: AttachmentKind }[] = [];
+  for (const tier of tiers) {
+    let taken = 0;
+    for (const url of tier.urls) {
+      if (selected.length >= MAX_ATTACHED_IMAGES) return selected;
+      if (taken >= tier.limit) break;
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      selected.push({ url, kind: tier.kind });
+      taken += 1;
+    }
+  }
+  return selected;
+}
+
+function describeAttachments(attachments: { kind: AttachmentKind }[]): string | null {
+  if (attachments.length === 0) return null;
+  const lines = attachments.map((a, i) => `Image ${i + 1}: ${ATTACHMENT_LABELS[a.kind]}`);
+  return `Attached images, in order:\n${lines.join("\n")}`;
+}
+
+function trimHistory(history: Message[]): { role: Message["role"]; content: string }[] {
+  return history.slice(-MAX_HISTORY_MESSAGES).map((m) => ({
+    role: m.role,
+    content:
+      m.content.length > MAX_MESSAGE_CHARACTERS
+        ? `${m.content.slice(0, MAX_MESSAGE_CHARACTERS)}\n[earlier text trimmed]`
+        : m.content,
+  }));
+}
+
 const STAVE_CONTEXT = `The user's canvas shows a music stave. The snapshot image has position labels on the left of each stave group:
 Lines (bottom to top): L1, L2, L3, L4, L5
 Spaces (bottom to top): S1, S2, S3, S4
@@ -89,6 +154,7 @@ function buildQuestionContext(
   question: any,
   staveAnalysis?: string | null,
   workspaceText?: string | null,
+  attachmentSummary?: string | null,
 ): string | undefined {
   const name = question?.properties?.name ?? question?.questionName;
   const tags = question?.properties?.tags ?? question?.tags;
@@ -109,8 +175,8 @@ function buildQuestionContext(
     .map((c: any, i: number) => (c?.question ? `Part ${i + 1}: ${c.question}` : null))
     .filter(Boolean);
   if (questionTexts.length) parts.push(`\n${questionTexts.join("\n\n")}`);
-  if (Array.isArray(question?.imageUrls) && question.imageUrls.length > 0) {
-    parts.push("An image of this question is attached. Use the image to understand the full question content.");
+  if (attachmentSummary) {
+    parts.push(attachmentSummary);
   } else if (!questionTexts.length && name) {
     parts.push("Use only the named question/part above as context. Do not answer other parts unless asked.");
   }
@@ -207,22 +273,32 @@ export function useAI(
       const paperDataUrl = getPaperSnapshot?.() ?? null;
       const workspaceText = getWorkspaceText?.() ?? null;
       const questionImageUrls: string[] = Array.isArray(question?.imageUrls) ? question.imageUrls : [];
-      const apiMessages = [...messages, userMessage].map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
+      const markingSchemeImageUrls: string[] = Array.isArray(question?.markingSchemeImageUrls)
+        ? question.markingSchemeImageUrls
+        : [];
+      const apiMessages: { role: Message["role"]; content: unknown }[] = trimHistory([...messages, userMessage]);
       const lastUserContent = apiMessages[apiMessages.length - 1].content;
-      const imageUrls = [...questionImageUrls, drawingDataUrl, paperDataUrl].filter((url): url is string => Boolean(url));
-      if (imageUrls.length > 0 && lastUserContent !== undefined) {
+      const attachments = selectAttachments({
+        questionImageUrls,
+        markingSchemeImageUrls,
+        drawingDataUrl,
+        paperDataUrl,
+      });
+      if (attachments.length > 0 && typeof lastUserContent === "string") {
         apiMessages[apiMessages.length - 1] = {
           role: "user",
           content: [
             { type: "text", text: lastUserContent },
-            ...imageUrls.map((url) => ({ type: "image_url" as const, image_url: { url } })),
+            ...attachments.map(({ url }) => ({ type: "image_url" as const, image_url: { url } })),
           ],
-        } as any;
+        };
       }
-      const context = buildQuestionContext(question, staveAnalysis, workspaceText);
+      const context = buildQuestionContext(
+        question,
+        staveAnalysis,
+        workspaceText,
+        describeAttachments(attachments),
+      );
       const res = await authenticatedAiFetch(
         METERED_CHAT_API_URL,
         { messages: apiMessages, context },

@@ -543,7 +543,8 @@ function WhiteboardPageViewInner() {
   });
   const [editorMode, setEditorMode] = useState<"pen" | "text">("pen");
   const [canvasTool, setCanvasTool] = useState<ToolMode>("pen");
-  const [selectedCanvasTextBoxId, setSelectedCanvasTextBoxId] = useState<string | null>(null);
+  const [selectedCanvasTextBoxIds, setSelectedCanvasTextBoxIds] = useState<string[]>([]);
+  const selectedCanvasTextBoxId = selectedCanvasTextBoxIds[selectedCanvasTextBoxIds.length - 1] ?? null;
   const [canvasTextFormat, setCanvasTextFormat] = useState({ bold: false, italic: false, bullet: false });
   const selectActive = canvasTool === "lasso";
   const textEditing = editorMode === "text" && !selectActive;
@@ -677,7 +678,7 @@ function WhiteboardPageViewInner() {
     setGradingStatus("idle");
     setAiInjectedExchange(null);
     setEditorMode("pen");
-    setSelectedCanvasTextBoxId(null);
+    setSelectedCanvasTextBoxIds([]);
     setCanvasViewport({ pan: { x: 0, y: 0 }, scale: 1 });
     setPinnedSideObject(null);
     setQuestionSeedStatus("idle");
@@ -1444,12 +1445,12 @@ function WhiteboardPageViewInner() {
   const activeToolbarPage = page?.id === pageId && !canvasLoading && !canvasLoadError ? page : null;
   const pageToolbarExtras = activeToolbarPage ? (
     <>
-      <span className="mx-1 h-6 w-px shrink-0 color-bg-grey-10" aria-hidden />
+      <span className="mx-1 h-4 w-px shrink-0 color-bg-grey-10" aria-hidden />
       <div className="relative">
         <button
           type="button"
           aria-label="Check Answer"
-          className="flex h-[30px] items-center gap-1.5 rounded-in px-2 text-sm font-semibold color-txt-main hover:color-bg-grey-10 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-in px-2 text-xs font-semibold color-txt-main hover:color-bg-grey-10 disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => {
             if (isDocumentPage) {
               setDocumentChecking(true);
@@ -1463,7 +1464,7 @@ function WhiteboardPageViewInner() {
           disabled={isDocumentPage ? documentChecking : !canCheckNow}
           title="Check Answer with AI"
         >
-          <LuCircleCheck size={16} strokeWidth={2} />
+          <LuCircleCheck size={14} strokeWidth={2} />
           <span>
             {isDocumentPage
               ? (documentChecking ? "Checking…" : "Check Answer")
@@ -1667,7 +1668,10 @@ function WhiteboardPageViewInner() {
                 onAttachQuestions={() => setQuestionModalMode("attach")}
                 initialObjects={canvasObjects}
                 captureTextBoxes={canvasTextBoxes}
-                onSelectTextBox={setSelectedCanvasTextBoxId}
+                selectedTextBoxIds={selectedCanvasTextBoxIds}
+                onSelectTextBoxes={setSelectedCanvasTextBoxIds}
+                onTextBoxesChange={handleCanvasTextBoxesChange}
+                textBoxDefaults={canvasTextDefaults}
                 onObjectsChange={handleObjectsChange}
                 onUploadImage={handleUploadImage}
                 onToolbarCenterChange={setToolbarFollowX}
@@ -1678,11 +1682,11 @@ function WhiteboardPageViewInner() {
                 editorMode={editorMode}
                 onToolChange={setCanvasTool}
                 onRequestTextMode={() => {
-                  setSelectedCanvasTextBoxId(null);
+                  setSelectedCanvasTextBoxIds([]);
                   setEditorMode("text");
                 }}
                 onRequestPenMode={() => {
-                  setSelectedCanvasTextBoxId(null);
+                  setSelectedCanvasTextBoxIds([]);
                   setEditorMode("pen");
                 }}
                 textFormat={{
@@ -1739,20 +1743,22 @@ function WhiteboardPageViewInner() {
                     const fontSize = typeof value === "number" ? value : Number(value);
                     if (!Number.isFinite(fontSize)) return;
                     setCanvasTextDefaults((current) => ({ ...current, fontSize }));
-                    if (!selectedCanvasTextBoxId) return;
+                    if (selectedCanvasTextBoxIds.length === 0) return;
+                    const selected = new Set(selectedCanvasTextBoxIds);
                     handleCanvasTextBoxesChange(
                       canvasTextBoxesRef.current.map((box) =>
-                        box.id === selectedCanvasTextBoxId ? { ...box, fontSize } : box
+                        selected.has(box.id) ? { ...box, fontSize } : box
                       )
                     );
                   },
                   onColorChange: (colorIndex) => {
                     setCanvasTextDefaults((current) => ({ ...current, colorIndex }));
                     applyThemeTextColor(colorIndex);
-                    if (selectedCanvasTextBoxId) {
+                    if (selectedCanvasTextBoxIds.length > 0) {
+                      const selected = new Set(selectedCanvasTextBoxIds);
                       handleCanvasTextBoxesChange(
                         canvasTextBoxesRef.current.map((box) =>
-                          box.id === selectedCanvasTextBoxId ? { ...box, colorIndex } : box
+                          selected.has(box.id) ? { ...box, colorIndex } : box
                         )
                       );
                     }
@@ -1778,9 +1784,9 @@ function WhiteboardPageViewInner() {
                   pan={canvasViewport.pan}
                   scale={canvasViewport.scale}
                   editing={textEditing}
-                  selectable={selectActive || editorMode === "text"}
-                  selectedId={selectedCanvasTextBoxId}
-                  onSelectedIdChange={setSelectedCanvasTextBoxId}
+                  selectable={selectActive}
+                  selectedIds={selectedCanvasTextBoxIds}
+                  onSelectedIdsChange={setSelectedCanvasTextBoxIds}
                   onCreateChange={handleCanvasTextBoxesChange}
                   defaults={canvasTextDefaults}
                   onFormatStateChange={setCanvasTextFormat}

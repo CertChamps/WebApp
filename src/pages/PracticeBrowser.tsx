@@ -663,6 +663,7 @@ function PracticeBrowserInner() {
                     id: `image_${storageSubject}_${selectedLevel}_${activeQuestion.topic ?? selectedTopicName ?? "paper"}_${activeQuestion.key}`,
                     properties: { name: activeQuestion.displayName },
                     imageUrls: activeQuestion.images.map((image) => image.downloadUrl),
+                    markingSchemeImageUrls: activeMarkingImages.map((image) => image.downloadUrl),
                     _discoverId: `image_${storageSubject}_${selectedLevel}_${activeQuestion.topic ?? selectedTopicName ?? "paper"}_${activeQuestion.key}`,
                     _discoverName: activeQuestion.displayName,
                     _discoverSubjectId: subjectId,

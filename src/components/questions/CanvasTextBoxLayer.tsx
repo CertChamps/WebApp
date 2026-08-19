@@ -11,11 +11,6 @@ import type {
 	PointerEvent as ReactPointerEvent,
 } from "react";
 import { GripHorizontal, Trash2 } from "lucide-react";
-import { isIPad } from "../../utils/isIPad";
-import {
-	dispatchCanvasFingerPointer,
-	requestCanvasFingerSelectMode,
-} from "../../utils/pencilEvents";
 import {
 	clampThemeColorIndex,
 	isThemeTextColorClass,
@@ -61,8 +56,8 @@ export type CanvasTextBoxLayerProps = {
 	editing: boolean;
 	/** Select, move, and resize existing boxes. */
 	selectable: boolean;
-	selectedId: string | null;
-	onSelectedIdChange: (id: string | null) => void;
+	selectedIds: string[];
+	onSelectedIdsChange: (ids: string[]) => void;
 	/** Receives the complete collection after a box is created or changed. */
 	onCreateChange: (boxes: CanvasTextBox[]) => void;
 	defaults: CanvasTextDefaults;
@@ -77,11 +72,6 @@ type BoxInteraction = {
 	startClientY: number;
 	startBox: CanvasTextBox;
 	startBoxes: CanvasTextBox[];
-	captureTarget: HTMLElement;
-};
-
-type FingerNavigation = {
-	pointerId: number;
 	captureTarget: HTMLElement;
 };
 
@@ -112,6 +102,28 @@ function makeBoxId(boxes: CanvasTextBox[]): string {
 				: `text-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 	} while (existingIds.has(id));
 	return id;
+}
+
+export function createBlankCanvasTextBox(
+	boxes: CanvasTextBox[],
+	x: number,
+	y: number,
+	defaults: CanvasTextDefaults,
+): CanvasTextBox | null {
+	if (boxes.length >= MAX_TEXT_BOXES) return null;
+	return {
+		id: makeBoxId(boxes),
+		text: "",
+		x,
+		y,
+		width: NEW_BOX_WIDTH,
+		height: NEW_BOX_HEIGHT,
+		fontSize: defaults.fontSize,
+		colorIndex: clampThemeColorIndex(defaults.colorIndex),
+		fontWeight: "normal",
+		fontStyle: "normal",
+		listStyle: "none",
+	};
 }
 
 export function htmlToPlainText(html: string): string {
@@ -225,6 +237,56 @@ function releasePointerCapture(interaction: BoxInteraction): void {
 	}
 }
 
+const TEXT_PAD_X = 8;
+const TEXT_PAD_Y = 6;
+let textMeasureCtx: CanvasRenderingContext2D | null | undefined;
+
+function getTextMeasureContext(): CanvasRenderingContext2D | null {
+	if (textMeasureCtx !== undefined) return textMeasureCtx;
+	if (typeof document === "undefined") {
+		textMeasureCtx = null;
+		return null;
+	}
+	textMeasureCtx = document.createElement("canvas").getContext("2d");
+	return textMeasureCtx;
+}
+
+export function isEmptyTextBox(box: { text: string }): boolean {
+	return !htmlToPlainText(box.text).trim();
+}
+
+export function getTextContentBounds(box: {
+	text: string;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	fontSize: number;
+}): { x: number; y: number; width: number; height: number } | null {
+	if (isEmptyTextBox(box)) return null;
+	const fontSize = finiteOr(box.fontSize, DEFAULT_FONT_SIZE);
+	const lines = htmlToPlainText(box.text).replace(/\s+$/g, "").split(/\n/);
+	const ctx = getTextMeasureContext();
+	if (ctx) ctx.font = `${fontSize}px ui-sans-serif, system-ui, sans-serif`;
+	const innerWidth = Math.max(8, finiteOr(box.width, MIN_BOX_WIDTH) - TEXT_PAD_X * 2);
+	const innerHeight = Math.max(fontSize, finiteOr(box.height, MIN_BOX_HEIGHT) - TEXT_PAD_Y * 2);
+	let wrappedLineCount = 0;
+	let longest = 0;
+	for (const line of lines) {
+		const lineWidth = ctx ? ctx.measureText(line).width : Math.max(1, line.length) * fontSize * 0.55;
+		longest = Math.max(longest, lineWidth);
+		wrappedLineCount += Math.max(1, Math.ceil(lineWidth / innerWidth));
+	}
+	const contentWidth = Math.min(innerWidth, Math.max(8, longest));
+	const contentHeight = Math.min(innerHeight, Math.max(fontSize, wrappedLineCount * TEXT_LINE_GAP));
+	return {
+		x: finiteOr(box.x, 0) + TEXT_PAD_X,
+		y: finiteOr(box.y, 0) + TEXT_PAD_Y,
+		width: contentWidth,
+		height: contentHeight,
+	};
+}
+
 function measureEditorWorldHeight(element: HTMLElement, viewScale: number): number {
 	const previousHeight = element.style.height;
 	const previousMinHeight = element.style.minHeight;
@@ -254,8 +316,8 @@ export default function CanvasTextBoxLayer({
 	scale,
 	editing,
 	selectable,
-	selectedId,
-	onSelectedIdChange,
+	selectedIds,
+	onSelectedIdsChange,
 	onCreateChange,
 	defaults,
 	onFormatStateChange,
@@ -265,18 +327,20 @@ export default function CanvasTextBoxLayer({
 	const composingIdsRef = useRef(new Set<string>());
 	const boxesRef = useRef(boxes);
 	const onCreateChangeRef = useRef(onCreateChange);
-	const onSelectedIdChangeRef = useRef(onSelectedIdChange);
+	const onSelectedIdsChangeRef = useRef(onSelectedIdsChange);
 	const onFormatStateChangeRef = useRef(onFormatStateChange);
+	const selectedIdsRef = useRef(selectedIds);
 	const interactionRef = useRef<BoxInteraction | null>(null);
-	const fingerNavigationRef = useRef<FingerNavigation | null>(null);
 	const interactionPreviewRef = useRef<CanvasTextBox[] | null>(null);
 	const pendingFocusIdRef = useRef<string | null>(null);
+	const knownBoxIdsRef = useRef<Set<string>>(new Set(boxes.map((box) => box.id)));
 	const [interactionPreview, setInteractionPreview] = useState<CanvasTextBox[] | null>(null);
 
 	boxesRef.current = boxes;
 	onCreateChangeRef.current = onCreateChange;
-	onSelectedIdChangeRef.current = onSelectedIdChange;
+	onSelectedIdsChangeRef.current = onSelectedIdsChange;
 	onFormatStateChangeRef.current = onFormatStateChange;
+	selectedIdsRef.current = selectedIds;
 
 	const viewScale = Math.max(MIN_VIEW_SCALE, Math.abs(finiteOr(scale, 1)));
 	const panX = finiteOr(pan.x, 0);
@@ -291,6 +355,19 @@ export default function CanvasTextBoxLayer({
 		boxesRef.current = nextBoxes;
 		onCreateChangeRef.current(nextBoxes);
 	}, []);
+
+	useEffect(() => {
+		if (editing) return;
+		const current = boxesRef.current;
+		const next = current.filter((box) => !isEmptyTextBox(box));
+		if (next.length === current.length) return;
+		const keep = new Set(next.map((box) => box.id));
+		const nextIds = selectedIdsRef.current.filter((id) => keep.has(id));
+		if (nextIds.length !== selectedIdsRef.current.length) {
+			onSelectedIdsChangeRef.current(nextIds);
+		}
+		publish(next);
+	}, [editing, publish]);
 
 	const emitFormatState = useCallback(() => {
 		onFormatStateChangeRef.current?.(readFormatState());
@@ -314,6 +391,13 @@ export default function CanvasTextBoxLayer({
 	}, [publish, viewScale]);
 
 	useLayoutEffect(() => {
+		if (editing) {
+			const known = knownBoxIdsRef.current;
+			const created = visibleBoxes.find((box) => !known.has(box.id) && selectedIds.includes(box.id));
+			if (created) pendingFocusIdRef.current = created.id;
+		}
+		knownBoxIdsRef.current = new Set(visibleBoxes.map((box) => box.id));
+
 		for (const box of visibleBoxes) {
 			const editor = editorRefs.current.get(box.id);
 			if (!editor || composingIdsRef.current.has(box.id)) continue;
@@ -341,7 +425,7 @@ export default function CanvasTextBoxLayer({
 		editor.focus({ preventScroll: true });
 		placeCaretAtEnd(editor);
 		emitFormatState();
-	}, [visibleBoxes, emitFormatState, publish, viewScale]);
+	}, [visibleBoxes, selectedIds, editing, emitFormatState, publish, viewScale]);
 
 	useEffect(() => {
 		if (interactive) return;
@@ -358,111 +442,8 @@ export default function CanvasTextBoxLayer({
 			interactionRef.current = null;
 			interactionPreviewRef.current = null;
 			if (interaction) releasePointerCapture(interaction);
-			const fingerNavigation = fingerNavigationRef.current;
-			if (fingerNavigation) {
-				try {
-					if (fingerNavigation.captureTarget.hasPointerCapture(fingerNavigation.pointerId)) {
-						fingerNavigation.captureTarget.releasePointerCapture(fingerNavigation.pointerId);
-					}
-				} catch {
-					// Pointer capture may already have ended.
-				}
-			}
 		};
 	}, []);
-
-	const beginFingerNavigation = (
-		event: ReactPointerEvent<HTMLElement>,
-		boxId: string | null,
-	) => {
-		if (event.pointerType !== "touch" || !isIPad()) return false;
-		event.preventDefault();
-		event.stopPropagation();
-		if (boxId) onSelectedIdChangeRef.current(boxId);
-		requestCanvasFingerSelectMode();
-		fingerNavigationRef.current = {
-			pointerId: event.pointerId,
-			captureTarget: event.currentTarget,
-		};
-		event.currentTarget.setPointerCapture(event.pointerId);
-		dispatchCanvasFingerPointer({
-			phase: "start",
-			pointerId: event.pointerId,
-			clientX: event.clientX,
-			clientY: event.clientY,
-		});
-		return true;
-	};
-
-	const handleFingerNavigationMove = (event: ReactPointerEvent<HTMLElement>) => {
-		const navigation = fingerNavigationRef.current;
-		if (!navigation || navigation.pointerId !== event.pointerId) return false;
-		event.preventDefault();
-		event.stopPropagation();
-		dispatchCanvasFingerPointer({
-			phase: "move",
-			pointerId: event.pointerId,
-			clientX: event.clientX,
-			clientY: event.clientY,
-		});
-		return true;
-	};
-
-	const finishFingerNavigation = (
-		event: ReactPointerEvent<HTMLElement>,
-		cancelled: boolean,
-	) => {
-		const navigation = fingerNavigationRef.current;
-		if (!navigation || navigation.pointerId !== event.pointerId) return false;
-		event.preventDefault();
-		event.stopPropagation();
-		fingerNavigationRef.current = null;
-		try {
-			if (navigation.captureTarget.hasPointerCapture(navigation.pointerId)) {
-				navigation.captureTarget.releasePointerCapture(navigation.pointerId);
-			}
-		} catch {
-			// Pointer capture may already have ended.
-		}
-		dispatchCanvasFingerPointer({
-			phase: cancelled ? "cancel" : "end",
-			pointerId: event.pointerId,
-			clientX: event.clientX,
-			clientY: event.clientY,
-		});
-		return true;
-	};
-
-	const handleBlankPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-		if (event.target !== event.currentTarget) return;
-		if (interactive && beginFingerNavigation(event, null)) return;
-		if (!editing) return;
-		if (event.pointerType === "mouse" && event.button !== 0) return;
-
-		const rect = event.currentTarget.getBoundingClientRect();
-		const worldX = (event.clientX - rect.left - panX) / viewScale;
-		const worldY = (event.clientY - rect.top - panY) / viewScale;
-		const currentBoxes = boxesRef.current;
-		if (currentBoxes.length >= MAX_TEXT_BOXES) return;
-		const created: CanvasTextBox = {
-			id: makeBoxId(currentBoxes),
-			text: "",
-			x: worldX,
-			y: worldY,
-			width: NEW_BOX_WIDTH,
-			height: NEW_BOX_HEIGHT,
-			fontSize: defaults.fontSize,
-			colorIndex: clampThemeColorIndex(defaults.colorIndex),
-			fontWeight: "normal",
-			fontStyle: "normal",
-			listStyle: "none",
-		};
-
-		event.preventDefault();
-		pendingFocusIdRef.current = created.id;
-		onSelectedIdChangeRef.current(created.id);
-		publish([...currentBoxes, created]);
-	};
 
 	const beginInteraction = (
 		event: ReactPointerEvent<HTMLElement>,
@@ -471,7 +452,6 @@ export default function CanvasTextBoxLayer({
 	) => {
 		if (!selectable && !editing) return;
 		if (event.pointerType === "mouse" && event.button !== 0) return;
-		if (beginFingerNavigation(event, box.id)) return;
 
 		event.preventDefault();
 		event.stopPropagation();
@@ -492,7 +472,8 @@ export default function CanvasTextBoxLayer({
 		interactionRef.current = interaction;
 		interactionPreviewRef.current = currentBoxes;
 		setInteractionPreview(currentBoxes);
-		onSelectedIdChangeRef.current(box.id);
+		const currentIds = selectedIdsRef.current;
+		onSelectedIdsChangeRef.current(currentIds.includes(box.id) ? currentIds : [...currentIds, box.id]);
 		captureTarget.setPointerCapture(event.pointerId);
 	};
 
@@ -551,7 +532,7 @@ export default function CanvasTextBoxLayer({
 
 	const deleteBox = (id: string) => {
 		const next = boxesRef.current.filter((box) => box.id !== id);
-		if (selectedId === id) onSelectedIdChangeRef.current(null);
+		onSelectedIdsChangeRef.current(selectedIdsRef.current.filter((selectedId) => selectedId !== id));
 		publish(next);
 	};
 
@@ -586,58 +567,44 @@ export default function CanvasTextBoxLayer({
 	return (
 		<div
 			ref={layerRef}
-			className={`absolute inset-0 ${editing ? "pointer-events-auto" : "pointer-events-none"}`}
-			style={{ touchAction: editing ? "none" : "auto" }}
-			onPointerDown={handleBlankPointerDown}
-			onPointerMove={(event) => { handleFingerNavigationMove(event); }}
-			onPointerUp={(event) => { finishFingerNavigation(event, false); }}
-			onPointerCancel={(event) => { finishFingerNavigation(event, true); }}
+			className="absolute inset-0 pointer-events-none"
+			style={{ touchAction: "auto" }}
 			aria-hidden={!interactive && boxes.length === 0 ? true : undefined}
 		>
 			{visibleBoxes.map((box) => {
-				const selected = interactive && selectedId === box.id;
-				const showChrome = selected && (selectable || editing);
+				const selected = interactive && selectedIds.includes(box.id);
+				const showChrome = selected && editing;
 				const boxWidth = Math.max(MIN_BOX_WIDTH, finiteOr(box.width, MIN_BOX_WIDTH));
 				const boxHeight = Math.max(MIN_BOX_HEIGHT, finiteOr(box.height, MIN_BOX_HEIGHT));
 				return (
 					<div
 						key={box.id}
 						data-canvas-text-box-id={box.id}
-						className={`group absolute rounded-in border transition-[border-color] duration-150 pointer-events-auto ${
-							selected
+						className={`group absolute rounded-in border transition-[border-color] duration-150 ${
+							editing ? "pointer-events-auto" : "pointer-events-none"
+						} ${
+							selected && editing
 								? "border-current color-txt-accent"
 								: editing
 									? "border-transparent color-txt-sub hover:border-current"
-									: selectable
-										? "border-transparent color-txt-sub hover:border-current"
-										: "border-transparent"
+									: "border-transparent"
 						}`}
 						style={{
 							left: finiteOr(box.x, 0) * viewScale + panX,
 							top: finiteOr(box.y, 0) * viewScale + panY,
 							width: boxWidth * viewScale,
 							height: boxHeight * viewScale,
-							touchAction: interactive ? "none" : "auto",
+							touchAction: editing ? "none" : "auto",
 							zIndex: selected ? 2 : 1,
 						}}
 						onPointerDown={(event) => {
-							if (!interactive) return;
-							if (beginFingerNavigation(event, box.id)) return;
+							if (!editing) return;
 							event.stopPropagation();
-							onSelectedIdChangeRef.current(box.id);
-							if (selectable && !editing) {
-								beginInteraction(event, box, "move");
-							}
+							onSelectedIdsChangeRef.current([box.id]);
 						}}
-						onPointerMove={(event) => {
-							if (!handleFingerNavigationMove(event)) handleInteractionMove(event);
-						}}
-						onPointerUp={(event) => {
-							if (!finishFingerNavigation(event, false)) finishInteraction(event, false);
-						}}
-						onPointerCancel={(event) => {
-							if (!finishFingerNavigation(event, true)) finishInteraction(event, true);
-						}}
+						onPointerMove={handleInteractionMove}
+						onPointerUp={(event) => finishInteraction(event, false)}
+						onPointerCancel={(event) => finishInteraction(event, true)}
 						onLostPointerCapture={handleLostPointerCapture}
 					>
 						<div
@@ -665,11 +632,10 @@ export default function CanvasTextBoxLayer({
 								touchAction: editing ? "manipulation" : "auto",
 							}}
 							onFocus={() => {
-								onSelectedIdChangeRef.current(box.id);
+								onSelectedIdsChangeRef.current([box.id]);
 								emitFormatState();
 							}}
 							onPointerDown={(event) => {
-								if (beginFingerNavigation(event, box.id)) return;
 								if (!editing) {
 									event.preventDefault();
 									return;
@@ -689,6 +655,8 @@ export default function CanvasTextBoxLayer({
 							onBlur={(event) => {
 								composingIdsRef.current.delete(box.id);
 								commitEditorHtml(box.id, event.currentTarget);
+								const latest = boxesRef.current.find((candidate) => candidate.id === box.id);
+								if (latest && isEmptyTextBox(latest)) deleteBox(box.id);
 							}}
 							onPaste={(event) => handlePaste(event, box.id)}
 							onCompositionStart={(event) => handleCompositionStart(event, box.id)}
@@ -697,28 +665,24 @@ export default function CanvasTextBoxLayer({
 
 						{showChrome && (
 							<>
+								{editing && (
+									<button
+										type="button"
+										className="pointer-events-auto absolute left-1/2 -top-7 flex h-6 -translate-x-1/2 cursor-grab items-center justify-center rounded-full border color-bg color-shadow color-txt-sub px-2 transition-colors hover:color-bg-grey-10 active:cursor-grabbing"
+										title="Move text box"
+										aria-label="Move text box"
+										onPointerDown={(event) => beginInteraction(event, box, "move")}
+										onPointerMove={handleInteractionMove}
+										onPointerUp={(event) => finishInteraction(event, false)}
+										onPointerCancel={(event) => finishInteraction(event, true)}
+										onLostPointerCapture={handleLostPointerCapture}
+									>
+										<GripHorizontal size={14} strokeWidth={2} aria-hidden />
+									</button>
+								)}
 								<button
 									type="button"
-									className="absolute left-1/2 -top-7 flex h-6 -translate-x-1/2 cursor-grab items-center justify-center rounded-full border color-bg color-shadow color-txt-sub px-2 transition-colors hover:color-bg-grey-10 active:cursor-grabbing"
-									title="Move text box"
-									aria-label="Move text box"
-									onPointerDown={(event) => beginInteraction(event, box, "move")}
-									onPointerMove={(event) => {
-										if (!handleFingerNavigationMove(event)) handleInteractionMove(event);
-									}}
-									onPointerUp={(event) => {
-										if (!finishFingerNavigation(event, false)) finishInteraction(event, false);
-									}}
-									onPointerCancel={(event) => {
-										if (!finishFingerNavigation(event, true)) finishInteraction(event, true);
-									}}
-									onLostPointerCapture={handleLostPointerCapture}
-								>
-									<GripHorizontal size={14} strokeWidth={2} aria-hidden />
-								</button>
-								<button
-									type="button"
-									className="absolute -right-2 -top-7 flex h-6 w-6 items-center justify-center rounded-full border color-bg color-shadow color-txt-main transition-colors hover:color-bg-grey-10"
+									className="pointer-events-auto absolute -right-2 -top-7 flex h-6 w-6 items-center justify-center rounded-full border color-bg color-shadow color-txt-main transition-colors hover:color-bg-grey-10"
 									title="Delete text box"
 									aria-label="Delete text box"
 									onPointerDown={(event) => {
@@ -734,19 +698,13 @@ export default function CanvasTextBoxLayer({
 								</button>
 								<button
 									type="button"
-									className="absolute -bottom-2 -right-2 h-4 w-4 cursor-nwse-resize rounded-full border-2 border-current color-bg color-txt-accent"
+									className="pointer-events-auto absolute -bottom-2 -right-2 h-4 w-4 cursor-nwse-resize rounded-full border-2 border-current color-bg color-txt-accent"
 									title="Resize text box"
 									aria-label="Resize text box"
 									onPointerDown={(event) => beginInteraction(event, box, "resize")}
-									onPointerMove={(event) => {
-										if (!handleFingerNavigationMove(event)) handleInteractionMove(event);
-									}}
-									onPointerUp={(event) => {
-										if (!finishFingerNavigation(event, false)) finishInteraction(event, false);
-									}}
-									onPointerCancel={(event) => {
-										if (!finishFingerNavigation(event, true)) finishInteraction(event, true);
-									}}
+									onPointerMove={handleInteractionMove}
+									onPointerUp={(event) => finishInteraction(event, false)}
+									onPointerCancel={(event) => finishInteraction(event, true)}
 									onLostPointerCapture={handleLostPointerCapture}
 								/>
 							</>

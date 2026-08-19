@@ -25,6 +25,12 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>com.certchamps.app</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
 				<string>com.googleusercontent.apps.433584407503-nut01c2d5nc5gs7broo33i6pvihqvpjn</string>
 			</array>
 		</dict>
@@ -56,6 +62,15 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>CertChamps uses the local network to load the app from your computer during development.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>CertChamps needs camera access so you can take a profile photo.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

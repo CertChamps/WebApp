@@ -613,6 +613,12 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   height: 18px;
 }
 
+.drawing-canvas-toolbar select {
+  height: 1.75rem;
+  max-height: 1.75rem;
+  line-height: 1.75rem;
+}
+
 .pen-thickness-slider::-webkit-slider-runnable-track {
   height: 5px;
   border-radius: 999px;
