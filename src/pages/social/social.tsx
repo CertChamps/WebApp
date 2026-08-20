@@ -1,10 +1,10 @@
 // React
-import { useContext, useEffect, useState } from "react"
+import { useContext, useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom";
 
 // Components
 import PostCard from "../../components/social/PostCard"
-import CommunityRightRail from "../../components/social/CommunityRightRail";
+import NotificationBell from "../../components/social/NotificationBell";
 
 // Hooks
 import { UserContext } from '../../context/UserContext';
@@ -15,7 +15,7 @@ import { addDoc, collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, q
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 
 // CSS
-import { LuImage, LuSearch, LuUsers } from "react-icons/lu";
+import { LuChevronDown, LuImage, LuSearch, LuUsers } from "react-icons/lu";
 import "../../styles/social.css"
 import ProGate from "../../components/ProGate"
 import { canUseAceFeature } from "../../lib/contentAccess";
@@ -38,6 +38,8 @@ export default function Social() {
 
     // Error handling 
     const [postError, setPostError] = useState<string | null>(null);
+    const pageMenuRef = useRef<HTMLDivElement | null>(null);
+    const [pageMenuOpen, setPageMenuOpen] = useState(false);
 
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //
     const [page, setPage ]= useState<string>('practice')
@@ -280,6 +282,16 @@ export default function Social() {
         return () => unsubscribe();
 
     }, []);
+
+    useEffect(() => {
+        function handleOutside(e: MouseEvent) {
+            if (pageMenuRef.current && !pageMenuRef.current.contains(e.target as Node)) {
+                setPageMenuOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleOutside);
+        return () => document.removeEventListener("mousedown", handleOutside);
+    }, []);
     //=======================================================================
 
     // -----------------------------------LISTEN TO REAL TIME CHANGES OF USER---------------------------------------//
@@ -294,7 +306,7 @@ export default function Social() {
         return (
             <div className="relative flex w-full h-full overflow-hidden">
                 <div className="flex w-full h-full filter blur-[2px] pointer-events-none select-none opacity-85">
-                    <div className="w-2/3 h-full p-6 space-y-4">
+                    <div className="w-full h-full p-6 space-y-4">
                         {[...Array(5)].map((_, i) => (
                             <div key={i} className="rounded-xl color-bg-grey-5 p-6 space-y-3">
                                 <div className="flex items-center gap-3">
@@ -303,15 +315,6 @@ export default function Social() {
                                 </div>
                                 <div className="h-3 w-full rounded color-bg-grey-10" />
                                 <div className="h-3 w-3/4 rounded color-bg-grey-10" />
-                            </div>
-                        ))}
-                    </div>
-                    <div className="w-1/3 h-full p-6 space-y-3">
-                        <div className="h-4 w-20 rounded color-bg-grey-10" />
-                        {[...Array(4)].map((_, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full color-bg-grey-10" />
-                                <div className="h-3 w-20 rounded color-bg-grey-10" />
                             </div>
                         ))}
                     </div>
@@ -324,34 +327,57 @@ export default function Social() {
     return (
         <div className="flex w-full h-full">
             <div className="flex-1 min-w-0 h-full overflow-y-scroll scrollbar-minimal">
-                <div className="px-6 pt-8 pb-4">
+                <div className="px-6 pt-4 pb-4">
                     <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                            <p className="inline-flex items-center gap-2 text-sm font-semibold color-txt-sub">
-                                <LuUsers size={16} />
-                                Community
-                            </p>
-                            <h1 className="text-3xl sm:text-4xl font-black color-txt-main mt-1">
-                                Discussion
+                        <div ref={pageMenuRef} className="relative">
+                            <h1 className="text-3xl sm:text-4xl font-black leading-none color-txt-main">
+                                <button
+                                    type="button"
+                                    onClick={() => setPageMenuOpen((open) => !open)}
+                                    aria-expanded={pageMenuOpen}
+                                    aria-haspopup="listbox"
+                                    aria-label="Switch community page"
+                                    className="inline-flex items-center gap-2 cursor-pointer"
+                                >
+                                    Discussion
+                                    <LuChevronDown
+                                        size={22}
+                                        className={`color-txt-sub transition-transform duration-200 ${pageMenuOpen ? "rotate-180" : ""}`}
+                                    />
+                                </button>
                             </h1>
+                            {pageMenuOpen && (
+                                <div
+                                    role="listbox"
+                                    className="absolute left-0 top-full mt-2 z-20 min-w-[12rem] rounded-xl color-bg shadow-md border border-color-border p-1.5 flex flex-col gap-1"
+                                >
+                                    <button
+                                        type="button"
+                                        role="option"
+                                        aria-selected={false}
+                                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg color-txt-sub hover:color-txt-main hover:color-bg-grey-5 text-sm font-semibold cursor-pointer"
+                                        onClick={() => {
+                                            setPageMenuOpen(false);
+                                            navigate("/discover");
+                                        }}
+                                    >
+                                        <LuSearch size={15} />
+                                        Discover
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="option"
+                                        aria-selected
+                                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg color-bg-accent color-txt-accent text-sm font-semibold cursor-pointer"
+                                        onClick={() => setPageMenuOpen(false)}
+                                    >
+                                        <LuUsers size={15} />
+                                        Discussion
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                        <div className="flex items-center gap-1 rounded-2xl color-bg-grey-5 p-1">
-                            <button
-                                type="button"
-                                onClick={() => navigate("/discover")}
-                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-txt-sub hover:color-txt-main text-sm font-semibold cursor-pointer"
-                            >
-                                <LuSearch size={15} />
-                                Resources
-                            </button>
-                            <button
-                                type="button"
-                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-semibold cursor-pointer"
-                            >
-                                <LuUsers size={15} />
-                                Discussion
-                            </button>
-                        </div>
+                        <NotificationBell />
                     </div>
                 </div>
                 <div className="compose-post-container">
@@ -458,7 +484,6 @@ export default function Social() {
                     </div>
                 </div>
             </div>
-                <CommunityRightRail />
         </div>
     )
 }

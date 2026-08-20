@@ -1,5 +1,16 @@
 import { useContext, useEffect, useState } from "react";
-import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
+import {
+    addDoc,
+    collection,
+    deleteDoc,
+    doc,
+    limit,
+    onSnapshot,
+    orderBy,
+    query,
+    serverTimestamp,
+    updateDoc,
+} from "firebase/firestore";
 import { db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { LuSend, LuCheck, LuBug, LuLightbulb, LuMessageCircle, LuHammer, LuHeart, LuSearch, LuTrash2 } from "react-icons/lu";
@@ -46,6 +57,8 @@ const PLACEHOLDERS = [
     "YOUR FEEDBACK MATTERS TO US!!!!!!",
 ];
 
+const WALL_LIMIT = 200;
+
 const STICKY_ROTATIONS = [
     "-rotate-1",
     "rotate-1",
@@ -65,29 +78,42 @@ export default function Feedback() {
     const [sent, setSent] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [items, setItems] = useState<FeedbackItem[]>([]);
+    const [loadingWall, setLoadingWall] = useState(true);
     const [tagMenuOpen, setTagMenuOpen] = useState<string | null>(null);
     const [placeholder] = useState(() => PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)]);
 
-    const fetchFeedback = async () => {
-        const q = query(collection(db, "feedback"), orderBy("timestamp", "desc"));
-        const snap = await getDocs(q);
-        setItems(
-            snap.docs.map((d) => {
-                const data = d.data();
-                return {
-                    id: d.id,
-                    type: (data.type as FeedbackType) ?? "general",
-                    message: data.message ?? "",
-                    timestamp: data.timestamp?.seconds ?? null,
-                    adminTag: (data.adminTag as AdminTag) ?? null,
-                    source: data.source ?? "feedback",
-                };
-            }).filter((item) => item.source !== "help")
-        );
-    };
-
     useEffect(() => {
-        fetchFeedback();
+        const wallQuery = query(
+            collection(db, "feedback"),
+            orderBy("timestamp", "desc"),
+            limit(WALL_LIMIT)
+        );
+        const unsub = onSnapshot(
+            wallQuery,
+            (snap) => {
+                setItems(
+                    snap.docs
+                        .map((d) => {
+                            const data = d.data();
+                            return {
+                                id: d.id,
+                                type: (data.type as FeedbackType) ?? "general",
+                                message: data.message ?? "",
+                                timestamp: data.timestamp?.seconds ?? null,
+                                adminTag: (data.adminTag as AdminTag) ?? null,
+                                source: data.source ?? "feedback",
+                            };
+                        })
+                        .filter((item) => item.source !== "help")
+                );
+                setLoadingWall(false);
+            },
+            (err) => {
+                console.error("Failed to load feedback:", err);
+                setLoadingWall(false);
+            }
+        );
+        return () => unsub();
     }, []);
 
     const handleSubmit = async () => {
@@ -108,7 +134,6 @@ export default function Feedback() {
             setMessage("");
             setSent(true);
             setTimeout(() => setSent(false), 3000);
-            fetchFeedback();
         } catch (e: any) {
             console.error("Failed to send feedback:", e);
             setError(e?.message ?? "Failed to send. Check Firestore rules.");
@@ -206,7 +231,20 @@ export default function Feedback() {
                 </div>
 
                 {/* Sticky notes wall */}
-                {items.length > 0 && (
+                {loadingWall ? (
+                    <div className="w-full columns-2 sm:columns-3 lg:columns-4 gap-4 space-y-4">
+                        {Array.from({ length: 8 }).map((_, i) => (
+                            <div
+                                key={i}
+                                className="break-inside-avoid rounded-2xl color-bg-grey-5 p-5 animate-pulse"
+                            >
+                                <div className="h-5 w-16 rounded-lg color-bg-grey-10 mb-3" />
+                                <div className="h-3 w-full rounded color-bg-grey-10 mb-2" />
+                                <div className="h-3 w-4/5 rounded color-bg-grey-10" />
+                            </div>
+                        ))}
+                    </div>
+                ) : items.length > 0 ? (
                     <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 space-y-4">
                         {items.map((item, i) => {
                             const Icon = TYPE_ICON[item.type];
@@ -287,9 +325,7 @@ export default function Feedback() {
                             );
                         })}
                     </div>
-                )}
-
-                {items.length === 0 && (
+                ) : (
                     <p className="color-txt-sub text-sm text-center pt-8">No feedback yet. Be the first to post!</p>
                 )}
             </div>

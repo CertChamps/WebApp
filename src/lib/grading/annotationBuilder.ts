@@ -142,17 +142,19 @@ export function buildAnnotations(pass1: Pass1Result, pass2: Pass2Result, capture
 
 export function buildPartSummary(pass2: Pass2Result): PartSummary[] {
   return pass2.parts.map((part) => {
-    let summary = "correct";
-    if (part.errors.length === 1) {
-      summary = part.errors[0].feedbackText;
-    } else if (part.errors.length === 2) {
-      const first = part.errors[0].feedbackText;
-      const second = part.errors[1].feedbackText.replace(/^You\s+/, "you ");
-      summary = `${first}, and ${second.charAt(0).toLowerCase() + second.slice(1)}`;
-    } else if (part.errors.length > 2) {
-      const first = part.errors[0].feedbackText;
-      const count = part.errors.length - 1;
-      summary = `${first}, plus ${count} more \u2014 see the annotations on your working`;
+    let summary = part.feedback.trim() || "correct";
+    if (!part.feedback.trim()) {
+      if (part.errors.length === 1) {
+        summary = part.errors[0].feedbackText;
+      } else if (part.errors.length === 2) {
+        const first = part.errors[0].feedbackText;
+        const second = part.errors[1].feedbackText.replace(/^You\s+/, "you ");
+        summary = `${first}, and ${second.charAt(0).toLowerCase() + second.slice(1)}`;
+      } else if (part.errors.length > 2) {
+        const first = part.errors[0].feedbackText;
+        const count = part.errors.length - 1;
+        summary = `${first}, plus ${count} more notes on this part.`;
+      }
     }
     return {
       partId: part.partId,
@@ -161,4 +163,73 @@ export function buildPartSummary(pass2: Pass2Result): PartSummary[] {
       summary,
     };
   });
+}
+
+export type GradingChatInput = {
+  totalAwarded: number;
+  totalAvailable: number;
+  isFullMarks: boolean;
+  overview: string;
+  parts: Array<{
+    partId: string;
+    marksAwarded: number;
+    marksAvailable: number;
+    feedback: string;
+  }>;
+};
+
+function defaultOverview(input: GradingChatInput): string {
+  if (input.isFullMarks && input.totalAvailable > 0) {
+    return "Strong work — this answer hits the marking points cleanly.";
+  }
+  if (input.totalAvailable <= 0) {
+    return "Here's a focused look at your work.";
+  }
+  return "Here's how this answer landed against the marking scheme.";
+}
+
+function partHeading(partId: string): string {
+  const trimmed = partId.trim();
+  if (/^part\b/i.test(trimmed)) return `## ${trimmed}`;
+  return `## Part ${trimmed}`;
+}
+
+export function buildGradingChatMessage(input: GradingChatInput): string {
+  const hasMarks = input.totalAvailable > 0;
+  const overview = input.overview.trim() || defaultOverview(input);
+  const lines: string[] = hasMarks
+    ? ["# Your Grade:", "", `**${Math.round(input.totalAwarded)}/${Math.round(input.totalAvailable)}**`, "", overview]
+    : ["# Your Feedback:", "", overview];
+
+  if (input.parts.length > 1) {
+    for (const part of input.parts) {
+      lines.push("", partHeading(part.partId));
+      if (hasMarks) {
+        lines.push(`**${Math.round(part.marksAwarded)}/${Math.round(part.marksAvailable)}**`);
+      }
+      lines.push(part.feedback.trim() || "No specific notes on this part.");
+    }
+  }
+
+  lines.push("", "Ready to mark this question as complete?");
+
+  return lines.join("\n");
+}
+
+export function gradingChatInputFromPass2(pass2: Pass2Result): GradingChatInput {
+  const summaries = buildPartSummary(pass2);
+  return {
+    totalAwarded: pass2.totalAwarded,
+    totalAvailable: pass2.totalAvailable,
+    isFullMarks: pass2.isFullMarks,
+    overview: pass2.overallFeedback,
+    parts: pass2.parts.map((part, index) => ({
+      partId: part.partId,
+      marksAwarded: part.marksAwarded,
+      marksAvailable: part.marksAvailable,
+      feedback: summaries[index]?.summary === "correct"
+        ? (part.feedback.trim() || "Clean work on this part.")
+        : (summaries[index]?.summary ?? part.feedback),
+    })),
+  };
 }

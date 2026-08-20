@@ -114,14 +114,14 @@
 /* ===================================== SEARCH =================================== */ 
 .search-box-hidden {
   @apply transform origin-top scale-y-0 h-[75vh] opacity-0 pointer-events-none
-         w-full rounded-out my-2 shadow-small color-shadow color-bg absolute z-10
+         w-full rounded-out my-2 border-2 color-shadow shadow-none color-bg absolute z-[80]
          duration-250 transition-all overflow-hidden;
 }
 
 .search-box-shown {
   @apply transform origin-top scale-y-100 h-[75vh] opacity-100 pointer-events-auto
-         w-full rounded-out my-2 shadow-small color-shadow color-bg
-         absolute z-10 duration-250 transition-all
+         w-full rounded-out my-2 border-2 color-shadow shadow-none color-bg
+         absolute z-[80] duration-250 transition-all
          overflow-y-scroll;
 }
 /* ================================================================================ */ 

@@ -22,6 +22,7 @@ import {
 import { db, storage } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { isAdminUid } from "../constants/adminUids";
+import { notifyPostOwner } from "../lib/notifications";
 
 type PendingResource = {
   id: string;
@@ -134,6 +135,13 @@ export default function DiscoverModeration() {
     setError(null);
     try {
       await deleteDoc(doc(db, "discover-notes", item.id));
+      notifyPostOwner({
+        ownerId: item.userId,
+        actorId: user?.uid,
+        type: "post-rejected",
+        postId: item.id,
+        postTitle: item.title,
+      });
       if (item.uploadedThumbnailPath) {
         try {
           await deleteObject(storageRef(storage, item.uploadedThumbnailPath));

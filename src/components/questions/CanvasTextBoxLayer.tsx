@@ -617,7 +617,11 @@ export default function CanvasTextBoxLayer({
 							aria-multiline="true"
 							contentEditable={editing}
 							suppressContentEditableWarning
-							spellCheck
+							spellCheck={false}
+							autoCorrect="off"
+							autoCapitalize="off"
+							data-gramm="false"
+							data-enable-grammarly="false"
 							tabIndex={editing ? 0 : -1}
 							className={`w-full overflow-hidden rounded-in outline-none break-words [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 ${themeTextColorClass(box.colorIndex ?? defaults.colorIndex)} ${
 								editing ? "cursor-text select-text" : "select-none"

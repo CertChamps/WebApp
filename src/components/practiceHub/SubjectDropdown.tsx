@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { LuChevronDown, LuSearch, LuStar } from "react-icons/lu";
@@ -31,6 +31,10 @@ type Props = {
    * (whiteboards).
    */
   variant?: "grid" | "list";
+  /** Replace the default subject trigger (e.g. a "View all" button). */
+  renderTrigger?: (state: { open: boolean; onToggle: () => void }) => ReactNode;
+  /** Grid dropdown alignment. Defaults to centered under the trigger. */
+  dropdownAlign?: "center" | "start";
 };
 
 type ContextMenuState = {
@@ -220,6 +224,8 @@ export default function SubjectDropdown({
   "aria-label": ariaLabel,
   onFavouritesChange,
   variant = "grid",
+  renderTrigger,
+  dropdownAlign = "center",
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -325,6 +331,8 @@ export default function SubjectDropdown({
   }, []);
 
   const searching = search.trim().length > 0;
+  const alignStart = dropdownAlign === "start";
+  const gridX = alignStart ? 0 : "-50%";
 
   return (
     <div
@@ -332,6 +340,9 @@ export default function SubjectDropdown({
       className={`practice-hub__subject-wrap${isList ? " practice-hub__subject-wrap--compact" : ""}`}
       data-state={open ? "open" : "closed"}
     >
+      {renderTrigger ? (
+        renderTrigger({ open, onToggle: () => setOpen((o) => !o) })
+      ) : (
       <button
         type="button"
         id={id}
@@ -357,6 +368,7 @@ export default function SubjectDropdown({
           <LuChevronDown size={isList ? 16 : 18} strokeWidth={2} className="practice-hub__subject-chevron" />
         </span>
       </button>
+      )}
 
       <AnimatePresence>
         {open && isList && (
@@ -461,15 +473,15 @@ export default function SubjectDropdown({
         {open && !isList && (
           <motion.div
             key="subject-dropdown"
-            className="practice-hub__subject-dropdown practice-hub__subject-dropdown--grid"
+            className={`practice-hub__subject-dropdown practice-hub__subject-dropdown--grid${alignStart ? " practice-hub__subject-dropdown--grid-start" : ""}`}
             role="listbox"
             aria-label="Subjects"
             onScroll={() => setContextMenu(null)}
-            initial={{ opacity: 0, y: -8, scale: 0.96, x: "-50%" }}
-            animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
-            exit={{ opacity: 0, y: -6, scale: 0.98, x: "-50%" }}
+            initial={{ opacity: 0, y: -8, scale: 0.96, x: gridX }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: gridX }}
+            exit={{ opacity: 0, y: -6, scale: 0.98, x: gridX }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            style={{ transformOrigin: "top center" }}
+            style={{ transformOrigin: alignStart ? "top left" : "top center" }}
           >
             <div className="flex shrink-0 items-center gap-2.5 border-b border-grey/15 px-4 py-3">
               <LuSearch size={18} className="shrink-0 color-txt-sub" aria-hidden />

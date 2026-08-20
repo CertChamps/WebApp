@@ -1,7 +1,8 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   increment,
@@ -11,54 +12,35 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  setDoc,
+  updateDoc,
 } from "firebase/firestore";
+import { deleteObject, getDownloadURL, ref as storageRef } from "firebase/storage";
 import {
+  LuArrowLeft,
+  LuArrowUpRight,
   LuBookmark,
-  LuBookOpen,
-  LuCirclePlay,
-  LuCompass,
   LuExternalLink,
-  LuFileText,
-  LuLayers,
-  LuLink,
   LuLoader,
-  LuMessageCircle,
   LuPlus,
-  LuSearch,
-  LuX,
+  LuStar,
+  LuTrash,
 } from "react-icons/lu";
-import { db } from "../../../firebase";
+import { useNavigate } from "react-router-dom";
+import { db, storage } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
-import VideoEmbedModal from "../discover/VideoEmbedModal";
-import { isDiscoverVideoUrl } from "../../lib/discoverMedia";
-import {
-  getQuestionDiscoveryContext,
-  type QuestionDiscoveryContext,
-} from "../../lib/questionDiscovery";
+import { notifyPostOwner } from "../../lib/notifications";
+import DiscoverMediaPreview from "../discover/DiscoverMediaPreview";
+import DiscoverShareModal from "../discover/DiscoverShareModal";
+import { getQuestionDiscoveryContext } from "../../lib/questionDiscovery";
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
 type ResourceSource = "website" | "pdf";
 
 const MAX_COMMENT = 500;
-const MAX_TITLE = 80;
-const MAX_DESCRIPTION = 500;
-const LINK_PREVIEW_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/fetchLinkPreview";
 const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
 const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
-
-function normaliseUrl(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  try {
-    const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-    const url = new URL(withProtocol);
-    if (!["http:", "https:"].includes(url.protocol)) return null;
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
 
 function displayHostname(url: string): string {
   try {
@@ -77,6 +59,7 @@ type DiscoverNote = {
   description: string;
   websiteUrl: string;
   resourceSource?: ResourceSource;
+  pdfPath?: string | null;
   thumbnailUrl: string;
   faviconUrl?: string | null;
   siteName?: string;
@@ -93,6 +76,13 @@ type DiscoverNote = {
   ratingCount?: number;
   timestamp: number | null;
   linkedQuestionId?: string;
+  linkedQuestionName?: string;
+  linkedQuestionPracticeUrl?: string;
+  linkedQuestionSubjectId?: string;
+  linkedQuestionSubjectLabel?: string;
+  linkedQuestionLevel?: string;
+  linkedQuestionTopic?: string;
+  linkedQuestionSource?: string;
   moderationStatus?: string;
 };
 
@@ -122,6 +112,7 @@ type DiscoverResource = {
   ratingCount?: number;
   websiteUrl?: string;
   resourceSource?: ResourceSource;
+  pdfPath?: string | null;
   thumbnailUrl?: string;
   userId?: string;
   username?: string;
@@ -194,7 +185,8 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
     ratingAverage: note.ratingAverage ?? 0,
     ratingCount: note.ratingCount ?? 0,
     websiteUrl: note.websiteUrl,
-    resourceSource: note.resourceSource ?? "website",
+    resourceSource: note.resourceSource ?? (note.pdfPath ? "pdf" : "website"),
+    pdfPath: note.pdfPath,
     thumbnailUrl: note.thumbnailUrl,
     userId: note.userId,
     username: note.username,
@@ -206,24 +198,25 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
 
 export default function QuestionDiscover({ question }: { question?: unknown }) {
   const { user } = useContext(UserContext);
+  const navigate = useNavigate();
   const context = useMemo(() => getQuestionDiscoveryContext(question), [question]);
   const [notes, setNotes] = useState<DiscoverNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedResource, setSelectedResource] = useState<DiscoverResource | null>(null);
-  const [videoResource, setVideoResource] = useState<DiscoverResource | null>(null);
   const [comments, setComments] = useState<DiscoverComment[]>([]);
   const [commentText, setCommentText] = useState("");
+  const [commentComposerOpen, setCommentComposerOpen] = useState(false);
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [userRating, setUserRating] = useState<number | null>(null);
+  const [userSaved, setUserSaved] = useState(false);
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [saveSubmitting, setSaveSubmitting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showShareForm, setShowShareForm] = useState(false);
-  const [shareTitle, setShareTitle] = useState("");
-  const [shareUrl, setShareUrl] = useState("");
-  const [shareDescription, setShareDescription] = useState("");
-  const [shareType, setShareType] = useState<ResourceType>("Notes");
-  const [shareSubmitting, setShareSubmitting] = useState(false);
-  const [shareError, setShareError] = useState("");
   const [shareToast, setShareToast] = useState(false);
+  const commentInputRef = useRef<HTMLInputElement | null>(null);
+  const listScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const resourcesQuery = query(
@@ -246,6 +239,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
               description: data.description ?? "",
               websiteUrl: data.websiteUrl ?? "",
               resourceSource: data.resourceSource === "pdf" ? "pdf" : "website",
+              pdfPath: data.pdfPath ?? null,
               thumbnailUrl: data.thumbnailUrl ?? "",
               faviconUrl: data.faviconUrl ?? null,
               siteName: data.siteName ?? "",
@@ -262,6 +256,13 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
               ratingCount: typeof data.ratingCount === "number" ? data.ratingCount : 0,
               timestamp: data.timestamp?.seconds ?? null,
               linkedQuestionId: data.linkedQuestionId,
+              linkedQuestionName: data.linkedQuestionName,
+              linkedQuestionPracticeUrl: data.linkedQuestionPracticeUrl,
+              linkedQuestionSubjectId: data.linkedQuestionSubjectId,
+              linkedQuestionSubjectLabel: data.linkedQuestionSubjectLabel,
+              linkedQuestionLevel: data.linkedQuestionLevel,
+              linkedQuestionTopic: data.linkedQuestionTopic,
+              linkedQuestionSource: data.linkedQuestionSource,
               moderationStatus: data.moderationStatus ?? "approved",
             };
           })
@@ -273,10 +274,13 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
   }, []);
 
   useEffect(() => {
+    setCommentText("");
+    setCommentComposerOpen(false);
+    setShowDeleteConfirm(false);
     if (!selectedResource?.note) {
       setComments([]);
       setUserRating(null);
-      setCommentText("");
+      setUserSaved(false);
       return;
     }
 
@@ -309,8 +313,12 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
           setUserRating(typeof value === "number" ? value : null);
         }
       });
+      getDoc(doc(db, "discover-notes", selectedResource.id, "likes", user.uid)).then((snap) => {
+        if (!cancelled) setUserSaved(snap.exists());
+      });
     } else {
       setUserRating(null);
+      setUserSaved(false);
     }
 
     return () => {
@@ -319,157 +327,135 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
     };
   }, [selectedResource?.id, selectedResource?.note, user?.uid]);
 
-  const visible = useMemo(() => {
-    const approved = notes
-      .filter((note) => note.moderationStatus === "approved")
-      .map(noteToResource);
+  useEffect(() => {
+    listScrollRef.current?.scrollTo({ top: 0 });
+  }, [selectedResource?.id]);
 
+  const approved = useMemo(
+    () => notes.filter((note) => note.moderationStatus === "approved").map(noteToResource),
+    [notes]
+  );
+
+  const { questionResources, subjectResources } = useMemo(() => {
     if (!context) {
-      return { items: approved.slice(0, 12), exact: false, mode: "recommended" as const };
+      return { questionResources: [] as DiscoverResource[], subjectResources: approved.slice(0, 12) };
     }
 
-    const exact = approved.filter((resource) => resource.note?.linkedQuestionId === context.id);
-    if (exact.length) return { items: exact.slice(0, 12), exact: true, mode: "exact" as const };
-
+    const questionItems = approved.filter((resource) => resource.note?.linkedQuestionId === context.id);
+    const questionIds = new Set(questionItems.map((resource) => resource.id));
     const subjectId = context.subjectId?.toLowerCase();
     const subjectLabel = context.subjectLabel?.toLowerCase();
-    const relevant = approved.filter((resource) =>
-      (subjectId && resource.note?.subjectId?.toLowerCase() === subjectId) ||
-      (subjectLabel && resource.subject.toLowerCase() === subjectLabel)
-    );
-    if (relevant.length) {
-      return { items: relevant.slice(0, 12), exact: false, mode: "subject" as const };
-    }
-    return { items: approved.slice(0, 12), exact: false, mode: "recommended" as const };
-  }, [context, notes]);
+    const subjectItems = approved.filter((resource) => {
+      if (questionIds.has(resource.id)) return false;
+      return (
+        (subjectId && resource.note?.subjectId?.toLowerCase() === subjectId) ||
+        (subjectLabel && resource.subject.toLowerCase() === subjectLabel)
+      );
+    });
 
-  const openShareForm = () => {
-    setShareError("");
-    setShareTitle("");
-    setShareUrl("");
-    setShareDescription("");
-    setShareType("Notes");
-    setShowShareForm(true);
-  };
+    return {
+      questionResources: questionItems.slice(0, 12),
+      subjectResources: subjectItems.slice(0, 12),
+    };
+  }, [approved, context]);
 
-  const handleShareSubmit = async () => {
-    if (!user?.uid) {
-      setShareError("Sign in to share a resource.");
-      return;
-    }
-    const trimmedTitle = shareTitle.trim();
-    const trimmedDescription = shareDescription.trim();
-    const validUrl = normaliseUrl(shareUrl);
-    if (!trimmedTitle) {
-      setShareError("Add a title so people know what this is.");
-      return;
-    }
-    if (trimmedTitle.length > MAX_TITLE) {
-      setShareError(`Title is too long (max ${MAX_TITLE} characters).`);
-      return;
-    }
-    if (trimmedDescription.length > MAX_DESCRIPTION) {
-      setShareError(`Description is too long (max ${MAX_DESCRIPTION} characters).`);
-      return;
-    }
-    if (!validUrl) {
-      setShareError("Add a valid link (https://...).");
-      return;
-    }
+  const relatedResources = useMemo(() => {
+    if (!selectedResource) return [];
+    const subject = selectedResource.subject.toLowerCase();
+    const tags = new Set(selectedResource.tags.map((tag) => tag.toLowerCase()));
+    const scored = approved
+      .filter((resource) => resource.id !== selectedResource.id)
+      .map((resource) => {
+        let score = 0;
+        if (resource.subject.toLowerCase() === subject) score += 3;
+        score += resource.tags.filter((tag) => tags.has(tag.toLowerCase())).length;
+        return { resource, score };
+      })
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score || (b.resource.timestamp ?? 0) - (a.resource.timestamp ?? 0))
+      .map((entry) => entry.resource);
+    if (scored.length > 0) return scored.slice(0, 8);
+    return approved.filter((resource) => resource.id !== selectedResource.id).slice(0, 6);
+  }, [approved, selectedResource]);
 
-    setShareSubmitting(true);
-    setShareError("");
-    try {
-      let preview: { url?: string; title?: string; imageUrl?: string; faviconUrl?: string; siteName?: string } | null = null;
+  const handleVisit = async (url: string | undefined, resource?: DiscoverResource) => {
+    let target = url?.trim() || "";
+    if (!target && resource?.pdfPath) {
       try {
-        const res = await fetch(LINK_PREVIEW_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: validUrl }),
-        });
-        if (res.ok) preview = await res.json();
-      } catch {
-        /* preview is optional */
+        target = await getDownloadURL(storageRef(storage, resource.pdfPath));
+      } catch (err) {
+        console.error("Failed to open PDF:", err);
+        return;
       }
+    }
+    if (!target) return;
+    try {
+      window.open(target, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      console.error("Failed to open link:", err);
+    }
+  };
 
-      const linkContext: QuestionDiscoveryContext | null = context;
-      await addDoc(collection(db, "discover-notes"), {
-        userId: user.uid,
-        username: user.username ?? "",
-        userPicture: user.picture ?? null,
-        title: trimmedTitle,
-        description: trimmedDescription,
-        websiteUrl: preview?.url || validUrl,
-        resourceSource: "website",
-        thumbnailUrl: preview?.imageUrl ?? preview?.faviconUrl ?? "",
-        uploadedThumbnailUrl: "",
-        uploadedThumbnailPath: null,
-        thumbnailStatus: "none",
-        moderationStatus: "pending",
-        faviconUrl: preview?.faviconUrl ?? "",
-        siteName: preview?.siteName ?? displayHostname(validUrl),
-        subjectId: linkContext?.subjectId ?? null,
-        subjectLabel: linkContext?.subjectLabel ?? null,
-        levels: [],
-        resourceTypes: [shareType],
-        resourceType: shareType,
-        topics: linkContext?.topic ? [linkContext.topic] : [],
-        likeCount: 0,
-        commentCount: 0,
-        ratingAverage: 0,
-        ratingCount: 0,
-        linkedQuestionId: linkContext?.id ?? null,
-        linkedQuestionName: linkContext?.name ?? null,
-        linkedQuestionPracticeUrl: linkContext?.practiceUrl ?? null,
-        linkedQuestionSubjectId: linkContext?.subjectId ?? null,
-        linkedQuestionSubjectLabel: linkContext?.subjectLabel ?? null,
-        linkedQuestionLevel: linkContext?.level ?? null,
-        linkedQuestionTopic: linkContext?.topic ?? null,
-        linkedQuestionSource: linkContext?.source ?? "whiteboard",
-        timestamp: serverTimestamp(),
-      });
-      setShowShareForm(false);
-      setShareToast(true);
-      window.setTimeout(() => setShareToast(false), 2800);
-    } catch (error) {
-      console.error("Failed to share discover resource:", error);
-      setShareError("Couldn't publish. Try again in a moment.");
+  const handleDelete = async (note: DiscoverNote) => {
+    if (!user?.uid || deleting || note.userId !== user.uid) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, "discover-notes", note.id));
+      if (note.pdfPath) {
+        await deleteObject(storageRef(storage, note.pdfPath)).catch((err) => {
+          console.warn("Failed to delete Discover upload:", err);
+        });
+      }
+      setShowDeleteConfirm(false);
+      setSelectedResource(null);
+    } catch (err) {
+      console.error("Failed to delete note:", err);
     } finally {
-      setShareSubmitting(false);
+      setDeleting(false);
     }
   };
 
-  const openResource = (resource: DiscoverResource) => {
-    if (isDiscoverVideoUrl(resource.websiteUrl)) {
-      setVideoResource(resource);
-      return;
-    }
-    if (resource.websiteUrl) {
-      window.open(resource.websiteUrl, "_blank", "noopener,noreferrer");
-    }
-  };
-
-  const handleLike = async (resource: DiscoverResource) => {
-    if (!user?.uid || !resource.note) {
-      setSelectedResource(resource);
-      return;
-    }
+  const handleSave = async (resource: DiscoverResource) => {
+    if (!user?.uid || !resource.note || saveSubmitting) return;
     const likeRef = doc(db, "discover-notes", resource.id, "likes", user.uid);
     const resourceRef = doc(db, "discover-notes", resource.id);
+    const currentlySaved = userSaved;
+    const nextSaved = !currentlySaved;
+    const nextSaves = Math.max(0, (resource.saves ?? 0) + (nextSaved ? 1 : -1));
+
+    setSaveSubmitting(true);
+    setUserSaved(nextSaved);
+    setSelectedResource((current) =>
+      current && current.id === resource.id ? { ...current, saves: nextSaves } : current
+    );
+
     try {
-      await runTransaction(db, async (transaction) => {
-        const likeSnap = await transaction.get(likeRef);
-        if (likeSnap.exists()) return;
-        transaction.set(likeRef, {
+      if (currentlySaved) {
+        await deleteDoc(likeRef);
+        try {
+          await updateDoc(resourceRef, { likeCount: increment(-1) });
+        } catch {
+          // Count update can be blocked by rules; the save itself already succeeded.
+        }
+      } else {
+        await setDoc(likeRef, {
           userId: user.uid,
           timestamp: serverTimestamp(),
         });
-        transaction.update(resourceRef, {
-          likeCount: increment(1),
-        });
-      });
+        try {
+          await updateDoc(resourceRef, { likeCount: increment(1) });
+        } catch {
+          // Count update can be blocked by rules; the save itself already succeeded.
+        }
+      }
     } catch (error) {
-      console.error("Failed to like resource:", error);
+      console.error("Failed to save resource:", error);
+      setUserSaved(currentlySaved);
+      setSelectedResource((current) =>
+        current && current.id === resource.id ? { ...current, saves: resource.saves } : current
+      );
+    } finally {
+      setSaveSubmitting(false);
     }
   };
 
@@ -479,6 +465,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
     const ratingRef = doc(db, "discover-notes", selectedResource.id, "ratings", user.uid);
     const resourceRef = doc(db, "discover-notes", selectedResource.id);
     try {
+      let isNewRating = false;
       await runTransaction(db, async (transaction) => {
         const resourceSnap = await transaction.get(resourceRef);
         const ratingSnap = await transaction.get(ratingRef);
@@ -486,6 +473,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
         const currentAverage = data?.ratingAverage ?? 0;
         const currentCount = data?.ratingCount ?? 0;
         const previousValue = ratingSnap.exists() ? ratingSnap.data()?.value : null;
+        isNewRating = typeof previousValue !== "number";
         const nextCount = typeof previousValue === "number" ? currentCount : currentCount + 1;
         const currentTotal = currentAverage * currentCount;
         const nextTotal = typeof previousValue === "number"
@@ -504,6 +492,15 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
         });
       });
       setUserRating(value);
+      if (isNewRating) {
+        notifyPostOwner({
+          ownerId: selectedResource.userId,
+          actorId: user.uid,
+          type: "post-rating",
+          postId: selectedResource.id,
+          postTitle: selectedResource.title,
+        });
+      }
     } catch (error) {
       console.error("Failed to rate resource:", error);
     } finally {
@@ -529,7 +526,15 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
           commentCount: increment(1),
         });
       });
+      notifyPostOwner({
+        ownerId: selectedResource.userId,
+        actorId: user.uid,
+        type: "post-comment",
+        postId: selectedResource.id,
+        postTitle: selectedResource.title,
+      });
       setCommentText("");
+      setCommentComposerOpen(false);
     } catch (error) {
       console.error("Failed to comment:", error);
     } finally {
@@ -537,501 +542,523 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
     }
   };
 
-  return (
-    <div className="flex h-full min-h-0 flex-col color-bg">
-      <div className="shrink-0 px-3 pt-2 pb-1 space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide color-txt-sub">
-              <LuCompass size={12} /> Discover
-            </p>
-            <h3 className="mt-0.5 line-clamp-2 text-sm font-bold color-txt-main">
-              {context?.name ?? "Recommended for you"}
-            </h3>
-            <p className="mt-0.5 text-[11px] color-txt-sub">
-              {context
-                ? [context.subjectLabel, context.level, context.topic].filter(Boolean).join(" · ") || "Question resources"
-                : "Popular resources from the community"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={openShareForm}
-            className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl color-bg-accent color-txt-accent px-3 py-2 text-xs font-bold hover:opacity-90 cursor-pointer"
-          >
-            <LuPlus size={14} /> Add
-          </button>
-        </div>
-      </div>
+  const cancelComment = () => {
+    setCommentText("");
+    setCommentComposerOpen(false);
+    commentInputRef.current?.blur();
+  };
 
-      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-minimal p-3 space-y-3">
-        <div>
-          <h4 className="text-sm font-bold color-txt-main">
-            {visible.mode === "exact"
-              ? "Linked to this question"
-              : visible.mode === "subject"
-                ? "Relevant subject resources"
-                : "Recommended"}
-          </h4>
-          <p className="text-xs color-txt-sub">
-            {visible.mode === "exact"
-              ? "Resources shared specifically for this question."
-              : visible.mode === "subject"
-                ? `No exact links yet, showing other ${context?.subjectLabel ?? "subject"} content.`
-                : "Fresh community picks while you work."}
-          </p>
-        </div>
+  const renderResourceCard = (resource: DiscoverResource) => {
+    const rating = resource.ratingAverage && resource.ratingAverage > 0 ? resource.ratingAverage : null;
+    const username = resource.username || "Unknown";
 
-        {loading ? (
-          <div className="space-y-3" aria-label="Loading Discover resources">
-            {[0, 1, 2].map((item) => (
-              <div key={item} className="overflow-hidden rounded-2xl color-bg-grey-5">
-                <div className="aspect-video animate-pulse color-bg-grey-10" />
-                <div className="space-y-2 p-3">
-                  <div className="h-3 w-3/4 animate-pulse rounded color-bg-grey-10" />
-                  <div className="h-3 w-full animate-pulse rounded color-bg-grey-10" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : visible.items.length ? (
-          visible.items.map((resource) => {
-            const isVideo = isDiscoverVideoUrl(resource.websiteUrl);
-            return (
-              <article
-                key={resource.id}
-                className="group overflow-hidden rounded-2xl color-bg-grey-5 flex flex-col"
-              >
-                <button
-                  type="button"
-                  onClick={() => openResource(resource)}
-                  disabled={!resource.websiteUrl}
-                  className="relative block w-full aspect-video overflow-hidden color-bg-grey-10 cursor-pointer disabled:cursor-default"
-                  aria-label={`${isVideo ? "Watch" : resource.resourceSource === "pdf" ? "Open" : "Visit"} ${resource.title}`}
-                >
-                  {resource.thumbnailUrl && resource.thumbnailUrl !== resource.faviconUrl ? (
-                    <img
-                      src={resource.thumbnailUrl}
-                      alt={resource.title}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center color-txt-sub">
-                      {resource.faviconUrl ? (
-                        <img
-                          src={resource.faviconUrl}
-                          alt=""
-                          className="h-12 w-12 rounded-2xl object-contain color-bg p-2 shadow-sm"
-                          loading="lazy"
-                        />
-                      ) : resource.resourceSource === "pdf" ? (
-                        <LuFileText size={28} />
-                      ) : resource.type === "Videos" || isVideo ? (
-                        <LuCirclePlay size={28} />
-                      ) : resource.type === "Flashcards" ? (
-                        <LuLayers size={28} />
-                      ) : (
-                        <LuBookOpen size={28} />
-                      )}
-                      <span className="text-xs font-semibold line-clamp-2">
-                        {resource.sourceName || resource.subject}
-                      </span>
-                    </div>
-                  )}
-                  {(isVideo || resource.type === "Videos") && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/20">
-                      <span className="rounded-full color-bg/90 p-2.5 shadow-sm">
-                        <LuCirclePlay size={22} className="color-txt-main" />
-                      </span>
-                    </span>
-                  )}
-                  <span className="absolute top-2 right-2 rounded-full color-bg px-2 py-0.5 text-[10px] font-bold color-txt-main">
-                    {resource.resourceSource === "pdf" ? "PDF" : resource.type}
-                  </span>
-                </button>
-
-                <div className="flex flex-1 flex-col gap-2.5 p-3">
-                  <h3 className="text-sm font-semibold color-txt-main line-clamp-2">{resource.title}</h3>
-                  <p className="text-xs color-txt-sub line-clamp-3">{resource.description}</p>
-
-                  {resource.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {resource.tags.slice(0, 3).map((tag) => (
-                        <span
-                          key={`${resource.id}-${tag}`}
-                          className="rounded-full color-bg px-2 py-0.5 text-[10px] font-semibold color-txt-sub"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-                    <div className="flex min-w-0 items-center gap-2">
-                      {resource.userPicture ? (
-                        <img
-                          src={resource.userPicture}
-                          alt=""
-                          className="h-5 w-5 shrink-0 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="h-5 w-5 shrink-0 rounded-full color-bg-grey-10" />
-                      )}
-                      <span className="truncate text-[11px] color-txt-sub">
-                        {resource.username || resource.sourceName}
-                        {resource.timestamp ? ` · ${timeAgo(resource.timestamp)}` : ""}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => openResource(resource)}
-                      disabled={!resource.websiteUrl}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-lg color-bg-accent color-txt-accent px-2.5 py-1 text-[11px] font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
-                    >
-                      {isVideo ? (
-                        <><LuCirclePlay size={12} /> Watch</>
-                      ) : (
-                        <><LuExternalLink size={12} /> {resource.resourceSource === "pdf" ? "Open" : "Visit"}</>
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 pt-1 text-[11px] color-txt-sub">
-                    <span>
-                      {resource.ratingAverage && resource.ratingAverage > 0
-                        ? `${resource.ratingAverage.toFixed(1)} ★`
-                        : "No ratings"}
-                      {resource.ratingCount ? ` (${resource.ratingCount})` : ""}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleLike(resource)}
-                        className="inline-flex items-center gap-1 hover:color-txt-main cursor-pointer"
-                      >
-                        <LuBookmark size={13} />
-                        {resource.saves}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedResource(resource)}
-                        className="inline-flex items-center gap-1 hover:color-txt-main cursor-pointer"
-                      >
-                        <LuMessageCircle size={13} />
-                        {resource.comments}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </article>
-            );
-          })
-        ) : (
-          <div className="rounded-2xl border border-dashed border-color-border color-bg-grey-5 p-5 text-center">
-            <LuSearch size={22} className="mx-auto color-txt-sub" />
-            <p className="mt-2 text-sm font-bold color-txt-main">No resources yet</p>
-            <p className="mt-1 text-xs color-txt-sub">Be the first to link something useful here.</p>
-            <button
-              type="button"
-              onClick={openShareForm}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-xl color-bg-accent color-txt-accent px-3 py-2 text-xs font-bold cursor-pointer"
-            >
-              <LuLink size={13} /> Link a resource
-            </button>
-          </div>
-        )}
-      </div>
-
-      {selectedResource && (
+    return (
+      <article
+        key={resource.id}
+        className="group relative flex flex-col cursor-pointer p-2 hover:z-10"
+        onClick={() => setSelectedResource(resource)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setSelectedResource(resource);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          onClick={() => setSelectedResource(null)}
-        >
-          <div
-            className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl color-bg shadow-md scrollbar-minimal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex flex-col">
-              <div className="color-bg-grey-5">
-                <button
-                  type="button"
-                  onClick={() => openResource(selectedResource)}
-                  disabled={!selectedResource.websiteUrl}
-                  className="aspect-video w-full overflow-hidden color-bg-grey-10 cursor-pointer disabled:cursor-default"
-                >
-                  {selectedResource.thumbnailUrl && selectedResource.thumbnailUrl !== selectedResource.faviconUrl ? (
-                    <img
-                      src={selectedResource.thumbnailUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full min-h-[160px] flex-col items-center justify-center gap-3 px-5 text-center color-txt-sub">
-                      {selectedResource.faviconUrl ? (
-                        <img
-                          src={selectedResource.faviconUrl}
-                          alt=""
-                          className="h-14 w-14 rounded-2xl object-contain color-bg p-2 shadow-sm"
-                        />
-                      ) : selectedResource.resourceSource === "pdf" ? (
-                        <LuFileText size={30} />
-                      ) : (
-                        <LuBookOpen size={30} />
-                      )}
-                      <span className="font-semibold text-sm">
-                        {selectedResource.sourceName || selectedResource.subject}
-                      </span>
-                    </div>
-                  )}
-                </button>
-              </div>
-
-              <div className="space-y-4 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="text-lg font-bold color-txt-main">{selectedResource.title}</h2>
-                    <p className="mt-1 text-xs color-txt-sub">
-                      {selectedResource.subject} · {(selectedResource.types ?? [selectedResource.type]).join(", ")}
-                      {selectedResource.levels?.length ? ` · ${selectedResource.levels.join(", ")}` : ""}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedResource(null)}
-                    className="color-txt-sub hover:color-txt-main cursor-pointer"
-                    aria-label="Close"
-                  >
-                    <LuX size={18} />
-                  </button>
-                </div>
-
-                <p className="text-sm color-txt-sub">{selectedResource.description}</p>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openResource(selectedResource)}
-                    className="inline-flex items-center gap-2 rounded-xl color-bg-accent color-txt-accent px-3.5 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer"
-                  >
-                    {isDiscoverVideoUrl(selectedResource.websiteUrl) ? (
-                      <><LuCirclePlay size={15} /> Watch</>
-                    ) : (
-                      <><LuExternalLink size={15} /> {selectedResource.resourceSource === "pdf" ? "Open PDF" : "Visit resource"}</>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleLike(selectedResource)}
-                    className="inline-flex items-center gap-2 rounded-xl color-bg-grey-5 color-txt-main px-3.5 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer"
-                  >
-                    <LuBookmark size={15} />
-                    Save · {selectedResource.saves}
-                  </button>
-                </div>
-
-                <div className="rounded-xl color-bg-grey-5 p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="font-bold color-txt-main text-sm">Rate this resource</h3>
-                      <p className="text-[11px] color-txt-sub">
-                        {selectedResource.ratingCount
-                          ? `${selectedResource.ratingAverage?.toFixed(1)} average from ${selectedResource.ratingCount} ratings`
-                          : "No ratings yet"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-0.5">
-                      {[1, 2, 3, 4, 5].map((value) => (
-                        <button
-                          type="button"
-                          key={value}
-                          disabled={ratingSubmitting || !selectedResource.note}
-                          onClick={() => handleRate(value)}
-                          className={`text-lg cursor-pointer disabled:cursor-not-allowed ${
-                            (userRating ?? 0) >= value ? "color-txt-accent" : "color-txt-sub"
-                          }`}
-                          aria-label={`Rate ${value} stars`}
-                        >
-                          ★
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h3 className="font-bold color-txt-main text-sm">Comments</h3>
-                  <div className="max-h-64 space-y-2 overflow-y-auto scrollbar-minimal pr-1">
-                    {comments.length === 0 ? (
-                      <p className="text-sm color-txt-sub">
-                        No comments yet. Add context for the next student.
-                      </p>
-                    ) : (
-                      comments.map((comment) => (
-                        <div key={comment.id} className="rounded-xl color-bg-grey-5 p-3">
-                          <div className="mb-1 flex items-center gap-2">
-                            {comment.userPicture ? (
-                              <img
-                                src={comment.userPicture}
-                                alt=""
-                                className="h-5 w-5 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="h-5 w-5 rounded-full color-bg-grey-10" />
-                            )}
-                            <span className="text-xs font-semibold color-txt-main">
-                              {comment.username || "Unknown"}
-                            </span>
-                            <span className="text-[11px] color-txt-sub">
-                              {comment.timestamp ? timeAgo(comment.timestamp) : ""}
-                            </span>
-                          </div>
-                          <p className="text-sm color-txt-sub whitespace-pre-wrap">{comment.text}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <textarea
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value.slice(0, MAX_COMMENT))}
-                      placeholder="Was it helpful? What topic is it best for?"
-                      rows={3}
-                      className="w-full resize-none rounded-xl color-bg-grey-5 color-txt-main px-3 py-2.5 text-sm outline-none placeholder:color-txt-sub"
-                    />
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[11px] color-txt-sub">
-                        {commentText.length}/{MAX_COMMENT}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleAddComment}
-                        disabled={commentSubmitting || !commentText.trim() || !selectedResource.note}
-                        className="inline-flex items-center gap-2 rounded-xl color-bg-accent color-txt-accent px-3.5 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {commentSubmitting && <LuLoader size={14} className="animate-spin" />}
-                        Comment
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          className="absolute inset-0 rounded-xl color-bg-grey-5 pointer-events-none opacity-60 scale-100 group-hover:opacity-100 group-hover:scale-[1.015]"
+          style={{ transition: "scale 150ms ease-out, opacity 150ms ease-out, transform 150ms ease-out" }}
+          aria-hidden
+        />
+        <div className="relative z-10 flex flex-col">
+          <div className="relative aspect-[16/10] rounded-lg color-bg-grey-10 overflow-hidden">
+            <DiscoverMediaPreview resource={resource} variant="thumb" />
+            <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full color-bg color-txt-main text-xs font-bold">
+              {resource.resourceSource === "pdf" ? "PDF" : resource.type}
+            </span>
           </div>
-        </div>
-      )}
 
-      {showShareForm && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          onClick={() => !shareSubmitting && setShowShareForm(false)}
-        >
-          <div
-            className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl color-bg shadow-md scrollbar-minimal p-5 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-bold color-txt-main">Add a resource</h2>
-                <p className="mt-1 text-xs color-txt-sub">
-                  {context
-                    ? `Share something useful for ${context.name}. Stays on this board.`
-                    : "Share something useful with the community. Stays on this board."}
-                </p>
-              </div>
+          <div className="flex items-center gap-2 min-w-0 px-0.5 pt-2">
+            {resource.userId ? (
               <button
                 type="button"
-                onClick={() => !shareSubmitting && setShowShareForm(false)}
-                className="color-txt-sub hover:color-txt-main cursor-pointer"
-                aria-label="Close"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/viewProfile/${resource.userId}`);
+                }}
+                className="shrink-0 cursor-pointer"
               >
-                <LuX size={18} />
+                {resource.userPicture ? (
+                  <img
+                    src={resource.userPicture}
+                    alt=""
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full color-bg-grey-10" />
+                )}
               </button>
+            ) : (
+              <div className="w-8 h-8 rounded-full color-bg-grey-10 shrink-0" />
+            )}
+            <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[11px] color-txt-sub truncate">
+                  {resource.userId ? username : resource.sourceName}
+                </span>
+                {resource.timestamp ? (
+                  <span className="text-[11px] color-txt-sub shrink-0">
+                    {timeAgo(resource.timestamp)}
+                  </span>
+                ) : null}
+                {rating && (
+                  <span className="inline-flex items-center gap-0.5 shrink-0 ml-auto text-xs font-semibold color-txt-sub">
+                    <LuStar size={12} fill="currentColor" className="color-txt-accent" />
+                    {rating.toFixed(1)}
+                    {resource.ratingCount ? ` (${resource.ratingCount})` : ""}
+                  </span>
+                )}
+              </div>
+              <h3 className="text-sm font-bold color-txt-main truncate">
+                {resource.title}
+              </h3>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">Title</label>
-              <input
-                type="text"
-                value={shareTitle}
-                onChange={(e) => setShareTitle(e.target.value.slice(0, MAX_TITLE))}
-                placeholder="e.g. Macbeth essay structure"
-                className="w-full rounded-xl color-bg-grey-5 color-txt-main px-3 py-2.5 text-sm outline-none placeholder:color-txt-sub"
-              />
+          {resource.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 px-0.5 pt-1.5">
+              {resource.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={`${resource.id}-${tag}`}
+                  className="px-2 py-0.5 rounded-full color-bg text-[11px] font-semibold color-txt-sub"
+                >
+                  {tag}
+                </span>
+              ))}
             </div>
+          )}
+        </div>
+      </article>
+    );
+  };
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">Link</label>
-              <input
-                type="url"
-                value={shareUrl}
-                onChange={(e) => setShareUrl(e.target.value)}
-                placeholder="https://"
-                className="w-full rounded-xl color-bg-grey-5 color-txt-main px-3 py-2.5 text-sm outline-none placeholder:color-txt-sub"
-              />
-            </div>
+  const renderResourceDetail = (resource: DiscoverResource) => {
+    const username = resource.username || "Unknown";
+    const canOpenResource = Boolean(resource.websiteUrl?.trim() || resource.pdfPath);
+    const ownsResource = Boolean(user?.uid && resource.userId === user.uid);
+    const linkedQuestionName = resource.note?.linkedQuestionName?.trim() || "";
+    const linkedQuestionUrl = resource.note?.linkedQuestionPracticeUrl?.trim() || "";
+    const commentCount = comments.length;
+    const composerActive = commentComposerOpen || Boolean(commentText);
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">Description</label>
-              <textarea
-                value={shareDescription}
-                onChange={(e) => setShareDescription(e.target.value.slice(0, MAX_DESCRIPTION))}
-                placeholder="Why is this helpful?"
-                rows={3}
-                className="w-full resize-none rounded-xl color-bg-grey-5 color-txt-main px-3 py-2.5 text-sm outline-none placeholder:color-txt-sub"
-              />
-            </div>
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="shrink-0 px-3 pt-2 pb-1 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setSelectedResource(null)}
+            className="inline-flex items-center gap-2 text-sm font-semibold color-txt-sub hover:color-txt-main cursor-pointer"
+          >
+            <LuArrowLeft size={16} />
+            Discover
+          </button>
+          {ownsResource && (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="inline-flex items-center justify-center rounded-lg color-bg-grey-5 p-1.5 color-txt-sub hover:color-bg-accent hover:color-txt-accent cursor-pointer"
+              aria-label="Delete resource"
+            >
+              <LuTrash size={14} />
+            </button>
+          )}
+        </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">Type</label>
-              <div className="flex flex-wrap gap-2">
-                {RESOURCE_TYPES.map((type) => (
+        <div ref={listScrollRef} className="min-h-0 flex-1 overflow-y-auto scrollbar-minimal px-4 pb-5 space-y-5">
+          <div className="relative min-h-[240px] h-[min(52vh,30rem)] rounded-2xl color-bg-grey-10 overflow-hidden">
+            <DiscoverMediaPreview key={resource.id} resource={resource} variant="hero" />
+            {canOpenResource && (
+              <button
+                type="button"
+                onClick={() => void handleVisit(resource.websiteUrl, resource)}
+                className="absolute top-3 right-3 z-20 inline-flex items-center gap-1.5 rounded-lg color-bg color-txt-accent px-2.5 py-1.5 text-[11px] font-semibold shadow-md hover:opacity-90 cursor-pointer"
+              >
+                <LuExternalLink size={13} />
+                Open Resource
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-start gap-2 min-w-0">
+            {resource.userId ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/viewProfile/${resource.userId}`)}
+                className="shrink-0 cursor-pointer"
+              >
+                {resource.userPicture ? (
+                  <img
+                    src={resource.userPicture}
+                    alt=""
+                    className="w-7 h-7 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full color-bg-grey-10" />
+                )}
+              </button>
+            ) : (
+              <div className="w-7 h-7 rounded-full color-bg-grey-10 shrink-0" />
+            )}
+            <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[11px] color-txt-sub truncate">
+                  {resource.userId ? username : resource.sourceName}
+                </span>
+                {resource.timestamp ? (
+                  <span className="text-[11px] color-txt-sub shrink-0">
+                    {timeAgo(resource.timestamp)}
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                <h1 className="text-sm font-bold color-txt-main leading-snug">
+                  {resource.title}
+                </h1>
+                {linkedQuestionName && linkedQuestionUrl && (
                   <button
                     type="button"
-                    key={type}
-                    onClick={() => setShareType(type)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                      shareType === type
-                        ? "color-bg-accent color-txt-accent"
-                        : "color-bg-grey-5 color-txt-main hover:opacity-90"
-                    }`}
+                    onClick={() => navigate(linkedQuestionUrl)}
+                    className="inline-flex items-center gap-1 max-w-full rounded-lg color-bg-accent color-txt-accent px-2 py-0.5 text-[11px] font-semibold cursor-pointer hover:opacity-90"
                   >
-                    {type}
+                    <LuArrowUpRight size={13} className="shrink-0" />
+                    <span className="truncate">{linkedQuestionName}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  type="button"
+                  key={value}
+                  disabled={!resource.note}
+                  onClick={() => handleRate(value)}
+                  className={`cursor-pointer ${
+                    (userRating ?? 0) >= value ? "color-txt-accent" : "color-txt-sub"
+                  } ${!resource.note ? "opacity-50" : ""}`}
+                  aria-label={`Rate ${value} stars`}
+                >
+                  <LuStar
+                    size={16}
+                    fill={(userRating ?? 0) >= value ? "currentColor" : "none"}
+                  />
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleSave(resource)}
+              disabled={!resource.note || !user?.uid}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer hover:opacity-90 ${
+                userSaved
+                  ? "color-bg-accent color-txt-accent"
+                  : "color-bg-grey-5 color-txt-main"
+              } ${!resource.note || !user?.uid ? "opacity-50" : ""}`}
+            >
+              <LuBookmark size={13} fill={userSaved ? "currentColor" : "none"} />
+              {userSaved ? "Saved" : "Save"} · {resource.saves}
+            </button>
+          </div>
+
+          {resource.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {resource.tags.map((tag) => (
+                <span
+                  key={`${resource.id}-detail-${tag}`}
+                  className="px-2 py-0.5 rounded-full color-bg-grey-5 text-[10px] font-semibold color-txt-sub"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {resource.description && (
+            <p className="text-xs color-txt-main whitespace-pre-wrap leading-relaxed">{resource.description}</p>
+          )}
+
+          {relatedResources.length > 0 && (
+            <section className="space-y-2">
+              <h2 className="text-xs font-bold color-txt-main">Related</h2>
+              <div className="flex gap-2.5 overflow-x-auto scrollbar-minimal pb-1">
+                {relatedResources.map((related) => (
+                  <button
+                    type="button"
+                    key={related.id}
+                    onClick={() => setSelectedResource(related)}
+                    className="shrink-0 w-32 text-left cursor-pointer"
+                  >
+                    <div className="aspect-[16/10] rounded-lg color-bg-grey-10 overflow-hidden mb-1.5">
+                      <DiscoverMediaPreview resource={related} variant="thumb" />
+                    </div>
+                    <p className="text-xs font-bold color-txt-main truncate">{related.title}</p>
+                    <p className="text-[10px] color-txt-sub truncate">{related.subject}</p>
                   </button>
                 ))}
               </div>
+            </section>
+          )}
+
+          <section className="space-y-3 pt-1">
+            <h3 className="text-xs font-bold color-txt-main">
+              {commentCount} {commentCount === 1 ? "Comment" : "Comments"}
+            </h3>
+            <div className="flex items-start gap-3">
+              {user?.picture ? (
+                <img
+                  src={user.picture}
+                  alt=""
+                  className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full color-bg-grey-10 shrink-0 mt-0.5" />
+              )}
+              <div className="flex-1 min-w-0">
+                <input
+                  ref={commentInputRef}
+                  type="text"
+                  value={commentText}
+                  onFocus={() => setCommentComposerOpen(true)}
+                  onChange={(e) => setCommentText(e.target.value.slice(0, MAX_COMMENT))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void handleAddComment();
+                    }
+                    if (e.key === "Escape") cancelComment();
+                  }}
+                  placeholder={user?.uid ? "Add a comment..." : "Log in to comment"}
+                  disabled={!user?.uid || !resource.note}
+                  maxLength={MAX_COMMENT}
+                  className="w-full bg-transparent color-txt-main text-xs outline-none border-0 border-b border-color-border pb-1.5 placeholder:color-txt-sub disabled:opacity-60"
+                />
+                {composerActive && (
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <span className="mr-auto text-[11px] color-txt-sub">
+                      {commentText.length}/{MAX_COMMENT}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={cancelComment}
+                      className="px-2.5 py-1 rounded-full text-xs font-semibold color-txt-sub hover:color-txt-main cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleAddComment()}
+                      disabled={commentSubmitting || !commentText.trim() || !resource.note}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full color-bg-accent color-txt-accent text-xs font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {commentSubmitting && <LuLoader size={12} className="animate-spin" />}
+                      Send
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
+            <div className="space-y-4">
+              {commentCount === 0 ? (
+                <p className="text-xs color-txt-sub">
+                  No comments yet. Add context for the next student.
+                </p>
+              ) : (
+                comments.map((comment) => (
+                  <div key={comment.id} className="flex items-start gap-3">
+                    {comment.userId ? (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/viewProfile/${comment.userId}`)}
+                        className="shrink-0 cursor-pointer mt-0.5"
+                      >
+                        {comment.userPicture ? (
+                          <img
+                            src={comment.userPicture}
+                            alt=""
+                            className="w-7 h-7 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full color-bg-grey-10" />
+                        )}
+                      </button>
+                    ) : comment.userPicture ? (
+                      <img
+                        src={comment.userPicture}
+                        alt=""
+                        className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full color-bg-grey-10 shrink-0 mt-0.5" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[11px] font-bold color-txt-main truncate">
+                          {comment.username || "Unknown"}
+                        </span>
+                        <span className="text-[11px] color-txt-sub shrink-0">
+                          {comment.timestamp ? timeAgo(comment.timestamp) : ""}
+                        </span>
+                      </div>
+                      <p className="text-xs color-txt-main whitespace-pre-wrap pt-0.5 leading-relaxed">
+                        {comment.text}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
 
-            {shareError && <p className="text-xs text-red-500">{shareError}</p>}
+        {showDeleteConfirm && resource.note && (
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={() => !deleting && setShowDeleteConfirm(false)}
+          >
+            <div
+              className="w-full max-w-sm rounded-2xl color-bg p-6 space-y-4 shadow-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-bold color-txt-main text-center">Are you sure?</h3>
+              <p className="text-sm color-txt-sub text-center">
+                This will permanently delete this resource.
+              </p>
+              <div className="flex justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                  className="px-4 py-2 rounded-xl text-sm color-txt-sub hover:color-txt-main cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(resource.note!)}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold color-bg-accent color-txt-accent cursor-pointer disabled:opacity-50"
+                >
+                  {deleting && <LuLoader size={14} className="animate-spin" />}
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
+  return (
+    <div className="flex h-full min-h-0 flex-col color-bg">
+      {selectedResource ? renderResourceDetail(selectedResource) : (
+        <>
+          <div className="shrink-0 px-3 pt-2 pb-1">
             <button
               type="button"
-              onClick={() => void handleShareSubmit()}
-              disabled={shareSubmitting}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl color-bg-accent color-txt-accent px-3.5 py-2.5 text-sm font-bold hover:opacity-90 cursor-pointer disabled:opacity-50"
+              onClick={() => setShowShareForm(true)}
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl color-bg-accent color-txt-accent px-3 py-2 text-xs font-bold hover:opacity-90 cursor-pointer"
             >
-              {shareSubmitting && <LuLoader size={14} className="animate-spin" />}
-              Publish for review
+              <LuPlus size={14} /> Add resource
             </button>
           </div>
-        </div>
+
+          <div ref={listScrollRef} className="min-h-0 flex-1 overflow-y-auto scrollbar-minimal px-1 pb-3 space-y-5">
+            <section>
+              <div className="px-3 pt-3 pb-1">
+                <h4 className="text-sm font-bold color-txt-main">Question Related Content</h4>
+              </div>
+              {loading ? (
+                <div className="space-y-1" aria-label="Loading question resources">
+                  {[0, 1].map((item) => (
+                    <div key={item} className="p-2">
+                      <div className="overflow-hidden rounded-xl color-bg-grey-5 animate-pulse">
+                        <div className="aspect-[16/10] color-bg-grey-10" />
+                        <div className="space-y-1.5 px-2.5 py-2">
+                          <div className="h-3.5 w-3/4 rounded color-bg-grey-10" />
+                          <div className="h-3 w-1/2 rounded color-bg-grey-10" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : questionResources.length ? (
+                <div className="grid grid-cols-1 gap-1">
+                  {questionResources.map(renderResourceCard)}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center px-4 py-10">
+                  <p className="text-sm color-txt-sub text-center">
+                    No content related to this question
+                  </p>
+                </div>
+              )}
+            </section>
+
+            <section>
+              <div className="px-3 pt-1 pb-1">
+                <h4 className="text-sm font-bold color-txt-main">Subject Related Content</h4>
+              </div>
+              {loading ? (
+                <div className="space-y-1" aria-label="Loading subject resources">
+                  {[0, 1].map((item) => (
+                    <div key={item} className="p-2">
+                      <div className="overflow-hidden rounded-xl color-bg-grey-5 animate-pulse">
+                        <div className="aspect-[16/10] color-bg-grey-10" />
+                        <div className="space-y-1.5 px-2.5 py-2">
+                          <div className="h-3.5 w-3/4 rounded color-bg-grey-10" />
+                          <div className="h-3 w-1/2 rounded color-bg-grey-10" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : subjectResources.length ? (
+                <div className="grid grid-cols-1 gap-1">
+                  {subjectResources.map(renderResourceCard)}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center px-4 py-10">
+                  <p className="text-sm color-txt-sub text-center">
+                    No subject related content yet
+                  </p>
+                </div>
+              )}
+            </section>
+          </div>
+        </>
       )}
+
+      <DiscoverShareModal
+        open={showShareForm}
+        onClose={() => setShowShareForm(false)}
+        onSubmitted={() => {
+          setShareToast(true);
+          window.setTimeout(() => setShareToast(false), 2800);
+        }}
+        linkedQuestion={context}
+      />
 
       {shareToast && (
-        <div className="fixed bottom-20 left-1/2 z-[80] -translate-x-1/2 rounded-xl color-bg color-shadow border px-4 py-2 text-xs font-semibold color-txt-main">
-          Submitted — it'll show after review.
+        <div className="fixed bottom-20 left-1/2 z-[90] -translate-x-1/2 rounded-xl color-bg color-shadow border px-4 py-2 text-xs font-semibold color-txt-main">
+          Thanks for sharing. Your resource has been sent for moderation.
         </div>
-      )}
-
-      {videoResource?.websiteUrl && (
-        <VideoEmbedModal
-          url={videoResource.websiteUrl}
-          title={videoResource.title}
-          onClose={() => setVideoResource(null)}
-        />
       )}
     </div>
   );
 }
+

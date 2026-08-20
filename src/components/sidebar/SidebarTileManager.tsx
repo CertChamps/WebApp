@@ -1,6 +1,6 @@
-import { useState, useCallback, useContext } from "react";
+import { useState, useCallback, useContext, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose, LuClipboardList, LuCompass } from "react-icons/lu";
+import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose, LuClipboardList, LuSearch } from "react-icons/lu";
 import { AIChat } from "../ai";
 import type { InjectedExchange } from "../ai/useAI";
 import QThread from "../questions/q_thread";
@@ -63,6 +63,8 @@ export type SidebarTileManagerProps = {
   aiInjectedExchange?: InjectedExchange | null;
   /** Optional completion CTA handler from grading flow. */
   onMarkCompleteFromGrading?: (() => void) | null;
+  /** Whether the current question is already marked complete. */
+  questionCompleted?: boolean;
 };
 
 export function SidebarTileManager({
@@ -82,6 +84,7 @@ export function SidebarTileManager({
   forceShowMarkingSchemeTab,
   aiInjectedExchange,
   onMarkCompleteFromGrading,
+  questionCompleted = false,
 }: SidebarTileManagerProps) {
   const [internalPanel, setInternalPanel] = useState<SidebarPanelId | null>("ai");
   const isControlled = controlledPanel !== undefined;
@@ -176,6 +179,7 @@ export function SidebarTileManager({
                   markingSchemeLoading={markingSchemeLoading}
                   aiInjectedExchange={aiInjectedExchange}
                   onMarkCompleteFromGrading={onMarkCompleteFromGrading}
+                  questionCompleted={questionCompleted}
                   onClosePanel={() => setOpenPanel(null)}
                 />
               </div>
@@ -212,6 +216,7 @@ function TileContent({
   markingSchemeLoading,
   aiInjectedExchange,
   onMarkCompleteFromGrading,
+  questionCompleted = false,
   onClosePanel: _onClosePanel,
 }: {
   panelId: SidebarPanelId;
@@ -227,6 +232,7 @@ function TileContent({
   markingSchemeLoading?: boolean;
   aiInjectedExchange?: InjectedExchange | null;
   onMarkCompleteFromGrading?: (() => void) | null;
+  questionCompleted?: boolean;
   onClosePanel?: () => void;
 }) {
   const part = 0;
@@ -261,9 +267,10 @@ function TileContent({
           <SpotifyPanel />
         </div>
       );
-    case "markingscheme":
+    case "markingscheme": {
+      let schemeBody: ReactNode;
       if (markingSchemeBlob && markingSchemePageRange) {
-        return (
+        schemeBody = (
           <div className="h-full overflow-hidden flex flex-col">
             {markingSchemeQuestionName && (
               <div className="shrink-0 px-3 py-2 text-center text-sm font-bold color-txt-sub truncate ">
@@ -280,17 +287,15 @@ function TileContent({
             </div>
           </div>
         );
-      }
-      if (markingSchemeLoading) {
-        return (
+      } else if (markingSchemeLoading) {
+        schemeBody = (
           <div className="flex h-full flex-col items-center justify-center p-4 text-center color-txt-sub">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--grey-10)] border-t-[var(--grey-5)] mb-3" />
             <p className="text-sm font-medium">Loading marking scheme…</p>
           </div>
         );
-      }
-      if (markingSchemeImages && markingSchemeImages.length > 0) {
-        return (
+      } else if (markingSchemeImages && markingSchemeImages.length > 0) {
+        schemeBody = (
           <div className="h-full overflow-hidden flex flex-col">
             <ImageMarkingScheme
               images={markingSchemeImages}
@@ -299,14 +304,32 @@ function TileContent({
             />
           </div>
         );
+      } else {
+        schemeBody = (
+          <div className="flex h-full flex-col items-center justify-center p-4 text-center color-txt-sub">
+            <LuClipboardList size={32} strokeWidth={1.5} className="mb-3 opacity-40" />
+            <p className="text-sm font-medium">No marking scheme</p>
+            <p className="text-xs mt-1 opacity-70">No marking scheme is available for this question yet.</p>
+          </div>
+        );
       }
       return (
-        <div className="flex h-full flex-col items-center justify-center p-4 text-center color-txt-sub">
-          <LuClipboardList size={32} strokeWidth={1.5} className="mb-3 opacity-40" />
-          <p className="text-sm font-medium">No marking scheme</p>
-          <p className="text-xs mt-1 opacity-70">No marking scheme is available for this question yet.</p>
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="min-h-0 flex-1 overflow-hidden">{schemeBody}</div>
+          {onMarkCompleteFromGrading ? (
+            <div className="shrink-0 border-t border-grey/15 p-3">
+              <button
+                type="button"
+                onClick={onMarkCompleteFromGrading}
+                className="w-full rounded-lg px-3 py-2 text-xs font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity"
+              >
+                {questionCompleted ? "Marked complete ✓" : "Mark as complete"}
+              </button>
+            </div>
+          ) : null}
         </div>
       );
+    }
     default:
       return null;
   }
@@ -349,7 +372,7 @@ function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionI
               threadView === "discover" ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-txt-main"
             }`}
           >
-            <LuCompass size={14} /> Discover
+            <LuSearch size={14} /> Discover
           </button>
           <button
             type="button"

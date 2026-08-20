@@ -87,6 +87,10 @@ Rules:
     give benefit of the doubt and note it
   - Feedback must cite the specific error: name the line or step that
     was wrong and explain precisely what is missing or incorrect
+  - Write ALL student-facing text in English, even when the question or the
+    student's work is in Irish, French, German, Spanish, or another language.
+    You may quote original-language phrases from the work, but explanations
+    must be English.
   - Write all feedback in second person, directly addressing the student as 'you'.
     Never refer to 'the student', 'the answer', or use third-person phrasing.
     Every feedbackText must start with 'You' or address the student directly
@@ -106,10 +110,15 @@ Rules:
     non-mathematical context may remain plain text
   - Never award more marks than available for any part
   - Be concise in feedback — one clear sentence per error, no padding
-  - The feedback throughout — in feedbackText fields and anywhere else text
-    is returned — must be encouraging and personal. The student is trying hard.
-    Acknowledge correct parts briefly before addressing errors. Never be blunt
-    or clinical.
+  - The feedback throughout — in overallFeedback, part feedback, feedbackText
+    fields, and anywhere else text is returned — must be encouraging and personal.
+    The student is trying hard. Acknowledge correct parts briefly before addressing
+    errors. Never be blunt or clinical.
+  - overallFeedback: if the question has multiple parts, write ONE overview
+    sentence on the whole answer. If it is a single-part question, write brief
+    but detailed feedback on the answer here (the UI will not show part headings).
+  - For each part, also write a brief but detailed 'feedback' string covering
+    that part. If the part is fully correct, say so clearly.
   - Some parts may have attempted: false, meaning no workings were found
   - For attempted: false parts:
       - Set marksAwarded: 0
@@ -140,12 +149,14 @@ Return ONLY this JSON, nothing else, no markdown fences:
   totalAwarded: number,
   totalAvailable: number,
   isFullMarks: boolean,
+  overallFeedback: string,
   parts: [
     {
       partId: string,
       marksAwarded: number,
       marksAvailable: number,
       isCorrect: boolean,
+      feedback: string,
       errors: [
         {
           id: string,
@@ -187,6 +198,9 @@ You may NOT have an official marking scheme. Adapt to the material:
     normal marking judgment
 
 Rules that always apply:
+  - Write ALL student-facing text in English, even when the question or the
+    student's work is in another language. Quotes from the work may stay in
+    the original language; explanations must be English.
   - Write all feedback in second person, directly addressing the student as 'you'.
     Never refer to 'the student', 'the answer', or use third-person phrasing.
     Every feedbackText must start with 'You' or address the student directly
@@ -194,6 +208,9 @@ Rules that always apply:
   - Write all mathematical expressions in LaTeX wrapped in dollar signs
   - Be concise — one clear sentence per note, encouraging and personal
   - Feedback must cite the specific place in the working when pointing out a mistake
+  - overallFeedback: one overview sentence when there are multiple parts;
+    brief but detailed answer feedback when there is a single part
+  - For each part, write a brief but detailed 'feedback' string
   - Some parts may have attempted: false
   - For attempted: false parts:
       - Set marksAwarded: 0
@@ -214,12 +231,14 @@ Return ONLY this JSON, nothing else, no markdown fences:
   totalAwarded: number,
   totalAvailable: number,
   isFullMarks: boolean,
+  overallFeedback: string,
   parts: [
     {
       partId: string,
       marksAwarded: number,
       marksAvailable: number,
       isCorrect: boolean,
+      feedback: string,
       errors: [
         {
           id: string,
@@ -346,6 +365,7 @@ function fallbackPass2(pass1: Pass1Result, rawText?: string): Pass2Result {
     totalAwarded: 0,
     totalAvailable: 0,
     isFullMarks: false,
+    overallFeedback: note,
     markLabel: "",
     answerMarkPosition: { x: 0.5, y: 0.5 },
     parts: pass1.parts.map((part) => ({
@@ -353,6 +373,7 @@ function fallbackPass2(pass1: Pass1Result, rawText?: string): Pass2Result {
       marksAwarded: 0,
       marksAvailable: 0,
       isCorrect: false,
+      feedback: part.attempted ? note : "No workings found for this part.",
       errors: [
         {
           id: "fallback",

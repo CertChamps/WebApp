@@ -73,15 +73,16 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
 
   // ---- Bank: image catalogue (topics + papers) — preferred when available ----
   const [imageBrowse, setImageBrowse] = useState<ImageBrowse>("topic");
-  const [imageLevel, setImageLevel] = useState<string | null>(null);
+  const [imageLevel, setImageLevel] = useState<string | null>("higher");
   const storageFolder = useMemo(() => getStorageFolderName(subject), [subject]);
   const {
     topics: imageTopics,
     levels: imageLevels,
     loading: topicsLoading,
   } = useImageTopics(storageFolder, imageLevel);
+  const preferredImageLevel = imageLevels.includes("higher") ? "higher" : imageLevels[0];
   const activeImageLevel =
-    (imageLevel && imageLevels.includes(imageLevel) ? imageLevel : imageLevels[0]) ?? null;
+    (imageLevel && imageLevels.includes(imageLevel) ? imageLevel : preferredImageLevel) ?? null;
   const hasImageBank = imageLevels.length > 0;
 
   // ---- Bank: legacy PDF past papers (only when no image catalogue) ----

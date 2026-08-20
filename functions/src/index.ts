@@ -10,6 +10,7 @@ admin.initializeApp();
 // docstring for the full wiring story.
 export { revenueCatWebhook, verifyAppleEntitlement } from "./iap/revenueCatWebhook";
 export { deleteAccount } from "./account/deleteAccount";
+export { captureWebsiteThumbnail } from "./discover/captureWebsiteThumbnail";
 const corsMiddleware = cors({ origin: true });
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -283,6 +284,7 @@ function extractYoutubeId(url: string): string | null {
 
 export const fetchLinkPreview = functions.https.onRequest({
     cors: true,
+    invoker: "public",
     timeoutSeconds: 15,
     memory: "256MiB",
 }, async (req, res) => {

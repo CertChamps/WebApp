@@ -115,7 +115,10 @@ export default function SubjectHeatmap({ subject, level, entries }: Props) {
           const drawn = new Set<string>();
           qdSnap.docs.forEach((d) => {
             const data = d.data();
-            if (typeof data.strokeCount === "number" && data.strokeCount > 0) drawn.add(d.id);
+            if ((typeof data.strokeCount === "number" && data.strokeCount > 0)
+              || (typeof data.textBoxCount === "number" && data.textBoxCount > 0)) {
+              drawn.add(d.id);
+            }
           });
           if (!cancelled) setDrawnSet(drawn);
         } catch {

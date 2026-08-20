@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { LuFolder, LuTrash2 } from "react-icons/lu";
+import { LuTrash2 } from "react-icons/lu";
 import WhiteboardModal from "./WhiteboardModal";
-import EmojiPicker from "./EmojiPicker";
 import { FOLDER_COLOURS, type WhiteboardFolder } from "../../data/whiteboards";
 import "../../styles/practiceHub.css";
 
@@ -31,7 +30,6 @@ export default function FolderModal({
 }: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [colour, setColour] = useState<string | null>(initial?.colour ?? null);
-  const [emoji, setEmoji] = useState<string | null>(initial?.emoji ?? null);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -44,7 +42,7 @@ export default function FolderModal({
     if (!canSave) return;
     setSaving(true);
     try {
-      await onSave({ name: name.trim(), colour, emoji, parentId });
+      await onSave({ name: name.trim(), colour, emoji: null, parentId });
       onClose();
     } finally {
       setSaving(false);
@@ -126,36 +124,22 @@ export default function FolderModal({
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex items-end gap-3">
-          <EmojiPicker
-            value={emoji}
-            onChange={setEmoji}
-            fallbackIcon={
-              colour ? (
-                <span className="block size-4 rounded-full" style={{ backgroundColor: colour }} />
-              ) : (
-                <LuFolder size={20} className="color-txt-sub" />
-              )
-            }
-            aria-label="Folder icon"
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold color-txt-sub" htmlFor="wb-folder-name">
+            Name
+          </label>
+          <input
+            id="wb-folder-name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Calculus"
+            className="w-full px-3 py-2 rounded-lg text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSave();
+            }}
           />
-          <div className="flex-1 flex flex-col gap-1">
-            <label className="text-xs font-semibold color-txt-sub" htmlFor="wb-folder-name">
-              Name
-            </label>
-            <input
-              id="wb-folder-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Calculus"
-              className="w-full px-3 py-2 rounded-lg text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSave();
-              }}
-            />
-          </div>
         </div>
 
         <div className="flex flex-col gap-1.5">

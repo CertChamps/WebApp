@@ -61,12 +61,20 @@ export const Pass2Schema = z.object({
   totalAwarded: NumberSchema,
   totalAvailable: NumberSchema,
   isFullMarks: BoolSchema,
+  overallFeedback: z.preprocess(
+    (v) => (typeof v === "string" ? v : v == null ? "" : String(v)),
+    z.string(),
+  ).default(""),
   parts: z.array(
     z.object({
       partId: z.preprocess((v) => String(v ?? "a"), z.string()),
       marksAwarded: NumberSchema,
       marksAvailable: NumberSchema,
       isCorrect: BoolSchema,
+      feedback: z.preprocess(
+        (v) => (typeof v === "string" ? v : v == null ? "" : String(v)),
+        z.string(),
+      ).default(""),
       errors: z.array(
         z.object({
           id: z.preprocess((v) => String(v ?? "note"), z.string()),

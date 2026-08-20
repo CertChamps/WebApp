@@ -114,7 +114,10 @@ export default function QuestionHeatmapModule({ config, entries, onRemove, editi
         const drawn = new Set<string>();
         qdSnap.docs.forEach((d) => {
           const data = d.data();
-          if (typeof data.strokeCount === "number" && data.strokeCount > 0) {
+          if (
+            (typeof data.strokeCount === "number" && data.strokeCount > 0) ||
+            (typeof data.textBoxCount === "number" && data.textBoxCount > 0)
+          ) {
             drawn.add(d.id);
           }
         });

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+﻿import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
-  LuCheck,
-  LuRotateCcw,
+  LuLoaderCircle,
 } from "react-icons/lu";
 import { z } from "zod";
 import DrawingCanvas, {
@@ -10,9 +10,12 @@ import DrawingCanvas, {
   type RegisterGetGradingCapture,
   type ToolMode,
 } from "../questions/DrawingCanvas";
-import type { WhiteboardPage } from "../../data/whiteboards";
+import QuestionAudioPlayer from "../questions/QuestionAudioPlayer";
+import type { AttachedQuestion, WhiteboardPage } from "../../data/whiteboards";
+import { useAttachedQuestionMedia } from "../../hooks/useAttachedQuestionMedia";
 import { useDocumentStorage } from "../../hooks/useDocumentStorage";
 import { renderPdfPages } from "../../utils/pdfPagesToImages";
+import { getThemedPortalTarget } from "../../utils/themedPortal";
 import {
   aiResponseError,
   AiRequestError,
@@ -25,6 +28,8 @@ import {
   isThemeTextColorClass,
   stripBakedColorStyles,
 } from "../../lib/themeTextColor";
+import type { InjectedExchange } from "../ai/useAI";
+import { buildGradingChatMessage } from "../../lib/grading/annotationBuilder";
 
 export type DocumentCanvasStroke = {
   points: { x: number; y: number; pressure: number }[];
@@ -34,12 +39,15 @@ export type DocumentCanvasStroke = {
   color?: string;
 };
 
-type Feedback = { id: string; quote: string; message: string };
+type Feedback = { id: string; quote: string; message: string; suggestion: string };
 type SaveStatus = "loading" | "saved" | "dirty" | "saving" | "error";
 type EditorMode = "text" | "pen";
 
 type Props = {
   page: WhiteboardPage;
+  attachments?: AttachedQuestion[];
+  activeAttachmentId?: string | null;
+  onSelectAttachment?: (id: string) => void;
   canvasStrokes: DocumentCanvasStroke[];
   canvasObjects: CanvasObject[];
   onStrokesChange: (strokes: DocumentCanvasStroke[]) => void;
@@ -49,7 +57,14 @@ type Props = {
   registerGetGradingCapture?: RegisterGetGradingCapture;
   registerGetDocumentText?: (fn: (() => string) | null) => void;
   registerCheckAnswer?: (fn: (() => Promise<void>) | null) => void;
+  questionLabel?: string;
+  questionImages?: string[];
+  markingSchemeImages?: string[];
+  subjectLabel?: string;
+  onCheckStart?: () => void;
+  onGradingComplete?: (exchange: InjectedExchange) => void;
   onTouch: () => Promise<void> | void;
+  progressAliasId?: string | null;
   viewportClassName?: string;
   toolbarCenterX?: number | null;
   toolbarCenterAnimated?: boolean;
@@ -57,22 +72,61 @@ type Props = {
   toolbarExtras?: ReactNode;
 };
 
+const coerceNumber = z.preprocess((value) => {
+  const n = typeof value === "string" ? Number(value) : typeof value === "number" ? value : NaN;
+  return Number.isFinite(n) ? n : 0;
+}, z.number());
+
+const coerceBool = z.preprocess((value) => {
+  if (typeof value === "boolean") return value;
+  if (value === "true" || value === 1 || value === "1") return true;
+  if (value === "false" || value === 0 || value === "0") return false;
+  return Boolean(value);
+}, z.boolean());
+
 const resultSchema = z.object({
-  feedback: z.array(z.object({ quote: z.string().min(1).max(240), message: z.string().min(1).max(1200) })).max(6),
-  rewrite: z.string().min(1).max(30000),
+  totalAwarded: coerceNumber,
+  totalAvailable: coerceNumber,
+  isFullMarks: coerceBool,
+  overview: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() ? value.trim() : "Here's my read of this answer."),
+    z.string().min(1).max(2500),
+  ),
+  parts: z.array(z.object({
+    partId: z.preprocess((value) => String(value ?? "a"), z.string().min(1).max(40)),
+    marksAwarded: coerceNumber,
+    marksAvailable: coerceNumber,
+    feedback: z.preprocess(
+      (value) => (typeof value === "string" ? value : ""),
+      z.string().max(2000),
+    ),
+  })).max(16).default([]),
+  errors: z.array(z.object({
+    quote: z.string().min(1).max(240),
+    message: z.string().min(1).max(1200),
+    suggestion: z.preprocess(
+      (value) => (typeof value === "string" ? value : ""),
+      z.string().max(800),
+    ).default(""),
+  })).max(8).default([]),
 });
 
 const ALLOWED_TAGS = new Set([
   "P", "DIV", "BR", "STRONG", "B", "EM", "I", "U", "S", "UL", "OL", "LI",
   "H1", "H2", "H3", "BLOCKQUOTE", "SPAN", "FONT", "FIGURE", "FIGCAPTION", "IMG",
+  "SECTION",
 ]);
 const ALLOWED_ATTRS: Record<string, Set<string>> = {
   "*": new Set(["class"]),
   FONT: new Set(["size"]),
   SPAN: new Set(["style", "data-theme-ink"]),
   DIV: new Set(["data-question-id", "contenteditable", "class"]),
+  SECTION: new Set(["data-doc-page"]),
   IMG: new Set(["src", "alt", "class", "width", "height"]),
 };
+/** Match the original document paper width so questions and writing line up. */
+const DOCUMENT_WIDTH_CLASS = "w-full max-w-[816px] sm:min-w-[640px]";
+const EMPTY_PAGE_HTML = "<p><br></p>";
 const ALLOWED_CONTENT_CLASSES = new Set([
   "my-3", "my-5", "flex", "items-center", "gap-2", "rounded-xl", "rounded-md", "rounded-lg",
   "color-bg-grey-5", "color-bg-accent", "color-txt-main", "color-txt-accent", "color-txt-sub",
@@ -162,11 +216,31 @@ function unwrapFeedbackMarks(root: ParentNode) {
   root.querySelectorAll("mark[data-document-feedback]").forEach((mark) => mark.replaceWith(...Array.from(mark.childNodes)));
 }
 
+function unwrapFeedbackMark(root: ParentNode, id: string) {
+  root.querySelectorAll(`mark[data-document-feedback="${CSS.escape(id)}"]`).forEach((mark) => {
+    mark.replaceWith(...Array.from(mark.childNodes));
+  });
+}
+
+function markPlainText(mark: Element): string {
+  return (mark.textContent ?? "").replace(/\u00a0/g, " ");
+}
+
 function serializableHtml(editor: HTMLElement): string {
   const clone = editor.cloneNode(true) as HTMLElement;
   unwrapFeedbackMarks(clone);
   clone.querySelectorAll("[data-transient]").forEach((node) => node.remove());
   return sanitizeHtml(clone.innerHTML);
+}
+
+function flattenSavedHtml(raw: string): string {
+  const parsed = new DOMParser().parseFromString(`<body>${raw}</body>`, "text/html");
+  parsed.querySelectorAll("[data-question-id]").forEach((node) => node.remove());
+  const sections = Array.from(parsed.body.querySelectorAll("section[data-doc-page]"));
+  const html = sections.length > 0
+    ? sections.map((section) => section.innerHTML).join("")
+    : parsed.body.innerHTML;
+  return sanitizeHtml(html) || EMPTY_PAGE_HTML;
 }
 
 function extractEssayText(root: HTMLElement | DocumentFragment): string {
@@ -182,6 +256,60 @@ function extractEssayText(root: HTMLElement | DocumentFragment): string {
 
 function documentText(editor: HTMLElement): string {
   return extractEssayText(editor);
+}
+
+function DocumentQuestionSheet({
+  attachment,
+  active,
+  onSelect,
+}: {
+  attachment: AttachedQuestion;
+  active: boolean;
+  onSelect?: (id: string) => void;
+}) {
+  const media = useAttachedQuestionMedia(attachment);
+  const sheetClass = `overflow-hidden rounded-sm color-bg color-shadow border ${
+    active ? "outline outline-2 outline-offset-2 color-txt-accent" : ""
+  }`;
+
+  return (
+    <div
+      className={`w-full ${sheetClass}`}
+      data-question-sheet={attachment.id}
+      onClick={() => onSelect?.(attachment.id)}
+    >
+      {media.audioPath && (
+        <div className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+          <QuestionAudioPlayer
+            audioPath={media.audioPath}
+            startSec={media.audioStartSec}
+            startLabel={media.audioStartLabel ?? undefined}
+            className="w-full"
+            autoLoad={false}
+          />
+        </div>
+      )}
+      {media.loading && media.questionImages.length === 0 && (
+        <div className="flex min-h-[220px] items-center justify-center">
+          <LuLoaderCircle size={20} className="animate-spin color-txt-sub" />
+        </div>
+      )}
+      {media.error && media.questionImages.length === 0 && (
+        <div className="px-5 py-8 text-center">
+          <p className="text-sm font-semibold color-txt-main">Couldn't load this question</p>
+        </div>
+      )}
+      {media.questionImages.map((image) => (
+        <img
+          key={image.key ?? image.src}
+          src={image.src}
+          alt={image.alt}
+          draggable={false}
+          className="block w-full h-auto select-none"
+        />
+      ))}
+    </div>
+  );
 }
 
 function findFeedbackRange(root: HTMLElement, quote: string): Range | null {
@@ -265,8 +393,80 @@ const DOCUMENT_FONT_SIZE_OPTIONS = [
   { value: "5", label: "Heading" },
 ];
 
+const FEEDBACK_POPOVER_WIDTH = 280;
+
+function FeedbackPopover({
+  mark,
+  item,
+  onOkay,
+}: {
+  mark: HTMLElement;
+  item: Feedback;
+  onOkay: () => void;
+}) {
+  const [pos, setPos] = useState({ top: 0, left: 8, above: false });
+
+  useLayoutEffect(() => {
+    const update = () => {
+      const rect = mark.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const above = spaceBelow < 170 && rect.top > 190;
+      const left = Math.max(8, Math.min(rect.left + rect.width / 2 - FEEDBACK_POPOVER_WIDTH / 2, window.innerWidth - FEEDBACK_POPOVER_WIDTH - 8));
+      setPos({
+        top: above ? rect.top - 10 : rect.bottom + 10,
+        left,
+        above,
+      });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [mark]);
+
+  return createPortal(
+    <div
+      className="document-feedback-popover color-bg color-shadow border color-txt-main"
+      style={{
+        top: pos.top,
+        left: pos.left,
+        transform: pos.above ? "translateY(-100%)" : undefined,
+      }}
+      onMouseDown={(event) => event.preventDefault()}
+    >
+      <div
+        className="document-feedback-popover__caret"
+        style={pos.above ? { bottom: -6, top: "auto" } : { top: -6 }}
+      />
+      <p className="text-[13px] leading-relaxed">{item.message}</p>
+      {item.suggestion.trim() ? (
+        <div className="mt-2 rounded-md color-bg-grey-5 px-2.5 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide color-txt-sub">Suggested change</p>
+          <p className="mt-1 text-[13px] leading-relaxed color-txt-main">{item.suggestion.trim()}</p>
+        </div>
+      ) : null}
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          onClick={onOkay}
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold color-bg-accent color-txt-accent hover:opacity-90"
+        >
+          Okay!
+        </button>
+      </div>
+    </div>,
+    getThemedPortalTarget()
+  );
+}
+
 export default function DocumentEditor({
   page,
+  attachments = [],
+  activeAttachmentId = null,
+  onSelectAttachment,
   canvasStrokes,
   canvasObjects,
   onStrokesChange,
@@ -276,7 +476,14 @@ export default function DocumentEditor({
   registerGetGradingCapture,
   registerGetDocumentText,
   registerCheckAnswer,
+  questionLabel,
+  questionImages = [],
+  markingSchemeImages = [],
+  subjectLabel,
+  onCheckStart,
+  onGradingComplete,
   onTouch,
+  progressAliasId = null,
   viewportClassName,
   toolbarCenterX = null,
   toolbarCenterAnimated = false,
@@ -295,10 +502,10 @@ export default function DocumentEditor({
   const runIdRef = useRef(0);
   const importRunIdRef = useRef(0);
   const requestControllerRef = useRef<AbortController | null>(null);
-  const rewriteUndoRef = useRef<string | null>(null);
-  const checkedRangeRef = useRef<Range | null>(null);
   const onTouchRef = useRef(onTouch);
   onTouchRef.current = onTouch;
+  const progressAliasIdRef = useRef(progressAliasId);
+  progressAliasIdRef.current = progressAliasId;
   const loadReadyRef = useRef(false);
   const { loadDocument, saveDocument } = useDocumentStorage();
 
@@ -310,9 +517,10 @@ export default function DocumentEditor({
   const [importStatus, setImportStatus] = useState("");
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [activeFeedback, setActiveFeedback] = useState<Feedback | null>(null);
-  const [rewrite, setRewrite] = useState("");
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState("");
+  const feedbackRef = useRef<Feedback[]>([]);
+  feedbackRef.current = feedback;
   const [formatState, setFormatState] = useState({
     bold: false,
     italic: false,
@@ -331,7 +539,7 @@ export default function DocumentEditor({
     htmlRef.current = html;
     setSaveStatus("saving");
     try {
-      await saveDocument(page.id, html);
+      await saveDocument(page.id, html, progressAliasIdRef.current);
       if (pageIdRef.current !== page.id) return;
       if (revision === revisionRef.current) {
         savedRevisionRef.current = revision;
@@ -357,24 +565,39 @@ export default function DocumentEditor({
     saveTimerRef.current = setTimeout(() => { saveTimerRef.current = null; void flushSave(); }, SAVE_DELAY_MS);
   }, [draftKey, flushSave]);
 
-  const invalidateReview = useCallback(() => {
-    runIdRef.current += 1;
-    requestControllerRef.current?.abort();
-    requestControllerRef.current = null;
-    if (editorRef.current) unwrapFeedbackMarks(editorRef.current);
-    setChecking(false);
-    setFeedback([]);
-    setActiveFeedback(null);
-    setRewrite("");
-    setCheckError("");
-    checkedRangeRef.current = null;
-    rewriteUndoRef.current = null;
+  const dismissFeedback = useCallback((id: string) => {
+    const editor = editorRef.current;
+    if (editor) unwrapFeedbackMark(editor, id);
+    setFeedback((items) => items.filter((item) => item.id !== id));
+    setActiveFeedback((current) => (current?.id === id ? null : current));
   }, []);
 
+  const pruneEditedMarks = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const remaining: Feedback[] = [];
+    let activeGone = false;
+    for (const item of feedbackRef.current) {
+      const mark = editor.querySelector(`mark[data-document-feedback="${CSS.escape(item.id)}"]`);
+      if (!mark) {
+        if (activeFeedback?.id === item.id) activeGone = true;
+        continue;
+      }
+      if (markPlainText(mark) === item.quote) {
+        remaining.push(item);
+        continue;
+      }
+      mark.replaceWith(...Array.from(mark.childNodes));
+      if (activeFeedback?.id === item.id) activeGone = true;
+    }
+    if (remaining.length !== feedbackRef.current.length) setFeedback(remaining);
+    if (activeGone) setActiveFeedback(null);
+  }, [activeFeedback]);
+
   const handleUserMutation = useCallback(() => {
-    invalidateReview();
+    pruneEditedMarks();
     scheduleSave();
-  }, [invalidateReview, scheduleSave]);
+  }, [pruneEditedMarks, scheduleSave]);
 
   useEffect(() => {
     pageIdRef.current = page.id;
@@ -382,8 +605,6 @@ export default function DocumentEditor({
     runIdRef.current += 1;
     importRunIdRef.current += 1;
     savedRangeRef.current = null;
-    checkedRangeRef.current = null;
-    rewriteUndoRef.current = null;
     setMode("text");
     setChecking(false);
     setImportStatus("");
@@ -393,8 +614,6 @@ export default function DocumentEditor({
     setSaveStatus("loading");
     setLoadError("");
     setFeedback([]);
-    setActiveFeedback(null);
-    setRewrite("");
     setCheckError("");
     requestControllerRef.current?.abort();
     const editor = editorRef.current;
@@ -408,7 +627,7 @@ export default function DocumentEditor({
       } catch (error) {
         if (cancelled || pageIdRef.current !== page.id) return;
         console.error("[DocumentEditor] load failed", error);
-        setLoadError("This document couldn’t be loaded safely. Your saved content has not been changed.");
+        setLoadError("This document couldn't be loaded safely. Your saved content has not been changed.");
         setSaveStatus("loading");
         return;
       }
@@ -417,17 +636,13 @@ export default function DocumentEditor({
       const hasRecoverableDraft = typeof draft?.html === "string" && draft.html !== stored?.html &&
         (Number(draft.updatedAt) || 0) >= (stored?.updatedAt ?? 0);
       const initial = hasRecoverableDraft && typeof draft?.html === "string"
-        ? draft.html : stored?.html || page.documentContent || "<p><br></p>";
+        ? draft.html : stored?.html || page.documentContent || EMPTY_PAGE_HTML;
       if (cancelled || pageIdRef.current !== page.id) return;
-      const safe = sanitizeHtml(initial);
-      editor.innerHTML = safe || "<p><br></p>";
-      // Questions are displayed in the document side panel, never inside the
-      // editable page. Remove legacy marker boxes from previously saved docs.
-      const legacyQuestionBlocks = Array.from(editor.querySelectorAll("[data-question-id]"));
-      legacyQuestionBlocks.forEach((node) => node.remove());
+      const safe = flattenSavedHtml(initial);
+      editor.innerHTML = safe;
       htmlRef.current = serializableHtml(editor);
       loadReadyRef.current = true;
-      const needsInitialSave = hasRecoverableDraft || legacyQuestionBlocks.length > 0;
+      const needsInitialSave = hasRecoverableDraft;
       setSaveStatus(needsInitialSave ? "dirty" : "saved");
       if (needsInitialSave) {
         revisionRef.current = 1;
@@ -444,9 +659,19 @@ export default function DocumentEditor({
       document.removeEventListener("visibilitychange", handleVisibility);
       requestControllerRef.current?.abort();
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      if (loadReadyRef.current && revisionRef.current !== savedRevisionRef.current && htmlRef.current) void saveDocument(page.id, htmlRef.current);
+      if (loadReadyRef.current && revisionRef.current !== savedRevisionRef.current && htmlRef.current) {
+        void saveDocument(page.id, htmlRef.current, progressAliasIdRef.current);
+      }
     };
   }, [flushSave, page.id, saveDocument]);
+
+  useEffect(() => {
+    if (!activeAttachmentId) return;
+    const sheet = documentViewportRef.current?.querySelector(
+      `[data-question-sheet="${CSS.escape(activeAttachmentId)}"]`
+    );
+    sheet?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [activeAttachmentId]);
 
   const rememberSelection = useCallback(() => {
     const selection = window.getSelection();
@@ -534,14 +759,14 @@ export default function DocumentEditor({
       return;
     }
     setCheckError("");
-    setImportStatus(isPdf ? "Preparing PDF…" : "Uploading image…");
+    setImportStatus(isPdf ? "Preparing PDF..." : "Uploading image...");
     try {
       const pageDataUrls = isPdf ? await renderPdfPages(file) : [];
       const totalPages = isPdf ? pageDataUrls.length : 1;
       if (totalPages === 0) throw new Error("The PDF has no importable pages");
       const sources: string[] = [];
       for (let index = 0; index < totalPages; index += 1) {
-        setImportStatus(isPdf ? `Uploading PDF page ${index + 1} of ${totalPages}…` : "Uploading image…");
+        setImportStatus(isPdf ? `Uploading PDF page ${index + 1} of ${totalPages}...` : "Uploading image...");
         const blob = isPdf ? await dataUrlToBlob(pageDataUrls[index]) : file;
         if (!isCurrent()) return;
         const source = await onUploadImage(blob);
@@ -574,7 +799,7 @@ export default function DocumentEditor({
     } catch (error) {
       if (isCurrent()) {
         console.error("[DocumentEditor] import failed", error);
-        setCheckError("That file couldn’t be added cleanly. Please retry.");
+        setCheckError("That file couldn't be added cleanly. Please retry.");
       }
     } finally {
       if (isCurrent()) {
@@ -599,7 +824,7 @@ export default function DocumentEditor({
       try {
         const mark = document.createElement("mark");
         mark.dataset.documentFeedback = item.id;
-        mark.className = "cursor-pointer rounded-sm color-bg-accent color-txt-main";
+        mark.className = "document-feedback-mark color-bg-accent";
         mark.append(range.extractContents());
         range.insertNode(mark);
       } catch {
@@ -618,7 +843,6 @@ export default function DocumentEditor({
         ? extractEssayText(activeRange.cloneContents())
         : "";
     const essay = selectedText.length >= 20 ? selectedText : documentText(editor);
-    checkedRangeRef.current = selectedText.length >= 20 && activeRange ? activeRange.cloneRange() : null;
     if (essay.length < 20) {
       setCheckError("Write a little more before checking your answer.");
       return;
@@ -632,8 +856,26 @@ export default function DocumentEditor({
     setChecking(true);
     setCheckError("");
     setActiveFeedback(null);
+    setFeedback([]);
     clearFeedbackMarks();
+    onCheckStart?.();
     requestControllerRef.current?.abort();
+    const hasQuestion = questionImages.length > 0 || Boolean(questionLabel);
+    const hasScheme = markingSchemeImages.length > 0;
+    const prompt = [
+      `You are marking a student's document answer for ${subjectLabel || "Leaving Certificate"}.`,
+      "Write ALL feedback in English, even if the student's writing or the question is in Irish, French, German, Spanish, or another language. Quotes copied from the essay must stay as exact original-language spans.",
+      hasQuestion
+        ? `Question: ${questionLabel || "see attached question images"}. Mark against the question${hasScheme ? " and marking scheme" : ""}. Award marks strictly.`
+        : "No exam question is attached. Review the writing itself. Only award a numerical mark if this is clearly an exam-style answer with an obvious mark allocation; otherwise set totalAvailable to 0 and isFullMarks to false.",
+      "Return JSON only with this exact shape:",
+      '{"totalAwarded":0,"totalAvailable":0,"isFullMarks":false,"overview":"string","parts":[{"partId":"a","marksAwarded":0,"marksAvailable":0,"feedback":"string"}],"errors":[{"quote":"exact short span copied from the essay","message":"English explanation of the error","suggestion":"short corrected replacement for that quote"}]}',
+      "If the question has multiple parts, overview is one sentence on the whole answer and each part has its own marks plus brief but detailed feedback.",
+      "If it is a single-part / whole-answer question, put brief but detailed feedback in overview and either omit parts or include one part matching the total.",
+      "Give 1 to 6 inline errors. Each quote must be an exact contiguous substring from <essay>. suggestion is a short replacement for that quote only — never a full rewrite.",
+      "If the answer is full marks, set isFullMarks true and you may return an empty errors array.",
+      `<essay>\n${essay}\n</essay>`,
+    ].join("\n");
     let lastError: unknown;
     try {
       let result: z.infer<typeof resultSchema> | null = null;
@@ -647,17 +889,15 @@ export default function DocumentEditor({
             messages: [{
               role: "user",
               content: [
-                "Review the student writing between <essay> tags as an English/language teacher.",
-                "Return JSON only with this exact shape:",
-                '{"feedback":[{"quote":"an exact short span copied from the essay","message":"specific, constructive feedback"}],"rewrite":"a polished rewrite of the checked writing"}',
-                "Give 1 to 6 useful points. Preserve the student's meaning and language where appropriate.",
-                `<essay>\n${essay}\n</essay>`,
-              ].join("\n"),
+                { type: "text", text: prompt },
+                ...questionImages.slice(0, 4).map((url) => ({ type: "image_url" as const, image_url: { url } })),
+                ...markingSchemeImages.slice(0, 4).map((url) => ({ type: "image_url" as const, image_url: { url } })),
+              ],
             }],
             temperature: 0.2,
           }, "grading", usageId, { signal: controller.signal });
           if (!response.ok) {
-            const error = await aiResponseError(response, "Couldn’t check your answer");
+            const error = await aiResponseError(response, "Couldn't check your answer");
             if (error instanceof AiRequestError && error.code === "AI_QUOTA_EXCEEDED") throw error;
             if (response.status !== 429 && response.status < 500) throw error;
             throw Object.assign(error, { retryable: true });
@@ -678,18 +918,29 @@ export default function DocumentEditor({
           window.clearTimeout(timeout);
         }
       }
-      if (!result) throw lastError ?? new Error("Couldn’t check your answer");
+      if (!result) throw lastError ?? new Error("Couldn't check your answer");
       if (runId !== runIdRef.current || pageIdRef.current !== page.id) return;
-      const items = result.feedback.map((item, index) => ({ ...item, id: `${runId}-${index}` }));
+      const items = result.errors.map((item, index) => ({ ...item, id: `${runId}-${index}` }));
       setFeedback(items);
-      setRewrite(result.rewrite);
       applyFeedbackMarks(items);
+      onGradingComplete?.({
+        nonce: `${Date.now()}`,
+        userMessage: "Check Answer",
+        assistantMessage: buildGradingChatMessage({
+          totalAwarded: result.totalAwarded,
+          totalAvailable: result.totalAvailable,
+          isFullMarks: result.isFullMarks,
+          overview: result.overview,
+          parts: result.parts,
+        }),
+        action: { type: "markComplete", label: "Mark as complete" },
+      });
     } catch (error) {
       if ((error as { name?: string })?.name !== "AbortError") {
         console.error("[DocumentEditor] check failed", error);
         setCheckError(error instanceof AiRequestError && error.code === "AI_QUOTA_EXCEEDED"
           ? error.message
-          : `${error instanceof Error ? error.message : "Couldn’t check your answer"}. You can retry.`);
+          : `${error instanceof Error ? error.message : "Couldn't check your answer"}. You can retry.`);
       }
     } finally {
       if (runId === runIdRef.current) {
@@ -697,7 +948,18 @@ export default function DocumentEditor({
         setChecking(false);
       }
     }
-  }, [applyFeedbackMarks, checking, clearFeedbackMarks, page.id]);
+  }, [
+    applyFeedbackMarks,
+    checking,
+    clearFeedbackMarks,
+    markingSchemeImages,
+    onCheckStart,
+    onGradingComplete,
+    page.id,
+    questionImages,
+    questionLabel,
+    subjectLabel,
+  ]);
 
   useEffect(() => {
     if (!registerCheckAnswer) return;
@@ -705,79 +967,83 @@ export default function DocumentEditor({
     return () => registerCheckAnswer(null);
   }, [registerCheckAnswer, checkAnswer]);
 
-  const applyRewrite = useCallback(() => {
-    const editor = editorRef.current;
-    if (!editor || !rewrite) return;
-    rewriteUndoRef.current = serializableHtml(editor);
-    clearFeedbackMarks();
-    const checkedRange = checkedRangeRef.current;
-    if (checkedRange && editor.contains(checkedRange.commonAncestorContainer)) {
-      checkedRange.deleteContents();
-      checkedRange.insertNode(document.createTextNode(rewrite));
-    } else {
-      Array.from(editor.children).forEach((child) => {
-        if (child.tagName !== "FIGURE" && !(child instanceof HTMLElement && child.dataset.questionId)) child.remove();
-      });
-      const fragment = document.createDocumentFragment();
-      rewrite.split(/\n{2,}/).forEach((paragraph) => {
-        const node = document.createElement("p");
-        node.textContent = paragraph.trim();
-        fragment.append(node);
-      });
-      editor.prepend(fragment);
-    }
-    setFeedback([]);
-    setActiveFeedback(null);
-    setRewrite("");
-    checkedRangeRef.current = null;
-    scheduleSave();
-  }, [clearFeedbackMarks, rewrite, scheduleSave]);
-
-  const undoRewrite = useCallback(() => {
-    const editor = editorRef.current;
-    if (!editor || !rewriteUndoRef.current) return;
-    editor.innerHTML = sanitizeHtml(rewriteUndoRef.current);
-    rewriteUndoRef.current = null;
-    scheduleSave();
-  }, [scheduleSave]);
-
   const handleEditorClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
     const mark = target.closest("mark[data-document-feedback]");
-    if (mark) {
-      setActiveFeedback(feedback.find((item) => item.id === mark.getAttribute("data-document-feedback")) ?? null);
+    if (!(mark instanceof HTMLElement)) {
+      setActiveFeedback(null);
       return;
     }
+    setActiveFeedback(feedback.find((item) => item.id === mark.getAttribute("data-document-feedback")) ?? null);
   }, [feedback]);
+
+  const activeMark = activeFeedback && editorRef.current
+    ? editorRef.current.querySelector<HTMLElement>(`mark[data-document-feedback="${CSS.escape(activeFeedback.id)}"]`)
+    : null;
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.querySelectorAll("mark[data-document-feedback]").forEach((mark) => {
+      mark.classList.toggle("is-open", mark.getAttribute("data-document-feedback") === activeFeedback?.id);
+    });
+  }, [activeFeedback]);
 
   return (
     <div ref={documentViewportRef} className="relative h-full min-h-0 w-full overflow-hidden color-bg-grey-5">
-      <div className={`h-full overflow-auto px-3 pb-24 pt-5 scrollbar-minimal sm:px-8 sm:pt-8 ${viewportClassName ?? ""}`}>
-        <div className="relative mx-auto min-h-[1056px] w-full max-w-[816px] overflow-hidden rounded-sm color-bg color-shadow border sm:min-w-[640px]">
-          <div
-            ref={editorRef}
-            contentEditable={mode === "text" && !loadError && saveStatus !== "loading"}
-            suppressContentEditableWarning
-            role="textbox"
-            aria-label={`${page.name} document`}
-            aria-multiline="true"
-            spellCheck
-            onInput={() => { handleUserMutation(); syncFormatState(); }}
-            onMouseUp={() => { rememberSelection(); syncFormatState(); }}
-            onKeyUp={() => { rememberSelection(); syncFormatState(); }}
-            onFocus={() => { rememberSelection(); syncFormatState(); }}
-            onPaste={(event) => {
-              event.preventDefault();
-              const html = event.clipboardData.getData("text/html");
-              const text = event.clipboardData.getData("text/plain");
-              if (html) document.execCommand("insertHTML", false, sanitizeHtml(html, true));
-              else document.execCommand("insertText", false, text);
-              handleUserMutation();
-              syncFormatState();
-            }}
-            onClick={handleEditorClick}
-            className={`relative z-10 min-h-[1056px] px-8 py-12 text-[16px] leading-7 color-txt-main outline-none sm:px-14 sm:py-16 [&_blockquote]:border-l-2 [&_blockquote]:pl-4 [&_figcaption]:color-txt-sub [&_img]:h-auto [&_img]:max-w-full [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 ${mode === "text" ? "cursor-text" : "pointer-events-none select-none"}`}
-          />
+      <div className={`h-full overflow-auto px-3 pb-24 scrollbar-minimal sm:px-8 ${
+        attachments.length > 0 ? "pt-14 sm:pt-16" : "pt-5 sm:pt-8"
+      } ${viewportClassName ?? ""}`}>
+        <div className={`relative mx-auto flex flex-col gap-6 ${DOCUMENT_WIDTH_CLASS}`}>
+          {attachments.map((attachment) => (
+            <DocumentQuestionSheet
+              key={attachment.id}
+              attachment={attachment}
+              active={attachment.id === activeAttachmentId}
+              onSelect={onSelectAttachment}
+            />
+          ))}
+
+          <div className="relative min-h-[1056px] overflow-hidden rounded-sm color-bg color-shadow border">
+            <div
+              ref={editorRef}
+              contentEditable={mode === "text" && !loadError && saveStatus !== "loading"}
+              suppressContentEditableWarning
+              role="textbox"
+              aria-label={`${page.name} document`}
+              aria-multiline="true"
+              spellCheck={false}
+              autoCorrect="off"
+              autoCapitalize="off"
+              data-gramm="false"
+              data-enable-grammarly="false"
+              onInput={(event) => {
+                if ((event.nativeEvent as InputEvent).isComposing) {
+                  scheduleSave();
+                  syncFormatState();
+                  return;
+                }
+                handleUserMutation();
+                syncFormatState();
+              }}
+              onCompositionEnd={() => pruneEditedMarks()}
+              onMouseUp={() => { rememberSelection(); syncFormatState(); }}
+              onKeyUp={() => { rememberSelection(); syncFormatState(); }}
+              onFocus={() => { rememberSelection(); syncFormatState(); }}
+              onPaste={(event) => {
+                event.preventDefault();
+                const html = event.clipboardData.getData("text/html");
+                const text = event.clipboardData.getData("text/plain");
+                if (html) document.execCommand("insertHTML", false, sanitizeHtml(html, true));
+                else document.execCommand("insertText", false, text);
+                handleUserMutation();
+                syncFormatState();
+              }}
+              onClick={handleEditorClick}
+              className={`relative z-10 min-h-[1056px] px-8 py-12 text-[16px] leading-7 color-txt-main outline-none sm:px-14 sm:py-16 [&_blockquote]:border-l-2 [&_blockquote]:pl-4 [&_figcaption]:color-txt-sub [&_img]:h-auto [&_img]:max-w-full [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 ${mode === "text" ? "cursor-text" : "pointer-events-none select-none"}`}
+            />
+          </div>
+
           <div className={`absolute inset-0 z-20 ${mode === "pen" || canvasTool === "lasso" ? "pointer-events-auto" : "pointer-events-none"}`}>
             <DrawingCanvas
               initialStrokes={canvasStrokes}
@@ -785,7 +1051,6 @@ export default function DocumentEditor({
               onStrokesChange={onStrokesChange}
               onObjectsChange={onObjectsChange}
               onUploadImage={onUploadImage}
-              onEditInteraction={() => { setFeedback([]); setActiveFeedback(null); setRewrite(""); }}
               registerDrawingSnapshot={registerDrawingSnapshot}
               registerGetGradingCapture={registerGetGradingCapture}
               wrapperClassName="bg-transparent"
@@ -831,31 +1096,23 @@ export default function DocumentEditor({
         </div>
       </div>
 
-      {(loadError || importStatus || checkError || activeFeedback) && (
+      {(loadError || importStatus || checkError) && (
         <div className="absolute bottom-16 left-1/2 z-50 max-w-sm -translate-x-1/2 rounded-lg color-bg color-shadow border px-3 py-2 text-xs color-txt-sub">
-          {activeFeedback?.message || loadError || checkError || importStatus}
+          {loadError || checkError || importStatus}
           {loadError ? (
             <button type="button" className="ml-2 font-semibold color-txt-accent" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry</button>
           ) : null}
         </div>
       )}
 
-      {(feedback.length > 0 || rewrite) && (
-        <div className="absolute right-3 top-3 z-40 w-[min(19rem,calc(100%-1.5rem))] rounded-xl color-bg color-shadow border p-3 sm:right-5 sm:top-5">
-          <div className="mb-2 flex items-center gap-1.5 text-sm font-bold color-txt-main"><LuCheck size={15} className="color-txt-accent" />Writing feedback</div>
-          <div className="max-h-52 overflow-y-auto scrollbar-minimal">
-            {feedback.map((item) => (
-              <button key={item.id} type="button" onClick={() => setActiveFeedback(item)} className="mb-1.5 w-full rounded-lg color-bg-grey-5 p-2 text-left text-xs color-txt-main hover:color-bg-grey-10">
-                <span className="block truncate font-semibold color-txt-accent">“{item.quote}”</span>
-                <span>{item.message}</span>
-              </button>
-            ))}
-          </div>
-          {rewrite && <button type="button" onClick={applyRewrite} className="mt-1 w-full rounded-lg color-bg-accent px-3 py-2 text-xs font-semibold color-txt-accent hover:opacity-90">Apply suggested rewrite</button>}
-        </div>
-      )}
+      {activeFeedback && activeMark ? (
+        <FeedbackPopover
+          mark={activeMark}
+          item={activeFeedback}
+          onOkay={() => dismissFeedback(activeFeedback.id)}
+        />
+      ) : null}
 
-      {rewriteUndoRef.current && <button type="button" onClick={undoRewrite} className="absolute bottom-16 right-4 z-40 flex items-center gap-1 rounded-lg color-bg color-shadow border px-3 py-2 text-xs font-semibold color-txt-main"><LuRotateCcw size={14} />Undo rewrite</button>}
       <input ref={fileInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={(event) => void handleFiles(event.target.files)} />
     </div>
   );

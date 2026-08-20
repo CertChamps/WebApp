@@ -845,6 +845,8 @@ type DrawingCanvasProps = {
 	defaultGridMode?: GridMode;
 	/** World-space grading annotations rendered in the canvas loop. */
 	gradingAnnotations?: CanvasAnnotation[] | null;
+	/** When false, skip on-canvas marks and feedback bubbles (chat-only grading). */
+	showGradingOverlay?: boolean;
 	/** Show the attach button + enable placing image/PDF objects on the canvas. */
 	enableAttachments?: boolean;
 	/** Register a function that places a question image strip as a normal canvas attachment. */
@@ -1018,6 +1020,7 @@ export default function DrawingCanvas({
 	readOnly = false,
 	defaultGridMode = "lines",
 	gradingAnnotations = null,
+	showGradingOverlay = true,
 	enableAttachments = false,
 	registerAttachQuestionImages,
 	registerRestoreCanvasObject,
@@ -1636,7 +1639,7 @@ export default function DrawingCanvas({
 			ctx.restore();
 		}
 
-		if (gradingAnnotations && gradingAnnotations.length > 0) {
+		if (showGradingOverlay && gradingAnnotations && gradingAnnotations.length > 0) {
 			const correctionColor = accentColor || strokeColor || "#D95F3B";
 
 			for (const annotation of gradingAnnotations) {
@@ -1708,7 +1711,7 @@ export default function DrawingCanvas({
 		}
 
 		ctx.restore();
-	}, [pan, scale, strokes, currentStroke, strokeColor, tool, lineAnchors, gradingAnnotations, accentColor, fontReady, lassoPath, selectedStrokeIndexes, transformSession, eraserMode, eraserHitRadius, penPalette, activePenColorIndex]);
+	}, [pan, scale, strokes, currentStroke, strokeColor, tool, lineAnchors, gradingAnnotations, showGradingOverlay, accentColor, fontReady, lassoPath, selectedStrokeIndexes, transformSession, eraserMode, eraserHitRadius, penPalette, activePenColorIndex]);
 
 	/** Paint grid then attached images (under ink) so images sit above the grid. */
 	const drawObjects = useCallback(() => {
@@ -3322,7 +3325,7 @@ export default function DrawingCanvas({
 		Boolean(onPinObjectToSide) &&
 		objects.some((object) => selectedObjectIds.includes(object.id) && !object.pinnedToSide);
 	const groupChromeAccent = accentColor || strokeColor || "#2563EB";
-	const overlayBubbles = badgeLayoutsRef.current.map((badge) => {
+	const overlayBubbles = showGradingOverlay ? badgeLayoutsRef.current.map((badge) => {
 		const expanded = expandedCommentId === badge.id;
 		
 		// Compute single anchor point at error box top-right
@@ -3346,7 +3349,7 @@ export default function DrawingCanvas({
 		const tailTransformY = expanded ? "translateY(0)" : "translateY(-50%)";
 		
 		return { badge, anchorScreenX, anchorScreenY, expanded, tailTop, tailTransformY };
-	});
+	}) : [];
 
 
 
@@ -3514,10 +3517,10 @@ export default function DrawingCanvas({
 				{/* Portaled toolbar is measured against the canvas so overlay layers cannot steal clicks. */}
 				{showToolbar && (() => {
 				const toolbarClassName = topToolbar
-					? "drawing-canvas-toolbar pointer-events-auto fixed z-40 flex h-8 items-center justify-center gap-0.5 overflow-x-auto color-bg px-3 scrollbar-minimal"
+					? "drawing-canvas-toolbar pointer-events-auto fixed z-40 flex items-center justify-center gap-0.5 overflow-x-auto color-bg px-3 py-1.5 scrollbar-minimal"
 					: `drawing-canvas-toolbar pointer-events-auto ${portalToolbar ? "fixed" : "absolute"} bottom-4 left-1/2 -translate-x-1/2 z-40 flex h-8 max-w-[calc(100%-1rem)] items-center justify-center gap-0.5 px-1.5 rounded-out color-bg color-shadow border`;
 				const toolbarSurfaceClassName = topToolbar
-					? "flex h-8 min-w-0 max-w-full flex-nowrap items-center justify-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full color-bg-grey-5 px-2 scrollbar-minimal"
+					? "flex h-8 min-w-0 max-w-full flex-nowrap items-center justify-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full color-bg-grey-5 px-2.5 scrollbar-minimal"
 					: "contents";
 				const toolbarStyle = topToolbar
 					? {

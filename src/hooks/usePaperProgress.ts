@@ -144,15 +144,22 @@ export function usePaperProgress() {
 
       try {
         const ref = doc(db, "user-data", user.uid, "paper-progress", key);
-        await setDoc(ref, {
-          paperId: paper.id,
-          subject: paper.subject ?? "unknown",
-          level: paper.level ?? "unknown",
-          paperLabel: paper.label,
-          completedQuestions: Array.from(next),
-          totalQuestions,
-          lastUpdated: Date.now(),
-        });
+        const snap = await getDoc(ref);
+        const existingTotal =
+          typeof snap.data()?.totalQuestions === "number" ? snap.data()!.totalQuestions : 0;
+        await setDoc(
+          ref,
+          {
+            paperId: paper.id,
+            subject: paper.subject ?? "unknown",
+            level: paper.level ?? "unknown",
+            paperLabel: paper.label,
+            completedQuestions: Array.from(next),
+            totalQuestions: Math.max(totalQuestions, existingTotal, next.size),
+            lastUpdated: Date.now(),
+          },
+          { merge: true },
+        );
       } catch (err) {
         console.error("Failed to save paper progress:", err);
       }

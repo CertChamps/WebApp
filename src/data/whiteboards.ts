@@ -371,6 +371,7 @@ export const WHITEBOARD_EMOJIS = [
 // ============================= SUBJECT PERSISTENCE ============================= //
 
 const LAST_SUBJECT_KEY = "whiteboards-last-subject";
+export const WHITEBOARDS_SUBJECT_CHANGED_EVENT = "whiteboards-subject-changed";
 
 export function getLastWhiteboardsSubject(): string | null {
   try {
@@ -384,6 +385,7 @@ export function setLastWhiteboardsSubject(subjectId: string | null): void {
   try {
     if (subjectId) localStorage.setItem(LAST_SUBJECT_KEY, subjectId);
     else localStorage.removeItem(LAST_SUBJECT_KEY);
+    window.dispatchEvent(new Event(WHITEBOARDS_SUBJECT_CHANGED_EVENT));
   } catch {
     /* ignore */
   }

@@ -412,6 +412,10 @@
   /* Horizontal centering is applied via motion (x: -50%) so enter/exit can animate. */
 }
 
+.practice-hub__subject-dropdown--grid-start {
+  left: 0;
+}
+
 .practice-hub__subject-dropdown--list {
   left: 0;
   right: 0;
