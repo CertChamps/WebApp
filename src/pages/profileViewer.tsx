@@ -6,6 +6,7 @@ import PostCard from '../components/social/PostCard'
 import { LuBookOpen, LuBookmark, LuCirclePlay, LuExternalLink, LuFileText, LuLayers, LuLoader, LuMessageCircle, LuX } from 'react-icons/lu'
 import { db } from '../../firebase'
 import { UserContext } from '../context/UserContext'
+import { notifyPostOwner } from '../lib/notifications'
 import '../styles/profile.css'
 import '../styles/decks.css'
 import '../styles/social.css'
@@ -222,6 +223,7 @@ export default function ProfileViewer() {
         try {
             let nextAverage = selectedDiscoverPost.ratingAverage ?? 0
             let nextCount = selectedDiscoverPost.ratingCount ?? 0
+            let isNewRating = false
             await runTransaction(db, async (transaction) => {
                 const resourceSnap = await transaction.get(resourceRef)
                 const ratingSnap = await transaction.get(ratingRef)
@@ -229,6 +231,7 @@ export default function ProfileViewer() {
                 const currentAverage = data?.ratingAverage ?? 0
                 const currentCount = data?.ratingCount ?? 0
                 const previousValue = ratingSnap.exists() ? ratingSnap.data()?.value : null
+                isNewRating = typeof previousValue !== 'number'
                 nextCount = typeof previousValue === 'number' ? currentCount : currentCount + 1
                 const currentTotal = currentAverage * currentCount
                 const nextTotal = typeof previousValue === 'number'
@@ -248,6 +251,15 @@ export default function ProfileViewer() {
             })
             setDiscoverUserRating(value)
             updateDiscoverPost(selectedDiscoverPost.id, { ratingAverage: nextAverage, ratingCount: nextCount })
+            if (isNewRating) {
+                notifyPostOwner({
+                    ownerId: userID,
+                    actorId: currentUser.uid,
+                    type: 'post-rating',
+                    postId: selectedDiscoverPost.id,
+                    postTitle: selectedDiscoverPost.title,
+                })
+            }
         } catch (err) {
             console.error('Profile Discover rating error:', err)
         } finally {
@@ -274,6 +286,13 @@ export default function ProfileViewer() {
                 })
             })
             updateDiscoverPost(selectedDiscoverPost.id, { commentCount: selectedDiscoverPost.commentCount + 1 })
+            notifyPostOwner({
+                ownerId: userID,
+                actorId: currentUser.uid,
+                type: 'post-comment',
+                postId: selectedDiscoverPost.id,
+                postTitle: selectedDiscoverPost.title,
+            })
             setDiscoverCommentText('')
         } catch (err) {
             console.error('Profile Discover comment error:', err)

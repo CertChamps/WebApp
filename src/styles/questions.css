@@ -328,6 +328,39 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   appearance: none;
 }
 
+.document-feedback-mark {
+  cursor: pointer;
+  border-radius: 2px;
+  @apply color-bg-accent;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--theme-txt-accent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.document-feedback-mark.is-open {
+  text-decoration-thickness: 3px;
+}
+.document-feedback-popover {
+  position: fixed;
+  z-index: 80;
+  width: 280px;
+  border-radius: 12px;
+  padding: 12px 12px 10px;
+}
+.document-feedback-popover__caret {
+  position: absolute;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%) rotate(45deg);
+  background: inherit;
+  border: inherit;
+  border-bottom: none;
+  border-right: none;
+  pointer-events: none;
+}
 /* AI Chat markdown – tuned for LLM output (headings, lists, code, blockquotes, tables) */
 .chat-markdown,
 .chat-markdown-prose {
@@ -611,6 +644,12 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   -webkit-appearance: none;
   background: transparent;
   height: 18px;
+}
+
+.drawing-canvas-toolbar select {
+  height: 1.75rem;
+  max-height: 1.75rem;
+  line-height: 1.75rem;
 }
 
 .pen-thickness-slider::-webkit-slider-runnable-track {

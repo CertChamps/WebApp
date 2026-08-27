@@ -5,6 +5,8 @@ import {
   type ImageTopic,
   type MarkingSchemeFile,
 } from "../hooks/useImageQuestions";
+import { getPracticeSubjectId } from "../data/practiceHubSubjects";
+import { imageCanvasQuestionId } from "./imageTopicProgress";
 import { newAttachmentId, type AttachedQuestion } from "../data/whiteboards";
 
 /** Attachment for a past-paper bank question (snapshot of everything needed to render it). */
@@ -65,4 +67,22 @@ export function buildImageAttachment(
         : {}),
     },
   };
+}
+
+/** Practice-canvas id so whiteboard work lights up the progress heatmap. */
+export function progressCanvasIdForAttachment(attachment: AttachedQuestion | null | undefined): string | null {
+  const bank = attachment?.bank;
+  if (!attachment || attachment.source !== "bank" || !bank) return null;
+  if (bank.kind === "paper" && bank.paperId && bank.questionId) {
+    return `${bank.paperId}_${bank.questionId}`;
+  }
+  if (bank.kind === "image" && bank.groupKey && bank.topic) {
+    return imageCanvasQuestionId(
+      getPracticeSubjectId(bank.subject),
+      bank.level,
+      bank.topic,
+      bank.groupKey
+    );
+  }
+  return null;
 }

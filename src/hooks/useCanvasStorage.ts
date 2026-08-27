@@ -89,6 +89,7 @@ export function useCanvasStorage() {
     feedbackOverlay: unknown | null = null,
     objects: CanvasObject[] = [],
     textBoxes: CanvasTextBox[] = [],
+    progressAliasId?: string | null,
   ) => {
     if (!user?.uid || !questionId) return;
     const uid = user.uid;
@@ -106,6 +107,18 @@ export function useCanvasStorage() {
         textBoxCount: textBoxes.length,
         updatedAt: serverTimestamp(),
       }, { merge: true });
+      if (
+        progressAliasId &&
+        progressAliasId !== questionId &&
+        (strokes.length > 0 || textBoxes.length > 0)
+      ) {
+        await setDoc(doc(db, "user-data", uid, "question-data", progressAliasId), {
+          strokeCount: strokes.length,
+          textBoxCount: textBoxes.length,
+          projectedFrom: questionId,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
     });
     saveQueueById.set(queueKey, next);
     try {

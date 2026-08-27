@@ -13,6 +13,10 @@ export type SavedDocumentData = {
 
 const queueById = new Map<string, Promise<void>>();
 
+function documentHasStudentText(html: string): boolean {
+  return html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/gi, " ").replace(/\s+/g, " ").trim().length > 0;
+}
+
 /**
  * Stores rich document payloads in Firebase Storage so page metadata remains well
  * below Firestore's document-size limit. Writes are serialized per document to
@@ -40,7 +44,11 @@ export function useDocumentStorage() {
     }
   }, [user?.uid]);
 
-  const saveDocument = useCallback(async (pageId: string, html: string): Promise<void> => {
+  const saveDocument = useCallback(async (
+    pageId: string,
+    html: string,
+    progressAliasId?: string | null,
+  ): Promise<void> => {
     if (!user?.uid || !pageId) throw new Error("Not signed in");
     const uid = user.uid;
     const storageId = documentContentStorageId(pageId);
@@ -55,6 +63,13 @@ export function useDocumentStorage() {
         contentLength: html.length,
         updatedAt: serverTimestamp(),
       }, { merge: true });
+      if (progressAliasId && progressAliasId !== storageId && documentHasStudentText(html)) {
+        await setDoc(doc(db, "user-data", uid, "question-data", progressAliasId), {
+          strokeCount: 1,
+          projectedFrom: storageId,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
     });
     queueById.set(queueKey, next);
     try {

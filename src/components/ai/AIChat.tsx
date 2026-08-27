@@ -1,8 +1,9 @@
-import { useContext, useState } from "react";
+import { useCallback, useContext, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { LuArrowRight, LuSendHorizontal, LuSparkles } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "../../context/UserContext";
+import { isIPad } from "../../utils/isIPad";
 import { useAI } from "./useAI";
 import { ChatMessage, ChatMessageLoading } from "./ChatMessage";
 import type { InjectedExchange } from "./useAI";
@@ -75,8 +76,48 @@ export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPape
     setCompletedActionNonce(injectedExchange.nonce);
   };
 
+  const decoyInputRef = useRef<HTMLInputElement>(null);
+
+  const forceFingerKeyboard = useCallback((textarea: HTMLTextAreaElement) => {
+    const decoy = decoyInputRef.current;
+    if (!decoy) return;
+
+    const caret = textarea.selectionStart ?? textarea.value.length;
+
+    // iPadOS latches onto Scribble after Pencil use. Cycling through a decoy
+    // input with readOnly reset is the most reliable way to reopen the keyboard.
+    textarea.readOnly = true;
+    textarea.blur();
+    decoy.removeAttribute("readonly");
+    decoy.focus({ preventScroll: true });
+
+    requestAnimationFrame(() => {
+      textarea.readOnly = false;
+      textarea.focus({ preventScroll: true });
+      try {
+        textarea.setSelectionRange(caret, caret);
+      } catch {
+        // iOS can reject selection until focus settles.
+      }
+      decoy.setAttribute("readonly", "");
+      decoy.blur();
+    });
+  }, []);
+
+  const handleComposerTouchStart = (event: React.TouchEvent<HTMLTextAreaElement>) => {
+    if (!isIPad() || event.touches.length !== 1) return;
+
+    // Finger always wins over Scribble / floating pencil input on iPad.
+    event.preventDefault();
+    forceFingerKeyboard(event.currentTarget);
+  };
+
   return (
-    <div className="ai-chat-shell pointer-events-auto h-full min-h-0 overflow-hidden">
+    <div
+      className="ai-chat-shell pointer-events-auto h-full min-h-0 overflow-hidden"
+      data-no-sidebar-drag
+      onPointerDown={(event) => event.stopPropagation()}
+    >
       <div ref={messagesContainerRef} className="ai-chat-messages overflow-y-auto overflow-x-hidden px-4 pt-4 pb-3 space-y-4 min-h-0">
         {messages.length === 0 && !loading && (
           <div className="text-center h-[90%] flex flex-col justify-center items-center">
@@ -135,18 +176,33 @@ export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPape
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="ai-chat-composer color-bg border-t border-grey/15 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] p-3 pt-2">
-        <div className="flex items-start rounded-out border border-grey/25 color-bg overflow-hidden focus-within:ring-2 focus-within:ring-inset focus-within:ring-grey/20">
+      <div className="ai-chat-composer color-bg border-t border-grey/15 p-3 pt-2" data-no-sidebar-drag>
+        <div className="relative flex items-start rounded-out border border-grey/25 color-bg overflow-hidden focus-within:ring-2 focus-within:ring-inset focus-within:ring-grey/20">
+          <input
+            ref={decoyInputRef}
+            type="text"
+            tabIndex={-1}
+            aria-hidden
+            inputMode="text"
+            readOnly
+            className="pointer-events-none absolute h-0 w-0 opacity-0"
+          />
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onTouchStartCapture={handleComposerTouchStart}
             placeholder={allowanceReached ? "Your AI allowance has been used for this month." : aiPlaceholder}
             rows={2}
+            inputMode="text"
+            enterKeyHint="send"
+            autoComplete="off"
+            autoCorrect="on"
+            spellCheck
             disabled={loading || allowanceReached}
             aria-disabled={loading || allowanceReached}
-            className="flex-1 resize-none min-h-[2.75rem] max-h-24 border-0 bg-transparent color-txt-main pl-4 pr-2 py-2.5 text-sm placeholder:color-txt-sub/70 focus:outline-none focus:ring-0 disabled:opacity-50"
+            className="ai-chat-composer__input flex-1 resize-none min-h-[2.75rem] max-h-24 border-0 bg-transparent color-txt-main pl-4 pr-2 py-2.5 text-sm placeholder:color-txt-sub/70 focus:outline-none focus:ring-0 disabled:opacity-50"
           />
           <button
             onClick={sendMessage}

@@ -182,7 +182,9 @@ export function useWhiteboards(subject: string | null) {
       const now = Date.now();
       const page: WhiteboardPage = {
         id: newDocId("page"),
-        name: input.name.trim() || "Untitled page",
+        name:
+          input.name.trim() ||
+          (input.pageType === "document" ? "Untitled document" : "Untitled whiteboard"),
         subject: input.subject,
         folderId: input.folderId ?? null,
         emoji: input.emoji ?? null,

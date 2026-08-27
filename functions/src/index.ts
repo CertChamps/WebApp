@@ -14,11 +14,30 @@ export { notifyAdminsOnPendingDiscover } from "./moderation/notifyPendingDiscove
 export { registerExpoPushToken, registerAdminPushToken } from "./push/registerExpoPushToken";
 export { notifyAuthorOnDiscoverComment } from "./push/notifyDiscoverComment";
 export { notifyAuthorOnDiscoverRating } from "./push/notifyDiscoverRating";
+export { captureWebsiteThumbnail } from "./discover/captureWebsiteThumbnail";
 const corsMiddleware = cors({ origin: true });
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_MODEL = "google/gemini-3-flash-preview";
 const OPENROUTER_TUTOR_MODEL = "google/gemini-3.5-flash-lite";
+
+const TUTOR_SYSTEM_PROMPT = `You are a study tutor helping a student with the single exam question described below.
+
+Answer scope:
+- Answer only what the student actually asked. Nothing else.
+- No tangents, no extra worked examples, no revision tips, no summaries of the question back to them.
+- Stay strictly within the question part named in the context unless the student explicitly asks about another part.
+- If the question is unclear, ask one short clarifying question instead of guessing.
+
+Style:
+- Be brief. Aim for under 120 words, and never more than 200.
+- Get straight to the point: no greetings, no "great question", no closing encouragement.
+- Organise anything multi-step as a short numbered or bulleted list, one idea per line.
+- Use a short bold lead-in only when it genuinely helps scanning.
+
+Teaching:
+- Prefer the next hint or step over the full solution, unless the student explicitly asks for the answer.
+- If a marking scheme image is attached, treat it as the authoritative answer, but do not reproduce it verbatim unless asked.`;
 
 type AiPurpose = "tutor" | "grading" | "discover" | "whiteboard";
 
@@ -145,26 +164,63 @@ async function consumeAiAllowance(args: {
     });
 }
 
-function countMessagePayload(messages: unknown[]): { images: number; characters: number } {
-    let images = 0;
-    let characters = 0;
-    for (const message of messages) {
+const MAX_CHAT_MESSAGES = 40;
+const MAX_CHAT_IMAGES = 6;
+const MAX_CHAT_CHARACTERS = 6_000_000;
+const MAX_CONTEXT_CHARACTERS = 60_000;
+
+type ChatContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+type ChatMessage = { role: string; content: string | ChatContentPart[] };
+
+/**
+ * Fits a conversation inside the model budget instead of rejecting it. Walks
+ * newest-first so the current turn keeps its question and marking scheme images
+ * and older history is what gets dropped.
+ */
+function sanitizeChatMessages(messages: unknown[]): ChatMessage[] {
+    let imageBudget = MAX_CHAT_IMAGES;
+    let characterBudget = MAX_CHAT_CHARACTERS;
+
+    const takeText = (value: string): string | null => {
+        if (characterBudget <= 0) return null;
+        const text = value.length > characterBudget ? value.slice(0, characterBudget) : value;
+        characterBudget -= text.length;
+        return text;
+    };
+
+    const sanitized: ChatMessage[] = [];
+    const recent = messages.slice(-MAX_CHAT_MESSAGES);
+    for (let i = recent.length - 1; i >= 0; i--) {
+        const message = recent[i] as any;
         if (!message || typeof message !== "object") continue;
-        const content = (message as any).content;
-        if (typeof content === "string") {
-            characters += content.length;
+        const role = message.role === "assistant" || message.role === "system" ? message.role : "user";
+
+        if (typeof message.content === "string") {
+            const text = takeText(message.content);
+            if (text === null) break;
+            sanitized.push({ role, content: text });
             continue;
         }
-        if (!Array.isArray(content)) continue;
-        for (const part of content) {
-            if (part?.type === "text" && typeof part.text === "string") characters += part.text.length;
+        if (!Array.isArray(message.content)) continue;
+
+        const parts: ChatContentPart[] = [];
+        for (const part of message.content) {
+            if (part?.type === "text" && typeof part.text === "string") {
+                const text = takeText(part.text);
+                if (text !== null) parts.push({ type: "text", text });
+                continue;
+            }
             if (part?.type === "image_url" && typeof part.image_url?.url === "string") {
-                images += 1;
-                characters += part.image_url.url.length;
+                const url = part.image_url.url as string;
+                if (imageBudget <= 0 || url.length > characterBudget) continue;
+                characterBudget -= url.length;
+                imageBudget -= 1;
+                parts.push({ type: "image_url", image_url: { url } });
             }
         }
+        if (parts.length > 0) sanitized.push({ role, content: parts });
     }
-    return { images, characters };
+    return sanitized.reverse();
 }
 
 function normalizePreviewUrl(input: unknown): string | null {
@@ -233,6 +289,7 @@ function extractYoutubeId(url: string): string | null {
 
 export const fetchLinkPreview = functions.https.onRequest({
     cors: true,
+    invoker: "public",
     timeoutSeconds: 15,
     memory: "256MiB",
 }, async (req, res) => {
@@ -367,16 +424,12 @@ function createMeteredChatFunction() {
         res.status(400).json({ error: "messages array is required" });
         return;
     }
-    if (messages.length > 40) {
-        res.status(400).json({ error: "Conversation is too long. Start a new chat.", code: "REQUEST_TOO_LARGE" });
+    const chatMessages = sanitizeChatMessages(messages);
+    if (chatMessages.length === 0) {
+        res.status(400).json({ error: "messages array is required" });
         return;
     }
-    const payloadSize = countMessagePayload(messages);
-    const contextLength = typeof context === "string" ? context.length : 0;
-    if (payloadSize.images > 6 || payloadSize.characters + contextLength > 8_000_000) {
-        res.status(413).json({ error: "AI request is too large.", code: "REQUEST_TOO_LARGE" });
-        return;
-    }
+    const trimmedContext = typeof context === "string" ? context.slice(0, MAX_CONTEXT_CHARACTERS) : "";
 
     const purpose = parseAiPurpose(purposeValue);
     let allowance: { used: number; limit: number };
@@ -402,28 +455,16 @@ function createMeteredChatFunction() {
     res.setHeader("X-AI-Usage", String(allowance.used));
     res.setHeader("X-AI-Limit", String(allowance.limit));
 
-    const systemMessage = typeof context === "string" && context.trim()
+    const systemMessage = trimmedContext.trim()
         ? {
             role: "system",
-            content: `The user is working on the following math question. Use this as context when answering. If the context specifies a particular question part, stay strictly within that part unless the user explicitly asks to switch. Do not give away the final answer unless they ask; prefer hints, explanations, and step-by-step guidance.\n\n---\n${context}\n---`
+            content: purpose === "tutor"
+                ? `${TUTOR_SYSTEM_PROMPT}\n\n---\n${trimmedContext}\n---`
+                : `The user is working on the following math question. Use this as context when answering. If the context specifies a particular question part, stay strictly within that part unless the user explicitly asks to switch. Do not give away the final answer unless they ask; prefer hints, explanations, and step-by-step guidance.\n\n---\n${trimmedContext}\n---`
         }
         : null;
 
-    // Normalize messages: support multimodal content (text + image_url for vision)
-    const apiMessages = (systemMessage ? [systemMessage, ...messages] : messages).map((m: { role: string; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }) => {
-        if (typeof m.content === "string") return m;
-        if (Array.isArray(m.content)) {
-            return {
-                role: m.role,
-                content: m.content.map((part: any) => {
-                    if (part.type === "text" && typeof part.text === "string") return { type: "text", text: part.text };
-                    if (part.type === "image_url" && part.image_url?.url) return { type: "image_url", image_url: { url: part.image_url.url } };
-                    return part;
-                }).filter(Boolean),
-            };
-        }
-        return m;
-    });
+    const apiMessages = systemMessage ? [systemMessage, ...chatMessages] : chatMessages;
 
     try {
         const resolvedTemperature = typeof temperature === "number" ? temperature : 0.7;

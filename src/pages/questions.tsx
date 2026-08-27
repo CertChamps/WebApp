@@ -78,7 +78,7 @@ import type { InjectedExchange } from "../components/ai/useAI";
 import { AiRequestError, aiResponseError, authenticatedAiFetch, createAiUsageId, METERED_CHAT_API_URL } from "../lib/aiApi";
 import { runGrading } from "../lib/grading/GradingEngine";
 import type { CanvasAnnotation, CanvasCapturePayload, GradingStatus, Pass1Result } from "../lib/grading/GradingTypes";
-import { buildPartSummary } from "../lib/grading/annotationBuilder";
+import { buildGradingChatMessage, gradingChatInputFromPass2 } from "../lib/grading/annotationBuilder";
 import { BlankCanvasError } from "../lib/grading/canvasCapture";
 
 // Style Imports
@@ -956,46 +956,11 @@ export default function Questions() {
     ]);
 
     const injectGradingMessage = useCallback((result: Awaited<ReturnType<typeof runGrading>>) => {
-        if (result.pass2.isFullMarks) {
-            setAiInjectedExchange({
-                nonce: `${Date.now()}`,
-                userMessage: "Check my answer",
-                assistantMessage: `Well done - full marks! You scored ${result.pass2.totalAwarded}/${result.pass2.totalAvailable}.\n\nReady to mark this question as complete?`,
-                action: { type: "markComplete", label: "Mark as complete" },
-            });
-            return;
-        }
-
-        const scoreRatio = result.pass2.totalAwarded / result.pass2.totalAvailable;
-        let openingEncouragement = "keep working at it, here is where things went wrong.";
-        if (scoreRatio >= 0.7 && scoreRatio < 1) {
-            openingEncouragement = "nearly there, here is what to work on.";
-        } else if (scoreRatio >= 0.4 && scoreRatio < 0.7) {
-            openingEncouragement = "close, just a couple of things to fix.";
-        }
-
-        const partSummaries = buildPartSummary(result.pass2);
-        const partBreakdown = partSummaries
-            .map((p) => {
-                if (p.marksAwarded === p.marksAvailable) {
-                    return `${p.marksAwarded}/${p.marksAvailable} \u2014 well done.`;
-                }
-                return `${p.marksAwarded}/${p.marksAvailable} \u2014 ${p.summary}`;
-            })
-            .join("\n");
-
-        const message = [
-            `You scored ${result.pass2.totalAwarded}/${result.pass2.totalAvailable} \u2014 ${openingEncouragement}`,
-            "",
-            partBreakdown,
-            "",
-            "I've highlighted exactly where to look on your working.",
-        ].join("\n");
-
         setAiInjectedExchange({
             nonce: `${Date.now()}`,
             userMessage: "Check my answer",
-            assistantMessage: message,
+            assistantMessage: buildGradingChatMessage(gradingChatInputFromPass2(result.pass2)),
+            action: { type: "markComplete", label: "Mark as complete" },
         });
     }, []);
 
@@ -1395,7 +1360,7 @@ export default function Questions() {
             const regionHeight = typeof region.height === "number" ? region.height : 150;
             return sum + (regionHeight / 595) * snippetWidth;
         }, 0);
-        const hasMarkingSchemeButton = Boolean(markingSchemeBlob && currentPaperQuestion?.markingSchemePageRange);
+        const hasMarkingSchemeButton = true;
         const controlsHeightPx = hasMarkingSchemeButton ? 56 : 0;
         const controlsGapPx = hasMarkingSchemeButton ? 12 : 0;
         const estimatedPanelHeight =
@@ -1404,7 +1369,7 @@ export default function Questions() {
             controlsGapPx +
             52; // includes inner paddings plus top inset above content
         return Math.max(360, Math.ceil(estimatedPanelHeight));
-    }, [currentPaperQuestion, markingSchemeBlob, snippetWidth]);
+    }, [currentPaperQuestion, snippetWidth]);
 
     // Full-paper scroll does NOT change the current question; user can scroll freely and click "Question only" to return to the question they were on.
 
@@ -1788,7 +1753,7 @@ export default function Questions() {
             {/* Sidebar: left or right depending on left-hand mode */}
             <div
                 ref={sidebarTutorialRef}
-                className={`absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-none ${options.leftHandMode ? "left-0" : "right-0"} w-[35%]`}
+                className={`ai-session-sidebar absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-none ${options.leftHandMode ? "left-0" : "right-0"} w-[35%]`}
                 style={{
                     transition: "clip-path 300ms cubic-bezier(0.25,0.1,0.25,1)",
                     clipPath: sidebarOpen
@@ -1839,6 +1804,7 @@ export default function Questions() {
                                     id: `image_${normalizedUrlSubject}_${normalizedUrlLevel}_${imageQuestionTopic ?? "paper"}_${currentGroupedQuestion.key}`,
                                     properties: { name: currentGroupedQuestion.displayName },
                                     imageUrls: currentGroupedQuestion.images.map((img) => img.downloadUrl),
+                                    markingSchemeImageUrls: currentImageMarkingSchemes.map((img) => img.downloadUrl),
                                     _discoverId: `image_${normalizedUrlSubject}_${normalizedUrlLevel}_${imageQuestionTopic ?? "paper"}_${currentGroupedQuestion.key}`,
                                     _discoverName: currentGroupedQuestion.displayName,
                                     _discoverSubjectId: getPracticeSubjectId(normalizedUrlSubject),
@@ -1884,7 +1850,7 @@ export default function Questions() {
                         if (!open) setMarkingSchemeQuestionIndex(null);
                     }}
                     openPanel={sidebarOpenPanel ?? undefined}
-                    forceShowMarkingSchemeTab={mode === "imagequestions"}
+                    forceShowMarkingSchemeTab
                     onOpenPanelChange={(panel) => {
                         setSidebarOpenPanel(panel ?? null);
                         if (panel !== "markingscheme") setMarkingSchemeQuestionIndex(null);
@@ -1907,6 +1873,13 @@ export default function Questions() {
                     }
                     aiInjectedExchange={aiInjectedExchange}
                     onMarkCompleteFromGrading={handleToggleQuestionCompleted}
+                    questionCompleted={
+                        mode === "pastpaper" && currentPaperQuestion
+                            ? isQuestionCompleted(currentPaperQuestion.id)
+                            : mode === "imagequestions" && currentGroupedQuestion
+                                ? isQuestionCompleted(currentGroupedQuestion.key)
+                                : false
+                    }
                 />
             </div>
 
@@ -2629,8 +2602,7 @@ export default function Questions() {
                                                                 setSnippetPdfLoaded(true);
                                                             }}
                                                         />
-                                                        {markingSchemeBlob && currentPaperQuestion?.markingSchemePageRange && (
-                                                            <div className="pt-2 flex justify-center" style={{ width: snippetWidth }}>
+                                                        <div className="pt-2 flex justify-center" style={{ width: snippetWidth }}>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => {
@@ -2645,7 +2617,6 @@ export default function Questions() {
                                                                     Reveal marking scheme
                                                                 </button>
                                                             </div>
-                                                        )}
                                                     </div>
                                                 </motion.div>
                                                 {/* Full paper: only mount when expanded (avoids parsing entire PDF off-screen on iPad). */}

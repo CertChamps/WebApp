@@ -29,6 +29,12 @@
   flex-shrink: 0;
 }
 
+.ai-chat-composer__input {
+  touch-action: manipulation;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 .ai-chat-notice {
   display: flex;
   align-items: flex-start;
@@ -87,4 +93,11 @@
 /* Stack gap between two window tiles */
 .sidebar-tile-manager__stack {
   gap: 0.5rem;
+}
+
+/* Keep the complete AI tool tab row usable on tablet-sized workspaces. */
+@media (min-width: 768px) and (max-width: 1366px) {
+  .ai-session-sidebar {
+    min-width: 20rem;
+  }
 }

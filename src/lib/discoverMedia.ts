@@ -81,3 +81,15 @@ export function getDiscoverVideoEmbed(url: string | undefined | null): DiscoverV
 export function isDiscoverVideoUrl(url: string | undefined | null): boolean {
   return Boolean(getDiscoverVideoEmbed(url));
 }
+
+export function getDiscoverVideoPoster(url: string | undefined | null): string | null {
+  const embed = getDiscoverVideoEmbed(url);
+  if (!embed) return null;
+  if (embed.kind === "youtube") {
+    return `https://i.ytimg.com/vi/${embed.id}/hqdefault.jpg`;
+  }
+  if (embed.kind === "vimeo") {
+    return `https://vumbnail.com/${embed.id}.jpg`;
+  }
+  return null;
+}

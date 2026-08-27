@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { LuFileText, LuLayoutPanelTop, LuPlus, LuTrash2, LuX, LuZap } from "react-icons/lu";
+import { LuFileText, LuLayoutPanelTop, LuPlus, LuTrash2, LuX } from "react-icons/lu";
 import WhiteboardModal from "./WhiteboardModal";
 import EmojiPicker from "./EmojiPicker";
 import AddQuestionModal from "./AddQuestionModal";
 import type { AttachedQuestion, WhiteboardPage } from "../../data/whiteboards";
 import "../../styles/practiceHub.css";
+
+function untitledPageName(pageType: "whiteboard" | "document"): string {
+  return pageType === "document" ? "Untitled document" : "Untitled whiteboard";
+}
 
 export type PageDetailsResult = {
   name: string;
@@ -22,8 +26,6 @@ type Props = {
   /** Optional folder to place a new page in (e.g. created from a folder context). */
   defaultFolderId?: string | null;
   onSave: (result: PageDetailsResult) => Promise<void> | void;
-  /** Create-mode only: skip straight to the canvas with defaults. */
-  onBlankCanvas?: (result: PageDetailsResult) => Promise<void> | void;
   onDelete?: (page: WhiteboardPage) => Promise<void> | void;
   onClose: () => void;
 };
@@ -33,7 +35,6 @@ export default function PageDetailsModal({
   initial = null,
   defaultFolderId = null,
   onSave,
-  onBlankCanvas,
   onDelete,
   onClose,
 }: Props) {
@@ -53,10 +54,10 @@ export default function PageDetailsModal({
   /** Preserve existing folder on edit; use default when creating from a folder context. */
   const folderId = initial?.folderId ?? defaultFolderId ?? null;
 
-  const canSave = name.trim().length > 0 && !saving;
+  const canSave = !saving && (isEdit ? name.trim().length > 0 : true);
 
   const buildResult = (): PageDetailsResult => ({
-    name: name.trim(),
+    name: name.trim() || untitledPageName(pageType),
     folderId,
     emoji,
     attachedQuestions,
@@ -68,17 +69,6 @@ export default function PageDetailsModal({
     setSaving(true);
     try {
       await onSave(buildResult());
-      onClose();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleBlankCanvas = async () => {
-    if (!onBlankCanvas || saving) return;
-    setSaving(true);
-    try {
-      await onBlankCanvas({ ...buildResult(), name: name.trim() || "Untitled page" });
       onClose();
     } finally {
       setSaving(false);
@@ -128,47 +118,34 @@ export default function PageDetailsModal({
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                {isEdit && onDelete && (
-                  <button
-                    type="button"
-                    className="p-2.5 rounded-lg color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
-                    onClick={() => setConfirmingDelete(true)}
-                    aria-label="Delete page"
-                    title="Delete page"
-                  >
-                    <LuTrash2 size={18} />
-                  </button>
-                )}
+            <div className="flex items-center gap-2">
+              {isEdit && onDelete && (
                 <button
                   type="button"
-                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold color-bg-grey-5 color-txt-main hover:color-bg-grey-10 transition-colors cursor-pointer"
-                  onClick={onClose}
-                  disabled={saving}
+                  className="p-2.5 rounded-lg color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
+                  onClick={() => setConfirmingDelete(true)}
+                  aria-label="Delete page"
+                  title="Delete page"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
-                  onClick={handleSave}
-                  disabled={!canSave}
-                >
-                  {isEdit ? "Save changes" : "Create page"}
-                </button>
-              </div>
-              {!isEdit && onBlankCanvas && pageType === "whiteboard" && (
-                <button
-                  type="button"
-                  className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
-                  onClick={handleBlankCanvas}
-                  disabled={saving}
-                >
-                  <LuZap size={15} />
-                  Just give me a blank canvas
+                  <LuTrash2 size={18} />
                 </button>
               )}
+              <button
+                type="button"
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold color-bg-grey-5 color-txt-main hover:color-bg-grey-10 transition-colors cursor-pointer"
+                onClick={onClose}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                onClick={handleSave}
+                disabled={!canSave}
+              >
+                {isEdit ? "Save changes" : "Create page"}
+              </button>
             </div>
           )
         }
@@ -190,7 +167,7 @@ export default function PageDetailsModal({
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Differentiation practice"
+                placeholder={untitledPageName(pageType)}
                 className="w-full px-3 py-2 rounded-lg text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none"
                 autoFocus={!isEdit}
                 onKeyDown={(e) => {
@@ -242,7 +219,7 @@ export default function PageDetailsModal({
 
             {attachedQuestions.length === 0 ? (
               <p className="rounded-lg color-bg-grey-5 px-3 py-3 text-sm color-txt-sub">
-                No questions attached yet — you can add some now or later from the page itself.
+                No questions attached.
               </p>
             ) : (
               <div className="flex flex-col gap-1">

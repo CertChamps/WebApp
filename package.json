@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "iPad": "node scripts/ipad-live.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -14,6 +15,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.25",
     "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.4",
     "@capacitor/core": "^8.3.0",
     "@capgo/capacitor-social-login": "^8.3.14",
     "@cortex-js/compute-engine": "^0.30.2",

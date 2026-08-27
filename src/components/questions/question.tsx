@@ -151,6 +151,7 @@ export default function Question(props: questionsProps) {
 
     //=========================================== Constants =====================================//
     const strokewidth = 1.75
+    const activeStrokewidth = 2.15
     const sidebarIconSize = 22
 
     // Check handler: shows overlay on correct; after 3 fails offers reveal button
@@ -911,27 +912,27 @@ export default function Question(props: questionsProps) {
                 className={sideView == 'thread' ? "sidebar-selected group" : "sidebar group"}
                 onClick={() => setSideView((prev: any) => prev != 'thread' ? 'thread' : '')}
             >
-                <LuMessageSquareText strokeWidth={strokewidth} size={sidebarIconSize}
+                <LuMessageSquareText strokeWidth={sideView == 'thread' ? activeStrokewidth : strokewidth} size={sidebarIconSize}
                     className={sideView == 'thread' ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
-                    fill={sideView == 'thread' ? 'currentColor' : 'none'} />
+                    fill="none" />
             </div>
 
             <div
                 className={sideView == 'logtables' ? 'sidebar-selected group' : 'sidebar group'}
                 onClick={() => setSideView((prev: any) => prev != 'logtables' ? 'logtables' : '')}
             >
-                <LuBookMarked strokeWidth={strokewidth} size={sidebarIconSize}
+                <LuBookMarked strokeWidth={sideView == 'logtables' ? activeStrokewidth : strokewidth} size={sidebarIconSize}
                     className={sideView == 'logtables' ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
-                    fill={sideView == 'logtables' ? 'currentColor' : 'none'} />
+                    fill="none" />
             </div>
 
             {Array.isArray(content) && content.length > 1 && (
             <div className={sideView == 'questionParts' ? 'sidebar-selected group' : 'sidebar group'}
                 onClick={() => setSideView((prev: any) => prev != 'questionParts' ? 'questionParts' : '')}
             >
-                <LuLayoutList strokeWidth={strokewidth} size={sidebarIconSize}
+                <LuLayoutList strokeWidth={sideView == 'questionParts' ? activeStrokewidth : strokewidth} size={sidebarIconSize}
                     className={sideView == 'questionParts' ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
-                    fill={sideView == 'questionParts' ? 'currentColor' : 'none'} />
+                    fill="none" />
             </div>
             )}
 
@@ -939,18 +940,18 @@ export default function Question(props: questionsProps) {
             <div className={sideView == 'share' ? 'sidebar-selected group' : 'sidebar group'}
                 onClick={() => setSideView((prev: any) => prev != 'share' ? 'share' : '')}
             >
-                <LuShare2 strokeWidth={strokewidth} size={sidebarIconSize}
+                <LuShare2 strokeWidth={sideView == 'share' ? activeStrokewidth : strokewidth} size={sidebarIconSize}
                     className={sideView == 'share' ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
-                    fill={sideView == 'share' ? 'currentColor' : 'none'} />
+                    fill="none" />
             </div>
             ) : (
             <div
                 className={sideView == 'decks' ? 'sidebar-selected group' : 'sidebar group'}
                 onClick={() => setSideView((prev: any) => prev != 'decks' ? 'decks' : '')}
             >
-                <TbCards strokeWidth={strokewidth} size={sidebarIconSize}
+                <TbCards strokeWidth={sideView == 'decks' ? activeStrokewidth : strokewidth} size={sidebarIconSize}
                     className={sideView == 'decks' ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
-                    fill={sideView == 'decks' ? 'currentColor' : 'none'} />
+                    fill="none" />
             </div>
             )}
 
@@ -958,33 +959,33 @@ export default function Question(props: questionsProps) {
                 className={sideView == 'timer' ? 'sidebar-selected group' : 'sidebar group'}
                 onClick={() => setSideView((prev: any) => prev != 'timer' ? 'timer' : '')}
             >
-                <LuTimer strokeWidth={strokewidth} size={sidebarIconSize}
+                <LuTimer strokeWidth={sideView == 'timer' ? activeStrokewidth : strokewidth} size={sidebarIconSize}
                     className={sideView == 'timer' ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
-                    fill={sideView == 'timer' ? 'currentColor' : 'none'} />
+                    fill="none" />
             </div>
 
             <div
                 className={sideView === 'filters' ? 'sidebar-selected group' : 'sidebar group'}
                 onClick={() => { setSideView(prev => prev === 'filters' ? '' : 'filters'); setShowSearch(false); }}
             >
-                <LuFilter strokeWidth={strokewidth} size={sidebarIconSize}
+                <LuFilter strokeWidth={sideView === 'filters' ? activeStrokewidth : strokewidth} size={sidebarIconSize}
                     className={sideView === 'filters' ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
-                    fill={sideView === 'filters' ? 'currentColor' : 'none'} />
+                    fill="none" />
             </div>
 
             {props.deckmode ? (
             <div className={sideView == 'viewQuestions' ? 'sidebar-selected group' : 'sidebar group'}
               onClick={() => { setSideView((prev) => prev !== 'viewQuestions' ? 'viewQuestions' : ''); setShowSearch(false); }}
             >
-              <LuListOrdered strokeWidth={strokewidth} size={sidebarIconSize}
+              <LuListOrdered strokeWidth={sideView == 'viewQuestions' ? activeStrokewidth : strokewidth} size={sidebarIconSize}
                 className={sideView == 'viewQuestions' ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
-                fill={sideView == 'viewQuestions' ? 'currentColor' : 'none'} />
+                fill="none" />
             </div>
             ) : (
             <div className={showSearch ? 'sidebar-selected group' : 'sidebar group'} onClick={() => setShowSearch((v) => !v)}>
-                <LuSearch strokeWidth={strokewidth} size={sidebarIconSize}
+                <LuSearch strokeWidth={showSearch ? activeStrokewidth : strokewidth} size={sidebarIconSize}
                     className={showSearch ? 'nav-icon-selected icon-anim' : 'nav-icon icon-anim'}
-                    fill={showSearch ? 'currentColor' : 'none'} />
+                    fill="none" />
             </div>
             )}
             </div>

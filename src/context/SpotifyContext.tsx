@@ -310,18 +310,6 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
 
   // ---- Auth actions -------------------------------------------------------
 
-  const beginLogin = useCallback(async () => {
-    setError(null);
-    // Remember where the user was so the callback can send them back.
-    try {
-      localStorage.setItem("SPOTIFY_RETURN_PATH", window.location.hash || "#/whiteboards");
-    } catch {
-      /* ignore */
-    }
-    const { beginAuthorization } = await import("../lib/spotify/spotifyAuth");
-    await beginAuthorization();
-  }, []);
-
   const completeLogin = useCallback(
     async (code: string, state: string) => {
       const bundle = await exchangeCodeForTokens(code, state);
@@ -331,6 +319,29 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     },
     [hydrateSession]
   );
+
+  const beginLogin = useCallback(async () => {
+    setError(null);
+    // Remember where the user was so the callback can send them back.
+    try {
+      localStorage.setItem("SPOTIFY_RETURN_PATH", window.location.hash || "#/whiteboards");
+    } catch {
+      /* ignore */
+    }
+    const { beginAuthorization, usesNativeSpotifyAuth } = await import("../lib/spotify/spotifyAuth");
+    if (usesNativeSpotifyAuth()) {
+      setStatus("connecting");
+    }
+    try {
+      const result = await beginAuthorization();
+      if (result) {
+        await completeLogin(result.code, result.state);
+      }
+    } catch (err) {
+      setStatus("disconnected");
+      setError(err instanceof Error ? err.message : "Spotify login failed.");
+    }
+  }, [completeLogin]);
 
   // ---- Playback actions ---------------------------------------------------
 

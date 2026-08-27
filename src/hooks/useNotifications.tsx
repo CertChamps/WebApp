@@ -42,6 +42,22 @@ export default function useNotifications() {
                             deckID: noti.deckID
                         }
                     }
+                    // POST COMMENT / RATING NOTIFICATIONS
+                    else if (noti.type == 'post-comment' || noti.type == 'post-rating') {
+                        if (noti.from) {
+                            const { username, picture } = await fetchUser(noti.from)
+                            return {
+                                ...noti,
+                                username,
+                                picture,
+                                timeago: timeAgoFormatter(noti.timestamp),
+                            }
+                        }
+                        return {
+                            ...noti,
+                            timeago: timeAgoFormatter(noti.timestamp),
+                        }
+                    }
                     return noti
                 })
                 const notisArr = await Promise.all(notiPromises)

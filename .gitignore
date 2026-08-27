@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+capacitor-shell/.live-reload-last
 
 # Editor directories and files
 .vscode/*

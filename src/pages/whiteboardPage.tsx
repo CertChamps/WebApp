@@ -75,9 +75,14 @@ import type { InjectedExchange } from "../components/ai/useAI";
 import { AiRequestError, aiResponseError, authenticatedAiFetch, createAiUsageId, METERED_CHAT_API_URL } from "../lib/aiApi";
 import { runGrading } from "../lib/grading/GradingEngine";
 import type { CanvasAnnotation, CanvasCapturePayload, GradingStatus, Pass1Result } from "../lib/grading/GradingTypes";
-import { buildPartSummary } from "../lib/grading/annotationBuilder";
+import { buildGradingChatMessage, gradingChatInputFromPass2 } from "../lib/grading/annotationBuilder";
 import { BlankCanvasError } from "../lib/grading/canvasCapture";
 import { getPracticeSubjectId, getSubjectLabel } from "../data/practiceHubSubjects";
+import { usePaperProgress, buildImageTopicExamPaper } from "../hooks/usePaperProgress";
+import type { ExamPaper } from "../hooks/useExamPapers";
+import { progressCanvasIdForAttachment } from "../lib/whiteboardAttachments";
+import { useQuestionSessionLog, type QuestionMeta } from "../hooks/useQuestionSessionLog";
+import { UserContext } from "../context/UserContext";
 import "../styles/questions.css";
 import "../styles/practiceHub.css";
 
@@ -332,6 +337,7 @@ function WhiteboardPageViewInner() {
   const { pageId } = useParams<{ pageId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { options } = useContext(OptionsContext);
+  const { user } = useContext(UserContext);
 
   const { page, loading: pageLoading, notFound } = useWhiteboardPage(pageId ?? null);
 
@@ -432,6 +438,71 @@ function WhiteboardPageViewInner() {
   }, [qParam, attachments, setSearchParams]);
 
   const currentAttachment: AttachedQuestion | null = attachments[attachmentIndex] ?? null;
+  const { toggleQuestion, isQuestionCompleted, loadPaperProgress } = usePaperProgress();
+  const attachmentProgress = useMemo(() => {
+    const bank = currentAttachment?.bank;
+    if (!currentAttachment || !bank) return null;
+    if (bank.kind === "paper" && bank.paperId && bank.questionId) {
+      const paper: ExamPaper = {
+        id: bank.paperId,
+        label: currentAttachment.label,
+        storagePath: bank.paperStoragePath ?? "",
+        subject: bank.subject,
+        level: bank.level,
+      };
+      return {
+        paper,
+        questionId: bank.questionId,
+        questionName: currentAttachment.label,
+        topics: [],
+      };
+    }
+    if (bank.kind === "image" && bank.groupKey && bank.topic) {
+      return {
+        paper: buildImageTopicExamPaper(getPracticeSubjectId(bank.subject), bank.level, bank.topic),
+        questionId: bank.groupKey,
+        questionName: currentAttachment.label,
+        topics: [bank.topic],
+      };
+    }
+    return null;
+  }, [currentAttachment]);
+  useEffect(() => {
+    if (attachmentProgress) void loadPaperProgress(attachmentProgress.paper);
+  }, [attachmentProgress, loadPaperProgress]);
+  const handleToggleQuestionCompleted = useCallback(() => {
+    if (!attachmentProgress) return;
+    void toggleQuestion(attachmentProgress.paper, attachmentProgress.questionId, 0);
+  }, [attachmentProgress, toggleQuestion]);
+  const questionLogMeta = useMemo((): QuestionMeta | null => {
+    if (!attachmentProgress) return null;
+    return {
+      questionId: attachmentProgress.questionId,
+      questionName: attachmentProgress.questionName,
+      paperId: attachmentProgress.paper.id,
+      paperLabel: attachmentProgress.paper.label,
+      subject: attachmentProgress.paper.subject ?? "unknown",
+      level: attachmentProgress.paper.level ?? "unknown",
+      topics: attachmentProgress.topics,
+      completed: isQuestionCompleted(attachmentProgress.questionId),
+    };
+  }, [attachmentProgress, isQuestionCompleted]);
+  useQuestionSessionLog(user?.uid, questionLogMeta);
+  const progressAliasId = progressCanvasIdForAttachment(currentAttachment);
+  const progressAliasIdRef = useRef<string | null>(progressAliasId);
+  progressAliasIdRef.current = progressAliasId;
+  const previousProgressAliasRef = useRef<string | null>(progressAliasId);
+  const persistCanvas = useCallback(
+    (
+      id: string,
+      strokes: CanvasStroke[],
+      overlay: CanvasAnnotation[] | unknown[] | null = [],
+      objects: CanvasObject[] = [],
+      textBoxes: CanvasTextBox[] = [],
+      alias: string | null = progressAliasIdRef.current,
+    ) => saveCanvas(id, strokes, overlay, objects, textBoxes, alias),
+    [saveCanvas]
+  );
   const canvasAttachmentIdRef = useRef<string | null>(null);
   canvasAttachmentIdRef.current = currentAttachment?.id ?? null;
 
@@ -455,7 +526,8 @@ function WhiteboardPageViewInner() {
   });
   const [editorMode, setEditorMode] = useState<"pen" | "text">("pen");
   const [canvasTool, setCanvasTool] = useState<ToolMode>("pen");
-  const [selectedCanvasTextBoxId, setSelectedCanvasTextBoxId] = useState<string | null>(null);
+  const [selectedCanvasTextBoxIds, setSelectedCanvasTextBoxIds] = useState<string[]>([]);
+  const selectedCanvasTextBoxId = selectedCanvasTextBoxIds[selectedCanvasTextBoxIds.length - 1] ?? null;
   const [canvasTextFormat, setCanvasTextFormat] = useState({ bold: false, italic: false, bullet: false });
   const selectActive = canvasTool === "lasso";
   const textEditing = editorMode === "text" && !selectActive;
@@ -518,18 +590,31 @@ function WhiteboardPageViewInner() {
   // Persist the previous question board before loading the next (keeps drawings isolated).
   useEffect(() => {
     const prevId = previousCanvasIdRef.current;
+    const prevAlias = previousProgressAliasRef.current;
+    const nextAlias = progressAliasIdRef.current;
     if (prevId && prevId !== canvasId) {
-      void saveCanvas(
+      void persistCanvas(
         prevId,
         canvasStrokesRef.current,
         gradingAnnotationsRef.current,
         canvasObjectsRef.current,
-        canvasTextBoxesRef.current
+        canvasTextBoxesRef.current,
+        prevAlias
       ).catch((error) => console.error("[whiteboard] switch save failed", error));
+    } else if (canvasId && prevAlias && prevAlias !== nextAlias) {
+      void persistCanvas(
+        canvasId,
+        canvasStrokesRef.current,
+        gradingAnnotationsRef.current,
+        canvasObjectsRef.current,
+        canvasTextBoxesRef.current,
+        prevAlias
+      ).catch((error) => console.error("[whiteboard] alias save failed", error));
     }
     previousCanvasIdRef.current = canvasId;
+    previousProgressAliasRef.current = nextAlias;
     activeCanvasIdRef.current = canvasId;
-  }, [canvasId, saveCanvas]);
+  }, [canvasId, progressAliasId, persistCanvas]);
 
   useEffect(() => {
     if (!canvasId) return;
@@ -589,7 +674,7 @@ function WhiteboardPageViewInner() {
     setGradingStatus("idle");
     setAiInjectedExchange(null);
     setEditorMode("pen");
-    setSelectedCanvasTextBoxId(null);
+    setSelectedCanvasTextBoxIds([]);
     setCanvasViewport({ pan: { x: 0, y: 0 }, scale: 1 });
     setPinnedSideObject(null);
     setQuestionSeedStatus("idle");
@@ -633,14 +718,15 @@ function WhiteboardPageViewInner() {
     clearTimeout(canvasTextSaveTimerRef.current);
     canvasTextSaveTimerRef.current = null;
     if (!canvasId) return;
-    void saveCanvas(
+    void persistCanvas(
       canvasId,
       canvasStrokesRef.current,
       [],
       canvasObjectsRef.current,
-      canvasTextBoxesRef.current
+      canvasTextBoxesRef.current,
+      previousProgressAliasRef.current
     ).catch((error) => console.error("[whiteboard text] final save failed", error));
-  }, [canvasId, saveCanvas]);
+  }, [canvasId, persistCanvas]);
 
   const handleStrokesChange = useCallback(
     (strokes: CanvasStroke[]) => {
@@ -648,7 +734,7 @@ function WhiteboardPageViewInner() {
       // Ignore stale flushes from a previous question's canvas unmount.
       if (canvasId !== activeCanvasIdRef.current) return;
       setCanvasStrokes(strokes);
-      void saveCanvas(
+      void persistCanvas(
         canvasId,
         strokes,
         [],
@@ -656,7 +742,7 @@ function WhiteboardPageViewInner() {
         canvasTextBoxesRef.current
       ).catch((error) => console.error("[whiteboard] stroke save failed", error));
     },
-    [canvasId, saveCanvas]
+    [canvasId, persistCanvas]
   );
 
   const handleObjectsChange = useCallback(
@@ -664,7 +750,7 @@ function WhiteboardPageViewInner() {
       if (!canvasId) return;
       if (canvasId !== activeCanvasIdRef.current) return;
       setCanvasObjects(objects);
-      void saveCanvas(
+      void persistCanvas(
         canvasId,
         canvasStrokesRef.current,
         gradingAnnotationsRef.current,
@@ -672,7 +758,7 @@ function WhiteboardPageViewInner() {
         canvasTextBoxesRef.current
       ).catch((error) => console.error("[whiteboard] object save failed", error));
     },
-    [canvasId, saveCanvas]
+    [canvasId, persistCanvas]
   );
 
   const handleCanvasTextBoxesChange = useCallback((boxes: CanvasTextBox[]) => {
@@ -685,7 +771,7 @@ function WhiteboardPageViewInner() {
     canvasTextSaveTimerRef.current = setTimeout(() => {
       canvasTextSaveTimerRef.current = null;
       if (canvasId !== activeCanvasIdRef.current) return;
-      void saveCanvas(
+      void persistCanvas(
         canvasId,
         canvasStrokesRef.current,
         [],
@@ -693,7 +779,7 @@ function WhiteboardPageViewInner() {
         boxes
       ).catch((error) => console.error("[whiteboard text] save failed", error));
     }, 450);
-  }, [canvasId, handleCanvasEditInteraction, saveCanvas]);
+  }, [canvasId, handleCanvasEditInteraction, persistCanvas]);
 
   const handleCanvasViewportChange = useCallback(
     (viewport: { pan: { x: number; y: number }; scale: number }) => setCanvasViewport(viewport),
@@ -769,70 +855,11 @@ function WhiteboardPageViewInner() {
   const canCheckNow = gradingStatus === "idle" || gradingStatus === "done" || gradingStatus === "error";
 
   const injectGradingMessage = useCallback((result: Awaited<ReturnType<typeof runGrading>>) => {
-    const hasMarks = result.pass2.totalAvailable > 0;
-
-    if (hasMarks && result.pass2.isFullMarks) {
-      setAiInjectedExchange({
-        nonce: `${Date.now()}`,
-        userMessage: "Check Answer",
-        assistantMessage: `Well done - full marks! You scored ${result.pass2.totalAwarded}/${result.pass2.totalAvailable}.`,
-      });
-      return;
-    }
-
-    const partSummaries = buildPartSummary(result.pass2);
-    const partBreakdown = partSummaries
-      .map((p) => {
-        if (!hasMarks) {
-          if (p.summary === "correct") return "Looking good on this part.";
-          return p.summary;
-        }
-        if (p.marksAwarded === p.marksAvailable) {
-          return `${p.marksAwarded}/${p.marksAvailable} \u2014 well done.`;
-        }
-        return `${p.marksAwarded}/${p.marksAvailable} \u2014 ${p.summary}`;
-      })
-      .join("\n");
-
-    if (!hasMarks) {
-      const notes = partSummaries.filter((p) => p.summary !== "correct");
-      const message = notes.length === 0
-        ? "I've looked over your work — it's looking solid. I've left notes on the canvas where useful."
-        : [
-            "I've reviewed your work — here's what to focus on:",
-            "",
-            partBreakdown,
-            "",
-            "I've highlighted the key spots on your working.",
-          ].join("\n");
-      setAiInjectedExchange({
-        nonce: `${Date.now()}`,
-        userMessage: "Check Answer",
-        assistantMessage: message,
-      });
-      return;
-    }
-
-    const scoreRatio = result.pass2.totalAwarded / result.pass2.totalAvailable;
-    let openingEncouragement = "keep working at it, here is where things went wrong.";
-    if (scoreRatio >= 0.7 && scoreRatio < 1) {
-      openingEncouragement = "nearly there, here is what to work on.";
-    } else if (scoreRatio >= 0.4 && scoreRatio < 0.7) {
-      openingEncouragement = "close, just a couple of things to fix.";
-    }
-
-    const message = [
-      `You scored ${result.pass2.totalAwarded}/${result.pass2.totalAvailable} \u2014 ${openingEncouragement}`,
-      "",
-      partBreakdown,
-      "",
-      "I've highlighted exactly where to look on your working.",
-    ].join("\n");
-
     setAiInjectedExchange({
       nonce: `${Date.now()}`,
       userMessage: "Check Answer",
-      assistantMessage: message,
+      assistantMessage: buildGradingChatMessage(gradingChatInputFromPass2(result.pass2)),
+      action: { type: "markComplete", label: "Mark as complete" },
     });
   }, []);
 
@@ -1086,11 +1113,11 @@ function WhiteboardPageViewInner() {
         onStatus: setGradingStatus,
       });
 
-      setGradingAnnotations(result.annotations);
-      await saveCanvas(
+      setGradingAnnotations([]);
+      await persistCanvas(
         canvasId,
         canvasStrokesRef.current,
-        result.annotations,
+        [],
         canvasObjectsRef.current,
         canvasTextBoxesRef.current
       );
@@ -1119,7 +1146,7 @@ function WhiteboardPageViewInner() {
     currentAttachment,
     streamChatResponse,
     pass1Cache,
-    saveCanvas,
+    persistCanvas,
     injectGradingMessage,
   ]);
 
@@ -1135,11 +1162,6 @@ function WhiteboardPageViewInner() {
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [questionModalMode, setQuestionModalMode] = useState<"add" | "attach" | null>(null);
 
-  const documentQuestionInserterRef = useRef<((attachments: AttachedQuestion[]) => void) | null>(null);
-  const registerDocumentQuestionInserter = useCallback((_pageId: string, insert: ((attachments: AttachedQuestion[]) => void) | null) => {
-    documentQuestionInserterRef.current = insert;
-  }, []);
-
   const handleAddAttachments = useCallback(
     async (added: AttachedQuestion[]) => {
       if (!page) return;
@@ -1148,7 +1170,6 @@ function WhiteboardPageViewInner() {
       }
       await updatePage(page.id, { attachedQuestions: [...page.attachedQuestions, ...added] });
       setAttachmentIndex(page.attachedQuestions.length);
-      if (page.pageType === "document") documentQuestionInserterRef.current?.(added);
     },
     [page, updatePage]
   );
@@ -1187,27 +1208,45 @@ function WhiteboardPageViewInner() {
   );
 
   const sidebarQuestion = useMemo(() => {
-    if (!currentAttachment || !page) return undefined;
-    const bank = currentAttachment.bank;
-    const rawSubject = bank?.subject ?? page.subject;
+    if (!page) return undefined;
+    const rawSubject = page.subject;
     const subjectId = getPracticeSubjectId(rawSubject);
     const subjectLabel = getSubjectLabel(rawSubject);
+
+    if (!currentAttachment) {
+      return {
+        id: `whiteboard_${page.id}`,
+        properties: { name: page.name },
+        questionName: page.name,
+        subject: subjectId,
+        _discoverId: `whiteboard_${page.id}`,
+        _discoverName: page.name,
+        _discoverSubjectId: subjectId,
+        _discoverSubjectLabel: subjectLabel,
+        _discoverSource: "whiteboard",
+      };
+    }
+
+    const bank = currentAttachment.bank;
+    const attachmentSubject = bank?.subject ?? page.subject;
+    const attachmentSubjectId = getPracticeSubjectId(attachmentSubject);
+    const attachmentSubjectLabel = getSubjectLabel(attachmentSubject);
     const discoverId = bank?.kind === "paper" && bank.paperId && bank.questionId
       ? `${bank.paperId}_${bank.questionId}`
       : bank?.kind === "image" && bank.groupKey
-        ? `image_${rawSubject}_${bank.level}_${bank.topic ?? "topic"}_${bank.groupKey}`
+        ? `image_${attachmentSubject}_${bank.level}_${bank.topic ?? "topic"}_${bank.groupKey}`
         : `whiteboard_${page.id}_${currentAttachment.id}`;
     const practiceUrl = bank?.kind === "paper" && bank.paperId && bank.questionId
       ? `/practice/session?${new URLSearchParams({
           mode: "pastpaper",
-          subject: subjectId,
+          subject: attachmentSubjectId,
           level: bank.level,
           paperId: bank.paperId,
           questionId: bank.questionId,
         }).toString()}`
       : bank?.kind === "image" && bank.groupKey && bank.topic
         ? `/practice?${new URLSearchParams({
-            subject: subjectId,
+            subject: attachmentSubjectId,
             level: bank.level,
             browse: "topic",
             topic: bank.topic,
@@ -1223,15 +1262,15 @@ function WhiteboardPageViewInner() {
       paperQuestionId: bank?.questionId,
       paperLabel: currentAttachment.label,
       questionName: currentAttachment.label,
-      subject: subjectId,
+      subject: attachmentSubjectId,
       level: bank?.level,
       storagePath: bank?.paperStoragePath,
       pageRange: bank?.pageRange,
       pageRegions: bank?.pageRegions,
       _discoverId: discoverId,
       _discoverName: currentAttachment.label,
-      _discoverSubjectId: subjectId,
-      _discoverSubjectLabel: subjectLabel,
+      _discoverSubjectId: attachmentSubjectId,
+      _discoverSubjectLabel: attachmentSubjectLabel,
       _discoverLevel: bank?.level,
       _discoverTopic: bank?.topic,
       _discoverSource: "whiteboard",
@@ -1243,13 +1282,16 @@ function WhiteboardPageViewInner() {
 
   const canvasAreaRef = useRef<HTMLDivElement>(null);
   const [chromeCenterX, setChromeCenterX] = useState<number | null>(null);
-  const [toolbarFollowX, setToolbarFollowX] = useState<number | null>(null);
+  const [, setToolbarFollowX] = useState<number | null>(null);
   /** Only animate left for discrete inset changes (session/paper), not folders width resize. */
   const [chromeLeftAnimated, setChromeLeftAnimated] = useState(false);
   const chromeInsetKeyRef = useRef("");
   const chromeAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDocumentPage = page?.pageType === "document";
-  const chromeInsetKey = `${sessionSidebarOpen}|${Boolean(pinnedSideObject)}|${options.leftHandMode}`;
+  const sidePanelImages = pinnedSideImages;
+  const hasSideQuestionPanel = !isDocumentPage && Boolean(pinnedSideObject && sidePanelImages.length > 0);
+  // Documents ignore the side question for chrome centering — overlap is intentional.
+  const chromeInsetKey = `${sessionSidebarOpen}|${options.leftHandMode}`;
 
   useLayoutEffect(() => {
     if (!isDocumentPage) {
@@ -1287,11 +1329,6 @@ function WhiteboardPageViewInner() {
           if (options.leftHandMode) leftInset += sidebarInset;
           else rightInset += sidebarInset;
         }
-        if (isXl && pinnedSideObject) {
-          const paperInset = 384; // xl:pl-96 / xl:pr-96
-          if (options.leftHandMode) rightInset += paperInset;
-          else leftInset += paperInset;
-        }
         const visibleWidth = Math.max(0, rect.width - leftInset - rightInset);
         setChromeCenterX(rect.left + leftInset + visibleWidth / 2);
       });
@@ -1314,7 +1351,6 @@ function WhiteboardPageViewInner() {
     chromeInsetKey,
     sessionSidebarOpen,
     foldersSidebarOpen,
-    pinnedSideObject,
     options.leftHandMode,
     pageId,
     canvasLoading,
@@ -1336,22 +1372,35 @@ function WhiteboardPageViewInner() {
   }
 
   const activeToolbarPage = page?.id === pageId && !canvasLoading && !canvasLoadError ? page : null;
-  const whiteboardToolbarExtras = activeToolbarPage && activeToolbarPage.pageType !== "document" ? (
+  const pageToolbarExtras = activeToolbarPage ? (
     <>
-      <span className="mx-1 h-6 w-px shrink-0 color-bg-grey-10" aria-hidden />
+      <span className="mx-1 h-4 w-px shrink-0 color-bg-grey-10" aria-hidden />
       <div className="relative">
         <button
           type="button"
           aria-label="Check Answer"
-          className="flex h-[30px] items-center gap-1.5 rounded-in px-2 text-sm font-semibold color-txt-main hover:color-bg-grey-10 disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={() => void handleCheckAnswer()}
-          disabled={!canCheckNow}
+          className="flex h-7 shrink-0 items-center gap-1 whitespace-nowrap rounded-in px-2 text-xs font-semibold color-txt-main hover:color-bg-grey-10 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => {
+            if (isDocumentPage) {
+              setDocumentChecking(true);
+              void documentCheckAnswerRef.current?.()
+                .catch(() => undefined)
+                .finally(() => setDocumentChecking(false));
+              return;
+            }
+            void handleCheckAnswer();
+          }}
+          disabled={isDocumentPage ? documentChecking : !canCheckNow}
           title="Check Answer with AI"
         >
-          <LuCircleCheck size={16} strokeWidth={2} />
-          <span>{!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check Answer"}</span>
+          <LuCircleCheck size={14} strokeWidth={2} />
+          <span>
+            {isDocumentPage
+              ? (documentChecking ? "Checking…" : "Check Answer")
+              : (!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check Answer")}
+          </span>
         </button>
-        {checkAnswerStatus && (
+        {!isDocumentPage && checkAnswerStatus && (
           <div className="absolute left-1/2 top-full z-20 mt-2 flex max-w-[280px] -translate-x-1/2 items-center gap-2 rounded-md bg-[var(--grey-5)]/90 px-2 py-1 text-xs color-txt-sub">
             <span>{checkAnswerStatus}</span>
             {gradingStatus === "error" && (
@@ -1366,21 +1415,19 @@ function WhiteboardPageViewInner() {
           </div>
         )}
       </div>
-      {markingSchemeImages.length > 0 && (
-        <button
-          type="button"
-          onClick={() => {
-            setSessionSidebarOpen(true);
-            setSidebarOpenPanel("markingscheme");
-          }}
-          className="flex h-[30px] items-center gap-1.5 rounded-in px-2 text-sm font-semibold color-txt-main hover:color-bg-grey-10"
-          aria-label="Reveal marking scheme"
-          title="Reveal marking scheme"
-        >
-          <LuClipboardList size={16} strokeWidth={2} />
-          <span>Marking scheme</span>
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => {
+          setSessionSidebarOpen(true);
+          setSidebarOpenPanel("markingscheme");
+        }}
+        className="flex h-[30px] items-center gap-1.5 rounded-in px-2 text-sm font-semibold color-txt-main hover:color-bg-grey-10"
+        aria-label="Reveal marking scheme"
+        title="Reveal marking scheme"
+      >
+        <LuClipboardList size={16} strokeWidth={2} />
+        <span>Marking scheme</span>
+      </button>
     </>
   ) : null;
 
@@ -1414,7 +1461,7 @@ function WhiteboardPageViewInner() {
 
       <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* ---- Top bar (kept) ---- */}
-        <div className="relative z-40 flex h-10 shrink-0 items-center gap-1 px-2">
+        <div className="relative z-40 flex h-10 shrink-0 items-center gap-1 px-2 color-bg">
           <button
             type="button"
             className="shrink-0 rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
@@ -1504,11 +1551,17 @@ function WhiteboardPageViewInner() {
         </div>
 
         {/* ---- Canvas (full bleed, same as practice) ---- */}
-        <div ref={canvasAreaRef} className="relative min-h-0 flex-1">
+        <div ref={canvasAreaRef} data-wb-canvas-area className="relative min-h-0 flex-1 overflow-hidden">
           {page && page.id === pageId && page.pageType === "document" && !canvasLoading && !canvasLoadError ? (
             <DocumentEditor
               key={page.id}
               page={page}
+              attachments={attachments}
+              activeAttachmentId={currentAttachment?.id ?? null}
+              onSelectAttachment={(id) => {
+                const index = attachments.findIndex((attachment) => attachment.id === id);
+                if (index >= 0) setAttachmentIndex(index);
+              }}
               canvasStrokes={canvasStrokes}
               canvasObjects={canvasObjects}
               onStrokesChange={handleStrokesChange}
@@ -1518,20 +1571,32 @@ function WhiteboardPageViewInner() {
               registerGetGradingCapture={registerGetGradingCapture}
               registerGetDocumentText={registerGetDocumentText}
               registerCheckAnswer={registerDocumentCheckAnswer}
+              questionLabel={currentAttachment?.label}
+              questionImages={media.questionImages.map((image) => image.src).filter(Boolean)}
+              markingSchemeImages={media.markingSchemeImages.map((image) => image.src).filter(Boolean)}
+              subjectLabel={getSubjectLabel(page.subject)}
+              onCheckStart={() => {
+                setSessionSidebarOpen(true);
+                setSidebarOpenPanel("ai");
+              }}
+              onGradingComplete={(exchange) => {
+                setAiInjectedExchange(exchange);
+                setSessionSidebarOpen(true);
+                setSidebarOpenPanel("ai");
+              }}
               onTouch={() => updatePage(page.id, {})}
-              registerQuestionInserter={registerDocumentQuestionInserter}
-              onOpenQuestion={(attachmentId) => openQuestion(page, attachmentId)}
+              progressAliasId={progressAliasId}
               toolbarCenterX={chromeCenterX}
               toolbarCenterAnimated={chromeLeftAnimated}
               onToolbarCenterChange={setToolbarFollowX}
-              viewportClassName={[
-                pinnedSideObject
-                  ? options.leftHandMode ? "xl:pr-96" : "xl:pl-96"
-                  : "",
+              toolbarExtras={pageToolbarExtras}
+              viewportClassName={
                 sessionSidebarOpen
-                  ? options.leftHandMode ? "xl:pl-[35%]" : "xl:pr-[35%]"
-                  : "",
-              ].filter(Boolean).join(" ")}
+                  ? options.leftHandMode
+                    ? "xl:pl-[35%]"
+                    : "xl:pr-[35%]"
+                  : ""
+              }
             />
           ) : page?.id === pageId && !canvasLoading && !canvasLoadError ? (
             <div className="absolute inset-0 z-0 color-bg">
@@ -1543,6 +1608,7 @@ function WhiteboardPageViewInner() {
                 registerDrawingSnapshot={registerDrawingSnapshot}
                 registerGetGradingCapture={registerGetGradingCapture}
                 gradingAnnotations={gradingAnnotations}
+                showGradingOverlay={false}
                 enableAttachments
                 registerAttachQuestionImages={registerAttachQuestionImages}
                 registerRestoreCanvasObject={registerRestoreCanvasObject}
@@ -1550,22 +1616,25 @@ function WhiteboardPageViewInner() {
                 onAttachQuestions={() => setQuestionModalMode("attach")}
                 initialObjects={canvasObjects}
                 captureTextBoxes={canvasTextBoxes}
-                onSelectTextBox={setSelectedCanvasTextBoxId}
+                selectedTextBoxIds={selectedCanvasTextBoxIds}
+                onSelectTextBoxes={setSelectedCanvasTextBoxIds}
+                onTextBoxesChange={handleCanvasTextBoxesChange}
+                textBoxDefaults={canvasTextDefaults}
                 onObjectsChange={handleObjectsChange}
                 onUploadImage={handleUploadImage}
                 onToolbarCenterChange={setToolbarFollowX}
                 toolbarPlacement="top"
-                toolbarExtras={whiteboardToolbarExtras}
+                toolbarExtras={pageToolbarExtras}
                 wrapperClassName={`bg-transparent ${editorMode === "pen" || selectActive ? "z-20" : "z-10"}`}
                 readOnly={editorMode === "text" && !selectActive}
                 editorMode={editorMode}
                 onToolChange={setCanvasTool}
                 onRequestTextMode={() => {
-                  setSelectedCanvasTextBoxId(null);
+                  setSelectedCanvasTextBoxIds([]);
                   setEditorMode("text");
                 }}
                 onRequestPenMode={() => {
-                  setSelectedCanvasTextBoxId(null);
+                  setSelectedCanvasTextBoxIds([]);
                   setEditorMode("pen");
                 }}
                 textFormat={{
@@ -1622,20 +1691,22 @@ function WhiteboardPageViewInner() {
                     const fontSize = typeof value === "number" ? value : Number(value);
                     if (!Number.isFinite(fontSize)) return;
                     setCanvasTextDefaults((current) => ({ ...current, fontSize }));
-                    if (!selectedCanvasTextBoxId) return;
+                    if (selectedCanvasTextBoxIds.length === 0) return;
+                    const selected = new Set(selectedCanvasTextBoxIds);
                     handleCanvasTextBoxesChange(
                       canvasTextBoxesRef.current.map((box) =>
-                        box.id === selectedCanvasTextBoxId ? { ...box, fontSize } : box
+                        selected.has(box.id) ? { ...box, fontSize } : box
                       )
                     );
                   },
                   onColorChange: (colorIndex) => {
                     setCanvasTextDefaults((current) => ({ ...current, colorIndex }));
                     applyThemeTextColor(colorIndex);
-                    if (selectedCanvasTextBoxId) {
+                    if (selectedCanvasTextBoxIds.length > 0) {
+                      const selected = new Set(selectedCanvasTextBoxIds);
                       handleCanvasTextBoxesChange(
                         canvasTextBoxesRef.current.map((box) =>
-                          box.id === selectedCanvasTextBoxId ? { ...box, colorIndex } : box
+                          selected.has(box.id) ? { ...box, colorIndex } : box
                         )
                       );
                     }
@@ -1661,9 +1732,9 @@ function WhiteboardPageViewInner() {
                   pan={canvasViewport.pan}
                   scale={canvasViewport.scale}
                   editing={textEditing}
-                  selectable={selectActive || editorMode === "text"}
-                  selectedId={selectedCanvasTextBoxId}
-                  onSelectedIdChange={setSelectedCanvasTextBoxId}
+                  selectable={selectActive}
+                  selectedIds={selectedCanvasTextBoxIds}
+                  onSelectedIdsChange={setSelectedCanvasTextBoxIds}
                   onCreateChange={handleCanvasTextBoxesChange}
                   defaults={canvasTextDefaults}
                   onFormatStateChange={setCanvasTextFormat}
@@ -1671,51 +1742,6 @@ function WhiteboardPageViewInner() {
               </div>
             </div>
           ) : null}
-          {activeToolbarPage?.pageType === "document" && (
-              <div
-                className="pointer-events-auto fixed z-30 bottom-16 flex -translate-x-1/2 items-center gap-2"
-                style={{
-                  left: (isDocumentPage ? chromeCenterX : toolbarFollowX) ?? "50%",
-                  ...(isDocumentPage && chromeLeftAnimated
-                    ? { transition: "left 300ms cubic-bezier(0.25, 0.1, 0.25, 1)" }
-                    : null),
-                }}
-              >
-                <div className="relative">
-                  <button
-                    type="button"
-                    aria-label="Check Answer"
-                    className="questions-action-button questions-action-button--solid-accent border color-shadow disabled:opacity-60 disabled:cursor-not-allowed"
-                    onClick={() => {
-                      setDocumentChecking(true);
-                      void documentCheckAnswerRef.current?.()
-                        .catch(() => undefined)
-                        .finally(() => setDocumentChecking(false));
-                    }}
-                    disabled={documentChecking}
-                    title="Check Answer with AI"
-                  >
-                    <LuCircleCheck size={14} strokeWidth={2} />
-                    <span>{documentChecking ? "Checking…" : "Check Answer"}</span>
-                  </button>
-                </div>
-                {markingSchemeImages.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSessionSidebarOpen(true);
-                      setSidebarOpenPanel("markingscheme");
-                    }}
-                    className="questions-action-button questions-action-button--solid-accent border color-shadow"
-                    aria-label="Reveal marking scheme"
-                    title="Reveal marking scheme"
-                  >
-                    <LuClipboardList size={14} strokeWidth={2} />
-                    <span>Marking scheme</span>
-                  </button>
-                )}
-              </div>
-          )}
           {canvasLoading && (
             <div className="absolute inset-0 z-0 flex items-center justify-center">
               <LuLoaderCircle size={22} className="animate-spin color-txt-sub" />
@@ -1759,30 +1785,29 @@ function WhiteboardPageViewInner() {
             </div>
           )}
 
-          {/* Pinned attachment — side paper panel */}
+          {/* Pinned attachment — side paper panel (whiteboards only) */}
           <div
             className={`absolute bottom-0 top-0 z-10 flex pointer-events-none ${
               options.leftHandMode ? "right-0 justify-end" : "left-0 justify-start"
             }`}
           >
             <AnimatePresence initial={false} mode="popLayout">
-              {pinnedSideObject && pinnedSideImages.length > 0 ? (
+              {hasSideQuestionPanel ? (
                 <motion.div
                   key="pinned-side-panel"
                   initial={{ opacity: 0, x: options.leftHandMode ? 16 : -16 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: options.leftHandMode ? 16 : -16 }}
                   transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                  className={`relative flex h-full max-h-full min-h-0 w-full max-w-sm shrink-0 flex-col overflow-hidden pointer-events-none ${
+                  className={`relative flex h-full max-h-full min-h-0 w-full max-w-sm shrink-0 flex-col pointer-events-none ${
                     options.leftHandMode ? "ml-auto" : ""
                   }`}
                 >
                   <div className="min-h-0 min-w-0 h-full flex flex-col pl-2 pr-1 overflow-hidden pointer-events-none">
-                    <div className="flex-1 min-h-0 relative pt-4 pointer-events-none">
+                    <div className="flex-1 min-h-0 relative pointer-events-none pt-4">
                       <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-8 items-center pointer-events-auto">
-                        {pinnedSideObject &&
-                          currentAttachment &&
-                          pinnedSideObject.id === questionAttachmentObjectId(currentAttachment.id) &&
+                        {currentAttachment &&
+                          pinnedSideObject?.id === questionAttachmentObjectId(currentAttachment.id) &&
                           !media.loading &&
                           !media.error &&
                           media.audioPath && (
@@ -1813,11 +1838,13 @@ function WhiteboardPageViewInner() {
                             <LuPin size={12} strokeWidth={2} />
                             <span className="text-[10px] font-semibold leading-none">Unpin</span>
                           </button>
-                          <ZoomableQuestionImage
-                            images={pinnedSideImages}
-                            className="w-full h-auto"
-                            roundStack
-                          />
+                          {sidePanelImages.length > 0 && (
+                            <ZoomableQuestionImage
+                              images={sidePanelImages}
+                              className="w-full h-auto"
+                              roundStack
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1829,7 +1856,7 @@ function WhiteboardPageViewInner() {
 
           {/* Practice-style collapsible sidebar (AI / threads / timer / marking scheme) */}
           <div
-            className={`absolute bottom-0 top-10 z-20 overflow-hidden pointer-events-none ${
+            className={`ai-session-sidebar absolute bottom-0 top-10 z-20 overflow-hidden pointer-events-none ${
               options.leftHandMode ? "left-0" : "right-0"
             } w-[35%]`}
             style={{
@@ -1850,12 +1877,14 @@ function WhiteboardPageViewInner() {
               open={sessionSidebarOpen}
               onOpenChange={setSessionSidebarOpen}
               openPanel={sidebarOpenPanel ?? undefined}
-              forceShowMarkingSchemeTab={attachments.length > 0}
+              forceShowMarkingSchemeTab
               onOpenPanelChange={(panel) => setSidebarOpenPanel(panel ?? null)}
               markingSchemeImages={markingSchemeImages}
               markingSchemeLoading={media.loading}
               markingSchemeQuestionName={currentAttachment?.label}
               aiInjectedExchange={aiInjectedExchange}
+              onMarkCompleteFromGrading={attachmentProgress ? handleToggleQuestionCompleted : null}
+              questionCompleted={attachmentProgress ? isQuestionCompleted(attachmentProgress.questionId) : false}
             />
           </div>
         </div>
@@ -1892,10 +1921,6 @@ function WhiteboardPageViewInner() {
         <PageDetailsModal
           subject={sidebarSubject}
           onSave={async (result) => {
-            const created = await createPage({ ...result, subject: sidebarSubject });
-            navigate(`/whiteboards/page/${created.id}`);
-          }}
-          onBlankCanvas={async (result) => {
             const created = await createPage({ ...result, subject: sidebarSubject });
             navigate(`/whiteboards/page/${created.id}`);
           }}

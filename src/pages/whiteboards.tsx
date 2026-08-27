@@ -454,10 +454,6 @@ export default function Whiteboards() {
             const page = await createPage({ ...result, subject });
             openPage(page.id);
           }}
-          onBlankCanvas={async (result) => {
-            const page = await createPage({ ...result, subject });
-            openPage(page.id);
-          }}
           onClose={() => setShowCreatePage(false)}
         />
       )}
