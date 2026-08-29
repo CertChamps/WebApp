@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2, FileText, Ban, Paperclip, LoaderCircle, Type, Bold, Italic, List, Pin, Upload, BookOpen, Move } from "lucide-react";
 import type { CanvasAnnotation, CanvasCapturePayload } from "../../lib/grading/GradingTypes";
@@ -610,7 +610,9 @@ function appendSampledPointsFixedHz(
 	if (!lastSample) {
 		return { points: [...points, nextPoint], lastSample: { point: nextPoint, timeMs: eventTimeMs } };
 	}
-	const appended: Point[] = [...points];
+	// Active stroke points are owned by a ref while drawing, so appending in place
+	// avoids copying an ever-growing array for every pointer event.
+	const appended = points;
 	let { point: prevPoint, timeMs: prevTime } = lastSample;
 	if (eventTimeMs <= prevTime) {
 		return { points: appended, lastSample };
@@ -1054,6 +1056,7 @@ export default function DrawingCanvas({
 }: DrawingCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const committedInkCanvasRef = useRef<HTMLCanvasElement>(null);
 	const objectsCanvasRef = useRef<HTMLCanvasElement>(null);
 	const penButtonRef = useRef<HTMLButtonElement>(null);
 	const eraserButtonRef = useRef<HTMLButtonElement>(null);
@@ -1119,7 +1122,7 @@ export default function DrawingCanvas({
 	const [strokes, setStrokes] = useState<Stroke[]>(normalizeStrokeColors(initialStrokes));
 	const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
 	const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
-	const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
+	const currentStrokeRef = useRef<Stroke | null>(null);
 	const [pan, setPan] = useState({ x: 0, y: 0 });
 	const [scale, setScale] = useState(1);
 	useEffect(() => {
@@ -1164,7 +1167,7 @@ export default function DrawingCanvas({
 			setStrokes(normalizedIncoming);
 			setUndoStack([]);
 			setRedoStack([]);
-			setCurrentStroke(null);
+			currentStrokeRef.current = null;
 			setPan({ x: 0, y: 0 });
 			setScale(1);
 			setLassoPath(null);
@@ -1184,6 +1187,7 @@ export default function DrawingCanvas({
 	panRef.current = pan;
 	const scaleRef = useRef(scale);
 	scaleRef.current = scale;
+	const renderedViewportRef = useRef({ pan, scale });
 	const undoStackRef = useRef(undoStack);
 	undoStackRef.current = undoStack;
 	const redoStackRef = useRef(redoStack);
@@ -1238,7 +1242,10 @@ export default function DrawingCanvas({
 	const [lassoPath, setLassoPath] = useState<Point[] | null>(null);
 	const [selectedStrokeIndexes, setSelectedStrokeIndexes] = useState<number[]>([]);
 	const [transformSession, setTransformSession] = useState<TransformSession | null>(null);
-	const penPalette = [strokeColor, secondaryStrokeColor, accentColor].filter(Boolean);
+	const penPalette = useMemo(
+		() => [strokeColor, secondaryStrokeColor, accentColor].filter(Boolean),
+		[strokeColor, secondaryStrokeColor, accentColor],
+	);
 
 	useEffect(() => {
 		const toggleEraser = () => {
@@ -1464,7 +1471,6 @@ export default function DrawingCanvas({
 	} | null>(null);
 	const pointerIdsRef = useRef<Map<number, { x: number; y: number }>>(new Map());
 	const holdStraightenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const currentStrokeRef = useRef<Stroke | null>(null);
 	const lastPenSampleRef = useRef<{ point: Point; timeMs: number } | null>(null);
 	const toolLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const longPressHandledRef = useRef(false);
@@ -1555,19 +1561,64 @@ export default function DrawingCanvas({
 	const getPressure = (e: PointerEvent): number => {
 		return e.pressure !== undefined && e.pressure > 0 ? e.pressure : 1;
 	};
-	const lineAnchors = buildLineAnchors(strokes);
+	const drawStrokeRef = useRef(drawStroke);
+	drawStrokeRef.current = drawStroke;
+	const strokeRenderKey = `${penPalette.join("\0")}:${activePenColorIndex}:${eraserWidth}`;
+	const drawCommittedInk = useCallback(() => {
+		void strokeRenderKey;
+		const canvas = committedInkCanvasRef.current;
+		const ctx = canvas?.getContext("2d");
+		if (!canvas || !ctx) return;
+
+		const dpr = window.devicePixelRatio || 1;
+		const rect = canvas.getBoundingClientRect();
+		const w = rect.width;
+		const h = rect.height;
+		if (w <= 0 || h <= 0) return;
+		const currentPan = panRef.current;
+		const currentScale = scaleRef.current;
+		if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+			canvas.width = w * dpr;
+			canvas.height = h * dpr;
+		}
+		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		ctx.clearRect(0, 0, w, h);
+		ctx.save();
+		ctx.translate(currentPan.x, currentPan.y);
+		ctx.scale(currentScale, currentScale);
+		for (const stroke of strokes) drawStrokeRef.current(ctx, stroke);
+		ctx.restore();
+	}, [strokes, strokeRenderKey]);
+	const appendCommittedStroke = useCallback((stroke: Stroke): boolean => {
+		void strokeRenderKey;
+		const canvas = committedInkCanvasRef.current;
+		const ctx = canvas?.getContext("2d");
+		if (!canvas || !ctx || canvas.width === 0 || canvas.height === 0) return false;
+		const dpr = window.devicePixelRatio || 1;
+		const currentPan = panRef.current;
+		const currentScale = scaleRef.current;
+		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		ctx.save();
+		ctx.translate(currentPan.x, currentPan.y);
+		ctx.scale(currentScale, currentScale);
+		drawStrokeRef.current(ctx, stroke);
+		ctx.restore();
+		return true;
+	}, [strokeRenderKey]);
 
 	const draw = useCallback(() => {
+		void strokeRenderKey;
 		const canvas = canvasRef.current;
 		const ctx = canvas?.getContext("2d");
 		if (!canvas || !ctx) return;
 
 		const targetedStrokeIndexes = new Set<number>();
 		const selectedIndexSet = new Set(selectedStrokeIndexes);
-		if (tool === "eraser" && eraserMode === "stroke" && currentStroke) {
+		const liveStroke = currentStrokeRef.current;
+		if (tool === "eraser" && eraserMode === "stroke" && liveStroke) {
 			for (let index = 0; index < strokes.length; index++) {
 				const stroke = strokes[index];
-				if (stroke.tool === "pen" && strokeIntersectsEraser(stroke, currentStroke, eraserHitRadius)) {
+				if (stroke.tool === "pen" && strokeIntersectsEraser(stroke, liveStroke, eraserHitRadius)) {
 					targetedStrokeIndexes.add(index);
 				}
 			}
@@ -1580,20 +1631,20 @@ export default function DrawingCanvas({
 		if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
 			canvas.width = w * dpr;
 			canvas.height = h * dpr;
-			ctx.scale(dpr, dpr);
 		}
-
+		ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 		ctx.clearRect(0, 0, w, h);
 		ctx.save();
 		ctx.translate(pan.x, pan.y);
 		ctx.scale(scale, scale);
 
-		// Strokes only — grid + images are on the objects canvas underneath
-		for (let index = 0; index < strokes.length; index++) {
-			drawStroke(ctx, strokes[index], { muted: targetedStrokeIndexes.has(index) });
+		// Completed ink lives on the committed canvas. This layer only paints
+		// transient input and interaction chrome.
+		for (const index of targetedStrokeIndexes) {
+			drawStrokeRef.current(ctx, strokes[index], { muted: true });
 		}
-		if (currentStroke) {
-			drawStroke(ctx, currentStroke, { preview: true });
+		if (liveStroke) {
+			drawStrokeRef.current(ctx, liveStroke, { preview: true });
 		}
 		if (lassoPath && lassoPath.length > 1) {
 			ctx.save();
@@ -1711,7 +1762,7 @@ export default function DrawingCanvas({
 		}
 
 		ctx.restore();
-	}, [pan, scale, strokes, currentStroke, strokeColor, tool, lineAnchors, gradingAnnotations, showGradingOverlay, accentColor, fontReady, lassoPath, selectedStrokeIndexes, transformSession, eraserMode, eraserHitRadius, penPalette, activePenColorIndex]);
+	}, [pan, scale, strokes, strokeColor, tool, gradingAnnotations, showGradingOverlay, accentColor, fontReady, lassoPath, selectedStrokeIndexes, eraserMode, eraserHitRadius, strokeRenderKey]);
 
 	/** Paint grid then attached images (under ink) so images sit above the grid. */
 	const drawObjects = useCallback(() => {
@@ -1724,6 +1775,8 @@ export default function DrawingCanvas({
 		const w = rect.width;
 		const h = rect.height;
 		if (w <= 0 || h <= 0) return;
+		const currentPan = panRef.current;
+		const currentScale = scaleRef.current;
 		if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
 			canvas.width = w * dpr;
 			canvas.height = h * dpr;
@@ -1732,20 +1785,20 @@ export default function DrawingCanvas({
 
 		ctx.clearRect(0, 0, w, h);
 		ctx.save();
-		ctx.translate(pan.x, pan.y);
-		ctx.scale(scale, scale);
+		ctx.translate(currentPan.x, currentPan.y);
+		ctx.scale(currentScale, currentScale);
 
 		// Grid first so images render above it
 		if (gridMode !== "off" && gridColor) {
-			const left = -pan.x / scale;
-			const top = -pan.y / scale;
-			const right = left + w / scale;
-			const bottom = top + h / scale;
+			const left = -currentPan.x / currentScale;
+			const top = -currentPan.y / currentScale;
+			const right = left + w / currentScale;
+			const bottom = top + h / currentScale;
 			ctx.globalAlpha = gridOpacity;
 
 			if (gridMode === "music") {
 				ctx.strokeStyle = gridColor;
-				ctx.lineWidth = 1.2 / scale;
+				ctx.lineWidth = 1.2 / currentScale;
 				const startStave = Math.floor(top / MUSIC_STAVE_REPEAT);
 				const endStave = Math.ceil(bottom / MUSIC_STAVE_REPEAT);
 				ctx.beginPath();
@@ -1759,7 +1812,7 @@ export default function DrawingCanvas({
 				}
 				ctx.stroke();
 			} else if (gridMode === "essay") {
-				drawEssayGrid(ctx, left, top, right, bottom, scale, gridColor, gridOpacity);
+				drawEssayGrid(ctx, left, top, right, bottom, currentScale, gridColor, gridOpacity);
 			} else {
 				const startX = Math.floor(left / GRID_STEP) * GRID_STEP;
 				const endX = Math.ceil(right / GRID_STEP) * GRID_STEP;
@@ -1767,7 +1820,7 @@ export default function DrawingCanvas({
 				const endY = Math.ceil(bottom / GRID_STEP) * GRID_STEP;
 				if (gridMode === "lines") {
 					ctx.strokeStyle = gridColor;
-					ctx.lineWidth = 1 / scale;
+					ctx.lineWidth = 1 / currentScale;
 					ctx.beginPath();
 					for (let x = startX; x <= endX; x += GRID_STEP) {
 						ctx.moveTo(x, top);
@@ -1783,7 +1836,7 @@ export default function DrawingCanvas({
 					for (let x = startX; x <= endX; x += GRID_STEP) {
 						for (let y = startY; y <= endY; y += GRID_STEP) {
 							ctx.beginPath();
-							ctx.arc(x, y, GRID_DOT_RADIUS / scale, 0, Math.PI * 2);
+							ctx.arc(x, y, GRID_DOT_RADIUS / currentScale, 0, Math.PI * 2);
 							ctx.fill();
 						}
 					}
@@ -1805,15 +1858,100 @@ export default function DrawingCanvas({
 		}
 
 		ctx.restore();
-	}, [pan, scale, objects, objectImagesVersion, gridMode, gridColor, gridOpacity]);
+	}, [objects, objectImagesVersion, gridMode, gridColor, gridOpacity]);
+
+	const drawRef = useRef(draw);
+	drawRef.current = draw;
+	const drawCommittedInkRef = useRef(drawCommittedInk);
+	drawCommittedInkRef.current = drawCommittedInk;
+	const drawObjectsRef = useRef(drawObjects);
+	drawObjectsRef.current = drawObjects;
+	const liveDrawFrameRef = useRef<number | null>(null);
+	const skipNextCommittedRedrawRef = useRef(false);
+	const staticRedrawTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const scheduleLiveDraw = useCallback(() => {
+		if (liveDrawFrameRef.current != null) return;
+		liveDrawFrameRef.current = window.requestAnimationFrame(() => {
+			liveDrawFrameRef.current = null;
+			drawRef.current();
+		});
+	}, []);
+	const resetStaticLayerTransforms = useCallback(() => {
+		for (const canvas of [objectsCanvasRef.current, committedInkCanvasRef.current]) {
+			if (!canvas) continue;
+			canvas.style.transform = "";
+			canvas.style.transformOrigin = "";
+		}
+	}, []);
+	const redrawStaticLayers = useCallback(() => {
+		if (staticRedrawTimerRef.current) {
+			clearTimeout(staticRedrawTimerRef.current);
+			staticRedrawTimerRef.current = null;
+		}
+		resetStaticLayerTransforms();
+		drawObjectsRef.current();
+		drawCommittedInkRef.current();
+		const currentPan = panRef.current;
+		renderedViewportRef.current = {
+			pan: { x: currentPan.x, y: currentPan.y },
+			scale: scaleRef.current,
+		};
+	}, [resetStaticLayerTransforms]);
+	const scheduleStaticRedraw = useCallback(() => {
+		if (staticRedrawTimerRef.current) clearTimeout(staticRedrawTimerRef.current);
+		staticRedrawTimerRef.current = setTimeout(() => {
+			staticRedrawTimerRef.current = null;
+			redrawStaticLayers();
+		}, 120);
+	}, [redrawStaticLayers]);
+	const previewStaticViewport = useCallback(() => {
+		const rendered = renderedViewportRef.current;
+		const currentPan = panRef.current;
+		const currentScale = scaleRef.current;
+		const ratio = currentScale / Math.max(rendered.scale, 0.0001);
+		const translateX = currentPan.x - rendered.pan.x * ratio;
+		const translateY = currentPan.y - rendered.pan.y * ratio;
+		const transform = `translate(${translateX}px, ${translateY}px) scale(${ratio})`;
+		for (const canvas of [objectsCanvasRef.current, committedInkCanvasRef.current]) {
+			if (!canvas) continue;
+			canvas.style.transformOrigin = "0 0";
+			canvas.style.transform = transform;
+		}
+		scheduleStaticRedraw();
+	}, [scheduleStaticRedraw]);
+
+	useEffect(() => {
+		if (skipNextCommittedRedrawRef.current) {
+			skipNextCommittedRedrawRef.current = false;
+			return;
+		}
+		redrawStaticLayers();
+	}, [drawCommittedInk, redrawStaticLayers]);
 
 	useEffect(() => {
 		draw();
 	}, [draw]);
 
 	useEffect(() => {
-		drawObjects();
-	}, [drawObjects]);
+		redrawStaticLayers();
+	}, [drawObjects, redrawStaticLayers]);
+
+	useLayoutEffect(() => {
+		previewStaticViewport();
+	}, [pan, scale, previewStaticViewport]);
+
+	useEffect(() => {
+		return () => {
+			if (liveDrawFrameRef.current != null) {
+				window.cancelAnimationFrame(liveDrawFrameRef.current);
+				liveDrawFrameRef.current = null;
+			}
+			if (staticRedrawTimerRef.current) {
+				clearTimeout(staticRedrawTimerRef.current);
+				staticRedrawTimerRef.current = null;
+			}
+		};
+	}, []);
 
 	// Canvas bitmap dimensions do not automatically follow CSS dimensions. When a
 	// surrounding sidebar animates, the browser otherwise stretches the previous
@@ -1822,16 +1960,18 @@ export default function DrawingCanvas({
 		const container = toolbarAnchorRef?.current ?? containerRef.current;
 		if (!container) return;
 
-		let frame = 0;
+		let resizeTimer: ReturnType<typeof setTimeout> | null = null;
 		const redrawAtCurrentSize = () => {
-			window.cancelAnimationFrame(frame);
-			frame = window.requestAnimationFrame(() => {
-				drawObjects();
-				draw();
-			});
+			if (resizeTimer) clearTimeout(resizeTimer);
+			resizeTimer = setTimeout(() => {
+				resizeTimer = null;
+				redrawStaticLayers();
+				drawRef.current();
+			}, 140);
 		};
 
-		redrawAtCurrentSize();
+		redrawStaticLayers();
+		drawRef.current();
 		window.addEventListener("resize", redrawAtCurrentSize);
 		const resizeObserver =
 			typeof ResizeObserver === "undefined"
@@ -1840,11 +1980,11 @@ export default function DrawingCanvas({
 		resizeObserver?.observe(container);
 
 		return () => {
-			window.cancelAnimationFrame(frame);
+			if (resizeTimer) clearTimeout(resizeTimer);
 			window.removeEventListener("resize", redrawAtCurrentSize);
 			resizeObserver?.disconnect();
 		};
-	}, [draw, drawObjects]);
+	}, [toolbarAnchorRef, redrawStaticLayers]);
 
 	useEffect(() => {
 		setSelectedStrokeIndexes((previous) => {
@@ -1936,11 +2076,6 @@ export default function DrawingCanvas({
 		}
 	}, [gradingAnnotations, expandedCommentId]);
 
-	// Keep ref in sync for timer callback
-	useEffect(() => {
-		currentStrokeRef.current = currentStroke;
-	}, [currentStroke]);
-
 	/** Snap stroke to nearest angle (snap step in degrees, e.g. 15 = every 15°) */
 	const ANGLE_SNAP_DEG = 15;
 	function straightenStroke(stroke: Stroke): Stroke {
@@ -1969,10 +2104,12 @@ export default function DrawingCanvas({
 			holdStraightenTimerRef.current = null;
 			const stroke = currentStrokeRef.current;
 			if (stroke && stroke.tool === "pen" && stroke.points.length >= 2) {
-				setCurrentStroke(straightenStroke(stroke));
+				const straightened = straightenStroke(stroke);
+				currentStrokeRef.current = straightened;
+				scheduleLiveDraw();
 			}
 		}, HOLD_TO_STRAIGHTEN_MS);
-	}, []);
+	}, [scheduleLiveDraw]);
 
 	const cancelHoldStraighten = useCallback(() => {
 		if (holdStraightenTimerRef.current) {
@@ -1983,7 +2120,8 @@ export default function DrawingCanvas({
 
 	// Expose current drawing as PNG for AI/vision (includes music staves when active)
 	const getSnapshot = useCallback(() => {
-		if (strokes.length === 0 && !currentStroke && objects.length === 0 && !captureTextBoxes.some((box) => box.text.trim())) return null;
+		const liveStroke = currentStrokeRef.current;
+		if (strokes.length === 0 && !liveStroke && objects.length === 0 && !captureTextBoxes.some((box) => box.text.trim())) return null;
 		const canvas = canvasRef.current;
 		if (!canvas || canvas.width === 0 || canvas.height === 0) return null;
 		const dpr = window.devicePixelRatio || 1;
@@ -2113,7 +2251,7 @@ export default function DrawingCanvas({
 		};
 
 		for (const stroke of strokes) drawSnapshotPenStroke(stroke);
-		if (currentStroke?.tool === "pen") drawSnapshotPenStroke(currentStroke);
+		if (liveStroke?.tool === "pen") drawSnapshotPenStroke(liveStroke);
 		ctx.restore();
 		try {
 			return off.toDataURL("image/png");
@@ -2121,9 +2259,10 @@ export default function DrawingCanvas({
 			console.error("[DrawingCanvas] snapshot failed (possibly tainted canvas):", err);
 			return null;
 		}
-	}, [pan, scale, strokes, currentStroke, gridMode, penPalette, activePenColorIndex, objects, objectImagesVersion, captureTextBoxes]);
+	}, [pan, scale, strokes, gridMode, penPalette, activePenColorIndex, objects, objectImagesVersion, captureTextBoxes]);
 	const getGradingCapture = useCallback((mode: "default" | "full-ink" | "retry-aggressive" = "default"): CanvasCapturePayload | null => {
-		const renderStrokes = [...strokes, ...(currentStroke ? [currentStroke] : [])];
+		const liveStroke = currentStrokeRef.current;
+		const renderStrokes = [...strokes, ...(liveStroke ? [liveStroke] : [])];
 		if (!renderStrokes.some((stroke) => stroke.tool === "pen" && stroke.points.length > 1) && !captureTextBoxes.some((box) => box.text.trim())) return null;
 		const canvas = canvasRef.current;
 		if (!canvas) return null;
@@ -2142,7 +2281,7 @@ export default function DrawingCanvas({
 			expandPaddingRatio: mode === "retry-aggressive" ? 0.25 : undefined,
 			jpegQuality: mode === "retry-aggressive" ? 0.97 : undefined,
 		});
-	}, [strokes, currentStroke, pan, scale, captureTextBoxes]);
+	}, [strokes, pan, scale, captureTextBoxes]);
 	useEffect(() => {
 		if (!registerDrawingSnapshot) return;
 		registerDrawingSnapshot(getSnapshot);
@@ -2156,9 +2295,10 @@ export default function DrawingCanvas({
 
 	const getStaveAnalysis = useCallback((): string | null => {
 		if (gridMode !== "music") return null;
-		const allStrokes = [...strokes, ...(currentStroke ? [currentStroke] : [])];
+		const liveStroke = currentStrokeRef.current;
+		const allStrokes = [...strokes, ...(liveStroke ? [liveStroke] : [])];
 		return analyseStavePositions(allStrokes);
-	}, [gridMode, strokes, currentStroke]);
+	}, [gridMode, strokes]);
 	useEffect(() => {
 		if (!registerGetStaveAnalysis) return;
 		registerGetStaveAnalysis(getStaveAnalysis);
@@ -2412,6 +2552,7 @@ export default function DrawingCanvas({
 			setIsGridPopoverOpen(false);
 			const canvas = canvasRef.current;
 			if (!canvas) return;
+			if (staticRedrawTimerRef.current) redrawStaticLayers();
 
 			const rect = canvas.getBoundingClientRect();
 			const isIPadFinger = e.pointerType === "touch" && isIPad();
@@ -2439,7 +2580,7 @@ export default function DrawingCanvas({
 				const distance = Math.hypot(dx, dy);
 				const center = { x: (a[1].x + b[1].x) / 2 - rect.left, y: (a[1].y + b[1].y) / 2 - rect.top };
 				isDrawingRef.current = false;
-				setCurrentStroke(null);
+				currentStrokeRef.current = null;
 				setLassoPath(null);
 				panStartRef.current = null;
 				pinchStartRef.current = { distance, center, scale, pan };
@@ -2494,7 +2635,7 @@ export default function DrawingCanvas({
 							if (next !== previous) pointEraseChangedRef.current = true;
 							return next;
 						});
-						setCurrentStroke(null);
+						currentStrokeRef.current = null;
 					} else {
 						const newStroke: Stroke = {
 							points: [world],
@@ -2502,7 +2643,8 @@ export default function DrawingCanvas({
 							colorIndex: tool === "pen" ? activePenColorIndex : undefined,
 							thicknessIndex: tool === "pen" ? activePenThicknessIndex : undefined,
 						};
-						setCurrentStroke(newStroke);
+						currentStrokeRef.current = newStroke;
+						scheduleLiveDraw();
 						lastPenSampleRef.current = tool === "pen" ? { point: world, timeMs: e.nativeEvent.timeStamp } : null;
 					}
 					lastPointRef.current = world;
@@ -2511,7 +2653,7 @@ export default function DrawingCanvas({
 				}
 			}
 		},
-		[pan, scale, screenToWorld, tool, readOnly, editorMode, onEditInteraction, eraserMode, activePenColorIndex, activePenThicknessIndex, allowViewportNavigation, onSelectTextBoxes]
+		[pan, scale, screenToWorld, tool, readOnly, editorMode, onEditInteraction, eraserMode, activePenColorIndex, activePenThicknessIndex, allowViewportNavigation, onSelectTextBoxes, scheduleLiveDraw, redrawStaticLayers]
 	);
 
 	const handlePointerMove = useCallback(
@@ -2598,26 +2740,29 @@ export default function DrawingCanvas({
 				return;
 			}
 
-			if (isDrawingRef.current && currentStroke) {
+			const liveStroke = currentStrokeRef.current;
+			if (isDrawingRef.current && liveStroke) {
 				const world = screenToWorld(e.clientX, e.clientY);
 				world.pressure = getPressure(e.nativeEvent);
-				setCurrentStroke((prev) => {
-					if (!prev) return null;
-					if (prev.tool !== "pen") return { ...prev, points: [...prev.points, world] };
+				if (liveStroke.tool === "pen") {
 					const sampled = appendSampledPointsFixedHz(
-						prev.points,
+						liveStroke.points,
 						world,
 						e.nativeEvent.timeStamp,
 						lastPenSampleRef.current,
 					);
 					lastPenSampleRef.current = sampled.lastSample;
-					return { ...prev, points: sampled.points };
-				});
+					currentStrokeRef.current = { ...liveStroke, points: sampled.points };
+					scheduleLiveDraw();
+				} else {
+					currentStrokeRef.current = { ...liveStroke, points: [...liveStroke.points, world] };
+					scheduleLiveDraw();
+				}
 				lastPointRef.current = world;
-				if (currentStroke.tool === "pen") scheduleHoldStraighten();
+				if (liveStroke.tool === "pen") scheduleHoldStraighten();
 			}
 		},
-		[currentStroke, screenToWorld, scheduleHoldStraighten, readOnly, editorMode, tool, lassoPath, applyTransformFromSession, eraserMode, allowViewportNavigation]
+		[screenToWorld, scheduleHoldStraighten, scheduleLiveDraw, readOnly, editorMode, tool, lassoPath, applyTransformFromSession, eraserMode, allowViewportNavigation]
 	);
 
 	const handlePointerUp = useCallback(
@@ -2699,38 +2844,41 @@ export default function DrawingCanvas({
 					setLassoPath(null);
 					lassoTapRef.current = null;
 				}
-				if (isDrawingRef.current && currentStroke && currentStroke.points.length > 0) {
+				const liveStroke = currentStrokeRef.current;
+				if (isDrawingRef.current && liveStroke && liveStroke.points.length > 0) {
 					const world = screenToWorld(e.clientX, e.clientY);
 					world.pressure = getPressure(e.nativeEvent);
-					let finalizedStroke = currentStroke;
-					if (currentStroke.tool === "pen") {
-						const lastPoint = currentStroke.points[currentStroke.points.length - 1];
+					let finalizedStroke = liveStroke;
+					if (liveStroke.tool === "pen") {
+						const lastPoint = liveStroke.points[liveStroke.points.length - 1];
 						if (!lastPoint || lastPoint.x !== world.x || lastPoint.y !== world.y) {
-							finalizedStroke = { ...currentStroke, points: [...currentStroke.points, world] };
+							finalizedStroke = { ...liveStroke, points: [...liveStroke.points, world] };
 						}
 					}
-					if (currentStroke.tool === "eraser") {
+					if (liveStroke.tool === "eraser") {
 						if (eraserMode === "stroke") {
 							commitStrokeChange((previous) => {
 								const next = previous.filter(
-									(stroke) => stroke.tool !== "pen" || !strokeIntersectsEraser(stroke, currentStroke, eraserHitRadiusRef.current)
+									(stroke) => stroke.tool !== "pen" || !strokeIntersectsEraser(stroke, liveStroke, eraserHitRadiusRef.current)
 								);
 								return next.length === previous.length ? previous : next;
 							});
 						} else {
-							commitStrokeChange((previous) => [...previous, currentStroke]);
+							commitStrokeChange((previous) => [...previous, liveStroke]);
 						}
 					} else {
+						skipNextCommittedRedrawRef.current = appendCommittedStroke(finalizedStroke);
 						commitStrokeChange((previous) => [...previous, finalizedStroke]);
 					}
-					setCurrentStroke(null);
+					currentStrokeRef.current = null;
 					lastPenSampleRef.current = null;
+					scheduleLiveDraw();
 				}
 				isDrawingRef.current = false;
 				if (tool !== "lasso") lassoTapRef.current = null;
 			}
 		},
-		[currentStroke, cancelHoldStraighten, commitStrokeChange, tool, lassoPath, commitTransformSession, eraserMode, allowViewportNavigation, selectAtWorldPoint, captureTextBoxes, onSelectTextBoxes, editorMode, onTextBoxesChange]
+		[cancelHoldStraighten, commitStrokeChange, tool, lassoPath, commitTransformSession, eraserMode, allowViewportNavigation, selectAtWorldPoint, captureTextBoxes, onSelectTextBoxes, editorMode, onTextBoxesChange, scheduleLiveDraw, screenToWorld, appendCommittedStroke]
 	);
 
 	const handleWheel = useCallback(
@@ -2756,7 +2904,7 @@ export default function DrawingCanvas({
 
 	const clearCanvas = useCallback(() => {
 		commitStrokeChange((previous) => (previous.length > 0 ? [] : previous));
-		setCurrentStroke(null);
+		currentStrokeRef.current = null;
 		setLassoPath(null);
 		setSelectedStrokeIndexes([]);
 		lastPenSampleRef.current = null;
@@ -3196,7 +3344,7 @@ export default function DrawingCanvas({
 		if (undoStackRef.current.length === 0) return;
 		onEditInteraction?.();
 		cancelHoldStraighten();
-		setCurrentStroke(null);
+		currentStrokeRef.current = null;
 		isDrawingRef.current = false;
 		setLassoPath(null);
 		setTransformSession(null);
@@ -3215,7 +3363,7 @@ export default function DrawingCanvas({
 		if (redoStackRef.current.length === 0) return;
 		onEditInteraction?.();
 		cancelHoldStraighten();
-		setCurrentStroke(null);
+		currentStrokeRef.current = null;
 		isDrawingRef.current = false;
 		setLassoPath(null);
 		setTransformSession(null);
@@ -3392,6 +3540,12 @@ export default function DrawingCanvas({
 				{/* Images / PDF pages — separate layer so ink eraser doesn't punch through them */}
 				<canvas
 					ref={objectsCanvasRef}
+					className="absolute inset-0 w-full h-full block pointer-events-none"
+					aria-hidden
+				/>
+				{/* Completed ink is retained separately so pen movement only repaints the live stroke. */}
+				<canvas
+					ref={committedInkCanvasRef}
 					className="absolute inset-0 w-full h-full block pointer-events-none"
 					aria-hidden
 				/>

@@ -28,6 +28,7 @@ import {
   LuFolder,
   LuFolderPlus,
   LuHouse,
+  LuLayoutPanelTop,
   LuLink,
   LuPencil,
   LuPlus,
@@ -118,6 +119,21 @@ function FolderGlyph({ folder }: { folder: WhiteboardFolder }) {
   );
 }
 
+function PageGlyph({ page, muted = true }: { page: WhiteboardPage; muted?: boolean }) {
+  if (page.emoji) {
+    return (
+      <span className="shrink-0 text-sm leading-none" aria-hidden>
+        {page.emoji}
+      </span>
+    );
+  }
+  const iconClass = muted ? "color-txt-sub" : "";
+  if (page.pageType === "document") {
+    return <LuFileText size={14} className={`shrink-0 ${iconClass}`} aria-hidden />;
+  }
+  return <LuLayoutPanelTop size={14} className={`shrink-0 ${iconClass}`} aria-hidden />;
+}
+
 /** Thin accent insertion line, indented to the target row's nesting depth. */
 function DropLine({ position, depth }: { position: "before" | "after"; depth: number }) {
   return (
@@ -163,9 +179,7 @@ function DragPreview({
   if (!page) return null;
   return (
     <div className="flex items-center gap-1.5 rounded-lg border border-grey/20 color-bg px-2 py-1.5 text-sm">
-      <span className="shrink-0 text-sm leading-none" aria-hidden>
-        {page.emoji ?? <LuFileText size={14} className="color-txt-sub" />}
-      </span>
+      <PageGlyph page={page} />
       <span className="max-w-[160px] truncate color-txt-main">{page.name}</span>
     </div>
   );
@@ -215,9 +229,7 @@ function PageRow({ page, depth }: { page: WhiteboardPage; depth: number }) {
           }}
           aria-expanded={hasQuestions ? isExpanded : undefined}
         >
-          <span className="shrink-0 text-sm leading-none" aria-hidden>
-            {page.emoji ?? <LuFileText size={14} className={isActive ? "" : "color-txt-sub"} />}
-          </span>
+          <PageGlyph page={page} muted={!isActive} />
           <span className="min-w-0 flex-1 truncate">{page.name}</span>
         </button>
         <button
