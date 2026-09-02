@@ -12,12 +12,11 @@
  * ordering space) so items can be manually reordered. Legacy items with no `order` sort last
  * alphabetically until first reordered; a move reindexes the whole destination sibling list.
  */
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   DndContext,
   DragOverlay,
-  MeasuringStrategy,
   useDraggable,
   useDroppable,
 } from "@dnd-kit/core";
@@ -55,6 +54,7 @@ type Props = {
   pages: WhiteboardPage[];
   loading: boolean;
   currentPageId?: string | null;
+  currentQuestionId?: string | null;
   onOpenPage: (page: WhiteboardPage) => void;
   onOpenQuestion: (page: WhiteboardPage, attachmentId: string) => void;
   onEditPage: (page: WhiteboardPage) => void;
@@ -67,15 +67,23 @@ type Props = {
 };
 
 const rowBase =
-  "group relative flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm transition-colors";
+  "group relative flex w-full items-center gap-2 rounded-xl py-1.5 text-left text-[15px] leading-snug transition-colors select-none";
 
-const indentPx = (depth: number) => 8 + depth * 14;
+const ICON = 18;
+const CHEVRON = 18;
+const EDIT_ICON = 16;
+const HEADER_ICON = 20;
+const LINK_ICON = 14;
+const ROW_GUTTER = 20;
+
+const indentPx = (depth: number) => 4 + depth * 12;
 const sameItem = (a: SidebarDragItem, b: SidebarDragItem) => a.type === b.type && a.id === b.id;
 
 // ============================= shared row context ============================= //
 
 type SidebarCtxValue = {
   currentPageId: string | null;
+  currentQuestionId: string | null;
   collapsedFolders: Set<string>;
   expandedPages: Set<string>;
   activeDrag: SidebarDragItem | null;
@@ -100,7 +108,7 @@ const useSidebarCtx = () => {
 function FolderGlyph({ folder }: { folder: WhiteboardFolder }) {
   if (folder.emoji) {
     return (
-      <span className="shrink-0 text-sm leading-none" aria-hidden>
+      <span className="shrink-0 text-base leading-none" aria-hidden>
         {folder.emoji}
       </span>
     );
@@ -108,7 +116,7 @@ function FolderGlyph({ folder }: { folder: WhiteboardFolder }) {
   // Default: a filled, colour-tinted folder icon (accent colour when none is set).
   return (
     <LuFolder
-      size={14}
+      size={ICON}
       className={`shrink-0 ${folder.colour ? "" : "color-txt-accent"}`}
       style={folder.colour ? { color: folder.colour } : undefined}
       fill="currentColor"
@@ -122,7 +130,7 @@ function FolderGlyph({ folder }: { folder: WhiteboardFolder }) {
 function DropLine({ position, depth }: { position: "before" | "after"; depth: number }) {
   return (
     <span
-      className="pointer-events-none absolute z-10 h-0.5 rounded-full color-cursor"
+      className="pointer-events-none absolute z-10 h-[3px] rounded-full color-cursor"
       style={{
         left: `${indentPx(depth)}px`,
         right: "8px",
@@ -133,8 +141,7 @@ function DropLine({ position, depth }: { position: "before" | "after"; depth: nu
   );
 }
 
-/** Floating preview that follows the cursor (replaces the native drag image). */
-function DragPreview({
+function DragPreviewBody({
   item,
   folders,
   pages,
@@ -148,25 +155,42 @@ function DragPreview({
     if (!folder) return null;
     const count = countDescendants(folders, pages, folder.id);
     return (
-      <div className="flex items-center gap-1.5 rounded-lg border border-grey/20 color-bg px-2 py-1.5 text-sm">
+      <>
         <FolderGlyph folder={folder} />
-        <span className="max-w-[160px] truncate font-semibold color-txt-main">{folder.name}</span>
+        <span className="min-w-0 flex-1 truncate font-semibold color-txt-main">{folder.name}</span>
         {count > 0 && (
-          <span className="ml-0.5 rounded-full color-bg-accent color-txt-accent px-1.5 text-[10px] font-bold leading-4">
+          <span className="ml-0.5 rounded-full color-bg-accent color-txt-accent px-1.5 text-[11px] font-bold leading-5">
             {count}
           </span>
         )}
-      </div>
+      </>
     );
   }
   const page = pages.find((p) => p.id === item.id);
   if (!page) return null;
   return (
-    <div className="flex items-center gap-1.5 rounded-lg border border-grey/20 color-bg px-2 py-1.5 text-sm">
-      <span className="shrink-0 text-sm leading-none" aria-hidden>
-        {page.emoji ?? <LuFileText size={14} className="color-txt-sub" />}
+    <>
+      <span className="shrink-0 text-base leading-none" aria-hidden>
+        {page.emoji ?? <LuFileText size={ICON} className="color-txt-sub" />}
       </span>
-      <span className="max-w-[160px] truncate color-txt-main">{page.name}</span>
+      <span className="min-w-0 flex-1 truncate color-txt-main">{page.name}</span>
+    </>
+  );
+}
+
+/** Floating preview that follows the cursor (replaces the native drag image). */
+function DragPreview({
+  item,
+  folders,
+  pages,
+}: {
+  item: SidebarDragItem;
+  folders: WhiteboardFolder[];
+  pages: WhiteboardPage[];
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-grey/20 color-bg px-2 py-1.5 text-[15px] shadow-md">
+      <DragPreviewBody item={item} folders={folders} pages={pages} />
     </div>
   );
 }
@@ -192,7 +216,7 @@ function PageRow({ page, depth }: { page: WhiteboardPage; depth: number }) {
   };
 
   return (
-    <motion.div layout="position" className={`flex flex-col ${isDraggingThis ? "opacity-40" : ""}`}>
+    <div className={`flex flex-col ${isDraggingThis ? "opacity-40" : ""}`}>
       <div
         ref={setRef}
         {...attributes}
@@ -200,35 +224,36 @@ function PageRow({ page, depth }: { page: WhiteboardPage; depth: number }) {
         className={`${rowBase} cursor-grab active:cursor-grabbing ${
           isActive ? "color-bg-accent color-txt-accent font-bold" : "color-txt-main hover:color-bg-grey-5"
         }`}
-        style={{ paddingLeft: `${indentPx(depth)}px` }}
+        style={{ paddingLeft: `${indentPx(depth)}px`, WebkitTouchCallout: "none" }}
+        onContextMenu={(e) => e.preventDefault()}
       >
         {showBefore && <DropLine position="before" depth={depth} />}
         {showAfter && <DropLine position="after" depth={depth} />}
         {/* Spacer keeps page icons aligned with folder icons (folders have a chevron here). */}
-        <span className="w-[18px] shrink-0" aria-hidden />
+        <span className="w-[20px] shrink-0" aria-hidden />
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-left cursor-pointer"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left cursor-pointer"
           onClick={() => {
             ctx.onOpenPage(page);
             if (hasQuestions) ctx.togglePage(page.id);
           }}
           aria-expanded={hasQuestions ? isExpanded : undefined}
         >
-          <span className="shrink-0 text-sm leading-none" aria-hidden>
-            {page.emoji ?? <LuFileText size={14} className={isActive ? "" : "color-txt-sub"} />}
+          <span className="shrink-0 text-base leading-none" aria-hidden>
+            {page.emoji ?? <LuFileText size={ICON} className={isActive ? "" : "color-txt-sub"} />}
           </span>
           <span className="min-w-0 flex-1 truncate">{page.name}</span>
         </button>
         <button
           type="button"
-          className="shrink-0 rounded p-1 color-txt-sub opacity-0 transition-opacity cursor-pointer group-hover:opacity-100 hover:color-bg-grey-10"
+          className="shrink-0 rounded-lg p-1.5 color-txt-sub opacity-0 transition-opacity cursor-pointer group-hover:opacity-100 hover:color-bg-grey-10"
           onClick={() => ctx.onEditPage(page)}
           onPointerDown={(e) => e.stopPropagation()}
           aria-label={`Edit ${page.name}`}
           title="Edit page"
         >
-          <LuPencil size={12} />
+          <LuPencil size={EDIT_ICON} />
         </button>
       </div>
 
@@ -241,22 +266,29 @@ function PageRow({ page, depth }: { page: WhiteboardPage; depth: number }) {
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            {page.attachedQuestions.map((attachment) => (
-              <button
-                key={attachment.id}
-                type="button"
-                className={`${rowBase} color-txt-sub hover:color-bg-grey-5 cursor-pointer`}
-                style={{ paddingLeft: `${indentPx(depth + 1) + 18}px` }}
-                onClick={() => ctx.onOpenQuestion(page, attachment.id)}
-              >
-                <LuLink size={11} className="shrink-0" />
-                <span className="min-w-0 flex-1 truncate text-xs">{attachment.label}</span>
-              </button>
-            ))}
+            {page.attachedQuestions.map((attachment) => {
+              const isQuestionActive = attachment.id === ctx.currentQuestionId;
+              return (
+                <button
+                  key={attachment.id}
+                  type="button"
+                  className={`${rowBase} cursor-pointer ${
+                    isQuestionActive
+                      ? "font-bold color-txt-main"
+                      : "color-txt-sub hover:color-bg-grey-5"
+                  }`}
+                  style={{ paddingLeft: `${indentPx(depth + 1) + ROW_GUTTER}px` }}
+                  onClick={() => ctx.onOpenQuestion(page, attachment.id)}
+                >
+                  <LuLink size={LINK_ICON} className="shrink-0" />
+                  <span className="min-w-0 flex-1 truncate text-sm">{attachment.label}</span>
+                </button>
+              );
+            })}
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
 
@@ -265,7 +297,7 @@ function EmptyFolderDrop({ folderId, depth }: { folderId: string; depth: number 
   return (
     <div
       ref={setNodeRef}
-      className="px-2 py-1.5 text-xs italic color-txt-sub"
+      className="px-2 py-1.5 text-sm italic color-txt-sub"
       style={{ paddingLeft: `${indentPx(depth)}px` }}
     >
       Empty folder
@@ -292,7 +324,7 @@ function FolderRow({ node, depth }: { node: WhiteboardTreeNode; depth: number })
   };
 
   return (
-    <motion.div layout="position" className={`flex flex-col ${isDraggingThis ? "opacity-40" : ""}`}>
+    <div className={`flex flex-col ${isDraggingThis ? "opacity-40" : ""}`}>
       <div
         ref={setRef}
         {...attributes}
@@ -302,24 +334,26 @@ function FolderRow({ node, depth }: { node: WhiteboardTreeNode; depth: number })
         }`}
         style={{
           paddingLeft: `${indentPx(depth)}px`,
+          WebkitTouchCallout: "none",
           ...(intoThis && folder.colour ? { boxShadow: `inset 0 0 0 2px ${folder.colour}` } : undefined),
         }}
+        onContextMenu={(e) => e.preventDefault()}
       >
         {showBefore && <DropLine position="before" depth={depth} />}
         {showAfter && <DropLine position="after" depth={depth} />}
         <button
           type="button"
-          className="shrink-0 rounded p-0.5 transition-colors cursor-pointer hover:color-bg-grey-10"
+          className="shrink-0 rounded-lg p-1 transition-colors cursor-pointer hover:color-bg-grey-10"
           onClick={() => ctx.toggleFolder(folder.id)}
           onPointerDown={(e) => e.stopPropagation()}
           aria-label={isCollapsed ? "Expand folder" : "Collapse folder"}
           aria-expanded={!isCollapsed}
         >
-          {isCollapsed ? <LuChevronRight size={13} /> : <LuChevronDown size={13} />}
+          {isCollapsed ? <LuChevronRight size={CHEVRON} /> : <LuChevronDown size={CHEVRON} />}
         </button>
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-left cursor-pointer"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left cursor-pointer"
           onClick={() => ctx.toggleFolder(folder.id)}
         >
           <FolderGlyph folder={folder} />
@@ -327,13 +361,13 @@ function FolderRow({ node, depth }: { node: WhiteboardTreeNode; depth: number })
         </button>
         <button
           type="button"
-          className="shrink-0 rounded p-1 color-txt-sub opacity-0 transition-opacity cursor-pointer group-hover:opacity-100 hover:color-bg-grey-10"
+          className="shrink-0 rounded-lg p-1.5 color-txt-sub opacity-0 transition-opacity cursor-pointer group-hover:opacity-100 hover:color-bg-grey-10"
           onClick={() => ctx.onEditFolder(folder)}
           onPointerDown={(e) => e.stopPropagation()}
           aria-label={`Edit ${folder.name}`}
           title="Edit folder"
         >
-          <LuPencil size={12} />
+          <LuPencil size={EDIT_ICON} />
         </button>
       </div>
 
@@ -354,7 +388,7 @@ function FolderRow({ node, depth }: { node: WhiteboardTreeNode; depth: number })
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
 
@@ -382,6 +416,7 @@ export default function WhiteboardsSidebar({
   pages,
   loading,
   currentPageId = null,
+  currentQuestionId = null,
   onOpenPage,
   onOpenQuestion,
   onEditPage,
@@ -394,6 +429,16 @@ export default function WhiteboardsSidebar({
 }: Props) {
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
   const [expandedPages, setExpandedPages] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!currentQuestionId) return;
+    const page = pages.find((p) => p.attachedQuestions.some((q) => q.id === currentQuestionId));
+    if (!page) return;
+    setExpandedPages((prev) => {
+      if (prev.size === 1 && prev.has(page.id)) return prev;
+      return new Set([page.id]);
+    });
+  }, [currentQuestionId, pages]);
 
   const isCollapsed = (id: string) => collapsedFolders.has(id);
   const expandFolder = (id: string) =>
@@ -412,10 +457,8 @@ export default function WhiteboardsSidebar({
     });
   const togglePage = (id: string) =>
     setExpandedPages((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+      if (prev.has(id)) return new Set();
+      return new Set([id]);
     });
 
   const {
@@ -436,6 +479,7 @@ export default function WhiteboardsSidebar({
 
   const ctxValue: SidebarCtxValue = {
     currentPageId,
+    currentQuestionId,
     collapsedFolders,
     expandedPages,
     activeDrag,
@@ -450,9 +494,9 @@ export default function WhiteboardsSidebar({
 
   return (
     <aside
-      className={`flex h-full min-h-0 w-full flex-col gap-2 border-r border-grey/15 p-3 ${className}`.trim()}
+      className={`flex h-full min-h-0 w-full flex-col gap-2 border-r border-grey/15 py-2 pl-1.5 pr-2 ${className}`.trim()}
     >
-      <div className="flex min-w-0 shrink-0 items-center gap-1.5">
+      <div className="flex min-w-0 shrink-0 items-center gap-1">
         <button
           type="button"
           className="shrink-0 rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
@@ -460,9 +504,9 @@ export default function WhiteboardsSidebar({
           aria-label="Whiteboards home"
           title="Whiteboards home"
         >
-          <LuHouse size={16} />
+          <LuHouse size={HEADER_ICON} />
         </button>
-        <span className="min-w-0 truncate text-sm font-bold color-txt-main">Whiteboards</span>
+        <span className="min-w-0 truncate text-base font-bold color-txt-main">Notes</span>
         <div className="ml-auto flex shrink-0 items-center">
           <button
             type="button"
@@ -471,7 +515,7 @@ export default function WhiteboardsSidebar({
             aria-label="New page"
             title="New page"
           >
-            <LuPlus size={16} />
+            <LuPlus size={HEADER_ICON} />
           </button>
           <button
             type="button"
@@ -480,7 +524,7 @@ export default function WhiteboardsSidebar({
             aria-label="New folder"
             title="New folder"
           >
-            <LuFolderPlus size={16} />
+            <LuFolderPlus size={HEADER_ICON} />
           </button>
         </div>
       </div>
@@ -498,7 +542,6 @@ export default function WhiteboardsSidebar({
       <DndContext
         sensors={sensors}
         collisionDetection={collisionDetection}
-        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         autoScroll={{ threshold: { x: 0, y: 0.2 }, acceleration: 14 }}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
@@ -508,28 +551,28 @@ export default function WhiteboardsSidebar({
         <div
           ref={setRootDropRef}
           className={`flex-1 min-h-0 overflow-y-auto scrollbar-minimal rounded-xl transition-colors ${
-            rootHighlighted ? "color-bg-grey-5 ring-2 ring-inset color-shadow-accent" : ""
+            rootHighlighted ? "color-bg-grey-5" : ""
           }`}
         >
           {loading ? (
-            <div className="flex flex-col gap-1.5 pt-1">
+            <div className="flex flex-col gap-1 pt-1">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-8 rounded-lg color-bg-grey-5 animate-pulse" />
+                <div key={i} className="h-9 rounded-lg color-bg-grey-5 animate-pulse" />
               ))}
             </div>
           ) : isEmpty ? (
-            <p className="px-2 pt-2 text-xs color-txt-sub">
-              Nothing here yet — create a page or folder to get started.
-            </p>
+            <button
+              type="button"
+              className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-[15px] color-txt-main hover:color-bg-grey-5 cursor-pointer"
+              onClick={() => onCreatePage(null)}
+            >
+              <LuPlus size={ICON} className="shrink-0 color-txt-sub" />
+              <span>New page</span>
+            </button>
           ) : (
             <SidebarCtx.Provider value={ctxValue}>
               <div className="flex flex-col pt-1">
                 <TreeItems items={tree.rootItems} depth={0} />
-                {activeDrag && (
-                  <p className="mt-2 px-2 text-[10px] color-txt-sub">
-                    Drop between items to reorder, on a folder to nest, or here for the root.
-                  </p>
-                )}
               </div>
             </SidebarCtx.Provider>
           )}

@@ -17,6 +17,7 @@ import {
 	stripBakedColorStyles,
 	themeTextColorClass,
 } from "../../lib/themeTextColor";
+import { ensureElementInView, ensureSelectionCaretInView, subscribeVisualViewport } from "../../utils/visualViewport";
 
 export type CanvasTextBox = {
 	id: string;
@@ -425,7 +426,28 @@ export default function CanvasTextBoxLayer({
 		editor.focus({ preventScroll: true });
 		placeCaretAtEnd(editor);
 		emitFormatState();
+		requestAnimationFrame(() => {
+			if (!ensureSelectionCaretInView(editor)) ensureElementInView(editor);
+		});
 	}, [visibleBoxes, selectedIds, editing, emitFormatState, publish, viewScale]);
+
+	const revealFocusedText = useCallback(() => {
+		const layer = layerRef.current;
+		const active = document.activeElement;
+		if (!layer || !(active instanceof HTMLElement) || !layer.contains(active)) return;
+		if (!active.isContentEditable) return;
+		if (!ensureSelectionCaretInView(active)) ensureElementInView(active);
+	}, []);
+
+	useEffect(() => {
+		if (!editing) return;
+		const stopViewport = subscribeVisualViewport(revealFocusedText);
+		document.addEventListener("selectionchange", revealFocusedText);
+		return () => {
+			stopViewport();
+			document.removeEventListener("selectionchange", revealFocusedText);
+		};
+	}, [editing, revealFocusedText]);
 
 	useEffect(() => {
 		if (interactive) return;
@@ -638,6 +660,7 @@ export default function CanvasTextBoxLayer({
 							onFocus={() => {
 								onSelectedIdsChangeRef.current([box.id]);
 								emitFormatState();
+								requestAnimationFrame(revealFocusedText);
 							}}
 							onPointerDown={(event) => {
 								if (!editing) {
@@ -647,7 +670,10 @@ export default function CanvasTextBoxLayer({
 								event.stopPropagation();
 							}}
 							onMouseUp={emitFormatState}
-							onKeyUp={emitFormatState}
+							onKeyUp={() => {
+								emitFormatState();
+								revealFocusedText();
+							}}
 							onInput={(event) => {
 								if (
 									(event.nativeEvent as InputEvent).isComposing ||
@@ -655,6 +681,7 @@ export default function CanvasTextBoxLayer({
 								) return;
 								commitEditorHtml(box.id, event.currentTarget);
 								emitFormatState();
+								revealFocusedText();
 							}}
 							onBlur={(event) => {
 								composingIdsRef.current.delete(box.id);

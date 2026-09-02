@@ -20,7 +20,6 @@ import {
   LuArrowLeft,
   LuArrowUpRight,
   LuBookmark,
-  LuExternalLink,
   LuLoader,
   LuPlus,
   LuStar,
@@ -29,7 +28,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { db, storage } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
-import { notifyPostOwner } from "../../lib/notifications";
 import DiscoverMediaPreview from "../discover/DiscoverMediaPreview";
 import DiscoverShareModal from "../discover/DiscoverShareModal";
 import { getQuestionDiscoveryContext } from "../../lib/questionDiscovery";
@@ -465,7 +463,6 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
     const ratingRef = doc(db, "discover-notes", selectedResource.id, "ratings", user.uid);
     const resourceRef = doc(db, "discover-notes", selectedResource.id);
     try {
-      let isNewRating = false;
       await runTransaction(db, async (transaction) => {
         const resourceSnap = await transaction.get(resourceRef);
         const ratingSnap = await transaction.get(ratingRef);
@@ -473,7 +470,6 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
         const currentAverage = data?.ratingAverage ?? 0;
         const currentCount = data?.ratingCount ?? 0;
         const previousValue = ratingSnap.exists() ? ratingSnap.data()?.value : null;
-        isNewRating = typeof previousValue !== "number";
         const nextCount = typeof previousValue === "number" ? currentCount : currentCount + 1;
         const currentTotal = currentAverage * currentCount;
         const nextTotal = typeof previousValue === "number"
@@ -492,15 +488,6 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
         });
       });
       setUserRating(value);
-      if (isNewRating) {
-        notifyPostOwner({
-          ownerId: selectedResource.userId,
-          actorId: user.uid,
-          type: "post-rating",
-          postId: selectedResource.id,
-          postTitle: selectedResource.title,
-        });
-      }
     } catch (error) {
       console.error("Failed to rate resource:", error);
     } finally {
@@ -525,13 +512,6 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
         transaction.update(doc(db, "discover-notes", selectedResource.id), {
           commentCount: increment(1),
         });
-      });
-      notifyPostOwner({
-        ownerId: selectedResource.userId,
-        actorId: user.uid,
-        type: "post-comment",
-        postId: selectedResource.id,
-        postTitle: selectedResource.title,
       });
       setCommentText("");
       setCommentComposerOpen(false);
@@ -677,17 +657,16 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
 
         <div ref={listScrollRef} className="min-h-0 flex-1 overflow-y-auto scrollbar-minimal px-4 pb-5 space-y-5">
           <div className="relative min-h-[240px] h-[min(52vh,30rem)] rounded-2xl color-bg-grey-10 overflow-hidden">
-            <DiscoverMediaPreview key={resource.id} resource={resource} variant="hero" />
-            {canOpenResource && (
-              <button
-                type="button"
-                onClick={() => void handleVisit(resource.websiteUrl, resource)}
-                className="absolute top-3 right-3 z-20 inline-flex items-center gap-1.5 rounded-lg color-bg color-txt-accent px-2.5 py-1.5 text-[11px] font-semibold shadow-md hover:opacity-90 cursor-pointer"
-              >
-                <LuExternalLink size={13} />
-                Open Resource
-              </button>
-            )}
+            <DiscoverMediaPreview
+              key={resource.id}
+              resource={resource}
+              variant="hero"
+              onOpenResource={
+                canOpenResource
+                  ? () => void handleVisit(resource.websiteUrl, resource)
+                  : undefined
+              }
+            />
           </div>
 
           <div className="flex items-start gap-2 min-w-0">

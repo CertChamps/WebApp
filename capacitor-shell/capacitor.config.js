@@ -1,10 +1,9 @@
-import type { CapacitorConfig } from '@capacitor/cli';
-
 // Set by `npm run iPad` so the native shell loads the Vite LAN URL.
 // Leave unset for TestFlight / App Store so the app uses bundled `webDir`.
 const liveUrl = process.env.CAPACITOR_LIVE_URL?.trim();
 
-const config: CapacitorConfig = {
+/** @type {import('@capacitor/cli').CapacitorConfig} */
+const config = {
   appId: 'com.certchamps.app',
   appName: 'CertChamps',
   webDir: '../dist',
@@ -35,7 +34,10 @@ const config: CapacitorConfig = {
         twitter: false,
       },
     },
+    FirebaseMessaging: {
+      presentationOptions: ["alert", "badge", "sound"],
+    },
   },
 };
 
-export default config;
+module.exports = config;

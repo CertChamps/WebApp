@@ -228,9 +228,11 @@ export default function PageDetailsModal({
                     key={attachment.id}
                     className="flex items-center gap-2 rounded-lg color-bg-grey-5 px-3 py-2 text-sm color-txt-main"
                   >
-                    <span className="shrink-0 rounded-md color-bg-grey-10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide color-txt-sub">
-                      {attachment.source === "bank" ? "Bank" : "Yours"}
-                    </span>
+                    {attachment.source === "custom" && (
+                      <span className="shrink-0 rounded-md color-bg-grey-10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide color-txt-sub">
+                        Custom
+                      </span>
+                    )}
                     <span className="min-w-0 flex-1 truncate">{attachment.label}</span>
                     <button
                       type="button"

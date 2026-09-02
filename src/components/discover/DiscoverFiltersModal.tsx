@@ -155,27 +155,16 @@ export default function DiscoverFiltersModal({
                             {SORT_OPTIONS.map((option) => {
                                 const active = draftSort === option.id;
                                 return (
-                                    <div key={option.id} className="flex items-center justify-between gap-3 py-1.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => setDraftSort(option.id)}
-                                            className={`text-sm font-medium text-left cursor-pointer ${
-                                                active ? "color-txt-accent" : "color-txt-sub hover:color-txt-main"
-                                            }`}
-                                        >
-                                            {option.label}
-                                        </button>
-                                        {active && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setDraftSort(option.id)}
-                                                className="color-txt-sub hover:color-txt-main cursor-pointer p-0.5"
-                                                aria-label={`Selected ${option.label}`}
-                                            >
-                                                <LuX size={15} />
-                                            </button>
-                                        )}
-                                    </div>
+                                    <button
+                                        key={option.id}
+                                        type="button"
+                                        onClick={() => setDraftSort(option.id)}
+                                        className={`text-sm font-medium text-left cursor-pointer py-1.5 ${
+                                            active ? "color-txt-accent" : "color-txt-sub hover:color-txt-main"
+                                        }`}
+                                    >
+                                        {option.label}
+                                    </button>
                                 );
                             })}
                         </div>

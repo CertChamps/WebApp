@@ -21,20 +21,23 @@ export function useSubjectLevels() {
           ? lcSnap.data()!.sections
           : [];
 
-        const result: SubjectLevel[] = [];
-        for (const subId of subjects) {
-          if (cancelled) return;
-          const subjRef = doc(db, "questions", "leavingcert", "subjects", subId);
-          const subjSnap = await getDoc(subjRef);
-          let levelIds = (subjSnap.data()?.sections as string[] | undefined) ?? [];
-          if (levelIds.length === 0 && (subId === "maths" || subId === "applied-maths")) {
-            levelIds = ["higher", "ordinary"];
-          }
-          for (const level of levelIds) {
-            result.push({ subject: subId, level });
-          }
-        }
-        if (!cancelled) setPairs(result);
+        const perSubject = await Promise.all(
+          subjects.map(async (subId) => {
+            try {
+              const subjRef = doc(db, "questions", "leavingcert", "subjects", subId);
+              const subjSnap = await getDoc(subjRef);
+              let levelIds = (subjSnap.data()?.sections as string[] | undefined) ?? [];
+              if (levelIds.length === 0 && (subId === "maths" || subId === "applied-maths")) {
+                levelIds = ["higher", "ordinary"];
+              }
+              return levelIds.map((level) => ({ subject: subId, level }));
+            } catch {
+              return [] as SubjectLevel[];
+            }
+          })
+        );
+
+        if (!cancelled) setPairs(perSubject.flat());
       } catch {
         if (!cancelled) setPairs([]);
       } finally {
@@ -42,7 +45,9 @@ export function useSubjectLevels() {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return { pairs, loading };

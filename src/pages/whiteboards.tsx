@@ -1,10 +1,12 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   LuArrowRight,
+  LuChevronDown,
   LuFileText,
   LuFolder,
+  LuLayoutPanelTop,
   LuLoaderCircle,
   LuLock,
   LuPencil,
@@ -27,6 +29,25 @@ import { hasAceAccess } from "../lib/contentAccess";
 import "../styles/practiceHub.css";
 
 const RECENTS_PREVIEW_COUNT = 8;
+
+const AI_SEARCH_STATUS_MESSAGES = [
+  "Reading through the question bank…",
+  "Matching your request…",
+  "Picking the best questions…",
+  "Putting a page together…",
+];
+
+type AiSearchOverlayPhase = "in" | "out" | "enter";
+type AIPageType = "whiteboard" | "document";
+
+const AI_PAGE_TYPES: Array<{
+  id: AIPageType;
+  label: string;
+  Icon: typeof LuLayoutPanelTop;
+}> = [
+  { id: "whiteboard", label: "Whiteboard", Icon: LuLayoutPanelTop },
+  { id: "document", label: "Document", Icon: LuFileText },
+];
 
 const fadeUp = {
   initial: { opacity: 0, y: 10 },
@@ -79,8 +100,17 @@ export default function Whiteboards() {
   const [showAllRecents, setShowAllRecents] = useState(false);
 
   const [aiPrompt, setAiPrompt] = useState("");
+  const [aiPageType, setAiPageType] = useState<AIPageType>("whiteboard");
+  const [aiTypeMenuOpen, setAiTypeMenuOpen] = useState(false);
+  const [aiOverlay, setAiOverlay] = useState<{ text: string; phase: AiSearchOverlayPhase }>({
+    text: "",
+    phase: "in",
+  });
+  const aiTypeMenuRef = useRef<HTMLDivElement>(null);
   const { state: aiState, search: aiSearch, dismiss: aiDismiss } = useWhiteboardAIMatch(subject);
   const aiBusy = aiState.status === "searching";
+  const selectedAiPageType = AI_PAGE_TYPES.find((option) => option.id === aiPageType) ?? AI_PAGE_TYPES[0];
+  const SelectedPageTypeIcon = selectedAiPageType.Icon;
 
   useEffect(() => {
     setLastWhiteboardsSubject(subject);
@@ -92,9 +122,68 @@ export default function Whiteboards() {
     setSubject(favouriteSubjectIds[0]);
   }, [favouriteSubjectIds, subject]);
 
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (aiTypeMenuRef.current && !aiTypeMenuRef.current.contains(e.target as Node)) {
+        setAiTypeMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!aiBusy) return;
+    const queryText = aiPrompt.trim();
+    let cancelled = false;
+    let showQuery = true;
+    let messageIndex = 0;
+    const timeouts: number[] = [];
+    setAiOverlay({ text: queryText, phase: "in" });
+
+    const later = (fn: () => void, ms: number) => {
+      const id = window.setTimeout(fn, ms);
+      timeouts.push(id);
+    };
+
+    const cycle = () => {
+      later(() => {
+        if (cancelled) return;
+        setAiOverlay((current) => ({ ...current, phase: "out" }));
+        later(() => {
+          if (cancelled) return;
+          showQuery = !showQuery;
+          const statusMessages =
+            aiPageType === "document"
+              ? [...AI_SEARCH_STATUS_MESSAGES.slice(0, 3), "Putting a document together…"]
+              : AI_SEARCH_STATUS_MESSAGES;
+          const nextText = showQuery
+            ? queryText
+            : statusMessages[messageIndex++ % statusMessages.length];
+          setAiOverlay({ text: nextText, phase: "enter" });
+          requestAnimationFrame(() => {
+            if (cancelled) return;
+            requestAnimationFrame(() => {
+              if (cancelled) return;
+              setAiOverlay({ text: nextText, phase: "in" });
+              cycle();
+            });
+          });
+        }, 320);
+      }, 1500);
+    };
+
+    cycle();
+    return () => {
+      cancelled = true;
+      timeouts.forEach(clearTimeout);
+    };
+  }, [aiBusy, aiPrompt, aiPageType]);
+
   const handleSubjectChange = useCallback(
     (subjectId: string | null) => {
       setSubject(subjectId);
+      setAiTypeMenuOpen(false);
       aiDismiss();
     },
     [aiDismiss]
@@ -106,17 +195,18 @@ export default function Whiteboards() {
   );
 
   const createPageFromProposal = useCallback(
-    async (proposal: AIProposal) => {
+    async (proposal: AIProposal, pageType: AIPageType = aiPageType) => {
       if (!subject) return;
       const page = await createPage({
         name: proposal.pageName,
         subject,
         emoji: proposal.emoji,
         attachedQuestions: proposal.attachments,
+        pageType,
       });
       openPage(page.id);
     },
-    [subject, createPage, openPage]
+    [subject, createPage, openPage, aiPageType]
   );
 
   const handleAISubmit = useCallback(async () => {
@@ -125,12 +215,13 @@ export default function Whiteboards() {
       return;
     }
     if (!subject || aiBusy || !aiPrompt.trim()) return;
-    const proposal = await aiSearch(aiPrompt);
+    setAiTypeMenuOpen(false);
+    const proposal = await aiSearch(aiPrompt, aiPageType);
     if (proposal) {
       setAiPrompt("");
-      await createPageFromProposal(proposal);
+      await createPageFromProposal(proposal, aiPageType);
     }
-  }, [hasAce, navigate, subject, aiBusy, aiPrompt, aiSearch, createPageFromProposal]);
+  }, [hasAce, navigate, subject, aiBusy, aiPrompt, aiSearch, aiPageType, createPageFromProposal]);
 
   const handleFindQuestions = useCallback(() => {
     navigate(subject ? `/practice?subject=${encodeURIComponent(subject)}` : "/practice");
@@ -223,27 +314,103 @@ export default function Whiteboards() {
               <LuArrowRight size={17} className="color-txt-accent" />
             </button>
           )}
-          <div className="flex w-full items-center gap-3 rounded-lg border-2 color-shadow color-bg px-4 py-2.5">
+          <div className="flex w-full items-center gap-2 rounded-full border-2 color-shadow color-bg px-4 py-2">
             <LuSparkles size={18} className="shrink-0 color-txt-accent" aria-hidden />
-            <input
-              type="text"
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAISubmit();
-              }}
-              placeholder={
-                subject
-                  ? "Describe the questions you want, e.g. “short differentiation questions”…"
-                  : "Pick a subject first, then describe the questions you want…"
-              }
-              className="min-w-0 flex-1 bg-transparent py-1.5 text-sm color-txt-main placeholder:color-txt-sub outline-none"
-              disabled={!hasAce || actionsDisabled || aiBusy}
-              aria-label="Find questions with AI"
-            />
+            <div className="relative min-w-0 flex-1 overflow-hidden">
+              <input
+                type="search"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAISubmit();
+                }}
+                placeholder={
+                  subject
+                    ? "Let AI choose a set of questions for you"
+                    : "Pick a subject first, then describe the questions you want…"
+                }
+                className={`min-w-0 w-full bg-transparent py-1.5 text-sm outline-none [&::-webkit-search-cancel-button]:hidden ${
+                  aiBusy
+                    ? "text-transparent caret-transparent placeholder:text-transparent"
+                    : "color-txt-main placeholder:color-txt-sub"
+                }`}
+                disabled={!hasAce || actionsDisabled || aiBusy}
+                aria-label="Find questions with AI"
+              />
+              {aiBusy && (
+                <div
+                  className="absolute inset-0 overflow-hidden pointer-events-none flex items-center"
+                  aria-live="polite"
+                >
+                  <span
+                    className="block w-full truncate text-sm color-txt-main"
+                    style={{
+                      transform:
+                        aiOverlay.phase === "out"
+                          ? "translateY(-110%)"
+                          : aiOverlay.phase === "enter"
+                            ? "translateY(110%)"
+                            : "translateY(0)",
+                      opacity: aiOverlay.phase === "in" ? 1 : 0,
+                      transition:
+                        aiOverlay.phase === "enter"
+                          ? "none"
+                          : "transform 320ms ease, opacity 320ms ease",
+                    }}
+                  >
+                    {aiOverlay.text}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="relative shrink-0" ref={aiTypeMenuRef}>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-bold color-txt-main hover:color-bg-grey-10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
+                onClick={() => setAiTypeMenuOpen((open) => !open)}
+                disabled={!hasAce || actionsDisabled || aiBusy}
+                aria-expanded={aiTypeMenuOpen}
+                aria-haspopup="listbox"
+                aria-label={`Create as ${selectedAiPageType.label}`}
+              >
+                <SelectedPageTypeIcon size={14} className="shrink-0 color-txt-accent" />
+                <span className="hidden sm:inline">{selectedAiPageType.label}</span>
+                <LuChevronDown
+                  size={13}
+                  className={`color-txt-sub transition-transform duration-200 ${aiTypeMenuOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {aiTypeMenuOpen && (
+                <div
+                  role="listbox"
+                  className="absolute right-0 top-full mt-2 z-30 min-w-[10.5rem] rounded-xl color-bg shadow-md border border-color-border p-1.5 flex flex-col gap-1"
+                >
+                  {AI_PAGE_TYPES.map(({ id, label, Icon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="option"
+                      aria-selected={aiPageType === id}
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer ${
+                        aiPageType === id
+                          ? "color-bg-accent color-txt-accent"
+                          : "color-txt-sub hover:color-txt-main hover:color-bg-grey-5"
+                      }`}
+                      onClick={() => {
+                        setAiPageType(id);
+                        setAiTypeMenuOpen(false);
+                      }}
+                    >
+                      <Icon size={15} />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               type="button"
-              className="shrink-0 rounded-lg p-2 color-txt-accent hover:color-bg-grey-10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
+              className="shrink-0 rounded-full p-2 color-txt-accent hover:color-bg-grey-10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
               onClick={handleAISubmit}
               disabled={!hasAce || actionsDisabled || aiBusy || !aiPrompt.trim()}
               aria-label="Search questions"
@@ -257,18 +424,6 @@ export default function Whiteboards() {
           </div>
 
           <AnimatePresence mode="wait">
-            {aiBusy && (
-              <motion.p
-                key="ai-busy"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="px-2 text-xs color-txt-sub"
-              >
-                Reading through the {subject ? "question bank" : "questions"} for you…
-              </motion.p>
-            )}
-
             {aiState.status === "message" && (
               <motion.div
                 key="ai-message"
@@ -326,10 +481,10 @@ export default function Whiteboards() {
                       const proposal = aiState.proposal;
                       aiDismiss();
                       setAiPrompt("");
-                      void createPageFromProposal(proposal);
+                      void createPageFromProposal(proposal, aiPageType);
                     }}
                   >
-                    Create the page
+                    Create {aiPageType === "document" ? "document" : "whiteboard"}
                   </button>
                 </div>
               </motion.div>
@@ -367,11 +522,7 @@ export default function Whiteboards() {
                 <div key={i} className="h-28 w-28 shrink-0 rounded-lg color-bg-grey-5 animate-pulse" />
               ))}
             </div>
-          ) : recentItems.length === 0 ? (
-            <p className="rounded-lg color-bg-grey-5 px-4 py-5 text-sm color-txt-sub">
-              Nothing here yet — create your first page to get going.
-            </p>
-          ) : showAllRecents ? (
+          ) : recentItems.length === 0 ? null : showAllRecents ? (
             <div className="flex flex-col gap-1.5">
               {visibleRecents.map((item) =>
                 item.type === "page" ? (

@@ -70,10 +70,13 @@ function candidateDescriptor(candidate: Candidate, id: string): Record<string, u
   };
 }
 
-function buildContext(subjectLabel: string): string {
+type AIPageType = "whiteboard" | "document";
+
+function buildContext(subjectLabel: string, pageType: AIPageType): string {
+  const destination = pageType === "document" ? "document" : "whiteboard";
   return [
     "You are the question-finding assistant inside CertChamps, an Irish exam-prep app.",
-    `The student wants a study page of ${subjectLabel} questions from the question bank.`,
+    `The student wants a ${destination} of ${subjectLabel} questions from the question bank.`,
     "You will receive the student's free-text request and a JSON list of candidate questions with their metadata (name, topic tags, exam paper, level, year, size).",
     "Act like a person skimming the question bank: reason about what each candidate actually is (its topic, whether it's a short or long question, its level and difficulty cues) rather than doing literal keyword matching against tags.",
     "Interpret loose or informal phrasing generously — infer topic, question type (e.g. 'short questions' usually means fewer pages/parts, early question numbers, or Section A style), difficulty and level cues (like 'higher level', 'ordinary'), and year hints.",
@@ -84,7 +87,7 @@ function buildContext(subjectLabel: string): string {
     "- status ok: you found a confident set of matches.",
     "- status low_confidence: you found something but you're unsure it's what they meant. Include your best picks anyway.",
     "- status no_match: the request is empty, gibberish, off-topic for this subject, or nothing fits. questionIds must be [].",
-    "- pageName: a short friendly title for the study page (max ~40 chars). Empty string when no_match.",
+    `- pageName: a short friendly title for the ${destination} (max ~40 chars). Empty string when no_match.`,
     "- emoji: one single emoji that suits the page topic. Empty string when no_match.",
     "- message: one or two warm, non-judgmental sentences to show the student. For no_match, kindly say you couldn't find matching questions and invite them to rephrase or try another topic — never make them feel they did something wrong. For low_confidence, briefly say what you found and that they can adjust it.",
     `- questionIds: ids of chosen candidates, max ${MAX_SELECTIONS}.`,
@@ -273,7 +276,7 @@ export function useWhiteboardAIMatch(subject: string | null) {
   }, []);
 
   const search = useCallback(
-    async (prompt: string): Promise<AIProposal | null> => {
+    async (prompt: string, pageType: AIPageType = "whiteboard"): Promise<AIProposal | null> => {
       const trimmed = prompt.trim();
       if (!subject || !trimmed) return null;
       const runId = ++runIdRef.current;
@@ -301,7 +304,7 @@ export function useWhiteboardAIMatch(subject: string | null) {
           JSON.stringify(descriptors),
         ].join("\n");
 
-        const raw = await requestCompletion(buildContext(subjectLabel), userPrompt);
+        const raw = await requestCompletion(buildContext(subjectLabel, pageType), userPrompt);
         if (runId !== runIdRef.current) return null;
 
         const reply = parseModelReply(raw);

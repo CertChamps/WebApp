@@ -254,7 +254,7 @@ function PracticeBrowserInner() {
   const subjectId = searchParams.get("subject");
   const selectedLevel = searchParams.get("level");
   const selectedTopicName = searchParams.get("topic");
-  const browseMode = (searchParams.get("browse") === "paper" ? "paper" : "topic") as BrowseMode;
+  const browseMode = (searchParams.get("browse") === "topic" ? "topic" : "paper") as BrowseMode;
   const paperYearParam = searchParams.get("year");
   const paperNumParam = searchParams.get("paper");
   const targetQuestionKey = searchParams.get("question");
@@ -903,24 +903,24 @@ function PracticeBrowserInner() {
               style={
                 {
                   "--pb-toggle-count": 2,
-                  "--pb-toggle-index": browseMode === "paper" ? 1 : 0,
+                  "--pb-toggle-index": browseMode === "topic" ? 1 : 0,
                 } as CSSProperties
               }
             >
               <span className="practice-browser__toggle-thumb" aria-hidden />
               <button
                 type="button"
-                className={browseMode === "topic" ? "is-active" : ""}
-                onClick={() => setBrowseMode("topic")}
-              >
-                By topic
-              </button>
-              <button
-                type="button"
                 className={browseMode === "paper" ? "is-active" : ""}
                 onClick={() => setBrowseMode("paper")}
               >
                 By paper
+              </button>
+              <button
+                type="button"
+                className={browseMode === "topic" ? "is-active" : ""}
+                onClick={() => setBrowseMode("topic")}
+              >
+                By topic
               </button>
             </div>
 

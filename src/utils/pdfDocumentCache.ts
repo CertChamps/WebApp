@@ -1,4 +1,5 @@
 import { getDocument } from "pdfjs-dist";
+import "../lib/pdfWorker";
 
 const MAX_DOCUMENTS = 16;
 

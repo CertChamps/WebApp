@@ -11,6 +11,12 @@ admin.initializeApp();
 export { revenueCatWebhook, verifyAppleEntitlement } from "./iap/revenueCatWebhook";
 export { deleteAccount } from "./account/deleteAccount";
 export { captureWebsiteThumbnail } from "./discover/captureWebsiteThumbnail";
+export {
+    deliverUserNotification,
+    onDiscoverCommentCreated,
+    onDiscoverRatingCreated,
+    onDiscoverResourceWritten,
+} from "./discover/deliverNotification";
 const corsMiddleware = cors({ origin: true });
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";

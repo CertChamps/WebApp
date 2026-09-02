@@ -15,8 +15,7 @@ import { addDoc, collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, q
 import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 
 // CSS
-import { LuChevronDown, LuImage, LuSearch, LuUsers } from "react-icons/lu";
-import "../../styles/social.css"
+import { LuChevronDown, LuImage, LuSearch, LuUsers, LuX } from "react-icons/lu";
 import ProGate from "../../components/ProGate"
 import { canUseAceFeature } from "../../lib/contentAccess";
 
@@ -40,6 +39,8 @@ export default function Social() {
     const [postError, setPostError] = useState<string | null>(null);
     const pageMenuRef = useRef<HTMLDivElement | null>(null);
     const [pageMenuOpen, setPageMenuOpen] = useState(false);
+    const [composerOpen, setComposerOpen] = useState(false);
+    const composerActive = composerOpen || Boolean(message.trim()) || Boolean(imagePreview);
 
     // ============================ NAVIGATING BETWEEN PAGES ===================================== //
     const [page, setPage ]= useState<string>('practice')
@@ -80,10 +81,10 @@ export default function Social() {
                 isFlashcard: false
             });
 
-            setMessage(''); //reset the text box
+            setMessage('');
             setImageFile(null);
             setImagePreview(null);
-            console.log('Post added!');
+            setComposerOpen(false);
         } catch (error) {
             console.error('Error sending post:', error);
             setPostError('Error sending post. Please try again.');
@@ -297,7 +298,10 @@ export default function Social() {
     // -----------------------------------LISTEN TO REAL TIME CHANGES OF USER---------------------------------------//
     const cancelReply = () => {
         setMessage('');
-        setPostError('')
+        setPostError('');
+        setImageFile(null);
+        setImagePreview(null);
+        setComposerOpen(false);
     };
     //=======================================================================
 
@@ -325,9 +329,9 @@ export default function Social() {
     }
 
     return (
-        <div className="flex w-full h-full">
-            <div className="flex-1 min-w-0 h-full overflow-y-scroll scrollbar-minimal">
-                <div className="px-6 pt-4 pb-4">
+        <div className="flex w-full h-full color-bg overflow-hidden">
+            <main className="flex-1 min-w-0 h-full overflow-y-auto scrollbar-minimal">
+                <div className="w-full px-6 pt-4 pb-6">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div ref={pageMenuRef} className="relative">
                             <h1 className="text-3xl sm:text-4xl font-black leading-none color-txt-main">
@@ -379,111 +383,105 @@ export default function Social() {
                         </div>
                         <NotificationBell />
                     </div>
-                </div>
-                <div className="compose-post-container">
-                    <div className="compose-post-text-wrapper"> 
-                        <img 
-                            src={user.picture}
-                            className="compose-post-img"
-                            />
-                        <textarea
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            //   onKeyDown={handleKeyDown}
-                            placeholder={randomPlaceholder}
-                            //rows={3}
-                            className={`compose-post-text-box`}
-                        />
-                    </div>
-            
-                    <div className="flex justify-between items-center gap-2 mt-2">
-                    <div className="flex items-center gap-3">
-                        <label className="color-txt-sub mx-2 hover:opacity-80 cursor-pointer">
-                        <LuImage size={32} strokeWidth={1.5} />
-                        <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (!f) return;
-                            setImageFile(f);
-                            setImagePreview(URL.createObjectURL(f));
-                            }}
-                        />
-                        </label>
-                        {imagePreview && (
-                        <div className="flex items-center gap-2">
-                            <img
-                            src={imagePreview}
-                            alt="preview"
-                            className="w-16 h-16 rounded object-cover border"
-                            />
-                            <button
-                            type="button"
-                            onClick={() => {
-                                setImageFile(null);
-                                setImagePreview(null);
-                            }}
-                            className="px-2 py-1 rounded bg-red-500 text-white"
-                            >
-                            Remove
-                            </button>
-                        </div>
-                        )}
-                    </div>
-                        <div>
-                            {postError && <p className="text-red-500 text-sm mr-4 inline">{postError}</p>} 
-                            <button
-                                type="button"
-                                onClick={cancelReply}
-                                className="compose-post-clear-button"
-                            >
-                                Clear
-                            </button>
-                            <button
-                                type="button"
-                                onClick={sendPost}
-                                disabled={!message.trim()}
-                                className="cursor-target compose-post-send-button"
-                            >
-                                Post
-                            </button>
-                        </div>
-                    </div>
 
-                    <div className="my-4">
-                        {/* This centers the posts within the available viewport */}
-                        <div className="mx-auto w-full space-y-4">
-                            {posts.map((post) => (
-                                <PostCard
-                                    key={post.id}
-                                    userId={post.userId}
-                                    rank={post.rank}
-                                    content={post.content}
-                                    userImage={post.userImage}
-                                    username={post.username}
-                                    time={post.timestamp}
-                                    replyCount={post.replyCount}
-                                    imageURL={post.imageURL}
-                                    onPressReplies={() => {
-                                        if (post.isFlashcard) {
-                                            // For flashcards, pass both flashcardId and replyId if available
-                                            //pageNavigate("social/q_replies", { state: { id: post.id, flashcardId: post.flashcardId, replyId: post.replyId } })
-                                            pageNavigate(`post/${post.id}`)
-                                        } else {
-                                            // For regular posts
-                                            //pageNavigate("social/replies", { state: { id: post.id } })
-                                            pageNavigate(`post/${post.id}`)
+                    <div className="w-full mt-6">
+                        <div className="rounded-2xl color-bg-grey-5 px-4 pt-3 pb-3">
+                            <textarea
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                onFocus={() => setComposerOpen(true)}
+                                placeholder={randomPlaceholder}
+                                rows={composerActive ? 5 : 3}
+                                className="w-full min-h-[5.5rem] bg-transparent color-txt-main text-[16px] leading-relaxed outline-none resize-none placeholder:color-txt-sub"
+                            />
+                            {imagePreview && (
+                                <div className="relative w-fit mt-2 mb-3">
+                                    <img
+                                        src={imagePreview}
+                                        alt="preview"
+                                        className="h-28 rounded-xl object-cover"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setImageFile(null);
+                                            setImagePreview(null);
+                                        }}
+                                        className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full color-bg color-txt-main cursor-pointer"
+                                        aria-label="Remove image"
+                                    >
+                                        <LuX size={12} />
+                                    </button>
+                                </div>
+                            )}
+                            <div className="flex items-center justify-between gap-3 pt-1">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <label className="inline-flex items-center justify-center rounded-lg p-2 color-txt-sub hover:color-txt-main hover:color-bg-grey-10 cursor-pointer">
+                                        <LuImage size={18} />
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const f = e.target.files?.[0];
+                                                if (!f) return;
+                                                setImageFile(f);
+                                                setImagePreview(URL.createObjectURL(f));
+                                            }}
+                                        />
+                                    </label>
+                                    {postError && (
+                                        <p className="text-xs text-red-500 truncate">{postError}</p>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={cancelReply}
+                                        className="px-3 py-1.5 rounded-xl text-sm font-semibold color-txt-sub hover:color-txt-main cursor-pointer"
+                                    >
+                                        Clear
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={sendPost}
+                                        disabled={!message.trim() && !imageFile}
+                                        className="px-5 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-bold hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Post
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
 
-                                        }
-                                    }}
-                                />
-                            ))}
+                        <div className="mt-2">
+                            {posts.length === 0 ? (
+                                <div className="rounded-2xl color-bg-grey-5 p-8 text-center space-y-2 mt-4">
+                                    <h3 className="text-lg font-semibold color-txt-main">No posts yet</h3>
+                                    <p className="text-sm color-txt-sub">Start the conversation above.</p>
+                                </div>
+                            ) : (
+                                posts.map((post, index) => (
+                                    <div key={post.id}>
+                                        {index > 0 && <div className="h-px color-bg-grey-10" />}
+                                        <PostCard
+                                            userId={post.userId}
+                                            rank={post.rank}
+                                            content={post.content}
+                                            userImage={post.userImage}
+                                            username={post.username}
+                                            time={post.timestamp}
+                                            replyCount={post.replyCount}
+                                            imageURL={post.imageURL}
+                                            onPressReplies={() => pageNavigate(`post/${post.id}`)}
+                                        />
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     )
 }

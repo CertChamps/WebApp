@@ -62,6 +62,7 @@ import { OptionsContext } from "../context/OptionsContext";
 import { TimerProvider } from "../context/TimerContext";
 import {
   documentCanvasId,
+  documentQuestionCanvasId,
   setLastWhiteboardsSubject,
   whiteboardCanvasId,
   whiteboardQuestionCanvasId,
@@ -71,6 +72,7 @@ import {
 } from "../data/whiteboards";
 import type { ImageQuestion } from "../hooks/useImageQuestions";
 import { getThemedPortalTarget } from "../utils/themedPortal";
+import { subscribeVisualViewport } from "../utils/visualViewport";
 import type { InjectedExchange } from "../components/ai/useAI";
 import { AiRequestError, aiResponseError, authenticatedAiFetch, createAiUsageId, METERED_CHAT_API_URL } from "../lib/aiApi";
 import { runGrading } from "../lib/grading/GradingEngine";
@@ -472,7 +474,8 @@ function WhiteboardPageViewInner() {
   }, [attachmentProgress, loadPaperProgress]);
   const handleToggleQuestionCompleted = useCallback(() => {
     if (!attachmentProgress) return;
-    void toggleQuestion(attachmentProgress.paper, attachmentProgress.questionId, 0);
+    // `toggleQuestion` keeps any larger total already stored from Practice Hub.
+    void toggleQuestion(attachmentProgress.paper, attachmentProgress.questionId, 1);
   }, [attachmentProgress, toggleQuestion]);
   const questionLogMeta = useMemo((): QuestionMeta | null => {
     if (!attachmentProgress) return null;
@@ -505,11 +508,14 @@ function WhiteboardPageViewInner() {
   );
   const canvasAttachmentIdRef = useRef<string | null>(null);
   canvasAttachmentIdRef.current = currentAttachment?.id ?? null;
+  const firstAttachmentId = attachments[0]?.id ?? null;
 
-  // Each attached question gets its own whiteboard (strokes + attachments).
+  // Each attached question gets its own board (strokes + attachments / document essay).
   const canvasId = pageId && page?.id === pageId
     ? (page.pageType === "document"
-      ? documentCanvasId(pageId)
+      ? (currentAttachment
+        ? documentQuestionCanvasId(pageId, currentAttachment.id)
+        : documentCanvasId(pageId))
       : currentAttachment
         ? whiteboardQuestionCanvasId(pageId, currentAttachment.id)
         : whiteboardCanvasId(pageId))
@@ -626,8 +632,20 @@ function WhiteboardPageViewInner() {
     setCanvasTextBoxes([]);
     setGradingAnnotations([]);
     loadCanvas(canvasId)
-      .then((loaded) => {
+      .then(async (loaded) => {
         if (cancelled) return;
+        const attachmentId = canvasAttachmentIdRef.current;
+        const isFirstDocumentQuestion = page?.pageType === "document"
+          && Boolean(attachmentId)
+          && firstAttachmentId === attachmentId;
+        if (
+          !loaded
+          && isFirstDocumentQuestion
+          && pageId
+        ) {
+          loaded = await loadCanvas(documentCanvasId(pageId));
+          if (cancelled) return;
+        }
         const strokes = loaded?.strokes ?? [];
         const objects = loaded?.objects ?? [];
         setCanvasStrokes(strokes);
@@ -638,7 +656,6 @@ function WhiteboardPageViewInner() {
         );
         setCanvasLoading(false);
         // Fresh per-question board → place that question's image once.
-        const attachmentId = canvasAttachmentIdRef.current;
         if (attachmentId && strokes.length === 0 && objects.length === 0) {
           pendingQuestionSeedsRef.current.add(attachmentId);
         } else if (attachmentId) {
@@ -660,7 +677,7 @@ function WhiteboardPageViewInner() {
     return () => {
       cancelled = true;
     };
-  }, [canvasId, loadCanvas, canvasLoadAttempt]);
+  }, [canvasId, canvasLoadAttempt, firstAttachmentId, loadCanvas, page?.pageType, pageId]);
 
   const handleCanvasEditInteraction = useCallback(() => {
     setGradingAnnotations([]);
@@ -1335,11 +1352,13 @@ function WhiteboardPageViewInner() {
     };
     update();
     window.addEventListener("resize", update);
+    const stopViewport = subscribeVisualViewport(update);
     const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
     resizeObserver?.observe(el);
     return () => {
       window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", update);
+      stopViewport();
       resizeObserver?.disconnect();
       if (chromeAnimTimerRef.current) {
         clearTimeout(chromeAnimTimerRef.current);
@@ -1436,7 +1455,7 @@ function WhiteboardPageViewInner() {
     <div className="flex min-h-0 h-full w-full">
       <div
         className={`flex h-full min-h-0 shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          !foldersSidebarOpen ? "w-0 overflow-hidden" : "w-64"
+          !foldersSidebarOpen ? "w-0 overflow-hidden" : "w-56"
         }`}
         aria-hidden={!foldersSidebarOpen}
       >
@@ -1448,6 +1467,7 @@ function WhiteboardPageViewInner() {
           pages={pages}
           loading={treeLoading}
           currentPageId={pageId ?? null}
+          currentQuestionId={currentAttachment?.id ?? null}
           onOpenPage={openPage}
           onOpenQuestion={openQuestion}
           onEditPage={(target) => setEditingPage(target)}
@@ -1461,7 +1481,7 @@ function WhiteboardPageViewInner() {
 
       <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* ---- Top bar (kept) ---- */}
-        <div className="relative z-40 flex h-10 shrink-0 items-center gap-1 px-2 color-bg">
+        <div className="relative z-50 flex h-10 shrink-0 items-center gap-1 px-2 color-bg">
           <button
             type="button"
             className="shrink-0 rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
@@ -1554,14 +1574,10 @@ function WhiteboardPageViewInner() {
         <div ref={canvasAreaRef} data-wb-canvas-area className="relative min-h-0 flex-1 overflow-hidden">
           {page && page.id === pageId && page.pageType === "document" && !canvasLoading && !canvasLoadError ? (
             <DocumentEditor
-              key={page.id}
+              key={`${page.id}:${currentAttachment?.id ?? "page"}`}
               page={page}
               attachments={attachments}
               activeAttachmentId={currentAttachment?.id ?? null}
-              onSelectAttachment={(id) => {
-                const index = attachments.findIndex((attachment) => attachment.id === id);
-                if (index >= 0) setAttachmentIndex(index);
-              }}
               canvasStrokes={canvasStrokes}
               canvasObjects={canvasObjects}
               onStrokesChange={handleStrokesChange}

@@ -37,7 +37,7 @@ export default function Navbar () {
         if (path.startsWith('/games')) return 'games'
         if (path.startsWith('/whiteboards')) return 'whiteboards'
         if (path.startsWith('/practice')) return 'practice'
-        if (path.startsWith('/post')) return 'social/social'
+        if (path.startsWith('/post')) return 'community'
         if (path.startsWith('/viewProfile')) return 'viewProfile'
         return 'practice'
     }

@@ -173,90 +173,90 @@ export function useExamPapers(
           ? subjectIds
           : getFirestoreSubjectIds(subjectId!);
 
-        const allPapers: ExamPaper[] = [];
+        const perSubject = await Promise.all(
+          idsToLoad.map(async (subId) => {
+            const subjRef = doc(db, "questions", "leavingcert", "subjects", subId);
+            const subjSnap = await getDoc(subjRef);
+            if (!subjSnap.exists()) return [] as ExamPaper[];
 
-        for (const subId of idsToLoad) {
-          if (cancelled) return;
-          const subjRef = doc(db, "questions", "leavingcert", "subjects", subId);
-          const subjSnap = await getDoc(subjRef);
-          if (!subjSnap.exists()) continue;
-
-          let levelIds = (subjSnap.data()?.sections as string[] | undefined) ?? [];
-          const usingFallbackLevels =
-            levelIds.length === 0 && (subId === "maths" || subId === "applied-maths");
-          if (usingFallbackLevels) {
-            levelIds = ["higher", "ordinary"];
-          }
-
-          for (const level of levelIds) {
-            if (cancelled) return;
-            const levelRef = doc(
-              db,
-              "questions",
-              "leavingcert",
-              "subjects",
-              subId,
-              "levels",
-              level
-            );
-            const levelSnap = await getDoc(levelRef);
-            if (!usingFallbackLevels) {
-              if (!levelSnap.exists()) continue;
-              const levelData = levelSnap.data() ?? {};
-              const levelSections =
-                (levelData.sections as string[] | undefined) ?? [];
-              // Image catalogue levels use sections: ["questions"] — skip PDF papers path
-              if (levelData.contentMode === "image") continue;
-              if (!levelSections.includes("papers")) continue;
-            } else {
-              // Maths fallback: still skip if this level was migrated to images
-              if (levelSnap.exists() && levelSnap.data()?.contentMode === "image") {
-                continue;
-              }
+            let levelIds = (subjSnap.data()?.sections as string[] | undefined) ?? [];
+            const usingFallbackLevels =
+              levelIds.length === 0 && (subId === "maths" || subId === "applied-maths");
+            if (usingFallbackLevels) {
+              levelIds = ["higher", "ordinary"];
             }
 
-            const papersRef = collection(
-              db,
-              "questions",
-              "leavingcert",
-              "subjects",
-              subId,
-              "levels",
-              level,
-              "papers"
+            const perLevel = await Promise.all(
+              levelIds.map(async (level) => {
+                const levelRef = doc(
+                  db,
+                  "questions",
+                  "leavingcert",
+                  "subjects",
+                  subId,
+                  "levels",
+                  level
+                );
+                const levelSnap = await getDoc(levelRef);
+                if (!usingFallbackLevels) {
+                  if (!levelSnap.exists()) return [] as ExamPaper[];
+                  const levelData = levelSnap.data() ?? {};
+                  const levelSections =
+                    (levelData.sections as string[] | undefined) ?? [];
+                  // Image catalogue levels use sections: ["questions"] — skip PDF papers path
+                  if (levelData.contentMode === "image") return [] as ExamPaper[];
+                  if (!levelSections.includes("papers")) return [] as ExamPaper[];
+                } else if (levelSnap.exists() && levelSnap.data()?.contentMode === "image") {
+                  return [] as ExamPaper[];
+                }
+
+                const papersRef = collection(
+                  db,
+                  "questions",
+                  "leavingcert",
+                  "subjects",
+                  subId,
+                  "levels",
+                  level,
+                  "papers"
+                );
+                const papersSnap = await getDocs(papersRef);
+                const papers: ExamPaper[] = [];
+                papersSnap.docs.forEach((d) => {
+                  const data = d.data();
+                  const storagePath =
+                    typeof data.storagePath === "string" ? data.storagePath : "";
+                  const isPrediction = data.isPrediction === true;
+                  const isComposite = data.isComposite === true;
+                  if (isPrediction || isComposite) return;
+                  if (!storagePath) return;
+
+                  const year = typeof data.year === "number" ? data.year : undefined;
+                  const label =
+                    typeof data.label === "string" && data.label.trim()
+                      ? data.label.trim()
+                      : deriveLabel(d.id, year);
+                  const isFree = data.isFree === true;
+
+                  papers.push({
+                    id: d.id,
+                    label,
+                    storagePath,
+                    year,
+                    subject: subId,
+                    level,
+                    isFree,
+                  });
+                });
+                return papers;
+              })
             );
-            const papersSnap = await getDocs(papersRef);
-
-            papersSnap.docs.forEach((d) => {
-              const data = d.data();
-              const storagePath =
-                typeof data.storagePath === "string" ? data.storagePath : "";
-              const isPrediction = data.isPrediction === true;
-              const isComposite = data.isComposite === true;
-              if (isPrediction || isComposite) return;
-              if (!storagePath) return;
-
-              const year = typeof data.year === "number" ? data.year : undefined;
-              const label =
-                typeof data.label === "string" && data.label.trim()
-                  ? data.label.trim()
-                  : deriveLabel(d.id, year);
-              const isFree = data.isFree === true;
-
-              allPapers.push({
-                id: d.id,
-                label,
-                storagePath,
-                year,
-                subject: subId,
-                level,
-                isFree,
-              });
-            });
-          }
-        }
+            return perLevel.flat();
+          })
+        );
 
         if (cancelled) return;
+        const allPapers = perSubject.flat();
         allPapers.sort((a, b) => {
           const yearA = a.year ?? 0;
           const yearB = b.year ?? 0;

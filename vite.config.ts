@@ -27,4 +27,11 @@ export default defineConfig({
   optimizeDeps: {
     entries: ['index.html'],
   },
+  build: {
+    // Do NOT use aggressive manualChunks here: splitting firebase/react into
+    // shared vendor files created circular chunk imports (firebase ↔ vendor ↔
+    // react) that white-screened the Capacitor/production app on boot.
+    // Route-level React.lazy in Router.tsx is enough for code-splitting.
+    chunkSizeWarningLimit: 900,
+  },
 })

@@ -10,9 +10,13 @@ import { isIPad } from "../../utils/isIPad";
 import {
 	CANVAS_FINGER_POINTER_EVENT,
 	CANVAS_FINGER_SELECT_EVENT,
+	CANVAS_PAN_BY_EVENT,
 	PENCIL_DOUBLE_TAP_EVENT,
+	touchEventHasStylus,
 	type CanvasFingerPointerDetail,
+	type CanvasPanByDetail,
 } from "../../utils/pencilEvents";
+import { getVisualViewportBounds, subscribeVisualViewport } from "../../utils/visualViewport";
 import RenderMath from "../math/mathdisplay";
 import {
 	createBlankCanvasTextBox,
@@ -1090,7 +1094,12 @@ export default function DrawingCanvas({
 				const rect = (toolbarAnchorRef?.current ?? containerRef.current)?.getBoundingClientRect();
 				if (!rect) return;
 				if (topToolbar) {
-					setTopToolbarBounds({ left: rect.left, top: rect.top, width: rect.width });
+					const viewport = getVisualViewportBounds();
+					setTopToolbarBounds({
+						left: rect.left,
+						top: Math.max(rect.top, viewport.top),
+						width: rect.width,
+					});
 				} else {
 					setFixedToolbarLeft(rect.left + rect.width / 2);
 				}
@@ -1099,6 +1108,7 @@ export default function DrawingCanvas({
 		update();
 		window.addEventListener("resize", update);
 		document.addEventListener("scroll", update, true);
+		const stopViewport = subscribeVisualViewport(update);
 		const container = containerRef.current;
 		const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
 		if (container) resizeObserver?.observe(container);
@@ -1106,6 +1116,7 @@ export default function DrawingCanvas({
 			window.cancelAnimationFrame(frame);
 			window.removeEventListener("resize", update);
 			document.removeEventListener("scroll", update, true);
+			stopViewport();
 			resizeObserver?.disconnect();
 		};
 	}, [portalToolbar, toolbarAnchorRef, toolbarCenterX, topToolbar]);
@@ -1463,6 +1474,7 @@ export default function DrawingCanvas({
 		panY: number;
 	} | null>(null);
 	const pointerIdsRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+	const penPointerIdsRef = useRef(new Set<number>());
 	const holdStraightenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const currentStrokeRef = useRef<Stroke | null>(null);
 	const lastPenSampleRef = useRef<{ point: Point; timeMs: number } | null>(null);
@@ -1522,17 +1534,28 @@ export default function DrawingCanvas({
 		setExpandedCommentId((current) => (current === id ? null : id));
 	}, []);
 
-	// Native touch listeners with passive: false so preventDefault works on iOS (Apple Pencil)
+	// Native touch listeners with passive: false so preventDefault works on iOS.
+	// Whiteboard: lock all touches to the canvas (finger pans, pencil draws).
+	// Document: only lock Apple Pencil so a finger can still scroll the page.
 	useEffect(() => {
 		const canvas = canvasRef.current;
 		if (!canvas) return;
-		if (!allowViewportNavigation) return;
-		const preventTouch = (e: TouchEvent) => e.preventDefault();
+		const preventTouch = (e: TouchEvent) => {
+			if (allowViewportNavigation) {
+				e.preventDefault();
+				return;
+			}
+			if (touchEventHasStylus(e) || penPointerIdsRef.current.size > 0) {
+				e.preventDefault();
+			}
+		};
 		const opts: AddEventListenerOptions = { passive: false, capture: true };
 		canvas.addEventListener("touchstart", preventTouch, opts);
 		canvas.addEventListener("touchmove", preventTouch, opts);
-		canvas.addEventListener("touchend", preventTouch, opts);
-		canvas.addEventListener("touchcancel", preventTouch, opts);
+		if (allowViewportNavigation) {
+			canvas.addEventListener("touchend", preventTouch, opts);
+			canvas.addEventListener("touchcancel", preventTouch, opts);
+		}
 		return () => {
 			canvas.removeEventListener("touchstart", preventTouch, opts);
 			canvas.removeEventListener("touchmove", preventTouch, opts);
@@ -1833,6 +1856,7 @@ export default function DrawingCanvas({
 
 		redrawAtCurrentSize();
 		window.addEventListener("resize", redrawAtCurrentSize);
+		const stopViewport = subscribeVisualViewport(redrawAtCurrentSize);
 		const resizeObserver =
 			typeof ResizeObserver === "undefined"
 				? null
@@ -1842,6 +1866,7 @@ export default function DrawingCanvas({
 		return () => {
 			window.cancelAnimationFrame(frame);
 			window.removeEventListener("resize", redrawAtCurrentSize);
+			stopViewport();
 			resizeObserver?.disconnect();
 		};
 	}, [draw, drawObjects]);
@@ -2381,9 +2406,16 @@ export default function DrawingCanvas({
 		};
 		window.addEventListener(CANVAS_FINGER_SELECT_EVENT, enterSelectMode);
 		window.addEventListener(CANVAS_FINGER_POINTER_EVENT, handleExternalFingerPointer);
+		const handleCanvasPanBy = (event: Event) => {
+			const dy = (event as CustomEvent<CanvasPanByDetail>).detail?.dy;
+			if (!Number.isFinite(dy) || dy === 0) return;
+			setPan((current) => ({ ...current, y: current.y + dy }));
+		};
+		window.addEventListener(CANVAS_PAN_BY_EVENT, handleCanvasPanBy);
 		return () => {
 			window.removeEventListener(CANVAS_FINGER_SELECT_EVENT, enterSelectMode);
 			window.removeEventListener(CANVAS_FINGER_POINTER_EVENT, handleExternalFingerPointer);
+			window.removeEventListener(CANVAS_PAN_BY_EVENT, handleCanvasPanBy);
 		};
 	}, []);
 
@@ -2405,7 +2437,16 @@ export default function DrawingCanvas({
 
 	const handlePointerDown = useCallback(
 		(e: React.PointerEvent) => {
-			if (!allowViewportNavigation && e.pointerType === "touch") return;
+			if (e.pointerType === "pen") {
+				penPointerIdsRef.current.add(e.pointerId);
+				// Pencil owns the gesture: drop incidental finger/palm pointers so we
+				// don't pinch/pan AND ink at the same time.
+				panStartRef.current = null;
+				pinchStartRef.current = null;
+				pointerIdsRef.current.clear();
+			}
+			const ignoreTouch = e.pointerType === "touch" && (penPointerIdsRef.current.size > 0 || !allowViewportNavigation);
+			if (ignoreTouch) return;
 			e.preventDefault();
 			setIsPenPopoverOpen(false);
 			setIsEraserPopoverOpen(false);
@@ -2516,7 +2557,8 @@ export default function DrawingCanvas({
 
 	const handlePointerMove = useCallback(
 		(e: React.PointerEvent) => {
-			if (!allowViewportNavigation && e.pointerType === "touch") return;
+			const ignoreTouch = e.pointerType === "touch" && (penPointerIdsRef.current.size > 0 || !allowViewportNavigation);
+			if (ignoreTouch) return;
 			e.preventDefault();
 			const isIPadFinger = e.pointerType === "touch" && isIPad();
 			const isTextPlaceMode = editorMode === "text" && tool !== "lasso";
@@ -2622,7 +2664,9 @@ export default function DrawingCanvas({
 
 	const handlePointerUp = useCallback(
 		(e: React.PointerEvent) => {
-			if (!allowViewportNavigation && e.pointerType === "touch") return;
+			if (e.pointerType === "pen") penPointerIdsRef.current.delete(e.pointerId);
+			const ignoreTouch = e.pointerType === "touch" && (penPointerIdsRef.current.size > 0 || !allowViewportNavigation);
+			if (ignoreTouch && !pointerIdsRef.current.has(e.pointerId)) return;
 			e.preventDefault();
 			const canvas = canvasRef.current;
 			if (canvas) canvas.releasePointerCapture(e.pointerId);
@@ -3400,7 +3444,10 @@ export default function DrawingCanvas({
 					tabIndex={-1}
 					className="absolute inset-0 w-full h-full block"
 					onPointerDown={handlePointerDown}
-					onPointerDownCapture={(e) => e.preventDefault()}
+					onPointerDownCapture={(e) => {
+						if (e.pointerType === "touch" && !allowViewportNavigation) return;
+						e.preventDefault();
+					}}
 					onPointerMove={handlePointerMove}
 					onPointerUp={handlePointerUp}
 					onPointerCancel={handlePointerUp}

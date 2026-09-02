@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { Document } from "react-pdf";
+import "../../lib/pdfWorker";
 import PdfThemeWrapper from "../PdfThemeWrapper";
 
 export type PdfRegion = {

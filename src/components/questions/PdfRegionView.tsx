@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useContext } from "react";
 import { getDocument } from "pdfjs-dist";
+import "../../lib/pdfWorker";
 import { getDocumentCached } from "../../utils/pdfDocumentCache";
 import { OptionsContext } from "../../context/OptionsContext";
 import { PDF_THEME_COLORS, PDF_THEMING_ENABLED } from "../../utils/pdfThemeColors";

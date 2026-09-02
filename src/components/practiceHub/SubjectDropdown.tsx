@@ -33,8 +33,11 @@ type Props = {
   variant?: "grid" | "list";
   /** Replace the default subject trigger (e.g. a "View all" button). */
   renderTrigger?: (state: { open: boolean; onToggle: () => void }) => ReactNode;
-  /** Grid dropdown alignment. Defaults to centered under the trigger. */
-  dropdownAlign?: "center" | "start";
+  /**
+   * Grid dropdown alignment. Defaults to centered under the trigger.
+   * `start` left-aligns, flipping to right (`end`) when the panel would overflow the viewport.
+   */
+  dropdownAlign?: "center" | "start" | "end";
 };
 
 type ContextMenuState = {
@@ -232,7 +235,11 @@ export default function SubjectDropdown({
   const [favourites, setFavourites] = useState<string[]>(() => getFavouriteSubjectIds());
   const syncedFavourites = useSyncedFavouriteSubjectIds();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [gridAlign, setGridAlign] = useState<"center" | "start" | "end">(dropdownAlign);
   const containerRef = useRef<HTMLDivElement>(null);
+  const gridDropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [searchEditable, setSearchEditable] = useState(false);
   const isList = variant === "list";
 
   const options = subjects != null && subjects.length > 0 ? subjects : PRACTICE_HUB_SUBJECTS;
@@ -247,8 +254,54 @@ export default function SubjectDropdown({
   }, [syncedFavourites]);
 
   useEffect(() => {
-    if (!open) setContextMenu(null);
+    if (!open) {
+      setContextMenu(null);
+      setSearchEditable(false);
+      setSearch("");
+    }
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    if (searchEditable) {
+      searchInputRef.current?.focus();
+      return;
+    }
+    // Opening the dropdown must not focus search (that pops the mobile keyboard).
+    if (document.activeElement === searchInputRef.current) {
+      searchInputRef.current?.blur();
+    }
+  }, [open, searchEditable]);
+
+  const enableSearch = useCallback((e: React.PointerEvent) => {
+    if (searchEditable) return;
+    e.preventDefault();
+    setSearchEditable(true);
+  }, [searchEditable]);
+
+  useEffect(() => {
+    setGridAlign(dropdownAlign);
+  }, [dropdownAlign, open]);
+
+  useLayoutEffect(() => {
+    if (!open || isList || dropdownAlign !== "start") return;
+
+    const updateAlign = () => {
+      const trigger = containerRef.current;
+      const panel = gridDropdownRef.current;
+      if (!trigger || !panel) return;
+
+      const triggerRect = trigger.getBoundingClientRect();
+      const panelWidth = panel.offsetWidth;
+      const pad = 8;
+      const fitsStart = triggerRect.left + panelWidth <= window.innerWidth - pad;
+      setGridAlign(fitsStart ? "start" : "end");
+    };
+
+    updateAlign();
+    window.addEventListener("resize", updateAlign);
+    return () => window.removeEventListener("resize", updateAlign);
+  }, [open, isList, dropdownAlign, search, favourites]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -331,8 +384,15 @@ export default function SubjectDropdown({
   }, []);
 
   const searching = search.trim().length > 0;
-  const alignStart = dropdownAlign === "start";
-  const gridX = alignStart ? 0 : "-50%";
+  const alignStart = gridAlign === "start";
+  const alignEnd = gridAlign === "end";
+  const gridX = alignStart || alignEnd ? 0 : "-50%";
+  const gridAlignClass = alignStart
+    ? " practice-hub__subject-dropdown--grid-start"
+    : alignEnd
+      ? " practice-hub__subject-dropdown--grid-end"
+      : "";
+  const gridOrigin = alignStart ? "top left" : alignEnd ? "top right" : "top center";
 
   return (
     <div
@@ -383,15 +443,21 @@ export default function SubjectDropdown({
             transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
             style={{ transformOrigin: "top center" }}
           >
-            <div className="practice-hub__subject-search-wrap">
+            <div
+              className="practice-hub__subject-search-wrap"
+              onPointerDown={enableSearch}
+            >
               <LuSearch size={15} className="practice-hub__subject-search-icon" aria-hidden />
               <input
+                ref={searchInputRef}
                 type="text"
                 className="practice-hub__subject-search"
                 placeholder="Search subjects…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                autoFocus
+                readOnly={!searchEditable}
+                inputMode={searchEditable ? "search" : "none"}
+                autoComplete="off"
                 aria-label="Search subjects"
               />
             </div>
@@ -473,7 +539,8 @@ export default function SubjectDropdown({
         {open && !isList && (
           <motion.div
             key="subject-dropdown"
-            className={`practice-hub__subject-dropdown practice-hub__subject-dropdown--grid${alignStart ? " practice-hub__subject-dropdown--grid-start" : ""}`}
+            ref={gridDropdownRef}
+            className={`practice-hub__subject-dropdown practice-hub__subject-dropdown--grid${gridAlignClass}`}
             role="listbox"
             aria-label="Subjects"
             onScroll={() => setContextMenu(null)}
@@ -481,11 +548,15 @@ export default function SubjectDropdown({
             animate={{ opacity: 1, y: 0, scale: 1, x: gridX }}
             exit={{ opacity: 0, y: -6, scale: 0.98, x: gridX }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            style={{ transformOrigin: alignStart ? "top left" : "top center" }}
+            style={{ transformOrigin: gridOrigin }}
           >
-            <div className="flex shrink-0 items-center gap-2.5 border-b border-grey/15 px-4 py-3">
+            <div
+              className="flex shrink-0 items-center gap-2.5 border-b border-grey/15 px-4 py-3 cursor-text"
+              onPointerDown={enableSearch}
+            >
               <LuSearch size={18} className="shrink-0 color-txt-sub" aria-hidden />
               <input
+                ref={searchInputRef}
                 type="text"
                 className="min-w-0 flex-1 border-none bg-transparent py-1 text-base color-txt-main outline-none placeholder:color-txt-sub"
                 placeholder="Search subjects…"
@@ -494,7 +565,9 @@ export default function SubjectDropdown({
                   setSearch(e.target.value);
                   setContextMenu(null);
                 }}
-                autoFocus
+                readOnly={!searchEditable}
+                inputMode={searchEditable ? "search" : "none"}
+                autoComplete="off"
                 aria-label="Search subjects"
               />
             </div>

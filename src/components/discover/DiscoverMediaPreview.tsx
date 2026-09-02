@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Document, Page } from "react-pdf";
-import { LuBookOpen, LuFileText, LuLoader } from "react-icons/lu";
-import { getDiscoverVideoEmbed } from "../../lib/discoverMedia";
+import "../../lib/pdfWorker";
+import { LuBookOpen, LuExternalLink, LuFileText, LuLoader } from "react-icons/lu";
+import {
+  DISCOVER_VIDEO_IFRAME_ALLOW,
+  getDiscoverVideoEmbed,
+  getDiscoverVideoPlayerSrc,
+} from "../../lib/discoverMedia";
 import {
   getDiscoverPreviewKind,
   getPdfFirstPageDataUrl,
@@ -15,6 +20,7 @@ type DiscoverMediaPreviewProps = {
   resource: DiscoverPreviewSource;
   variant: "hero" | "thumb";
   className?: string;
+  onOpenResource?: () => void;
 };
 
 function PreviewFallback({
@@ -41,6 +47,46 @@ function PreviewFallback({
   );
 }
 
+function PreviewSpinner({ compact }: { compact?: boolean }) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center color-bg-grey-10 color-txt-sub">
+      <LuLoader size={compact ? 18 : 22} className="animate-spin" />
+    </div>
+  );
+}
+
+function CannotLoadFallback({ onOpenResource }: { onOpenResource?: () => void }) {
+  return (
+    <div className="w-full h-full min-h-[240px] flex flex-col items-center justify-center gap-4 color-bg-grey-10 px-6 text-center">
+      <p className="text-base font-semibold color-txt-main">Cannot Load Resource... Sorry :(</p>
+      {onOpenResource && (
+        <button
+          type="button"
+          onClick={onOpenResource}
+          className="inline-flex items-center gap-2 rounded-xl color-bg color-txt-accent px-4 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer"
+        >
+          <LuExternalLink size={15} />
+          Open Resource
+        </button>
+      )}
+    </div>
+  );
+}
+
+function OpenResourceCorner({ onOpenResource }: { onOpenResource?: () => void }) {
+  if (!onOpenResource) return null;
+  return (
+    <button
+      type="button"
+      onClick={onOpenResource}
+      className="absolute top-3 right-3 z-20 inline-flex items-center gap-2 rounded-xl color-bg color-txt-accent px-4 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer"
+    >
+      <LuExternalLink size={15} />
+      Open Resource
+    </button>
+  );
+}
+
 function CoverImage({
   src,
   compact,
@@ -52,16 +98,95 @@ function CoverImage({
   objectTop?: boolean;
   fallback: ReactNode;
 }) {
+  const imgRef = useRef<HTMLImageElement>(null);
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+    setLoaded(false);
+  }, [src]);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth > 0) setLoaded(true);
+  }, [src, loaded]);
+
   if (failed) return <>{fallback}</>;
   return (
-    <img
-      src={src}
-      alt=""
-      className={`w-full h-full ${objectTop ? "object-cover object-top" : "object-cover"}`}
-      loading={compact ? "lazy" : "eager"}
-      onError={() => setFailed(true)}
-    />
+    <div className="relative w-full h-full">
+      {!compact && !loaded && <PreviewSpinner />}
+      <img
+        ref={imgRef}
+        src={src}
+        alt=""
+        className={`w-full h-full ${objectTop ? "object-cover object-top" : "object-cover"} ${
+          loaded || compact ? "opacity-100" : "opacity-0"
+        }`}
+        loading={compact ? "lazy" : "eager"}
+        onLoad={() => setLoaded(true)}
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
+function IframePreview({
+  src,
+  title,
+  allow,
+  sandbox,
+  className = "",
+}: {
+  src: string;
+  title: string;
+  allow?: string;
+  sandbox?: string;
+  className?: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    setLoaded(false);
+    const timer = window.setTimeout(() => setLoaded(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, [src]);
+
+  return (
+    <div className={`relative w-full h-full ${className}`}>
+      {!loaded && <PreviewSpinner />}
+      <iframe
+        src={src}
+        title={title}
+        className="w-full h-full border-0 bg-white"
+        allow={allow}
+        sandbox={sandbox}
+        allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  );
+}
+
+function DirectVideoPreview({ src, className = "" }: { src: string; className?: string }) {
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    setLoaded(false);
+  }, [src]);
+
+  return (
+    <div className={`relative w-full h-full color-bg-grey-10 ${className}`}>
+      {!loaded && <PreviewSpinner />}
+      <video
+        src={src}
+        controls
+        playsInline
+        className="w-full h-full object-contain"
+        onLoadedData={() => setLoaded(true)}
+      />
+    </div>
   );
 }
 
@@ -118,7 +243,13 @@ function PdfThumb({ resource }: { resource: DiscoverPreviewSource }) {
   );
 }
 
-function PdfHero({ resource }: { resource: DiscoverPreviewSource }) {
+function PdfHero({
+  resource,
+  onOpenResource,
+}: {
+  resource: DiscoverPreviewSource;
+  onOpenResource?: () => void;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [file, setFile] = useState<Blob | string | null>(null);
   const [numPages, setNumPages] = useState(0);
@@ -140,6 +271,7 @@ function PdfHero({ resource }: { resource: DiscoverPreviewSource }) {
     let cancelled = false;
     setLoading(true);
     setFailed(false);
+    setFile(null);
     setNumPages(0);
     loadDiscoverPdfBlob(resource.pdfPath, resource.websiteUrl)
       .then((blob) => {
@@ -148,38 +280,26 @@ function PdfHero({ resource }: { resource: DiscoverPreviewSource }) {
           setFile(blob);
           return;
         }
-        if (resource.websiteUrl) {
-          setFile(resource.websiteUrl);
-          return;
-        }
         setFailed(true);
         setLoading(false);
       })
       .catch(() => {
         if (cancelled) return;
-        if (resource.websiteUrl) setFile(resource.websiteUrl);
-        else {
-          setFailed(true);
-          setLoading(false);
-        }
+        setFailed(true);
+        setLoading(false);
       });
     return () => {
       cancelled = true;
     };
   }, [resource.pdfPath, resource.websiteUrl]);
 
-  if (failed && resource.websiteUrl) {
-    return (
-      <iframe
-        src={resource.websiteUrl}
-        title={resource.title || "PDF"}
-        className="w-full h-full"
-      />
-    );
+  if (failed) {
+    return <CannotLoadFallback onOpenResource={onOpenResource} />;
   }
 
   return (
-    <div ref={containerRef} className="w-full h-full overflow-y-auto scrollbar-minimal color-bg-grey-10">
+    <div ref={containerRef} className="relative w-full h-full overflow-y-auto scrollbar-minimal color-bg-grey-10">
+      <OpenResourceCorner onOpenResource={onOpenResource} />
       {loading && !file && (
         <div className="w-full h-full min-h-[240px] flex items-center justify-center color-txt-sub">
           <LuLoader size={22} className="animate-spin" />
@@ -219,24 +339,11 @@ function PdfHero({ resource }: { resource: DiscoverPreviewSource }) {
   );
 }
 
-function WebsiteHero({ resource }: { resource: DiscoverPreviewSource }) {
-  const url = resource.websiteUrl?.trim() || "";
-  if (!url) return <PreviewFallback resource={resource} />;
-
-  return (
-    <iframe
-      src={url}
-      title={resource.title || "Website preview"}
-      className="w-full h-full bg-white"
-      sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-presentation"
-    />
-  );
-}
-
 export default function DiscoverMediaPreview({
   resource,
   variant,
   className = "",
+  onOpenResource,
 }: DiscoverMediaPreviewProps) {
   const kind = getDiscoverPreviewKind(resource);
   const videoEmbed = getDiscoverVideoEmbed(resource.websiteUrl);
@@ -262,31 +369,26 @@ export default function DiscoverMediaPreview({
   }
 
   if (kind === "video" && videoEmbed) {
-    const embedSrc = videoEmbed.embedUrl.replace("autoplay=1", "autoplay=0");
-    if (videoEmbed.kind === "direct") {
-      return (
-        <video
-          src={embedSrc}
-          controls
-          className={`w-full h-full object-contain color-bg-grey-10 ${className}`}
-        />
-      );
-    }
     return (
-      <iframe
-        src={embedSrc}
-        title={resource.title || "Video"}
-        className={`w-full h-full ${className}`}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-      />
+      <div className={`relative w-full h-full ${className}`}>
+        {videoEmbed.kind === "direct" ? (
+          <DirectVideoPreview src={videoEmbed.embedUrl} />
+        ) : (
+          <IframePreview
+            src={getDiscoverVideoPlayerSrc(videoEmbed, { autoplay: false })}
+            title={resource.title || "Video"}
+            allow={DISCOVER_VIDEO_IFRAME_ALLOW}
+          />
+        )}
+        <OpenResourceCorner onOpenResource={onOpenResource} />
+      </div>
     );
   }
 
   if (kind === "pdf") {
     return (
       <div className={`w-full h-full ${className}`}>
-        <PdfHero resource={resource} />
+        <PdfHero resource={resource} onOpenResource={onOpenResource} />
       </div>
     );
   }
@@ -294,7 +396,7 @@ export default function DiscoverMediaPreview({
   if (kind === "website") {
     return (
       <div className={`w-full h-full ${className}`}>
-        <WebsiteHero resource={resource} />
+        <CannotLoadFallback onOpenResource={onOpenResource} />
       </div>
     );
   }
@@ -309,7 +411,7 @@ export default function DiscoverMediaPreview({
 
   return (
     <div className={`w-full h-full ${className}`}>
-      <PreviewFallback resource={resource} />
+      <CannotLoadFallback onOpenResource={onOpenResource} />
     </div>
   );
 }

@@ -1,7 +1,15 @@
+import { Capacitor } from "@capacitor/core";
+
 export type DiscoverVideoEmbed =
   | { kind: "youtube"; id: string; embedUrl: string; titleHint?: string }
   | { kind: "vimeo"; id: string; embedUrl: string; titleHint?: string }
   | { kind: "direct"; embedUrl: string; titleHint?: string };
+
+/** Hosted HTTPS page so YouTube receives a valid Referer from the iPad WKWebView. */
+const YOUTUBE_IOS_PROXY = "https://app.certchamps.ie/youtube-embed.html";
+
+export const DISCOVER_VIDEO_IFRAME_ALLOW =
+  "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen";
 
 function safeUrl(input: string): URL | null {
   try {
@@ -58,7 +66,7 @@ export function getDiscoverVideoEmbed(url: string | undefined | null): DiscoverV
     return {
       kind: "youtube",
       id: youtubeId,
-      embedUrl: `https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`,
+      embedUrl: getYoutubeEmbedUrl(youtubeId, true),
     };
   }
 
@@ -67,7 +75,7 @@ export function getDiscoverVideoEmbed(url: string | undefined | null): DiscoverV
     return {
       kind: "vimeo",
       id: vimeoId,
-      embedUrl: `https://player.vimeo.com/video/${vimeoId}?autoplay=1`,
+      embedUrl: getVimeoEmbedUrl(vimeoId, true),
     };
   }
 
@@ -80,6 +88,45 @@ export function getDiscoverVideoEmbed(url: string | undefined | null): DiscoverV
 
 export function isDiscoverVideoUrl(url: string | undefined | null): boolean {
   return Boolean(getDiscoverVideoEmbed(url));
+}
+
+function getYoutubeEmbedUrl(id: string, autoplay: boolean): string {
+  const params = new URLSearchParams({
+    autoplay: autoplay ? "1" : "0",
+    rel: "0",
+    playsinline: "1",
+    modestbranding: "1",
+  });
+  return `https://www.youtube.com/embed/${id}?${params.toString()}`;
+}
+
+function getVimeoEmbedUrl(id: string, autoplay: boolean): string {
+  const params = new URLSearchParams({
+    autoplay: autoplay ? "1" : "0",
+    playsinline: "1",
+  });
+  return `https://player.vimeo.com/video/${id}?${params.toString()}`;
+}
+
+/** iframe src for the in-app player. Native iOS must go through the HTTPS proxy. */
+export function getDiscoverVideoPlayerSrc(
+  embed: DiscoverVideoEmbed,
+  options?: { autoplay?: boolean }
+): string {
+  const autoplay = options?.autoplay ?? false;
+  if (embed.kind === "youtube") {
+    if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+      const proxy = new URL(YOUTUBE_IOS_PROXY);
+      proxy.searchParams.set("v", embed.id);
+      proxy.searchParams.set("autoplay", autoplay ? "1" : "0");
+      return proxy.toString();
+    }
+    return getYoutubeEmbedUrl(embed.id, autoplay);
+  }
+  if (embed.kind === "vimeo") {
+    return getVimeoEmbedUrl(embed.id, autoplay);
+  }
+  return embed.embedUrl;
 }
 
 export function getDiscoverVideoPoster(url: string | undefined | null): string | null {

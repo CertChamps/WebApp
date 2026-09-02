@@ -8,6 +8,7 @@ import {
   createRef,
 } from "react";
 import { Document } from "react-pdf";
+import "../lib/pdfWorker";
 import PdfThemeWrapper from "./PdfThemeWrapper";
 import Lottie from "lottie-react";
 import loadingAnim from "../assets/animations/loading.json";

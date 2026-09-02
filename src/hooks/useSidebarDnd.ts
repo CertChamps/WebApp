@@ -17,6 +17,7 @@ import {
   type WhiteboardFolder,
   type WhiteboardPage,
 } from "../data/whiteboards";
+import { isIPad } from "../utils/isIPad";
 
 /** Delay before a sustained hover over a collapsed folder auto-expands it. */
 const HOLD_EXPAND_MS = 550;
@@ -41,6 +42,12 @@ type Options = {
 
 const sameItem = (a: SidebarDragItem, b: SidebarDragItem) => a.type === b.type && a.id === b.id;
 
+function samePreviewSlot(a: ResolvedMove, b: ResolvedMove): boolean {
+  if (a.destParentId !== b.destParentId) return false;
+  if (a.orderedIds.length !== b.orderedIds.length) return false;
+  return a.orderedIds.every((s, i) => sameItem(s, b.orderedIds[i]));
+}
+
 function sameIntent(a: SidebarDropIntent | null, b: SidebarDropIntent | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
@@ -63,6 +70,42 @@ const collisionDetection: CollisionDetection = (args) => {
   return nonRoot.length ? nonRoot : hits;
 };
 
+/** Sticky drop zones so tiny pointer jitter doesn't flip before/into/after. */
+function intentForRow(
+  data: Extract<DroppableData, { role: "row" }>,
+  rel: number,
+  prev: SidebarDropIntent | null
+): SidebarDropIntent {
+  const { item } = data;
+  if (data.isFolder) {
+    const stickyInto = prev?.kind === "into" && prev.folderId === item.id;
+    const stickyBefore = prev?.kind === "before" && sameItem(prev.target, item);
+    const stickyAfter = prev?.kind === "after" && sameItem(prev.target, item);
+    if (stickyInto) {
+      if (rel < 0.16) return { kind: "before", target: item };
+      if (rel > 0.84) return { kind: "after", target: item };
+      return { kind: "into", folderId: item.id };
+    }
+    if (stickyBefore) {
+      if (rel > 0.48) return { kind: "into", folderId: item.id };
+      return { kind: "before", target: item };
+    }
+    if (stickyAfter) {
+      if (rel < 0.52) return { kind: "into", folderId: item.id };
+      return { kind: "after", target: item };
+    }
+    if (rel < 0.22) return { kind: "before", target: item };
+    if (rel > 0.78) return { kind: "after", target: item };
+    return { kind: "into", folderId: item.id };
+  }
+
+  const stickyBefore = prev?.kind === "before" && sameItem(prev.target, item);
+  const stickyAfter = prev?.kind === "after" && sameItem(prev.target, item);
+  if (stickyBefore) return rel > 0.72 ? { kind: "after", target: item } : { kind: "before", target: item };
+  if (stickyAfter) return rel < 0.28 ? { kind: "before", target: item } : { kind: "after", target: item };
+  return rel < 0.5 ? { kind: "before", target: item } : { kind: "after", target: item };
+}
+
 /**
  * Drag-and-drop brain for the whiteboards sidebar tree.
  *
@@ -74,6 +117,7 @@ const collisionDetection: CollisionDetection = (args) => {
 export function useSidebarDnd({ folders, pages, isCollapsed, onExpand, onMove }: Options) {
   const [activeDrag, setActiveDrag] = useState<SidebarDragItem | null>(null);
   const [dropIntent, setDropIntent] = useState<SidebarDropIntent | null>(null);
+  const dropIntentRef = useRef<SidebarDropIntent | null>(null);
 
   // Live pointer position (viewport coords) — accurate even while the list auto-scrolls.
   const pointerY = useRef(0);
@@ -81,10 +125,20 @@ export function useSidebarDnd({ folders, pages, isCollapsed, onExpand, onMove }:
   const holdTimer = useRef<number | null>(null);
   const holdFolderId = useRef<string | null>(null);
 
+  const commitIntent = useCallback((next: SidebarDropIntent | null) => {
+    if (sameIntent(dropIntentRef.current, next)) return;
+    dropIntentRef.current = next;
+    setDropIntent(next);
+  }, []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      // Small threshold so clicks (open/rename/toggle) still work and don't start a drag.
-      activationConstraint: { distance: 6 },
+      // Desktop: a short move starts a drag so clicks still open/toggle.
+      // iPad: press-and-hold enters reorder so a tap still opens the item
+      // and a pan still scrolls the list.
+      activationConstraint: isIPad()
+        ? { delay: 420, tolerance: 10 }
+        : { distance: 6 },
     })
   );
 
@@ -122,6 +176,7 @@ export function useSidebarDnd({ folders, pages, isCollapsed, onExpand, onMove }:
 
   const reset = useCallback(() => {
     clearHold();
+    dropIntentRef.current = null;
     setActiveDrag(null);
     setDropIntent(null);
   }, [clearHold]);
@@ -136,39 +191,36 @@ export function useSidebarDnd({ folders, pages, isCollapsed, onExpand, onMove }:
       const dragData = e.active.data.current as { item?: SidebarDragItem } | undefined;
       const drag = dragData?.item;
       const over = e.over;
-      if (!drag || !over) {
-        setDropIntent(null);
-        clearHold();
-        return;
-      }
+      const prev = dropIntentRef.current;
+      // Gaps between rows briefly hit nothing / only the root catch-all.
+      // Keep the last slot so the indicator doesn't jump to the list end.
+      if (!drag || !over) return;
       const data = over.data.current as DroppableData | undefined;
-      if (!data) {
-        setDropIntent(null);
-        clearHold();
-        return;
-      }
+      if (!data) return;
 
       let intent: SidebarDropIntent | null = null;
       if (data.role === "root") {
+        if (prev && prev.kind !== "into-root") return;
         intent = { kind: "into-root" };
       } else if (data.role === "empty-folder") {
         intent = { kind: "into", folderId: data.folderId };
-      } else {
+      } else if (data.role === "row") {
         const rect = over.rect;
         const rel = rect.height > 0 ? (pointerY.current - rect.top) / rect.height : 0.5;
-        if (data.isFolder) {
-          if (rel < 0.33) intent = { kind: "before", target: data.item };
-          else if (rel > 0.66) intent = { kind: "after", target: data.item };
-          else intent = { kind: "into", folderId: data.item.id };
-        } else {
-          intent = rel < 0.5 ? { kind: "before", target: data.item } : { kind: "after", target: data.item };
-        }
+        intent = intentForRow(data, rel, prev);
       }
 
       // Drop invalid targets (self / cycle / no-op) so no misleading indicator shows.
-      if (intent && !resolveDrop(folders, pages, drag, intent)) intent = null;
+      const move = intent ? resolveDrop(folders, pages, drag, intent) : null;
+      if (intent && !move) {
+        if (prev && resolveDrop(folders, pages, drag, prev)) return;
+        intent = null;
+      } else if (intent && prev && move) {
+        const prevMove = resolveDrop(folders, pages, drag, prev);
+        if (prevMove && samePreviewSlot(prevMove, move)) intent = prev;
+      }
 
-      setDropIntent((prev) => (sameIntent(prev, intent) ? prev : intent));
+      commitIntent(intent);
 
       // Hover-to-expand only while intending to drop *into* a collapsed folder.
       if (intent && intent.kind === "into" && isCollapsed(intent.folderId)) {
@@ -177,20 +229,20 @@ export function useSidebarDnd({ folders, pages, isCollapsed, onExpand, onMove }:
         clearHold();
       }
     },
-    [folders, pages, isCollapsed, scheduleHold, clearHold]
+    [folders, pages, isCollapsed, scheduleHold, clearHold, commitIntent]
   );
 
   const handleDragEnd = useCallback(
     (_e: DragEndEvent) => {
       const drag = activeDrag;
-      const intent = dropIntent;
+      const intent = dropIntentRef.current;
       if (drag && intent) {
         const move = resolveDrop(folders, pages, drag, intent);
         if (move) onMove(drag, move);
       }
       reset();
     },
-    [activeDrag, dropIntent, folders, pages, onMove, reset]
+    [activeDrag, folders, pages, onMove, reset]
   );
 
   return {

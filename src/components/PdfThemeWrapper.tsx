@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useContext } from "react";
 import { Page } from "react-pdf";
+import "../lib/pdfWorker";
 import { OptionsContext } from "../context/OptionsContext";
 import { PDF_THEME_COLORS, PDF_THEMING_ENABLED } from "../utils/pdfThemeColors";
 import { applyThemeToCanvas } from "../utils/pdfThemeUtils";

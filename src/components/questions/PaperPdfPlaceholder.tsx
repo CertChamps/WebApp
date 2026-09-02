@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, Component, type ReactNode, type MutableRefObject } from "react";
 import { Document } from "react-pdf";
+import "../../lib/pdfWorker";
 import PdfThemeWrapper from "../PdfThemeWrapper";
 
 /** Default buffer; mobile uses 1. */
