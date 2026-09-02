@@ -10,6 +10,10 @@ admin.initializeApp();
 // docstring for the full wiring story.
 export { revenueCatWebhook, verifyAppleEntitlement } from "./iap/revenueCatWebhook";
 export { deleteAccount } from "./account/deleteAccount";
+export { notifyAdminsOnPendingDiscover } from "./moderation/notifyPendingDiscover";
+export { registerExpoPushToken, registerAdminPushToken } from "./push/registerExpoPushToken";
+export { notifyAuthorOnDiscoverComment } from "./push/notifyDiscoverComment";
+export { notifyAuthorOnDiscoverRating } from "./push/notifyDiscoverRating";
 export { captureWebsiteThumbnail } from "./discover/captureWebsiteThumbnail";
 export {
     deliverUserNotification,
@@ -21,6 +25,7 @@ const corsMiddleware = cors({ origin: true });
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_MODEL = "google/gemini-3-flash-preview";
+const OPENROUTER_TUTOR_MODEL = "google/gemini-3.5-flash-lite";
 
 const TUTOR_SYSTEM_PROMPT = `You are a study tutor helping a student with the single exam question described below.
 
@@ -481,7 +486,7 @@ function createMeteredChatFunction() {
                 "HTTP-Referer": "https://certchamps.com"
             },
             body: JSON.stringify({
-                model: OPENROUTER_MODEL,
+                model: purpose === "tutor" ? OPENROUTER_TUTOR_MODEL : OPENROUTER_MODEL,
                 messages: apiMessages,
                 max_tokens: maxTokens,
                 temperature: resolvedTemperature,

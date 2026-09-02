@@ -16,12 +16,14 @@ import {
 import SubjectDropdown from "../components/practiceHub/SubjectDropdown";
 import PageDetailsModal from "../components/whiteboards/PageDetailsModal";
 import FolderModal from "../components/whiteboards/FolderModal";
+import WhiteboardModal from "../components/whiteboards/WhiteboardModal";
 import { useWhiteboards } from "../hooks/useWhiteboards";
 import { useWhiteboardAIMatch, type AIProposal } from "../hooks/useWhiteboardAIMatch";
 import {
   getLastWhiteboardsSubject,
   setLastWhiteboardsSubject,
   type WhiteboardFolder,
+  type WhiteboardPage,
 } from "../data/whiteboards";
 import { getFavouriteSubjectIds, useSyncedFavouriteSubjectIds } from "../data/practiceHubSubjects";
 import { UserContext } from "../context/UserContext";
@@ -48,6 +50,18 @@ const AI_PAGE_TYPES: Array<{
   { id: "whiteboard", label: "Whiteboard", Icon: LuLayoutPanelTop },
   { id: "document", label: "Document", Icon: LuFileText },
 ];
+
+const surfaceClassName = "rounded-lg border-2 color-shadow color-bg transition-colors";
+
+const actionCardClassName =
+  "flex flex-col items-start gap-2 rounded-lg color-bg-grey-5 px-5 py-4 text-left transition-colors cursor-pointer hover:color-bg-grey-10 disabled:opacity-50 disabled:cursor-default";
+
+const recentRowClassName = `${surfaceClassName} flex w-full items-center gap-3 px-3 py-2.5 text-left cursor-pointer hover:color-bg-accent`;
+
+const surfacePanelClassName = `${surfaceClassName} px-4 py-3`;
+
+const secondaryButtonClassName =
+  "flex-1 rounded-lg border-2 color-shadow color-bg py-2 text-sm font-semibold color-txt-main hover:color-bg-accent transition-colors cursor-pointer";
 
 const fadeUp = {
   initial: { opacity: 0, y: 10 },
@@ -78,6 +92,14 @@ function FolderRecentGlyph({ folder }: { folder: WhiteboardFolder }) {
   return <LuFolder size={16} className="color-txt-accent" />;
 }
 
+function PageRecentGlyph({ page, size = 16 }: { page: WhiteboardPage; size?: number }) {
+  if (page.emoji) return <span aria-hidden>{page.emoji}</span>;
+  if (page.pageType === "document") {
+    return <LuFileText size={size} className="color-txt-accent" />;
+  }
+  return <LuLayoutPanelTop size={size} className="color-txt-accent" />;
+}
+
 export default function Whiteboards() {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
@@ -97,7 +119,7 @@ export default function Whiteboards() {
 
   const [showCreatePage, setShowCreatePage] = useState(false);
   const [editingFolder, setEditingFolder] = useState<WhiteboardFolder | null>(null);
-  const [showAllRecents, setShowAllRecents] = useState(false);
+  const [showRecentsModal, setShowRecentsModal] = useState(false);
 
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiPageType, setAiPageType] = useState<AIPageType>("whiteboard");
@@ -114,7 +136,7 @@ export default function Whiteboards() {
 
   useEffect(() => {
     setLastWhiteboardsSubject(subject);
-    setShowAllRecents(false);
+    setShowRecentsModal(false);
   }, [subject]);
 
   useEffect(() => {
@@ -227,9 +249,9 @@ export default function Whiteboards() {
     navigate(subject ? `/practice?subject=${encodeURIComponent(subject)}` : "/practice");
   }, [navigate, subject]);
 
-  const visibleRecents = useMemo(
-    () => (showAllRecents ? recentItems : recentItems.slice(0, RECENTS_PREVIEW_COUNT)),
-    [recentItems, showAllRecents]
+  const previewRecents = useMemo(
+    () => recentItems.slice(0, RECENTS_PREVIEW_COUNT),
+    [recentItems]
   );
 
   const actionsDisabled = !subject;
@@ -258,7 +280,7 @@ export default function Whiteboards() {
         <div className="grid w-full grid-cols-2 gap-4">
           <motion.button
             type="button"
-            className="flex flex-col items-start gap-2 rounded-lg color-bg-grey-5 px-5 py-4 text-left transition-colors cursor-pointer hover:color-bg-grey-10 disabled:opacity-50 disabled:cursor-default"
+            className={actionCardClassName}
             onClick={() => setShowCreatePage(true)}
             disabled={actionsDisabled}
             initial={{ opacity: 0, y: 12 }}
@@ -275,7 +297,7 @@ export default function Whiteboards() {
 
           <motion.button
             type="button"
-            className="flex flex-col items-start gap-2 rounded-lg color-bg-grey-5 px-5 py-4 text-left transition-colors cursor-pointer hover:color-bg-grey-10 disabled:opacity-50 disabled:cursor-default"
+            className={actionCardClassName}
             onClick={handleFindQuestions}
             disabled={actionsDisabled}
             initial={{ opacity: 0, y: 12 }}
@@ -410,7 +432,7 @@ export default function Whiteboards() {
             </div>
             <button
               type="button"
-              className="shrink-0 rounded-full p-2 color-txt-accent hover:color-bg-grey-10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
+              className="shrink-0 rounded-lg p-2 color-txt-accent hover:color-bg-grey-10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
               onClick={handleAISubmit}
               disabled={!hasAce || actionsDisabled || aiBusy || !aiPrompt.trim()}
               aria-label="Search questions"
@@ -431,7 +453,7 @@ export default function Whiteboards() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                className="flex items-start justify-between gap-3 rounded-lg color-bg-grey-5 px-4 py-3"
+                className={`flex items-start justify-between gap-3 ${surfacePanelClassName}`}
               >
                 <p className="text-sm color-txt-main">{aiState.message}</p>
                 <button
@@ -451,7 +473,7 @@ export default function Whiteboards() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                className="flex flex-col gap-2 rounded-lg color-bg-grey-5 px-4 py-3"
+                className={`flex flex-col gap-2 ${surfacePanelClassName}`}
               >
                 <p className="text-sm color-txt-main">{aiState.message}</p>
                 <div className="flex flex-col gap-1">
@@ -469,7 +491,7 @@ export default function Whiteboards() {
                 <div className="flex gap-2 pt-1">
                   <button
                     type="button"
-                    className="flex-1 rounded-lg py-2 text-sm font-semibold color-bg-grey-10 color-txt-main hover:opacity-80 transition-opacity cursor-pointer"
+                    className={secondaryButtonClassName}
                     onClick={aiDismiss}
                   >
                     Not quite
@@ -492,7 +514,7 @@ export default function Whiteboards() {
           </AnimatePresence>
         </motion.div>
 
-        {/* Recents — cute horizontal scroll */}
+        {/* Recents — one full-width row per item */}
         <motion.div
           className="flex w-full flex-col gap-3"
           initial={{ opacity: 0, y: 12 }}
@@ -501,95 +523,64 @@ export default function Whiteboards() {
         >
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-black color-txt-main">Recents</h2>
-            {recentItems.length > RECENTS_PREVIEW_COUNT && (
+            {subject && !loading && recentItems.length > 0 && (
               <button
                 type="button"
-                className="text-xs font-bold color-txt-accent hover:opacity-80 transition-opacity cursor-pointer"
-                onClick={() => setShowAllRecents((v) => !v)}
+                className="inline-flex items-center gap-1 text-xs font-bold color-txt-accent hover:opacity-80 transition-opacity cursor-pointer"
+                onClick={() => setShowRecentsModal(true)}
               >
-                {showAllRecents ? "Show less" : "See more"}
+                View all
+                <LuArrowRight size={14} />
               </button>
             )}
           </div>
 
           {!subject ? (
-            <p className="rounded-lg color-bg-grey-5 px-4 py-5 text-sm color-txt-sub">
+            <p className={`py-5 text-sm color-txt-sub ${surfacePanelClassName}`}>
               Choose a subject to see your recent pages and folders.
             </p>
           ) : loading ? (
-            <div className="flex gap-3 overflow-hidden">
+            <div className="flex w-full flex-col gap-1.5">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-28 w-28 shrink-0 rounded-lg color-bg-grey-5 animate-pulse" />
+                <div key={i} className={`h-11 w-full animate-pulse ${surfaceClassName}`} />
               ))}
             </div>
-          ) : recentItems.length === 0 ? null : showAllRecents ? (
-            <div className="flex flex-col gap-1.5">
-              {visibleRecents.map((item) =>
-                item.type === "page" ? (
-                  <button
-                    key={`page-${item.page.id}`}
-                    type="button"
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left color-txt-main hover:color-bg-grey-5 transition-colors cursor-pointer"
-                    onClick={() => openPage(item.page.id)}
-                  >
-                    <span className="flex size-8 shrink-0 items-center justify-center text-base leading-none color-txt-accent">
-                      {item.page.emoji ?? <LuFileText size={16} />}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">{item.page.name}</span>
-                    <span className="shrink-0 text-xs color-txt-sub">{editedAgo(item.timestamp)}</span>
-                  </button>
-                ) : (
-                  <button
-                    key={`folder-${item.folder.id}`}
-                    type="button"
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left color-txt-main hover:color-bg-grey-5 transition-colors cursor-pointer"
-                    onClick={() => setEditingFolder(item.folder)}
-                  >
-                    <span className="flex size-8 shrink-0 items-center justify-center text-base leading-none color-txt-accent">
-                      <FolderRecentGlyph folder={item.folder} />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">{item.folder.name}</span>
-                    <span className="shrink-0 text-xs color-txt-sub">{editedAgo(item.timestamp)}</span>
-                  </button>
-                )
-              )}
-            </div>
+          ) : recentItems.length === 0 ? (
+            <p className={`py-5 text-sm color-txt-sub ${surfacePanelClassName}`}>
+              Nothing here yet — create your first page to get going.
+            </p>
           ) : (
-            <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 scrollbar-minimal">
-              {visibleRecents.map((item) =>
+            <div className="flex w-full flex-col gap-1.5">
+              {previewRecents.map((item) =>
                 item.type === "page" ? (
                   <button
                     key={`page-${item.page.id}`}
                     type="button"
-                    className="flex h-28 w-28 shrink-0 flex-col items-start justify-between rounded-lg color-bg-grey-5 p-2.5 text-left transition-colors cursor-pointer hover:color-bg-grey-10"
+                    className={recentRowClassName}
                     onClick={() => openPage(item.page.id)}
                   >
-                    <span className="text-base leading-none color-txt-accent">
-                      {item.page.emoji ?? <LuFileText size={18} />}
+                    <span className="flex size-8 shrink-0 items-center justify-center text-base leading-none color-txt-accent">
+                      <PageRecentGlyph page={item.page} />
                     </span>
-                    <span className="flex w-full flex-col gap-0.5">
-                      <span className="w-full truncate text-xs font-bold color-txt-main">
-                        {item.page.name}
-                      </span>
-                      <span className="text-[10px] color-txt-sub">{editedAgo(item.timestamp)}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold color-txt-main">
+                      {item.page.name}
                     </span>
+                    <span className="shrink-0 text-xs color-txt-sub">{editedAgo(item.timestamp)}</span>
                   </button>
                 ) : (
                   <button
                     key={`folder-${item.folder.id}`}
                     type="button"
-                    className="flex h-28 w-28 shrink-0 flex-col items-start justify-between rounded-lg color-bg-grey-5 p-2.5 text-left transition-colors cursor-pointer hover:color-bg-grey-10"
+                    className={recentRowClassName}
                     onClick={() => setEditingFolder(item.folder)}
                   >
-                    <span className="text-base leading-none color-txt-accent">
+                    <span className="flex size-8 shrink-0 items-center justify-center text-base leading-none color-txt-accent">
                       <FolderRecentGlyph folder={item.folder} />
                     </span>
-                    <span className="flex w-full flex-col gap-0.5">
-                      <span className="w-full truncate text-xs font-bold color-txt-main">
-                        {item.folder.name}
-                      </span>
-                      <span className="text-[10px] color-txt-sub">{editedAgo(item.timestamp)}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold color-txt-main">
+                      {item.folder.name}
                     </span>
+                    <span className="shrink-0 text-xs color-txt-sub">{editedAgo(item.timestamp)}</span>
                   </button>
                 )
               )}
@@ -597,6 +588,48 @@ export default function Whiteboards() {
           )}
         </motion.div>
       </div>
+
+      {showRecentsModal && (
+        <WhiteboardModal title="Recents" onClose={() => setShowRecentsModal(false)}>
+          <div className="flex flex-col gap-1 px-1 pb-1">
+            {recentItems.map((item) =>
+              item.type === "page" ? (
+                <button
+                  key={`modal-page-${item.page.id}`}
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left color-txt-main hover:color-bg-accent transition-colors cursor-pointer"
+                  onClick={() => {
+                    setShowRecentsModal(false);
+                    openPage(item.page.id);
+                  }}
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center text-base leading-none color-txt-accent">
+                    <PageRecentGlyph page={item.page} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{item.page.name}</span>
+                  <span className="shrink-0 text-xs color-txt-sub">{editedAgo(item.timestamp)}</span>
+                </button>
+              ) : (
+                <button
+                  key={`modal-folder-${item.folder.id}`}
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left color-txt-main hover:color-bg-accent transition-colors cursor-pointer"
+                  onClick={() => {
+                    setShowRecentsModal(false);
+                    setEditingFolder(item.folder);
+                  }}
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center text-base leading-none color-txt-accent">
+                    <FolderRecentGlyph folder={item.folder} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{item.folder.name}</span>
+                  <span className="shrink-0 text-xs color-txt-sub">{editedAgo(item.timestamp)}</span>
+                </button>
+              )
+            )}
+          </div>
+        </WhiteboardModal>
+      )}
 
       {showCreatePage && subject && (
         <PageDetailsModal
