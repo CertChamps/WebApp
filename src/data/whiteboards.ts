@@ -3,11 +3,18 @@
  * Folders and pages are always scoped to a single subject (Practice Hub subject slug).
  */
 
-import type { PaperPageRegion } from "../hooks/useExamPapers";
-
 // ============================= ATTACHED QUESTIONS ============================= //
 
 export type AttachedQuestionSource = "bank" | "custom";
+
+/** One page region defining a snippet of the question on a PDF page. */
+export type PaperPageRegion = {
+  page: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+};
 
 /** Bank question snapshot — enough info to render the question + marking scheme without re-searching. */
 export type AttachedBankRef = {
@@ -370,26 +377,11 @@ export const WHITEBOARD_EMOJIS = [
 
 // ============================= SUBJECT PERSISTENCE ============================= //
 
-const LAST_SUBJECT_KEY = "whiteboards-last-subject";
-export const WHITEBOARDS_SUBJECT_CHANGED_EVENT = "whiteboards-subject-changed";
-
-export function getLastWhiteboardsSubject(): string | null {
-  try {
-    return localStorage.getItem(LAST_SUBJECT_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function setLastWhiteboardsSubject(subjectId: string | null): void {
-  try {
-    if (subjectId) localStorage.setItem(LAST_SUBJECT_KEY, subjectId);
-    else localStorage.removeItem(LAST_SUBJECT_KEY);
-    window.dispatchEvent(new Event(WHITEBOARDS_SUBJECT_CHANGED_EVENT));
-  } catch {
-    /* ignore */
-  }
-}
+export {
+  WHITEBOARDS_SUBJECT_CHANGED_EVENT,
+  getLastWhiteboardsSubject,
+  setLastWhiteboardsSubject,
+} from "./whiteboardSubject";
 
 /** Canvas storage id for a whiteboard page (namespaced so it can't collide with question ids). */
 export function whiteboardCanvasId(pageId: string): string {
@@ -406,9 +398,19 @@ export function documentCanvasId(pageId: string): string {
   return `document_canvas_${pageId}`;
 }
 
+/** Per-question ink on a document page (isolated like whiteboard questions). */
+export function documentQuestionCanvasId(pageId: string, attachmentId: string): string {
+  return `document_canvas_${pageId}_q_${attachmentId}`;
+}
+
 /** Rich-text storage id for a document page. */
 export function documentContentStorageId(pageId: string): string {
   return `document_content_${pageId}`;
+}
+
+/** Per-question rich-text on a document page. */
+export function documentQuestionContentStorageId(pageId: string, attachmentId: string): string {
+  return `document_content_${pageId}_q_${attachmentId}`;
 }
 
 export function newAttachmentId(): string {

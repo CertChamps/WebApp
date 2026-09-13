@@ -87,6 +87,10 @@ export default function QuestionTitlePicker({
   }, [open, updatePanelPosition]);
 
   useEffect(() => {
+    setOpen(false);
+  }, [currentIndex, titleKey]);
+
+  useEffect(() => {
     if (!open) return;
     const activeEl = listRef.current?.querySelector("[data-active='true']");
     activeEl?.scrollIntoView({ block: "nearest" });

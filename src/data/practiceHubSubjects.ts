@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase";
+import { DEFAULT_EXAM_CYCLE, type ExamCycleId } from "../lib/examCycle";
 
 /**
  * Leaving Cert subjects for Practice Hub.
@@ -9,6 +10,14 @@ import { auth, db } from "../../firebase";
  */
 
 export type SubjectOption = { id: string; label: string };
+
+export const ALL_SUBJECTS_OPTION: SubjectOption = { id: "all-subjects", label: "All subjects" };
+
+export function isAllSubjectsResource(subjectId?: string | null, subjectLabel?: string | null) {
+  const id = (subjectId ?? "").trim().toLowerCase();
+  const label = (subjectLabel ?? "").trim().toLowerCase();
+  return id === ALL_SUBJECTS_OPTION.id || label === "all subjects" || label === "general";
+}
 
 /** Slug from label for use as id (lowercase, hyphenated). */
 function slug(label: string): string {
@@ -174,7 +183,41 @@ function cleanSubjectIds(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((x): x is string => typeof x === "string") : [];
 }
 
-export function getFavouriteSubjectIds(): string[] {
+function encodeFavouriteId(cycle: ExamCycleId, subjectId: string): string {
+  return `${cycle}:${subjectId}`;
+}
+
+function parseFavouriteEntry(raw: string): { cycle: ExamCycleId; subjectId: string } {
+  if (raw.startsWith("junior:")) return { cycle: "junior", subjectId: raw.slice("junior:".length) };
+  if (raw.startsWith("leaving:")) return { cycle: "leaving", subjectId: raw.slice("leaving:".length) };
+  return { cycle: "leaving", subjectId: raw };
+}
+
+export function subjectIdsForCycle(stored: string[], cycle: ExamCycleId): string[] {
+  return [
+    ...new Set(
+      stored
+        .map(parseFavouriteEntry)
+        .filter((entry) => entry.cycle === cycle && entry.subjectId.length > 0)
+        .map((entry) => entry.subjectId)
+    ),
+  ];
+}
+
+function toggleFavouriteForCycle(subjectId: string, cycle: ExamCycleId, stored: string[]): string[] {
+  const already = stored.some((raw) => {
+    const entry = parseFavouriteEntry(raw);
+    return entry.cycle === cycle && entry.subjectId === subjectId;
+  });
+  const without = stored.filter((raw) => {
+    const entry = parseFavouriteEntry(raw);
+    return !(entry.cycle === cycle && entry.subjectId === subjectId);
+  });
+  if (already) return without;
+  return [...without, encodeFavouriteId(cycle, subjectId)];
+}
+
+function getStoredFavouriteIds(): string[] {
   try {
     const raw = localStorage.getItem(FAVOURITES_KEY);
     if (!raw) return [];
@@ -183,6 +226,10 @@ export function getFavouriteSubjectIds(): string[] {
   } catch {
     return [];
   }
+}
+
+export function getFavouriteSubjectIds(cycle: ExamCycleId = "leaving"): string[] {
+  return subjectIdsForCycle(getStoredFavouriteIds(), cycle);
 }
 
 export function setFavouriteSubjectIds(ids: string[], options: { syncRemote?: boolean } = {}): void {
@@ -200,10 +247,14 @@ export function setFavouriteSubjectIds(ids: string[], options: { syncRemote?: bo
   });
 }
 
-export function toggleFavourite(id: string, current: string[]): string[] {
-  const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-  setFavouriteSubjectIds(next);
-  return next;
+export function toggleFavourite(
+  id: string,
+  _current: string[] = [],
+  cycle: ExamCycleId = "leaving"
+): string[] {
+  const nextStored = toggleFavouriteForCycle(id, cycle, getStoredFavouriteIds());
+  setFavouriteSubjectIds(nextStored);
+  return subjectIdsForCycle(nextStored, cycle);
 }
 
 export function subjectMatchesFavourite(subject: string, favourites: string[]): boolean {
@@ -215,8 +266,8 @@ export function subjectMatchesFavourite(subject: string, favourites: string[]): 
   });
 }
 
-export function useSyncedFavouriteSubjectIds(): string[] {
-  const [ids, setIds] = useState<string[]>(() => getFavouriteSubjectIds());
+export function useSyncedFavouriteSubjectIds(cycle: ExamCycleId = DEFAULT_EXAM_CYCLE): string[] {
+  const [ids, setIds] = useState<string[]>(() => getFavouriteSubjectIds(cycle));
   const [uid, setUid] = useState<string | null>(() => auth.currentUser?.uid ?? null);
 
   useEffect(() => {
@@ -226,7 +277,7 @@ export function useSyncedFavouriteSubjectIds(): string[] {
   }, []);
 
   useEffect(() => {
-    const updateFromLocal = () => setIds(getFavouriteSubjectIds());
+    const updateFromLocal = () => setIds(getFavouriteSubjectIds(cycle));
     window.addEventListener(FAVOURITES_CHANGED_EVENT, updateFromLocal);
     window.addEventListener("storage", updateFromLocal);
 
@@ -244,14 +295,14 @@ export function useSyncedFavouriteSubjectIds(): string[] {
       const remote = cleanSubjectIds(data?.[FAVOURITES_FIELD]);
       if (hasRemoteFavourites) {
         setFavouriteSubjectIds(remote, { syncRemote: false });
-        setIds(remote);
+        setIds(subjectIdsForCycle(remote, cycle));
         return;
       }
 
-      const local = getFavouriteSubjectIds();
-      setIds(local);
-      if (local.length > 0) {
-        setFavouriteSubjectIds(local);
+      const localStored = getStoredFavouriteIds();
+      setIds(subjectIdsForCycle(localStored, cycle));
+      if (localStored.length > 0) {
+        setFavouriteSubjectIds(localStored);
       }
     });
 
@@ -260,7 +311,7 @@ export function useSyncedFavouriteSubjectIds(): string[] {
       window.removeEventListener(FAVOURITES_CHANGED_EVENT, updateFromLocal);
       window.removeEventListener("storage", updateFromLocal);
     };
-  }, [uid]);
+  }, [cycle, uid]);
 
   return ids;
 }

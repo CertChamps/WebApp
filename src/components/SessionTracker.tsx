@@ -5,7 +5,7 @@ import { useSessionTracking } from "../hooks/useSessionTracking";
 import {
   getLastWhiteboardsSubject,
   WHITEBOARDS_SUBJECT_CHANGED_EVENT,
-} from "../data/whiteboards";
+} from "../data/whiteboardSubject";
 
 const AUTH_PATHS = ["/", "/login", "/signup", "/verify-email"];
 

@@ -21,13 +21,13 @@ import { deleteObject, getDownloadURL, ref as storageRef } from "firebase/storag
 import { db, storage } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { isAdminUid } from "../constants/adminUids";
-import { notifyPostOwner } from "../lib/notifications";
 import NotificationBell from "../components/social/NotificationBell";
 import DiscoverFiltersModal, { type DiscoverSortBy } from "../components/discover/DiscoverFiltersModal";
 import DiscoverShareModal from "../components/discover/DiscoverShareModal";
 import {
     FAVOURITES_CHANGED_EVENT,
     getFavouriteSubjectIds,
+    isAllSubjectsResource,
     PRACTICE_HUB_SUBJECTS,
     useSyncedFavouriteSubjectIds,
 } from "../data/practiceHubSubjects";
@@ -47,6 +47,7 @@ import {
     LuUsers,
     LuX,
     LuChevronDown,
+    LuChevronLeft,
 } from "react-icons/lu";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import VideoEmbedModal from "../components/discover/VideoEmbedModal";
@@ -152,6 +153,16 @@ type DiscoverResource = {
     timestamp?: number | null;
     note?: DiscoverNote;
 };
+
+function resourceMatchesSelectedSubject(resource: DiscoverResource, selectedLabel?: string) {
+    if (!selectedLabel) return true;
+    if (isAllSubjectsResource(resource.note?.subjectId, resource.subject)) return true;
+    const needle = selectedLabel.toLowerCase();
+    return (
+        resource.subject.toLowerCase() === needle ||
+        resource.tags.some((tag) => tag.toLowerCase() === needle)
+    );
+}
 
 const MAX_COMMENT = 500;
 const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
@@ -417,6 +428,49 @@ function scoreDiscoverSearch(
     return score;
 }
 
+function firestoreToDiscoverNote(id: string, data: Record<string, any>): DiscoverNote {
+    return {
+        id,
+        userId: data.userId ?? "",
+        username: data.username ?? "Unknown",
+        userPicture: data.userPicture ?? null,
+        title: data.title ?? "",
+        description: data.description ?? "",
+        websiteUrl: data.websiteUrl ?? "",
+        resourceSource: data.resourceSource === "pdf" ? "pdf" : "website",
+        pdfPath: data.pdfPath ?? null,
+        pdfFileName: data.pdfFileName ?? null,
+        thumbnailUrl: data.thumbnailUrl ?? "",
+        thumbnailPath: data.thumbnailPath ?? null,
+        uploadedThumbnailUrl: data.uploadedThumbnailUrl ?? null,
+        uploadedThumbnailPath: data.uploadedThumbnailPath ?? null,
+        thumbnailStatus: data.thumbnailStatus ?? "none",
+        moderationStatus: data.moderationStatus ?? "approved",
+        faviconUrl: data.faviconUrl ?? null,
+        siteName: data.siteName ?? "",
+        subjectId: data.subjectId ?? undefined,
+        subjectLabel: data.subjectLabel ?? undefined,
+        level: data.level ?? undefined,
+        levels: Array.isArray(data.levels) ? data.levels : [],
+        resourceType: data.resourceType ?? undefined,
+        resourceTypes: Array.isArray(data.resourceTypes) ? data.resourceTypes : [],
+        topics: Array.isArray(data.topics) ? data.topics : [],
+        likeCount: typeof data.likeCount === "number" ? data.likeCount : 0,
+        commentCount: typeof data.commentCount === "number" ? data.commentCount : 0,
+        ratingAverage: typeof data.ratingAverage === "number" ? data.ratingAverage : 0,
+        ratingCount: typeof data.ratingCount === "number" ? data.ratingCount : 0,
+        timestamp: data.timestamp?.seconds ?? null,
+        linkedQuestionId: data.linkedQuestionId ?? undefined,
+        linkedQuestionName: data.linkedQuestionName ?? undefined,
+        linkedQuestionPracticeUrl: data.linkedQuestionPracticeUrl ?? undefined,
+        linkedQuestionSubjectId: data.linkedQuestionSubjectId ?? undefined,
+        linkedQuestionSubjectLabel: data.linkedQuestionSubjectLabel ?? undefined,
+        linkedQuestionLevel: data.linkedQuestionLevel ?? undefined,
+        linkedQuestionTopic: data.linkedQuestionTopic ?? undefined,
+        linkedQuestionSource: data.linkedQuestionSource ?? undefined,
+    };
+}
+
 function noteToResource(note: DiscoverNote): DiscoverResource {
     const types = normalizeResourceTypes(note.resourceTypes, note.resourceType);
     const type = types[0] ?? inferResourceType(note);
@@ -541,12 +595,36 @@ export default function Discover() {
     }, [syncedFavouriteSubjectIds]);
 
     useEffect(() => {
-        if (!linkedQuestion) return;
-        if (linkedQuestion.subjectId) {
-            setSelectedSubjectId(linkedQuestion.subjectId);
+        if (linkedQuestion) {
+            if (linkedQuestion.subjectId) {
+                setSelectedSubjectId(linkedQuestion.subjectId);
+            }
+            if (searchParams.get("share") === "1") setShowForm(true);
         }
-        if (searchParams.get("share") === "1") setShowForm(true);
     }, [linkedQuestion, searchParams]);
+
+    useEffect(() => {
+        const resourceId = searchParams.get("resource")?.trim();
+        if (!resourceId) return;
+        const note = notes.find((entry) => entry.id === resourceId);
+        if (note && note.moderationStatus === "approved") {
+            setSelectedResource(noteToResource(note));
+            return;
+        }
+        if (loading) return;
+
+        let cancelled = false;
+        getDoc(doc(db, "discover-notes", resourceId)).then((snap) => {
+            if (cancelled || !snap.exists()) return;
+            const fetched = firestoreToDiscoverNote(snap.id, snap.data());
+            if (fetched.moderationStatus === "approved") {
+                setSelectedResource(noteToResource(fetched));
+            }
+        }).catch((err) => {
+            console.error("Discover resource lookup error:", err);
+        });
+        return () => { cancelled = true; };
+    }, [searchParams, notes, loading]);
 
     useEffect(() => {
         const q = query(
@@ -726,6 +804,60 @@ export default function Discover() {
         return () => unsub();
     }, []);
 
+    useEffect(() => {
+        setCommentText("");
+        setCommentComposerOpen(false);
+        setShowDeleteConfirm(false);
+        if (!selectedResource?.note) {
+            setComments([]);
+            setUserRating(null);
+            setUserSaved(false);
+            return;
+        }
+
+        const commentsQuery = query(
+            collection(db, "discover-notes", selectedResource.id, "comments"),
+            orderBy("timestamp", "asc"),
+            limit(100)
+        );
+        const unsubComments = onSnapshot(commentsQuery, (snap) => {
+            setComments(
+                snap.docs.map((d) => {
+                    const data = d.data();
+                    return {
+                        id: d.id,
+                        userId: data.userId ?? "",
+                        username: data.username ?? "Unknown",
+                        userPicture: data.userPicture ?? null,
+                        text: data.text ?? "",
+                        timestamp: data.timestamp?.seconds ?? null,
+                    };
+                })
+            );
+        });
+
+        let cancelled = false;
+        if (user?.uid) {
+            getDoc(doc(db, "discover-notes", selectedResource.id, "ratings", user.uid)).then((snap) => {
+                if (!cancelled) {
+                    const value = snap.data()?.value;
+                    setUserRating(typeof value === "number" ? value : null);
+                }
+            });
+            getDoc(doc(db, "discover-notes", selectedResource.id, "likes", user.uid)).then((snap) => {
+                if (!cancelled) setUserSaved(snap.exists());
+            });
+        } else {
+            setUserRating(null);
+            setUserSaved(false);
+        }
+
+        return () => {
+            cancelled = true;
+            unsubComments();
+        };
+    }, [selectedResource?.id, selectedResource?.note, user?.uid]);
+
     const favouriteSubjects = useMemo(() => {
         const byId = new Map(PRACTICE_HUB_SUBJECTS.map((subject) => [subject.id, subject]));
         return favouriteSubjectIds.map((id) => byId.get(id)).filter(Boolean);
@@ -751,7 +883,20 @@ export default function Discover() {
         aiSearchGen.current += 1;
         setAiSearching(false);
         setAiSearchEnabled(false);
+        setSearchLoading(false);
+        if (searchDelayRef.current) {
+            window.clearTimeout(searchDelayRef.current);
+            searchDelayRef.current = null;
+        }
+    }, []);
+
+    const clearSearchResults = useCallback(() => {
+        aiSearchGen.current += 1;
+        setSearchTerm("");
+        setSubmittedQuery(null);
         setAiResultIds(null);
+        setAiSearching(false);
+        setAiSearchEnabled(false);
         setSearchLoading(false);
         if (searchDelayRef.current) {
             window.clearTimeout(searchDelayRef.current);
@@ -767,12 +912,8 @@ export default function Discover() {
             return;
         }
 
-        const selectedSubjectLabel = selectedSubject?.label.toLowerCase();
         const candidateResources = resources.filter((resource) => {
-            const matchesSubject = selectedSubjectLabel
-                ? resource.subject.toLowerCase() === selectedSubjectLabel ||
-                  resource.tags.some((tag) => tag.toLowerCase() === selectedSubjectLabel)
-                : true;
+            const matchesSubject = resourceMatchesSelectedSubject(resource, selectedSubject?.label);
             const matchesType =
                 selectedTypes.length === 0 ||
                 (resource.types ?? [resource.type]).some((type) => selectedTypes.includes(type));
@@ -880,16 +1021,12 @@ export default function Discover() {
     }, [aiSearchEnabled, aiSearching, clearAiSearch]);
 
     const filteredResources = useMemo(() => {
-        const selectedSubjectLabel = selectedSubject?.label.toLowerCase();
         const aiOrder = aiResultIds ? new Map(aiResultIds.map((id, index) => [id, index])) : null;
         const searchQuery = (submittedQuery ?? "").trim().toLowerCase();
         const searchTokens = tokenizeSearch(searchQuery);
 
         const scored = resources.flatMap((resource) => {
-            const matchesSubject = selectedSubjectLabel
-                ? resource.subject.toLowerCase() === selectedSubjectLabel ||
-                  resource.tags.some((tag) => tag.toLowerCase() === selectedSubjectLabel)
-                : true;
+            const matchesSubject = resourceMatchesSelectedSubject(resource, selectedSubject?.label);
             const matchesType =
                 selectedTypes.length === 0 ||
                 (resource.types ?? [resource.type]).some((type) => selectedTypes.includes(type));
@@ -933,7 +1070,7 @@ export default function Discover() {
 
     const recommendedResources = useMemo(() => {
         const base = filteredResources.filter((resource) => {
-            if (selectedSubject) return resource.subject.toLowerCase() === selectedSubject.label.toLowerCase();
+            if (selectedSubject) return resourceMatchesSelectedSubject(resource, selectedSubject.label);
             if (favouriteSubjectLabels.size === 0) return true;
             return favouriteSubjectLabels.has(resource.subject.toLowerCase());
         });
@@ -953,13 +1090,14 @@ export default function Discover() {
         const exact = filteredResources.filter((resource) =>
             noteLinksQuestion(resource.note, linkedQuestion.id)
         );
-        const subjectId = linkedQuestion.subjectId?.toLowerCase();
-        const subjectLabel = linkedQuestion.subjectLabel?.toLowerCase();
         const fallback = filteredResources.filter((resource) => {
             if (noteLinksQuestion(resource.note, linkedQuestion.id)) return false;
             return (
-                (subjectId && resource.note?.subjectId?.toLowerCase() === subjectId) ||
-                (subjectLabel && resource.subject.toLowerCase() === subjectLabel)
+                resourceMatchesSelectedSubject(resource, linkedQuestion.subjectLabel) ||
+                Boolean(
+                    linkedQuestion.subjectId &&
+                    resource.note?.subjectId?.toLowerCase() === linkedQuestion.subjectId.toLowerCase()
+                )
             );
         });
         return { exact: exact.slice(0, 12), fallback: fallback.slice(0, 12) };
@@ -1000,15 +1138,6 @@ export default function Discover() {
         setDeleting(true);
         try {
             await deleteDoc(doc(db, "discover-notes", note.id));
-            if (isAdmin && note.userId && note.userId !== user.uid) {
-                notifyPostOwner({
-                    ownerId: note.userId,
-                    actorId: user.uid,
-                    type: "post-removed",
-                    postId: note.id,
-                    postTitle: note.title,
-                });
-            }
             const storagePaths = [note.uploadedThumbnailPath, note.thumbnailPath, note.pdfPath].filter(Boolean) as string[];
             await Promise.all(storagePaths.map((path) =>
                 deleteObject(storageRef(storage, path)).catch((err) => {
@@ -1103,7 +1232,6 @@ export default function Discover() {
         const ratingRef = doc(db, "discover-notes", selectedResource.id, "ratings", user.uid);
         const resourceRef = doc(db, "discover-notes", selectedResource.id);
         try {
-            let isNewRating = false;
             await runTransaction(db, async (transaction) => {
                 const resourceSnap = await transaction.get(resourceRef);
                 const ratingSnap = await transaction.get(ratingRef);
@@ -1111,7 +1239,6 @@ export default function Discover() {
                 const currentAverage = data?.ratingAverage ?? 0;
                 const currentCount = data?.ratingCount ?? 0;
                 const previousValue = ratingSnap.exists() ? ratingSnap.data()?.value : null;
-                isNewRating = typeof previousValue !== "number";
                 const nextCount = typeof previousValue === "number" ? currentCount : currentCount + 1;
                 const currentTotal = currentAverage * currentCount;
                 const nextTotal = typeof previousValue === "number"
@@ -1130,15 +1257,6 @@ export default function Discover() {
                 });
             });
             setUserRating(value);
-            if (isNewRating) {
-                notifyPostOwner({
-                    ownerId: selectedResource.userId,
-                    actorId: user.uid,
-                    type: "post-rating",
-                    postId: selectedResource.id,
-                    postTitle: selectedResource.title,
-                });
-            }
         } catch (error) {
             console.error("Failed to rate resource:", error);
             setUserRating(previousRating);
@@ -1164,13 +1282,6 @@ export default function Discover() {
                 transaction.update(doc(db, "discover-notes", selectedResource.id), {
                     commentCount: increment(1),
                 });
-            });
-            notifyPostOwner({
-                ownerId: selectedResource.userId,
-                actorId: user.uid,
-                type: "post-comment",
-                postId: selectedResource.id,
-                postTitle: selectedResource.title,
             });
             setCommentText("");
             setCommentComposerOpen(false);
@@ -1301,9 +1412,25 @@ export default function Discover() {
         </div>
     );
 
-    const renderResourceSection = (title: string, sectionResources: DiscoverResource[]) => (
+    const renderResourceSection = (
+        title: string,
+        sectionResources: DiscoverResource[],
+        options?: { showBack?: boolean }
+    ) => (
         <section className="space-y-3">
-            <h2 className="text-lg font-bold color-txt-main">{title}</h2>
+            <div className="flex items-center gap-2">
+                {options?.showBack && (
+                    <button
+                        type="button"
+                        onClick={clearSearchResults}
+                        className="inline-flex items-center justify-center rounded-md p-1 color-txt-sub hover:color-txt-main hover:color-bg-grey-5 cursor-pointer"
+                        aria-label="Back to Discover"
+                    >
+                        <LuChevronLeft size={22} strokeWidth={2.25} />
+                    </button>
+                )}
+                <h2 className="text-lg font-bold color-txt-main">{title}</h2>
+            </div>
 
             {sectionResources.length === 0 ? (
                 <div className="rounded-2xl color-bg-grey-5 p-8 text-center space-y-3">
@@ -1339,7 +1466,14 @@ export default function Discover() {
                 <div className="flex items-center justify-between gap-3">
                     <button
                         type="button"
-                        onClick={() => setSelectedResource(null)}
+                        onClick={() => {
+                            setSelectedResource(null);
+                            if (searchParams.get("resource")) {
+                                const next = new URLSearchParams(searchParams);
+                                next.delete("resource");
+                                setSearchParams(next, { replace: true });
+                            }
+                        }}
                         className="inline-flex items-center gap-2 text-sm font-semibold color-txt-sub hover:color-txt-main cursor-pointer"
                     >
                         <LuArrowLeft size={16} />
@@ -1360,17 +1494,16 @@ export default function Discover() {
                 <div className="relative">
                     <div className="space-y-4 lg:pr-[23.5rem] xl:pr-[27.5rem]">
                         <div className="relative min-h-[240px] h-[min(68vh,42rem)] rounded-2xl color-bg-grey-10 overflow-hidden">
-                            <DiscoverMediaPreview key={resource.id} resource={resource} variant="hero" />
-                            {canOpenResource && (
-                                <button
-                                    type="button"
-                                    onClick={() => void handleVisit(resource.websiteUrl, resource)}
-                                    className="absolute top-3 right-3 z-20 inline-flex items-center gap-2 rounded-xl color-bg color-txt-accent px-4 py-2 text-sm font-semibold shadow-md hover:opacity-90 cursor-pointer"
-                                >
-                                    <LuExternalLink size={15} />
-                                    Open Resource
-                                </button>
-                            )}
+                            <DiscoverMediaPreview
+                                key={resource.id}
+                                resource={resource}
+                                variant="hero"
+                                onOpenResource={
+                                    canOpenResource
+                                        ? () => void handleVisit(resource.websiteUrl, resource)
+                                        : undefined
+                                }
+                            />
                         </div>
 
                         <div className="flex items-start gap-2 min-w-0">
@@ -1751,12 +1884,7 @@ export default function Discover() {
                             {(submittedQuery || searchTerm) && !aiSearching && (
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setSearchTerm("");
-                                        setSubmittedQuery(null);
-                                        setAiResultIds(null);
-                                        setSearchLoading(false);
-                                    }}
+                                    onClick={clearSearchResults}
                                     className="ml-1 color-txt-sub hover:color-txt-main cursor-pointer"
                                     aria-label="Clear search"
                                 >
@@ -1968,12 +2096,14 @@ export default function Discover() {
                         {aiResultIds !== null ? (
                             renderResourceSection(
                                 "AI search results",
-                                filteredResources
+                                filteredResources,
+                                { showBack: true }
                             )
                         ) : submittedQuery ? (
                             renderResourceSection(
                                 "Search results",
-                                filteredResources
+                                filteredResources,
+                                { showBack: true }
                             )
                         ) : (
                             <>

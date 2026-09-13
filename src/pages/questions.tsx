@@ -53,7 +53,7 @@ import { motion } from "framer-motion";
 import PaperPdfPlaceholder, { getQuestionScrollOffset } from "../components/questions/PaperPdfPlaceholder";
 import PaperQuestionRegionPanel from "../components/questions/PaperQuestionRegionPanel";
 import CroppedPdfRegions from "../components/questions/CroppedPdfRegions";
-import ZoomableQuestionImage from "../components/questions/ZoomableQuestionImage";
+import ZoomableQuestionImage, { ZoomableSurface } from "../components/questions/ZoomableQuestionImage";
 import QuestionAudioPlayer from "../components/questions/QuestionAudioPlayer";
 import FloatingLogTables from "../components/FloatingLogTables";
 import FloatingCalculator from "../components/calculator/FloatingCalculator";
@@ -2594,22 +2594,24 @@ export default function Questions() {
                                                     transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
                                                 >
                                                     <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto scrollbar-hide py-2 pb-2 pr-2 items-center pointer-events-auto">
-                                                        <CroppedPdfRegions
-                                                            file={paperBlob}
-                                                            regions={currentPaperQuestion!.pageRegions!.map((r) => ({
-                                                                page: r.page,
-                                                                x: r.x ?? 0,
-                                                                y: r.y ?? 0,
-                                                                width: r.width ?? 595,
-                                                                height: r.height ?? 150,
-                                                            }))}
-                                                            pageWidth={snippetWidth}
-                                                            onDocumentLoadSuccess={() => setSnippetPdfLoaded(true)}
-                                                            onDocumentLoadError={(err) => {
-                                                                setPaperLoadError(err.message ?? "Failed to display PDF");
-                                                                setSnippetPdfLoaded(true);
-                                                            }}
-                                                        />
+                                                        <ZoomableSurface>
+                                                            <CroppedPdfRegions
+                                                                file={paperBlob}
+                                                                regions={currentPaperQuestion!.pageRegions!.map((r) => ({
+                                                                    page: r.page,
+                                                                    x: r.x ?? 0,
+                                                                    y: r.y ?? 0,
+                                                                    width: r.width ?? 595,
+                                                                    height: r.height ?? 150,
+                                                                }))}
+                                                                pageWidth={snippetWidth}
+                                                                onDocumentLoadSuccess={() => setSnippetPdfLoaded(true)}
+                                                                onDocumentLoadError={(err) => {
+                                                                    setPaperLoadError(err.message ?? "Failed to display PDF");
+                                                                    setSnippetPdfLoaded(true);
+                                                                }}
+                                                            />
+                                                        </ZoomableSurface>
                                                         <div className="pt-2 flex justify-center" style={{ width: snippetWidth }}>
                                                                 <button
                                                                     type="button"

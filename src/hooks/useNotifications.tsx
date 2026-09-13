@@ -4,6 +4,18 @@ import { updateDoc, arrayRemove, arrayUnion, doc, Timestamp } from 'firebase/fir
 import { db }from '../../firebase'
 import useFetch from './useFetch';
 
+function isSameNotification(a: any, b: any) {
+    if (a?.id && b?.id) return a.id === b.id;
+    return a?.timestamp?.seconds === b?.timestamp?.seconds
+        && a?.timestamp?.nanoseconds === b?.timestamp?.nanoseconds;
+}
+
+function notificationTime(noti: any) {
+    if (noti?.timestamp?.toMillis) return noti.timestamp.toMillis();
+    if (typeof noti?.timestamp?.seconds === "number") return noti.timestamp.seconds * 1000;
+    return 0;
+}
+
 
 
 export default function useNotifications() {
@@ -42,25 +54,34 @@ export default function useNotifications() {
                             deckID: noti.deckID
                         }
                     }
-                    // POST COMMENT / RATING NOTIFICATIONS
-                    else if (noti.type == 'post-comment' || noti.type == 'post-rating') {
-                        if (noti.from) {
-                            const { username, picture } = await fetchUser(noti.from)
-                            return {
-                                ...noti,
-                                username,
-                                picture,
-                                timeago: timeAgoFormatter(noti.timestamp),
-                            }
-                        }
-                        return {
+                    else if (
+                        noti.type == 'post-comment' ||
+                        noti.type == 'post-rating' ||
+                        noti.type == 'post-approved' ||
+                        noti.type == 'post-rejected' ||
+                        noti.type == 'post-removed'
+                    ) {
+                        const extra: any = {
                             ...noti,
                             timeago: timeAgoFormatter(noti.timestamp),
                         }
+                        if (noti.from) {
+                            const actor = await fetchUser(noti.from)
+                            if (actor) {
+                                extra.username = actor.username || noti.fromName || extra.username
+                                extra.fromName = extra.username
+                                extra.picture = actor.picture || extra.picture
+                            }
+                        }
+                        return extra
                     }
-                    return noti
+                    return {
+                        ...noti,
+                        timeago: timeAgoFormatter(noti.timestamp),
+                    }
                 })
                 const notisArr = await Promise.all(notiPromises)
+                notisArr.sort((a: any, b: any) => notificationTime(b) - notificationTime(a))
                 setNotis(notisArr)
             } else {
                 setNotis([])
@@ -84,19 +105,17 @@ export default function useNotifications() {
 
         // display second 
         if (seconds < 5) return 'just now';
-        if (seconds < 60) return `${seconds}s`;
+        if (seconds < 60) return `${seconds}s ago`;
 
-        // displaying minutes 
         const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `${minutes}m`;
+        if (minutes < 60) return `${minutes}m ago`;
 
-        // displaying hours 
         const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours}h`;
+        if (hours < 24) return `${hours}h ago`;
 
-        // displaying days
         const days = Math.floor(hours / 24);
-        return `${days}d`;
+        if (days < 30) return `${days}d ago`;
+        return `${Math.floor(days / 30)}mo ago`;
     }
     // ============================================================================================//
 
@@ -106,7 +125,7 @@ export default function useNotifications() {
            
             // Remove notfication and store in an updated array 
             const updatedNotifications = user.notifications.filter(
-                (n: any) => n.timestamp?.seconds !== noti.timestamp?.seconds || n.timestamp?.nanoseconds !== noti.timestamp?.nanoseconds
+                (n: any) => !isSameNotification(n, noti)
             );
 
             // update local and server
@@ -135,6 +154,34 @@ export default function useNotifications() {
     //============================================================================================//
 
     //======================== ADDING FRIENDS ==================================================//
+    const markRead = async (noti: any) => {
+        if (noti?.read === true || !user?.uid) return;
+        try {
+            const updatedNotifications = user.notifications.map((n: any) =>
+                isSameNotification(n, noti) ? { ...n, read: true } : n
+            );
+            setUser((prev: any) => ({ ...prev, notifications: updatedNotifications }));
+            await updateDoc(doc(db, 'user-data', user.uid), { notifications: updatedNotifications });
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    const markAllRead = async () => {
+        if (!user?.uid) return;
+        const list = Array.isArray(user.notifications) ? user.notifications : [];
+        if (!list.some((n: any) => n?.read !== true)) return;
+        const updatedNotifications = list.map((n: any) => (
+            n?.read === true ? n : { ...n, read: true }
+        ));
+        setUser((prev: any) => ({ ...prev, notifications: updatedNotifications }));
+        try {
+            await updateDoc(doc(db, 'user-data', user.uid), { notifications: updatedNotifications });
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
     const addFriend = async (noti: any) => {
         try {
             // remove notification: 
@@ -155,5 +202,5 @@ export default function useNotifications() {
 
 
 
-    return {removeNotification, addFriend, notis, timeAgoFormatter}
+    return {removeNotification, addFriend, markRead, markAllRead, notis, timeAgoFormatter}
 }

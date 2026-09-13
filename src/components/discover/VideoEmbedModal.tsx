@@ -2,7 +2,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { LuExternalLink, LuGripVertical, LuPictureInPicture2, LuX } from "react-icons/lu";
 import { OptionsContext } from "../../context/OptionsContext";
-import { getDiscoverVideoEmbed } from "../../lib/discoverMedia";
+import { getDiscoverVideoEmbed, getDiscoverVideoPlayerSrc, DISCOVER_VIDEO_IFRAME_ALLOW } from "../../lib/discoverMedia";
 
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 220;
@@ -130,13 +130,14 @@ export default function VideoEmbedModal({ url, title, onClose, className }: Vide
   if (!embed) return null;
 
   const player = embed.kind === "direct" ? (
-    <video src={embed.embedUrl} controls autoPlay className="h-full w-full bg-black" />
+    <video src={embed.embedUrl} controls autoPlay playsInline className="h-full w-full bg-black" />
   ) : (
     <iframe
-      src={embed.embedUrl}
+      src={getDiscoverVideoPlayerSrc(embed, { autoplay: true })}
       title={title || "Video player"}
       className="h-full w-full border-0 bg-black"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allow={DISCOVER_VIDEO_IFRAME_ALLOW}
+      referrerPolicy="strict-origin-when-cross-origin"
       allowFullScreen
     />
   );

@@ -1,11 +1,8 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import {
   LuArrowLeft,
-  LuBookOpen,
   LuCheck,
-  LuChevronRight,
   LuFileText,
-  LuImage,
   LuSearch,
   LuUpload,
 } from "react-icons/lu";
@@ -72,7 +69,7 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
   const [search, setSearch] = useState("");
 
   // ---- Bank: image catalogue (topics + papers) — preferred when available ----
-  const [imageBrowse, setImageBrowse] = useState<ImageBrowse>("topic");
+  const [imageBrowse, setImageBrowse] = useState<ImageBrowse>("paper");
   const [imageLevel, setImageLevel] = useState<string | null>("higher");
   const storageFolder = useMemo(() => getStorageFolderName(subject), [subject]);
   const {
@@ -360,7 +357,7 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
   };
 
   const listRow =
-    "flex w-full items-center gap-2 px-3 py-2.5 rounded-xl text-left text-sm color-txt-main color-bg-grey-5 hover:color-bg-grey-10 transition-colors cursor-pointer";
+    "flex w-full items-center gap-2 px-1 py-2.5 text-left text-sm color-txt-main border-b border-grey/15 hover:opacity-80 transition-opacity cursor-pointer last:border-b-0";
 
   const renderCheck = (checked: boolean) => (
     <span
@@ -489,11 +486,11 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
               </div>
             )}
 
-            <div className="flex flex-col gap-1.5 min-h-[200px]">
+            <div className="flex flex-col min-h-[200px]">
               {bankLoading && (
                 <>
                   {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
+                    <div key={i} className="h-11 border-b border-grey/15 animate-pulse last:border-b-0" />
                   ))}
                 </>
               )}
@@ -512,7 +509,6 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
                   >
                     <span className="min-w-0 flex-1 truncate font-semibold">{paper.label}</span>
                     <span className="shrink-0 text-xs color-txt-sub">{formatLevelCode(paper.level)}</span>
-                    <LuChevronRight size={16} className="shrink-0 color-txt-sub" />
                   </button>
                 ))}
 
@@ -520,7 +516,7 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
               {!bankLoading && selectedPaper && (
                 questionsLoading ? (
                   [1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
+                    <div key={i} className="h-11 border-b border-grey/15 animate-pulse last:border-b-0" />
                   ))
                 ) : (
                   filteredPaperQuestions.map((question) => {
@@ -576,8 +572,8 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
                   <div className="flex gap-1 rounded-xl color-bg-grey-5 p-1 mb-0.5">
                     {(
                       [
-                        { id: "topic" as const, label: "By topic" },
                         { id: "paper" as const, label: "By paper" },
+                        { id: "topic" as const, label: "By topic" },
                       ]
                     ).map(({ id, label }) => (
                       <button
@@ -602,7 +598,7 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
                     <>
                       {topicsLoading &&
                         [1, 2, 3, 4].map((i) => (
-                          <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
+                          <div key={i} className="h-11 border-b border-grey/15 animate-pulse last:border-b-0" />
                         ))}
                       {!topicsLoading &&
                         filteredTopics.map((topic) => (
@@ -615,12 +611,10 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
                               setSearch("");
                             }}
                           >
-                            <LuImage size={16} className="shrink-0 color-txt-sub" />
                             <span className="min-w-0 flex-1 truncate font-semibold">{topic.displayName}</span>
                             {topic.questionCount > 0 && (
                               <span className="shrink-0 text-xs color-txt-sub">{topic.questionCount} questions</span>
                             )}
-                            <LuChevronRight size={16} className="shrink-0 color-txt-sub" />
                           </button>
                         ))}
                       {!topicsLoading && filteredTopics.length === 0 && (
@@ -635,7 +629,7 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
                     <>
                       {imagePapersLoading &&
                         [1, 2, 3, 4].map((i) => (
-                          <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
+                          <div key={i} className="h-11 border-b border-grey/15 animate-pulse last:border-b-0" />
                         ))}
                       {!imagePapersLoading &&
                         filteredImagePapers.map((paper) => (
@@ -648,17 +642,12 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
                               setSearch("");
                             }}
                           >
-                            <LuBookOpen size={16} className="shrink-0 color-txt-sub" />
                             <span className="min-w-0 flex-1 truncate font-semibold">{paper.label}</span>
                             {(paper.paper === 1 || paper.paper === 2) && (
-                              <span className="shrink-0 rounded-md color-bg-grey-10 px-1.5 py-0.5 text-[11px] font-semibold color-txt-sub">
+                              <span className="shrink-0 text-xs font-semibold color-txt-sub">
                                 P{paper.paper}
                               </span>
                             )}
-                            <span className="shrink-0 text-xs color-txt-sub">
-                              {paper.questionCount} questions
-                            </span>
-                            <LuChevronRight size={16} className="shrink-0 color-txt-sub" />
                           </button>
                         ))}
                       {!imagePapersLoading && filteredImagePapers.length === 0 && (
@@ -675,7 +664,7 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
               {!bankLoading && isImageMode && selectedTopic && (
                 questionsLoading ? (
                   [1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
+                    <div key={i} className="h-11 border-b border-grey/15 animate-pulse last:border-b-0" />
                   ))
                 ) : (
                   filteredGrouped.map((grouped) => {
@@ -716,7 +705,7 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
               {!bankLoading && isImageMode && selectedImagePaper && (
                 imagePaperQuestionsLoading ? (
                   [1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-11 rounded-xl color-bg-grey-5 animate-pulse" />
+                    <div key={i} className="h-11 border-b border-grey/15 animate-pulse last:border-b-0" />
                   ))
                 ) : filteredImagePaperGrouped.length === 0 ? (
                   <p className="py-6 text-center text-sm color-txt-sub">No questions in this paper.</p>
@@ -771,20 +760,6 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
         {tab === "upload" && (
           <div className="flex flex-col gap-4 py-1">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold color-txt-sub" htmlFor="wb-upload-label">
-                Question name
-              </label>
-              <input
-                id="wb-upload-label"
-                type="text"
-                value={uploadLabel}
-                onChange={(e) => setUploadLabel(e.target.value)}
-                placeholder="e.g. Class test — vectors"
-                className="w-full px-3 py-2 rounded-xl text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
               <span className="text-xs font-semibold color-txt-sub">Question (PDF or image)</span>
               <label className="flex items-center gap-2 rounded-xl color-bg-grey-5 px-3 py-2.5 text-sm color-txt-main hover:color-bg-grey-10 transition-colors cursor-pointer">
                 <LuUpload size={16} className="shrink-0 color-txt-sub" />
@@ -814,6 +789,19 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
                   onChange={(e) => setMarkingFile(e.target.files?.[0] ?? null)}
                 />
               </label>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold color-txt-sub" htmlFor="wb-upload-label">
+                Question name (optional)
+              </label>
+              <input
+                id="wb-upload-label"
+                type="text"
+                value={uploadLabel}
+                onChange={(e) => setUploadLabel(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl text-sm color-bg-grey-5 color-txt-main outline-none"
+              />
             </div>
           </div>
         )}

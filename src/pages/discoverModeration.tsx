@@ -89,6 +89,7 @@ export default function DiscoverModeration() {
     else next.delete(key);
     setSearchParams(next, { replace: true });
   };
+  const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -143,19 +144,24 @@ export default function DiscoverModeration() {
     }
   };
 
+  const reject = async (item: PendingResource) => {
+    const reason = (rejectReasons[item.id] ?? "").trim();
+    if (!reason) {
+      setError("Add a reason before rejecting.");
+      return;
+    }
   const reject = async (item: DiscoverModerationNote) => {
     if (!window.confirm("Reject and delete this Discover resource?")) return;
     setBusyId(item.id);
     setError(null);
     try {
-      await deleteDoc(doc(db, "discover-notes", item.id));
-      notifyPostOwner({
-        ownerId: item.userId,
-        actorId: user?.uid,
-        type: "post-rejected",
-        postId: item.id,
-        postTitle: item.title,
+      await updateDoc(doc(db, "discover-notes", item.id), {
+        moderationStatus: "rejected",
+        rejectionReason: reason,
+        thumbnailModeratedBy: user?.uid ?? "",
+        thumbnailModeratedAt: new Date(),
       });
+      await deleteDoc(doc(db, "discover-notes", item.id));
       if (item.uploadedThumbnailPath) {
         try {
           await deleteObject(storageRef(storage, item.uploadedThumbnailPath));
@@ -278,6 +284,15 @@ export default function DiscoverModeration() {
                     </p>
                   </div>
 
+                  <input
+                    type="text"
+                    value={rejectReasons[item.id] ?? ""}
+                    onChange={(e) =>
+                      setRejectReasons((prev) => ({ ...prev, [item.id]: e.target.value.slice(0, 200) }))
+                    }
+                    placeholder="Reason if you reject"
+                    className="w-full px-3 py-2 rounded-xl color-bg color-txt-main text-sm outline-none"
+                  />
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"

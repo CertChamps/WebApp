@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, createRef } from "react";
 import { Document } from "react-pdf";
+import "../lib/pdfWorker";
 import PdfThemeWrapper from "./PdfThemeWrapper";
 import React from "react";
 import Lottie from "lottie-react";

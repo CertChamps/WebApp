@@ -255,7 +255,7 @@ function PracticeBrowserInner() {
   const subjectId = searchParams.get("subject");
   const selectedLevel = searchParams.get("level");
   const selectedTopicName = searchParams.get("topic");
-  const browseMode = (searchParams.get("browse") === "paper" ? "paper" : "topic") as BrowseMode;
+  const browseMode = (searchParams.get("browse") === "topic" ? "topic" : "paper") as BrowseMode;
   const paperYearParam = searchParams.get("year");
   const paperNumParam = searchParams.get("paper");
   const targetQuestionKey = searchParams.get("question");
@@ -273,9 +273,9 @@ function PracticeBrowserInner() {
   const [canvasAttachment, setCanvasAttachment] = useState<AttachedQuestion | null>(null);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [favouriteSubjectIds, setFavouriteSubjectIds] = useState<string[]>(
-    () => getFavouriteSubjectIds()
+    () => getFavouriteSubjectIds(cycle)
   );
-  const syncedFavouriteSubjectIds = useSyncedFavouriteSubjectIds();
+  const syncedFavouriteSubjectIds = useSyncedFavouriteSubjectIds(cycle);
   const scrollRef = useRef<HTMLDivElement>(null);
   const questionElements = useRef(new Map<string, HTMLElement>());
   const titleRowRef = useRef<HTMLDivElement>(null);
@@ -409,18 +409,18 @@ function PracticeBrowserInner() {
   );
 
   useEffect(() => {
-    const syncFavourites = () => setFavouriteSubjectIds(getFavouriteSubjectIds());
+    const syncFavourites = () => setFavouriteSubjectIds(getFavouriteSubjectIds(cycle));
     window.addEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
     return () => window.removeEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
-  }, []);
+  }, [cycle]);
 
   useEffect(() => {
     setFavouriteSubjectIds(syncedFavouriteSubjectIds);
   }, [syncedFavouriteSubjectIds]);
 
   const handleToggleFavourite = useCallback((subject: string) => {
-    setFavouriteSubjectIds((current) => toggleFavourite(subject, current));
-  }, []);
+    setFavouriteSubjectIds(toggleFavourite(subject, [], cycle));
+  }, [cycle]);
 
   const filteredTopics = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -912,24 +912,24 @@ function PracticeBrowserInner() {
               style={
                 {
                   "--pb-toggle-count": 2,
-                  "--pb-toggle-index": browseMode === "paper" ? 1 : 0,
+                  "--pb-toggle-index": browseMode === "topic" ? 1 : 0,
                 } as CSSProperties
               }
             >
               <span className="practice-browser__toggle-thumb" aria-hidden />
               <button
                 type="button"
-                className={browseMode === "topic" ? "is-active" : ""}
-                onClick={() => setBrowseMode("topic")}
-              >
-                By topic
-              </button>
-              <button
-                type="button"
                 className={browseMode === "paper" ? "is-active" : ""}
                 onClick={() => setBrowseMode("paper")}
               >
                 By paper
+              </button>
+              <button
+                type="button"
+                className={browseMode === "topic" ? "is-active" : ""}
+                onClick={() => setBrowseMode("topic")}
+              >
+                By topic
               </button>
             </div>
 

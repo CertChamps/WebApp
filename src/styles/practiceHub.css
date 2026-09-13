@@ -416,6 +416,11 @@
   left: 0;
 }
 
+.practice-hub__subject-dropdown--grid-end {
+  left: auto;
+  right: 0;
+}
+
 .practice-hub__subject-dropdown--list {
   left: 0;
   right: 0;
@@ -454,6 +459,7 @@
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   flex-shrink: 0;
+  cursor: text;
   @apply border-b color-shadow;
 }
 

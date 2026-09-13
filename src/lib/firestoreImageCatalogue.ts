@@ -76,10 +76,13 @@ export type CataloguePaper = {
 type CacheEntry<T> = { data: T; ts: number };
 const CACHE_TTL = 5 * 60 * 1000;
 
+type AvailabilityRow = { storageName: string; levels: string[] };
+
 const subjectListCache = new Map<string, CacheEntry<string[]>>();
 const levelListCache = new Map<string, CacheEntry<string[]>>();
 const topicListCache = new Map<string, CacheEntry<CatalogueTopic[]>>();
 const questionsCache = new Map<string, CacheEntry<CatalogueQuestion[]>>();
+const availabilityCache = new Map<string, CacheEntry<AvailabilityRow[]>>();
 const resolvedSubjectCache = new Map<string, string>();
 
 function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
@@ -555,9 +558,50 @@ export async function listCataloguePapers(
   return buildCataloguePapers(questions);
 }
 
+const AVAILABILITY_CACHE_KEY = "certchamps.catalogue.subjectAvailability.v1";
+const AVAILABILITY_CACHE_TTL = 30 * 60 * 1000;
+
+function readAvailabilitySessionCache(cycle: ExamCycleId): AvailabilityRow[] | null {
+  try {
+    const raw = sessionStorage.getItem(`${AVAILABILITY_CACHE_KEY}:${cycle}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { ts?: number; data?: AvailabilityRow[] };
+    if (
+      typeof parsed?.ts !== "number" ||
+      !Array.isArray(parsed.data) ||
+      Date.now() - parsed.ts > AVAILABILITY_CACHE_TTL
+    ) {
+      return null;
+    }
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+function writeAvailabilitySessionCache(cycle: ExamCycleId, data: AvailabilityRow[]): void {
+  try {
+    sessionStorage.setItem(
+      `${AVAILABILITY_CACHE_KEY}:${cycle}`,
+      JSON.stringify({ ts: Date.now(), data })
+    );
+  } catch {
+    /* ignore quota */
+  }
+}
+
 export async function listCatalogueSubjectAvailability(
   cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
 ): Promise<{ storageName: string; levels: string[] }[]> {
+  const memoryKey = cycle;
+  const memCached = getCached(availabilityCache, memoryKey);
+  if (memCached) return memCached;
+
+  const sessionCached = readAvailabilitySessionCache(cycle);
+  if (sessionCached) {
+    return setCached(availabilityCache, memoryKey, sessionCached);
+  }
+
   const subjects = await listCatalogueSubjectIds(cycle);
   const results = await Promise.all(
     subjects.map(async (subject) => {
@@ -570,7 +614,9 @@ export async function listCatalogueSubjectAvailability(
       }
     })
   );
-  return results.filter((row): row is { storageName: string; levels: string[] } => row != null);
+  const rows = results.filter((row): row is AvailabilityRow => row != null);
+  writeAvailabilitySessionCache(cycle, rows);
+  return setCached(availabilityCache, memoryKey, rows);
 }
 
 /** Resolve a download URL for a storage path (in-memory + browser HTTP cache). */
@@ -593,6 +639,7 @@ export function clearCatalogueCaches(): void {
   levelListCache.clear();
   topicListCache.clear();
   questionsCache.clear();
+  availabilityCache.clear();
   resolvedSubjectCache.clear();
   downloadUrlCache.clear();
 }
