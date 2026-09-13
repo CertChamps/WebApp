@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
   type RefObject,
   type TransitionEvent,
 } from "react";
@@ -414,6 +415,42 @@ function usePinchPanZoom({
     resetAnimated,
     onTransitionEnd,
   };
+}
+
+/** In-place pinch/pan for content that should not be cloned (e.g. PDF pages). */
+export function ZoomableSurface({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const onTapRef = useRef<(() => void) | null>(null);
+  const zoom = usePinchPanZoom({
+    surfaceRef,
+    snapBackOnRelease: false,
+    onTapRef,
+  });
+
+  const zoomActive = zoom.isPinching || zoom.transform.scale > 1 || zoom.isTransitioning;
+
+  return (
+    <div
+      ref={surfaceRef}
+      className={`zoomable-question-page${zoomActive ? " zoomable-question-page--zooming" : ""}${className ? ` ${className}` : ""}`}
+    >
+      <div
+        className={`zoomable-question-page__content${zoom.isTransitioning && !zoomActive ? " zoomable-question-page__content--transition" : ""}`}
+        style={{
+          transform: `translate(${zoom.transform.panX}px, ${zoom.transform.panY}px) scale(${zoom.transform.scale})`,
+        }}
+        onTransitionEnd={zoom.onTransitionEnd}
+      >
+        {children}
+      </div>
+    </div>
+  );
 }
 
 function PageImages({

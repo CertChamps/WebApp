@@ -50,7 +50,11 @@ import fetch from "node-fetch";
 /** RevenueCat entitlement that grants ACE — must match the dashboard
  *  entitlement identifier exactly (including the space). */
 const ACE_ENTITLEMENT_ID = "CertChamps ACE";
-const REVENUECAT_ACE_PRODUCT_IDS = new Set(["CertChamps_TEST", "CertChamps_ACE"]);
+const REVENUECAT_ACE_PRODUCT_IDS = new Set([
+  "CertChamps_TEST",
+  "CertChamps_ACE",
+  "CertChamps_ACE_iphone",
+]);
 
 /** Firestore mirror of the App Store originalTransactionId → Firebase
  *  uid mapping. Mirrors the existing `stripe_subscriptions` collection. */

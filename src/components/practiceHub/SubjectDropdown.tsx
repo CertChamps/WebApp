@@ -4,11 +4,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { LuChevronDown, LuSearch, LuStar } from "react-icons/lu";
 import {
   PRACTICE_HUB_SUBJECTS,
+  ALL_SUBJECTS_OPTION,
   getFavouriteSubjectIds,
   toggleFavourite,
   useSyncedFavouriteSubjectIds,
   type SubjectOption,
 } from "../../data/practiceHubSubjects";
+import { DEFAULT_EXAM_CYCLE, type ExamCycleId } from "../../lib/examCycle";
 import { getThemedPortalTarget } from "../../utils/themedPortal";
 import { SubjectGlyph } from "./subjectIcons";
 import "../../styles/practiceHub.css";
@@ -25,6 +27,7 @@ type Props = {
   subjects?: SubjectOption[] | null;
   id?: string;
   "aria-label"?: string;
+  examCycle?: ExamCycleId;
   onFavouritesChange?: (ids: string[]) => void;
   /**
    * `grid` — icon tiles (Practice Hub). `list` — compact text rows with star favourites
@@ -35,6 +38,8 @@ type Props = {
   renderTrigger?: (state: { open: boolean; onToggle: () => void }) => ReactNode;
   /** Grid dropdown alignment. Defaults to centered under the trigger. */
   dropdownAlign?: "center" | "start";
+  /** Prepend an "All subjects" choice (e.g. Discover resource upload). */
+  includeAllOption?: boolean;
 };
 
 type ContextMenuState = {
@@ -226,21 +231,28 @@ export default function SubjectDropdown({
   variant = "grid",
   renderTrigger,
   dropdownAlign = "center",
+  includeAllOption = false,
+  examCycle = DEFAULT_EXAM_CYCLE,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [favourites, setFavourites] = useState<string[]>(() => getFavouriteSubjectIds());
-  const syncedFavourites = useSyncedFavouriteSubjectIds();
+  const [favourites, setFavourites] = useState<string[]>(() => getFavouriteSubjectIds(examCycle));
+  const syncedFavourites = useSyncedFavouriteSubjectIds(examCycle);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isList = variant === "list";
 
-  const options = subjects != null && subjects.length > 0 ? subjects : PRACTICE_HUB_SUBJECTS;
-  const allowAllSubjects = subjects == null || subjects.length === 0;
+  const options = useMemo(() => {
+    const base = subjects != null && subjects.length > 0 ? subjects : PRACTICE_HUB_SUBJECTS;
+    if (!includeAllOption) return base;
+    if (base.some((s) => s.id === ALL_SUBJECTS_OPTION.id)) return base;
+    return [ALL_SUBJECTS_OPTION, ...base];
+  }, [includeAllOption, subjects]);
+  const allowAllSubjects = !includeAllOption && (subjects == null || subjects.length === 0);
 
   useEffect(() => {
-    setFavourites(getFavouriteSubjectIds());
-  }, [open]);
+    setFavourites(getFavouriteSubjectIds(examCycle));
+  }, [examCycle, open]);
 
   useEffect(() => {
     setFavourites(syncedFavourites);
@@ -270,25 +282,40 @@ export default function SubjectDropdown({
     );
   }, [search, options]);
 
+  const listed = useMemo(
+    () => filtered.filter((s) => s.id !== ALL_SUBJECTS_OPTION.id),
+    [filtered]
+  );
+
+  const allOptionVisible = useMemo(() => {
+    if (!includeAllOption) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      ALL_SUBJECTS_OPTION.label.toLowerCase().includes(q) ||
+      ALL_SUBJECTS_OPTION.id.includes(q)
+    );
+  }, [includeAllOption, search]);
+
   const yourSubjects = useMemo(
-    () => filtered.filter((s) => favourites.includes(s.id)),
-    [filtered, favourites]
+    () => listed.filter((s) => favourites.includes(s.id)),
+    [listed, favourites]
   );
 
   const otherSubjects = useMemo(
-    () => filtered.filter((s) => !favourites.includes(s.id)),
-    [filtered, favourites]
+    () => listed.filter((s) => !favourites.includes(s.id)),
+    [listed, favourites]
   );
 
   const favouriteSubjects = useMemo(
-    () => filtered.filter((s) => favourites.includes(s.id)),
-    [filtered, favourites]
+    () => listed.filter((s) => favourites.includes(s.id)),
+    [listed, favourites]
   );
 
   const selectedLabel = useMemo(
     () =>
       options.find((s) => s.id === value)?.label ??
-      (allowAllSubjects ? "Choose a subject" : "Select subject"),
+      (includeAllOption ? "Choose a subject" : allowAllSubjects ? "Choose a subject" : "Select subject"),
     [value, options, allowAllSubjects]
   );
 
@@ -309,13 +336,14 @@ export default function SubjectDropdown({
 
   const handleTogglePin = useCallback(
     (subjectId: string) => {
+      if (subjectId === ALL_SUBJECTS_OPTION.id) return;
       setFavourites((prev) => {
-        const next = toggleFavourite(subjectId, prev);
+        const next = toggleFavourite(subjectId, prev, examCycle);
         onFavouritesChange?.(next);
         return next;
       });
     },
-    [onFavouritesChange]
+    [examCycle, onFavouritesChange]
   );
 
   const handleFavourite = useCallback(
@@ -397,6 +425,19 @@ export default function SubjectDropdown({
             </div>
 
             <div className="practice-hub__subject-scroll">
+              {allOptionVisible ? (
+                <div className="practice-hub__subject-group">
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={value === ALL_SUBJECTS_OPTION.id}
+                    className="practice-hub__subject-option"
+                    onClick={() => handleSelect(ALL_SUBJECTS_OPTION)}
+                  >
+                    <span className="truncate">{ALL_SUBJECTS_OPTION.label}</span>
+                  </button>
+                </div>
+              ) : null}
               {favouriteSubjects.length > 0 && (
                 <div className="practice-hub__subject-group">
                   <div className="practice-hub__subject-group-label">Favourites</div>
@@ -429,12 +470,12 @@ export default function SubjectDropdown({
                   {search.trim() ? "Results" : "All subjects"}
                 </div>
                 <div className="practice-hub__subject-list">
-                  {filtered.length === 0 ? (
+                  {listed.length === 0 && !allOptionVisible ? (
                     <div className="practice-hub__subject-empty color-txt-sub text-sm py-2">
                       No subjects match
                     </div>
                   ) : (
-                    filtered.map((s) => (
+                    listed.map((s) => (
                       <button
                         key={s.id}
                         type="button"

@@ -15,9 +15,10 @@ import { db, storage } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
 import { SubjectDropdown } from "../practiceHub";
 import {
+  PRACTICE_HUB_SUBJECTS,
+  ALL_SUBJECTS_OPTION,
   FAVOURITES_CHANGED_EVENT,
   getFavouriteSubjectIds,
-  PRACTICE_HUB_SUBJECTS,
   useSyncedFavouriteSubjectIds,
 } from "../../data/practiceHubSubjects";
 import { extractYoutubeId, getDiscoverVideoPoster, isDiscoverVideoUrl } from "../../lib/discoverMedia";
@@ -353,7 +354,9 @@ export default function DiscoverShareModal({
     const validUrl = resourceSource === "website" ? normaliseUrl(websiteUrl) ?? "" : "";
     const topics = shareTopics.slice(0, 8);
     const shareSubject = shareSubjectId
-      ? PRACTICE_HUB_SUBJECTS.find((subject) => subject.id === shareSubjectId)
+      ? shareSubjectId === ALL_SUBJECTS_OPTION.id
+        ? ALL_SUBJECTS_OPTION
+        : PRACTICE_HUB_SUBJECTS.find((subject) => subject.id === shareSubjectId)
       : null;
 
     if (!trimmedTitle) {
@@ -705,6 +708,7 @@ export default function DiscoverShareModal({
                 aria-label="Choose resource subject"
                 variant="list"
                 dropdownAlign="start"
+                includeAllOption
               />
             </div>
 

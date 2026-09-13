@@ -33,6 +33,7 @@ import { notifyPostOwner } from "../../lib/notifications";
 import DiscoverMediaPreview from "../discover/DiscoverMediaPreview";
 import DiscoverShareModal from "../discover/DiscoverShareModal";
 import { getQuestionDiscoveryContext } from "../../lib/questionDiscovery";
+import { isAllSubjectsResource } from "../../data/practiceHubSubjects";
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
@@ -347,6 +348,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
     const subjectLabel = context.subjectLabel?.toLowerCase();
     const subjectItems = approved.filter((resource) => {
       if (questionIds.has(resource.id)) return false;
+      if (isAllSubjectsResource(resource.note?.subjectId, resource.subject)) return true;
       return (
         (subjectId && resource.note?.subjectId?.toLowerCase() === subjectId) ||
         (subjectLabel && resource.subject.toLowerCase() === subjectLabel)

@@ -28,6 +28,7 @@ import DiscoverShareModal from "../components/discover/DiscoverShareModal";
 import {
     FAVOURITES_CHANGED_EVENT,
     getFavouriteSubjectIds,
+    isAllSubjectsResource,
     PRACTICE_HUB_SUBJECTS,
     useSyncedFavouriteSubjectIds,
 } from "../data/practiceHubSubjects";
@@ -146,6 +147,16 @@ type DiscoverResource = {
     timestamp?: number | null;
     note?: DiscoverNote;
 };
+
+function resourceMatchesSelectedSubject(resource: DiscoverResource, selectedLabel?: string) {
+    if (!selectedLabel) return true;
+    if (isAllSubjectsResource(resource.note?.subjectId, resource.subject)) return true;
+    const needle = selectedLabel.toLowerCase();
+    return (
+        resource.subject.toLowerCase() === needle ||
+        resource.tags.some((tag) => tag.toLowerCase() === needle)
+    );
+}
 
 const MAX_COMMENT = 500;
 const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
@@ -757,12 +768,8 @@ export default function Discover() {
             return;
         }
 
-        const selectedSubjectLabel = selectedSubject?.label.toLowerCase();
         const candidateResources = resources.filter((resource) => {
-            const matchesSubject = selectedSubjectLabel
-                ? resource.subject.toLowerCase() === selectedSubjectLabel ||
-                  resource.tags.some((tag) => tag.toLowerCase() === selectedSubjectLabel)
-                : true;
+            const matchesSubject = resourceMatchesSelectedSubject(resource, selectedSubject?.label);
             const matchesType =
                 selectedTypes.length === 0 ||
                 (resource.types ?? [resource.type]).some((type) => selectedTypes.includes(type));
@@ -870,16 +877,12 @@ export default function Discover() {
     }, [aiSearchEnabled, aiSearching, clearAiSearch]);
 
     const filteredResources = useMemo(() => {
-        const selectedSubjectLabel = selectedSubject?.label.toLowerCase();
         const aiOrder = aiResultIds ? new Map(aiResultIds.map((id, index) => [id, index])) : null;
         const searchQuery = (submittedQuery ?? "").trim().toLowerCase();
         const searchTokens = tokenizeSearch(searchQuery);
 
         const scored = resources.flatMap((resource) => {
-            const matchesSubject = selectedSubjectLabel
-                ? resource.subject.toLowerCase() === selectedSubjectLabel ||
-                  resource.tags.some((tag) => tag.toLowerCase() === selectedSubjectLabel)
-                : true;
+            const matchesSubject = resourceMatchesSelectedSubject(resource, selectedSubject?.label);
             const matchesType =
                 selectedTypes.length === 0 ||
                 (resource.types ?? [resource.type]).some((type) => selectedTypes.includes(type));
@@ -923,7 +926,7 @@ export default function Discover() {
 
     const recommendedResources = useMemo(() => {
         const base = filteredResources.filter((resource) => {
-            if (selectedSubject) return resource.subject.toLowerCase() === selectedSubject.label.toLowerCase();
+            if (selectedSubject) return resourceMatchesSelectedSubject(resource, selectedSubject.label);
             if (favouriteSubjectLabels.size === 0) return true;
             return favouriteSubjectLabels.has(resource.subject.toLowerCase());
         });
@@ -943,13 +946,14 @@ export default function Discover() {
         const exact = filteredResources.filter(
             (resource) => resource.note?.linkedQuestionId === linkedQuestion.id
         );
-        const subjectId = linkedQuestion.subjectId?.toLowerCase();
-        const subjectLabel = linkedQuestion.subjectLabel?.toLowerCase();
         const fallback = filteredResources.filter((resource) => {
             if (resource.note?.linkedQuestionId === linkedQuestion.id) return false;
             return (
-                (subjectId && resource.note?.subjectId?.toLowerCase() === subjectId) ||
-                (subjectLabel && resource.subject.toLowerCase() === subjectLabel)
+                resourceMatchesSelectedSubject(resource, linkedQuestion.subjectLabel) ||
+                Boolean(
+                    linkedQuestion.subjectId &&
+                    resource.note?.subjectId?.toLowerCase() === linkedQuestion.subjectId.toLowerCase()
+                )
             );
         });
         return { exact: exact.slice(0, 12), fallback: fallback.slice(0, 12) };

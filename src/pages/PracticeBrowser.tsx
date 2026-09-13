@@ -270,9 +270,9 @@ function PracticeBrowserInner() {
   const [canvasAttachment, setCanvasAttachment] = useState<AttachedQuestion | null>(null);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
   const [favouriteSubjectIds, setFavouriteSubjectIds] = useState<string[]>(
-    () => getFavouriteSubjectIds()
+    () => getFavouriteSubjectIds(cycle)
   );
-  const syncedFavouriteSubjectIds = useSyncedFavouriteSubjectIds();
+  const syncedFavouriteSubjectIds = useSyncedFavouriteSubjectIds(cycle);
   const scrollRef = useRef<HTMLDivElement>(null);
   const questionElements = useRef(new Map<string, HTMLElement>());
   const titleRowRef = useRef<HTMLDivElement>(null);
@@ -400,18 +400,18 @@ function PracticeBrowserInner() {
   );
 
   useEffect(() => {
-    const syncFavourites = () => setFavouriteSubjectIds(getFavouriteSubjectIds());
+    const syncFavourites = () => setFavouriteSubjectIds(getFavouriteSubjectIds(cycle));
     window.addEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
     return () => window.removeEventListener(FAVOURITES_CHANGED_EVENT, syncFavourites);
-  }, []);
+  }, [cycle]);
 
   useEffect(() => {
     setFavouriteSubjectIds(syncedFavouriteSubjectIds);
   }, [syncedFavouriteSubjectIds]);
 
   const handleToggleFavourite = useCallback((subject: string) => {
-    setFavouriteSubjectIds((current) => toggleFavourite(subject, current));
-  }, []);
+    setFavouriteSubjectIds(toggleFavourite(subject, [], cycle));
+  }, [cycle]);
 
   const filteredTopics = useMemo(() => {
     const query = search.trim().toLowerCase();
