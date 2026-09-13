@@ -59,6 +59,7 @@ import FloatingLogTables from "../components/FloatingLogTables";
 import FloatingCalculator from "../components/calculator/FloatingCalculator";
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
 import type { SidebarPanelId } from "../components/sidebar/SidebarTileManager";
+import { DISCOVER_SIDEBAR_PARAM } from "../lib/discoverLinks";
 import { TimerProvider, useTimerOptional } from "../context/TimerContext";
 import { FloatingWidgets } from "../components/floating/FloatingWidgets";
 import PastPaperFilterPanel from "../components/questions/PastPaperFilterPanel";
@@ -601,7 +602,14 @@ export default function Questions() {
     const [isFullPaperExpanded, setIsFullPaperExpanded] = useState(false);
     const [paperPanelVisible, setPaperPanelVisible] = useState(true);
     const [markingSchemeBlob, setMarkingSchemeBlob] = useState<Blob | null>(null);
-    const [sidebarOpenPanel, setSidebarOpenPanel] = useState<SidebarPanelId | null>("ai");
+    const [sidebarOpenPanel, setSidebarOpenPanel] = useState<SidebarPanelId | null>(
+        () => (searchParams.get(DISCOVER_SIDEBAR_PARAM) === "threads" ? "threads" : "ai")
+    );
+    useEffect(() => {
+        if (searchParams.get(DISCOVER_SIDEBAR_PARAM) !== "threads") return;
+        setSidebarOpen(true);
+        setSidebarOpenPanel("threads");
+    }, [searchParams]);
     const [markingSchemeQuestionIndex, setMarkingSchemeQuestionIndex] = useState<number | null>(null);
     const [logTablesQuestionIndex, setLogTablesQuestionIndex] = useState<number | null>(null);
     const [showLogTables, setShowLogTables] = useState(false);

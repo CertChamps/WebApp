@@ -1,5 +1,5 @@
-import { useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   collection,
   deleteDoc,
@@ -13,6 +13,7 @@ import {
 import { deleteObject, ref as storageRef } from "firebase/storage";
 import {
   LuArrowLeft,
+  LuArrowRight,
   LuCheck,
   LuExternalLink,
   LuLoaderCircle,
@@ -23,45 +24,71 @@ import { db, storage } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { isAdminUid } from "../constants/adminUids";
 import { notifyPostOwner } from "../lib/notifications";
+import {
+  parseDiscoverModerationNote,
+  timeAgo,
+  RESOURCE_LEVELS,
+  type DiscoverModerationNote,
+  type ResourceLevel,
+} from "../lib/discoverModeration";
+import { getPracticeSubjectId, getSubjectLabel } from "../data/practiceHubSubjects";
+import DiscoverMediaPreview from "../components/discover/DiscoverMediaPreview";
 
-type PendingResource = {
-  id: string;
-  title: string;
-  description: string;
-  websiteUrl: string;
-  resourceSource: "website" | "pdf";
-  pdfPath: string;
-  pdfFileName: string;
-  thumbnailUrl: string;
-  uploadedThumbnailUrl: string;
-  uploadedThumbnailPath: string;
-  username: string;
-  userId: string;
-  subjectLabel: string;
-  timestamp: number | null;
-};
+const FILTER_LEVELS = [...RESOURCE_LEVELS, "Common"] as const;
+const UNLEVELLED = "Unspecified";
 
-function timeAgo(seconds: number | null): string {
-  if (!seconds) return "";
-  const diff = Math.floor(Date.now() / 1000 - seconds);
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return new Date(seconds * 1000).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
+function noteSubjectId(item: DiscoverModerationNote): string {
+  const raw = item.subjectId || item.linkedQuestionSubjectId || item.subjectLabel;
+  return raw ? getPracticeSubjectId(raw) : "";
+}
+
+function noteLevelLabels(item: DiscoverModerationNote): string[] {
+  const raw = [
+    ...item.levels,
+    item.linkedQuestionLevel,
+    ...item.linkedQuestions.map((question) => question.level ?? ""),
+  ];
+  const labels = raw
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase());
+  return [...new Set(labels)];
+}
+
+function parseCsvParam(value: string | null): string[] {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function toggleValue(current: string[], value: string): string[] {
+  return current.includes(value)
+    ? current.filter((item) => item !== value)
+    : [...current, value];
 }
 
 export default function DiscoverModeration() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useContext(UserContext);
   const isAdmin = isAdminUid(user?.uid, user?.email);
-  const [items, setItems] = useState<PendingResource[]>([]);
+  const [items, setItems] = useState<DiscoverModerationNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const selectedSubjects = parseCsvParam(searchParams.get("subject"));
+  const selectedLevels = parseCsvParam(searchParams.get("level"));
+  const filterQuery = searchParams.toString();
+  const listSearch = filterQuery ? `?${filterQuery}` : "";
+
+  const setFilterParam = (key: "subject" | "level", values: string[]) => {
+    const next = new URLSearchParams(searchParams);
+    if (values.length > 0) next.set(key, values.join(","));
+    else next.delete(key);
+    setSearchParams(next, { replace: true });
+  };
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -75,25 +102,7 @@ export default function DiscoverModeration() {
       pendingQuery,
       (snap) => {
         const pendingItems = snap.docs
-          .map((entry) => {
-            const data = entry.data() as any;
-            return {
-              id: entry.id,
-              title: data.title ?? "Untitled",
-              description: data.description ?? "",
-              websiteUrl: data.websiteUrl ?? "",
-              resourceSource: data.resourceSource === "pdf" ? "pdf" as const : "website" as const,
-              pdfPath: data.pdfPath ?? "",
-              pdfFileName: data.pdfFileName ?? "",
-              thumbnailUrl: data.thumbnailUrl ?? "",
-              uploadedThumbnailUrl: data.uploadedThumbnailUrl ?? "",
-              uploadedThumbnailPath: data.uploadedThumbnailPath ?? "",
-              username: data.username ?? "Unknown",
-              userId: data.userId ?? "",
-              subjectLabel: data.subjectLabel ?? "General",
-              timestamp: data.timestamp?.seconds ?? null,
-            };
-          })
+          .map((entry) => parseDiscoverModerationNote(entry.id, entry.data() as Record<string, unknown>))
           .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
         setItems(pendingItems);
         setLoading(false);
@@ -108,28 +117,33 @@ export default function DiscoverModeration() {
     return () => unsub();
   }, [isAdmin]);
 
-  const approve = async (item: PendingResource) => {
+  const openReview = (item: DiscoverModerationNote) => {
+    navigate(`/admin/discover-moderation/${item.id}`);
+  };
+
+  const approve = async (item: DiscoverModerationNote) => {
     setBusyId(item.id);
     setError(null);
     try {
-      const payload: Record<string, any> = {
+      await updateDoc(doc(db, "discover-notes", item.id), {
         moderationStatus: "approved",
         thumbnailModeratedBy: user?.uid ?? "",
         thumbnailModeratedAt: new Date(),
-      };
-      if (item.uploadedThumbnailUrl) {
-        payload.thumbnailUrl = item.uploadedThumbnailUrl;
-        payload.thumbnailStatus = "approved";
-      }
-      await updateDoc(doc(db, "discover-notes", item.id), payload);
-    } catch (err: any) {
-      setError(err?.message ?? "Could not approve resource.");
+        ...(item.uploadedThumbnailUrl
+          ? {
+              thumbnailUrl: item.uploadedThumbnailUrl,
+              thumbnailStatus: "approved",
+            }
+          : {}),
+      });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not approve resource.");
     } finally {
       setBusyId(null);
     }
   };
 
-  const reject = async (item: PendingResource) => {
+  const reject = async (item: DiscoverModerationNote) => {
     if (!window.confirm("Reject and delete this Discover resource?")) return;
     setBusyId(item.id);
     setError(null);
@@ -156,8 +170,8 @@ export default function DiscoverModeration() {
           console.warn("Failed to delete rejected PDF:", deleteErr);
         }
       }
-    } catch (err: any) {
-      setError(err?.message ?? "Could not reject resource.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not reject resource.");
     } finally {
       setBusyId(null);
     }
@@ -190,7 +204,9 @@ export default function DiscoverModeration() {
             </button>
             <div>
               <h1 className="color-txt-main text-2xl font-bold">Discover Moderation</h1>
-              <p className="color-txt-sub text-sm">Approve or reject submitted resources before they appear publicly.</p>
+              <p className="color-txt-sub text-sm">
+                Open a pending listing to compare it with the linked question, edit fields, then approve or reject.
+              </p>
             </div>
           </div>
           <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl color-bg-grey-5 color-txt-sub text-sm font-semibold">
@@ -217,28 +233,32 @@ export default function DiscoverModeration() {
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
             {items.map((item) => (
-              <article key={item.id} className="rounded-2xl color-bg-grey-5 overflow-hidden">
-                <div className="grid grid-cols-1 sm:grid-cols-2">
-                  <div>
-                    <div className="px-4 py-3 text-xs font-bold color-txt-sub uppercase tracking-wide">Current public</div>
-                    <div className="aspect-video color-bg-grey-10 flex items-center justify-center overflow-hidden">
-                      {item.thumbnailUrl ? (
-                        <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="color-txt-sub text-sm">No preview image</span>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="px-4 py-3 text-xs font-bold color-txt-sub uppercase tracking-wide">Uploaded thumbnail</div>
-                    <div className="aspect-video color-bg-grey-10 flex items-center justify-center overflow-hidden">
-                      {item.uploadedThumbnailUrl ? (
-                        <img src={item.uploadedThumbnailUrl} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="color-txt-sub text-sm">Missing upload</span>
-                      )}
-                    </div>
-                  </div>
+              <article
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openReview(item)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openReview(item);
+                  }
+                }}
+                className="rounded-2xl color-bg-grey-5 overflow-hidden text-left cursor-pointer hover:color-bg-grey-10 transition-colors"
+              >
+                <div className="aspect-video color-bg-grey-10 overflow-hidden">
+                  <DiscoverMediaPreview
+                    resource={{
+                      title: item.title,
+                      websiteUrl: item.websiteUrl,
+                      resourceSource: item.resourceSource,
+                      pdfPath: item.pdfPath,
+                      thumbnailUrl: item.uploadedThumbnailUrl || item.thumbnailUrl,
+                      faviconUrl: item.faviconUrl,
+                    }}
+                    variant="thumb"
+                    className="w-full h-full"
+                  />
                 </div>
 
                 <div className="p-4 space-y-4">
@@ -246,36 +266,64 @@ export default function DiscoverModeration() {
                     <h2 className="font-bold color-txt-main">{item.title}</h2>
                     <p className="text-sm color-txt-sub line-clamp-2 mt-1">{item.description}</p>
                     <p className="text-xs color-txt-sub mt-2">
-                      {item.subjectLabel} · {item.resourceSource === "pdf" ? item.pdfFileName || "PDF" : "Website"} · shared by {item.username} {item.timestamp ? `· ${timeAgo(item.timestamp)}` : ""}
+                      {item.subjectLabel}
+                      {item.linkedQuestionName
+                        ? item.linkedQuestions.length > 1
+                          ? ` · ${item.linkedQuestions.length} linked questions`
+                          : ` · ${item.linkedQuestionName}`
+                        : ""}
+                      {` · ${item.resourceSource === "pdf" ? item.pdfFileName || "PDF" : item.siteName || "Website"}`}
+                      {` · ${item.username}`}
+                      {item.timestamp ? ` · ${timeAgo(item.timestamp)}` : ""}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => approve(item)}
-                      disabled={busyId === item.id}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openReview(item);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-semibold hover:opacity-90 cursor-pointer"
                     >
-                      <LuCheck size={15} />
-                      Approve post
+                      Review
+                      <LuArrowRight size={15} />
                     </button>
                     <button
                       type="button"
-                      onClick={() => reject(item)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void approve(item);
+                      }}
+                      disabled={busyId === item.id}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg color-txt-main text-sm font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
+                    >
+                      <LuCheck size={15} />
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void reject(item);
+                      }}
                       disabled={busyId === item.id}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg color-txt-main text-sm font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
                     >
                       <LuX size={15} />
-                      Reject post
+                      Reject
                     </button>
                     <button
                       type="button"
-                      onClick={() => window.open(item.websiteUrl, "_blank", "noopener,noreferrer")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        window.open(item.websiteUrl, "_blank", "noopener,noreferrer");
+                      }}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg color-txt-main text-sm font-semibold hover:opacity-90 cursor-pointer"
                     >
                       <LuExternalLink size={15} />
-                      {item.resourceSource === "pdf" ? "Open PDF" : "Open link"}
+                      Open
                     </button>
                   </div>
                 </div>

@@ -35,7 +35,6 @@ import { SubjectDropdown } from "../components/practiceHub";
 import {
     LuArrowLeft,
     LuArrowRight,
-    LuArrowUpRight,
     LuBookOpen,
     LuBookmark,
     LuExternalLink,
@@ -52,6 +51,12 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import VideoEmbedModal from "../components/discover/VideoEmbedModal";
 import DiscoverMediaPreview from "../components/discover/DiscoverMediaPreview";
+import LinkedQuestionJump from "../components/discover/LinkedQuestionJump";
+import {
+    noteLinksQuestion,
+    parseLinkedQuestions,
+    type LinkedDiscoverQuestion,
+} from "../lib/discoverLinks";
 
 type DiscoverNote = {
     id: string;
@@ -92,6 +97,7 @@ type DiscoverNote = {
     linkedQuestionLevel?: string;
     linkedQuestionTopic?: string;
     linkedQuestionSource?: string;
+    linkedQuestions?: LinkedDiscoverQuestion[];
 };
 
 type DiscoverQuestionPost = {
@@ -377,7 +383,10 @@ function scoreDiscoverSearch(
     const description = resource.description ?? "";
     const sourceName = resource.sourceName ?? "";
     const siteName = resource.note?.siteName ?? "";
-    const linkedName = resource.note?.linkedQuestionName ?? "";
+    const linkedName = [
+        resource.note?.linkedQuestionName ?? "",
+        ...(resource.note?.linkedQuestions ?? []).map((item) => item.name),
+    ].join(" ");
     const tags = [
         ...resource.tags,
         ...(resource.types ?? [resource.type]),
@@ -589,6 +598,7 @@ export default function Discover() {
                         linkedQuestionLevel: data.linkedQuestionLevel ?? undefined,
                         linkedQuestionTopic: data.linkedQuestionTopic ?? undefined,
                         linkedQuestionSource: data.linkedQuestionSource ?? undefined,
+                        linkedQuestions: parseLinkedQuestions(data as Record<string, unknown>),
                     };
                 });
                 setNotes(rows);
@@ -940,13 +950,13 @@ export default function Discover() {
 
     const linkedQuestionResources = useMemo(() => {
         if (!linkedQuestion) return { exact: [] as DiscoverResource[], fallback: [] as DiscoverResource[] };
-        const exact = filteredResources.filter(
-            (resource) => resource.note?.linkedQuestionId === linkedQuestion.id
+        const exact = filteredResources.filter((resource) =>
+            noteLinksQuestion(resource.note, linkedQuestion.id)
         );
         const subjectId = linkedQuestion.subjectId?.toLowerCase();
         const subjectLabel = linkedQuestion.subjectLabel?.toLowerCase();
         const fallback = filteredResources.filter((resource) => {
-            if (resource.note?.linkedQuestionId === linkedQuestion.id) return false;
+            if (noteLinksQuestion(resource.note, linkedQuestion.id)) return false;
             return (
                 (subjectId && resource.note?.subjectId?.toLowerCase() === subjectId) ||
                 (subjectLabel && resource.subject.toLowerCase() === subjectLabel)
@@ -1318,8 +1328,9 @@ export default function Discover() {
         const username = resource.username || "Unknown";
         const canOpenResource = Boolean(resource.websiteUrl?.trim() || resource.pdfPath);
         const ownsResource = Boolean(user?.uid && resource.userId === user.uid);
-        const linkedQuestionName = resource.note?.linkedQuestionName?.trim() || "";
-        const linkedQuestionUrl = resource.note?.linkedQuestionPracticeUrl?.trim() || "";
+        const linkedQuestions = resource.note?.linkedQuestions?.length
+            ? resource.note.linkedQuestions
+            : parseLinkedQuestions(resource.note as Record<string, unknown> | undefined);
         const commentCount = comments.length;
         const composerActive = commentComposerOpen || Boolean(commentText);
 
@@ -1397,16 +1408,10 @@ export default function Discover() {
                                     <h1 className="text-xl sm:text-2xl font-bold color-txt-main leading-snug">
                                         {resource.title}
                                     </h1>
-                                    {linkedQuestionName && linkedQuestionUrl && (
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate(linkedQuestionUrl)}
-                                            className="inline-flex items-center gap-1.5 max-w-full rounded-xl color-bg-accent color-txt-accent px-2.5 py-1 text-sm font-semibold cursor-pointer hover:opacity-90"
-                                        >
-                                            <LuArrowUpRight size={15} className="shrink-0" />
-                                            <span className="truncate">{linkedQuestionName}</span>
-                                        </button>
-                                    )}
+                                    <LinkedQuestionJump
+                                        questions={linkedQuestions}
+                                        resourceId={resource.id}
+                                    />
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0 ml-auto pl-2">

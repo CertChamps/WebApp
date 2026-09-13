@@ -1,4 +1,5 @@
-import { useState, useCallback, useContext, type ReactNode } from "react";
+import { useState, useCallback, useContext, useEffect, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose, LuClipboardList, LuSearch } from "react-icons/lu";
 import { AIChat } from "../ai";
@@ -14,6 +15,7 @@ import type { ImageQuestion } from "../../hooks/useImageQuestions";
 import ProGate from "../ProGate";
 import { UserContext } from "../../context/UserContext";
 import { canUseAceFeature } from "../../lib/contentAccess";
+import { DISCOVER_RESOURCE_PARAM, DISCOVER_SIDEBAR_PARAM } from "../../lib/discoverLinks";
 
 const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const };
 
@@ -337,7 +339,15 @@ function TileContent({
 
 function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionId: string; part: number; isPaperThread: boolean; question?: any }) {
   const { user } = useContext(UserContext);
+  const [searchParams] = useSearchParams();
   const [threadView, setThreadView] = useState<"discover" | "discussion">("discover");
+
+  useEffect(() => {
+    const openDiscover =
+      searchParams.get(DISCOVER_SIDEBAR_PARAM) === "threads" ||
+      Boolean(searchParams.get(DISCOVER_RESOURCE_PARAM)?.trim());
+    if (openDiscover) setThreadView("discover");
+  }, [searchParams]);
 
   if (!canUseAceFeature(user, "threads")) {
     return (

@@ -13,6 +13,8 @@ import {
 } from "react-icons/lu";
 import { db, storage } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
+import { isAdminUid } from "../../constants/adminUids";
+import { lookupDiscoverAuthor, type DiscoverAuthor } from "../../lib/discoverAuthor";
 import { SubjectDropdown } from "../practiceHub";
 import {
   FAVOURITES_CHANGED_EVENT,
@@ -24,6 +26,7 @@ import { extractYoutubeId, getDiscoverVideoPoster, isDiscoverVideoUrl } from "..
 import { renderPdfFirstPageJpeg } from "../../lib/discoverPreview";
 import { captureWebsiteThumbnailBlob } from "../../lib/discoverCapture";
 import type { QuestionDiscoveryContext } from "../../lib/questionDiscovery";
+import { linkedQuestionsPayload } from "../../lib/discoverLinks";
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
@@ -102,7 +105,11 @@ export default function DiscoverShareModal({
   linkedQuestion = null,
 }: DiscoverShareModalProps) {
   const { user } = useContext(UserContext);
+  const isAdmin = isAdminUid(user?.uid, user?.email);
   const [title, setTitle] = useState("");
+  const [postAsHandle, setPostAsHandle] = useState("");
+  const [postAsAuthor, setPostAsAuthor] = useState<DiscoverAuthor | null>(null);
+  const [lookingUpAuthor, setLookingUpAuthor] = useState(false);
   const [description, setDescription] = useState("");
   const [resourceSource, setResourceSource] = useState<ResourceSource>("website");
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -151,6 +158,9 @@ export default function DiscoverShareModal({
     setDescription("");
     setResourceSource("website");
     setWebsiteUrl("");
+    setPostAsHandle("");
+    setPostAsAuthor(null);
+    setLookingUpAuthor(false);
     setPdfFile(null);
     setShareSubjectId(linkedQuestion?.subjectId ?? null);
     setShareTypes(["Notes"]);
@@ -343,6 +353,25 @@ export default function DiscoverShareModal({
     onClose();
   };
 
+  const resolvePostAsAuthor = async (): Promise<DiscoverAuthor | null> => {
+    const handle = postAsHandle.trim();
+    if (!handle) {
+      setPostAsAuthor(null);
+      return null;
+    }
+    if (postAsAuthor && (postAsAuthor.username === handle || postAsAuthor.uid === handle)) {
+      return postAsAuthor;
+    }
+    setLookingUpAuthor(true);
+    try {
+      const match = await lookupDiscoverAuthor(handle);
+      setPostAsAuthor(match);
+      return match;
+    } finally {
+      setLookingUpAuthor(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user?.uid) {
       setFormError("You must be logged in to share notes.");
@@ -380,6 +409,19 @@ export default function DiscoverShareModal({
       setFormError("Choose the subject this resource is for.");
       return;
     }
+    let authorUid = user.uid;
+    let authorUsername = user.username ?? "";
+    let authorPicture: string | null = user.picture ?? null;
+    if (isAdmin && postAsHandle.trim()) {
+      const match = await resolvePostAsAuthor();
+      if (!match) {
+        setFormError("Could not find that account. Use their username or uid.");
+        return;
+      }
+      authorUid = match.uid;
+      authorUsername = match.username;
+      authorPicture = match.picture;
+    }
 
     setSubmitting(true);
     setFormError(null);
@@ -393,7 +435,7 @@ export default function DiscoverShareModal({
       let resourceUrl = preview?.url || validUrl;
       if (resourceSource === "pdf" && pdfFile) {
         const safePdfName = pdfFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        uploadedPdfPath = `discover-pdf-uploads/${user.uid}/${Date.now()}-${safePdfName}`;
+        uploadedPdfPath = `discover-pdf-uploads/${authorUid}/${Date.now()}-${safePdfName}`;
         const pdfRef = storageRef(storage, uploadedPdfPath);
         await uploadBytes(pdfRef, pdfFile, { contentType: "application/pdf" });
         resourceUrl = await getDownloadURL(pdfRef);
@@ -401,7 +443,7 @@ export default function DiscoverShareModal({
       let uploadedThumbnailUrl = "";
       if (thumbnailFile) {
         const safeName = thumbnailFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        uploadedThumbnailPath = `discover-thumbnail-uploads/${user.uid}/${Date.now()}-${safeName}`;
+        uploadedThumbnailPath = `discover-thumbnail-uploads/${authorUid}/${Date.now()}-${safeName}`;
         const fileRef = storageRef(storage, uploadedThumbnailPath);
         await uploadBytes(fileRef, thumbnailFile);
         uploadedThumbnailUrl = await getDownloadURL(fileRef);
@@ -416,7 +458,7 @@ export default function DiscoverShareModal({
               ? cached.blob
               : await captureWebsiteThumbnailBlob(preview?.url || validUrl);
           if (shot) {
-            listingThumbnailPath = `discover-thumbnail-uploads/${user.uid}/${Date.now()}-preview.jpg`;
+            listingThumbnailPath = `discover-thumbnail-uploads/${authorUid}/${Date.now()}-preview.jpg`;
             await uploadBytes(storageRef(storage, listingThumbnailPath), shot, {
               contentType: shot.type || "image/jpeg",
             });
@@ -430,7 +472,7 @@ export default function DiscoverShareModal({
         try {
           const pageJpeg = pdfShotRef.current ?? await renderPdfFirstPageJpeg(pdfFile);
           if (pageJpeg) {
-            listingThumbnailPath = `discover-thumbnail-uploads/${user.uid}/${Date.now()}-preview.jpg`;
+            listingThumbnailPath = `discover-thumbnail-uploads/${authorUid}/${Date.now()}-preview.jpg`;
             await uploadBytes(storageRef(storage, listingThumbnailPath), pageJpeg, {
               contentType: "image/jpeg",
             });
@@ -442,9 +484,9 @@ export default function DiscoverShareModal({
       }
 
       await addDoc(collection(db, "discover-notes"), {
-        userId: user.uid,
-        username: user.username ?? "",
-        userPicture: user.picture ?? null,
+        userId: authorUid,
+        username: authorUsername,
+        userPicture: authorPicture,
         title: trimmedTitle,
         description: trimmedDescription,
         websiteUrl: resourceUrl,
@@ -471,14 +513,30 @@ export default function DiscoverShareModal({
         commentCount: 0,
         ratingAverage: 0,
         ratingCount: 0,
-        linkedQuestionId: linkedQuestion?.id ?? null,
-        linkedQuestionName: linkedQuestion?.name ?? null,
-        linkedQuestionPracticeUrl: linkedQuestion?.practiceUrl ?? null,
-        linkedQuestionSubjectId: linkedQuestion?.subjectId ?? null,
-        linkedQuestionSubjectLabel: linkedQuestion?.subjectLabel ?? null,
-        linkedQuestionLevel: linkedQuestion?.level ?? null,
-        linkedQuestionTopic: linkedQuestion?.topic ?? null,
-        linkedQuestionSource: linkedQuestion?.source ?? null,
+        ...(linkedQuestion
+          ? linkedQuestionsPayload([
+              {
+                id: linkedQuestion.id,
+                name: linkedQuestion.name,
+                practiceUrl: linkedQuestion.practiceUrl,
+                subjectId: linkedQuestion.subjectId,
+                subjectLabel: linkedQuestion.subjectLabel,
+                level: linkedQuestion.level,
+                topic: linkedQuestion.topic,
+                source: linkedQuestion.source,
+              },
+            ])
+          : {
+              linkedQuestions: [],
+              linkedQuestionId: null,
+              linkedQuestionName: null,
+              linkedQuestionPracticeUrl: null,
+              linkedQuestionSubjectId: null,
+              linkedQuestionSubjectLabel: null,
+              linkedQuestionLevel: null,
+              linkedQuestionTopic: null,
+              linkedQuestionSource: null,
+            }),
         timestamp: serverTimestamp(),
       });
 
@@ -941,6 +999,44 @@ export default function DiscoverShareModal({
                 )}
               </div>
             </div>
+            {isAdmin && (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
+                  Post as another account
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={postAsHandle}
+                    onChange={(e) => {
+                      setPostAsHandle(e.target.value);
+                      setPostAsAuthor(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void resolvePostAsAuthor();
+                      }
+                    }}
+                    placeholder="Username or uid (leave blank for yourself)"
+                    className="flex-1 min-w-[16rem] rounded-xl color-bg-grey-5 color-txt-main px-4 py-3 text-sm outline-none placeholder:color-txt-sub"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void resolvePostAsAuthor()}
+                    disabled={lookingUpAuthor || !postAsHandle.trim()}
+                    className="px-4 py-2.5 rounded-xl color-bg-grey-5 color-txt-main text-sm font-semibold cursor-pointer disabled:opacity-50"
+                  >
+                    {lookingUpAuthor ? "Looking up…" : "Look up"}
+                  </button>
+                </div>
+                <p className="text-xs color-txt-sub">
+                  {postAsAuthor
+                    ? `Will publish as ${postAsAuthor.username}`
+                    : "Admins can attribute this listing to someone else when it goes to moderation."}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

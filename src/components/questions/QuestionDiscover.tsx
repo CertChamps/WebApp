@@ -18,7 +18,6 @@ import {
 import { deleteObject, getDownloadURL, ref as storageRef } from "firebase/storage";
 import {
   LuArrowLeft,
-  LuArrowUpRight,
   LuBookmark,
   LuExternalLink,
   LuLoader,
@@ -26,13 +25,19 @@ import {
   LuStar,
   LuTrash,
 } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { db, storage } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
 import { notifyPostOwner } from "../../lib/notifications";
 import DiscoverMediaPreview from "../discover/DiscoverMediaPreview";
 import DiscoverShareModal from "../discover/DiscoverShareModal";
+import LinkedQuestionJump from "../discover/LinkedQuestionJump";
 import { getQuestionDiscoveryContext } from "../../lib/questionDiscovery";
+import {
+  noteLinksQuestion,
+  parseLinkedQuestions,
+  type LinkedDiscoverQuestion,
+} from "../../lib/discoverLinks";
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
@@ -83,6 +88,7 @@ type DiscoverNote = {
   linkedQuestionLevel?: string;
   linkedQuestionTopic?: string;
   linkedQuestionSource?: string;
+  linkedQuestions?: LinkedDiscoverQuestion[];
   moderationStatus?: string;
 };
 
@@ -199,6 +205,7 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
 export default function QuestionDiscover({ question }: { question?: unknown }) {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const context = useMemo(() => getQuestionDiscoveryContext(question), [question]);
   const [notes, setNotes] = useState<DiscoverNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -263,6 +270,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
               linkedQuestionLevel: data.linkedQuestionLevel,
               linkedQuestionTopic: data.linkedQuestionTopic,
               linkedQuestionSource: data.linkedQuestionSource,
+              linkedQuestions: parseLinkedQuestions(data as Record<string, unknown>),
               moderationStatus: data.moderationStatus ?? "approved",
             };
           })
@@ -341,7 +349,9 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
       return { questionResources: [] as DiscoverResource[], subjectResources: approved.slice(0, 12) };
     }
 
-    const questionItems = approved.filter((resource) => resource.note?.linkedQuestionId === context.id);
+    const questionItems = approved.filter((resource) =>
+      noteLinksQuestion(resource.note, context.id)
+    );
     const questionIds = new Set(questionItems.map((resource) => resource.id));
     const subjectId = context.subjectId?.toLowerCase();
     const subjectLabel = context.subjectLabel?.toLowerCase();
@@ -358,6 +368,18 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
       subjectResources: subjectItems.slice(0, 12),
     };
   }, [approved, context]);
+
+  const autoOpenedResource = useRef<string | null>(null);
+  useEffect(() => {
+    const resourceId = searchParams.get("discoverResource")?.trim();
+    if (!resourceId || autoOpenedResource.current === resourceId) return;
+    const match =
+      approved.find((resource) => resource.id === resourceId) ||
+      notes.filter((note) => note.id === resourceId).map(noteToResource)[0];
+    if (!match) return;
+    autoOpenedResource.current = resourceId;
+    setSelectedResource(match);
+  }, [approved, notes, searchParams]);
 
   const relatedResources = useMemo(() => {
     if (!selectedResource) return [];
@@ -647,8 +669,9 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
     const username = resource.username || "Unknown";
     const canOpenResource = Boolean(resource.websiteUrl?.trim() || resource.pdfPath);
     const ownsResource = Boolean(user?.uid && resource.userId === user.uid);
-    const linkedQuestionName = resource.note?.linkedQuestionName?.trim() || "";
-    const linkedQuestionUrl = resource.note?.linkedQuestionPracticeUrl?.trim() || "";
+    const linkedQuestions = resource.note?.linkedQuestions?.length
+      ? resource.note.linkedQuestions
+      : parseLinkedQuestions(resource.note as Record<string, unknown> | undefined);
     const commentCount = comments.length;
     const composerActive = commentComposerOpen || Boolean(commentText);
 
@@ -725,16 +748,11 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
                 <h1 className="text-sm font-bold color-txt-main leading-snug">
                   {resource.title}
                 </h1>
-                {linkedQuestionName && linkedQuestionUrl && (
-                  <button
-                    type="button"
-                    onClick={() => navigate(linkedQuestionUrl)}
-                    className="inline-flex items-center gap-1 max-w-full rounded-lg color-bg-accent color-txt-accent px-2 py-0.5 text-[11px] font-semibold cursor-pointer hover:opacity-90"
-                  >
-                    <LuArrowUpRight size={13} className="shrink-0" />
-                    <span className="truncate">{linkedQuestionName}</span>
-                  </button>
-                )}
+                <LinkedQuestionJump
+                  questions={linkedQuestions}
+                  resourceId={resource.id}
+                  compact
+                />
               </div>
             </div>
           </div>
