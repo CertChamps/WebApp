@@ -161,47 +161,47 @@ export default function SubjectHeatmap({ subject, level, entries }: Props) {
           );
           if (cancelled) return;
 
-          for (const d of papersSnap.docs) {
-            if (cancelled) return;
-            const data = d.data();
-            const year = typeof data.year === "number" ? data.year : 0;
-            const lbl =
-              typeof data.label === "string" && data.label.trim() ? data.label.trim() : d.id;
+          paperList = (
+            await Promise.all(
+              papersSnap.docs.map(async (d) => {
+                const data = d.data();
+                const year = typeof data.year === "number" ? data.year : 0;
+                const lbl =
+                  typeof data.label === "string" && data.label.trim() ? data.label.trim() : d.id;
 
-            const qSnap = await getDocs(
-              collection(
-                db,
-                "questions",
-                "leavingcert",
-                "subjects",
-                subject.toLowerCase(),
-                "levels",
-                level.toLowerCase(),
-                "papers",
-                d.id,
-                "questions"
-              )
-            );
-            if (cancelled) return;
-            const questions: PaperQuestion[] = qSnap.docs
-              .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
-              .map((q) => {
-                const qData = q.data();
-                const name =
-                  typeof qData.questionName === "string" ? qData.questionName : q.id;
-                return { id: q.id, name };
-              });
+                const qSnap = await getDocs(
+                  collection(
+                    db,
+                    "questions",
+                    "leavingcert",
+                    "subjects",
+                    subject.toLowerCase(),
+                    "levels",
+                    level.toLowerCase(),
+                    "papers",
+                    d.id,
+                    "questions"
+                  )
+                );
+                const questions: PaperQuestion[] = qSnap.docs
+                  .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
+                  .map((q) => {
+                    const qData = q.data();
+                    const name =
+                      typeof qData.questionName === "string" ? qData.questionName : q.id;
+                    return { id: q.id, name };
+                  });
 
-            paperList.push({
-              id: d.id,
-              label: lbl,
-              year,
-              paperNum: getPaperNumber(d.id, lbl),
-              questions,
-            });
-          }
-
-          paperList.sort((a, b) => {
+                return {
+                  id: d.id,
+                  label: lbl,
+                  year,
+                  paperNum: getPaperNumber(d.id, lbl),
+                  questions,
+                } satisfies PaperInfo;
+              })
+            )
+          ).sort((a, b) => {
             if (a.year !== b.year) return b.year - a.year;
             return (a.paperNum ?? 99) - (b.paperNum ?? 99);
           });
@@ -305,7 +305,10 @@ export default function SubjectHeatmap({ subject, level, entries }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [subject, level, user?.uid, entries]);
+    // Intentionally omit `entries` — completion heat is derived in render via progressMap.
+    // Refetching the full curriculum whenever paper-progress updates was a major stall.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subject, level, user?.uid]);
 
   const progressMap = useMemo(() => {
     const map = new Map<string, Set<string>>();

@@ -1,6 +1,6 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { LuBell } from "react-icons/lu";
 import { db } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
@@ -13,7 +13,27 @@ export default function NotificationBell() {
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-  const unreadCount = user?.notifications?.length ?? 0;
+  const wasOpenRef = useRef(false);
+  const unreadCount = (user?.notifications ?? []).filter((n: any) => n?.read !== true).length;
+
+  const closePanel = () => setOpen(false);
+
+  useEffect(() => {
+    const wasOpen = wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (!wasOpen || open || !user?.uid) return;
+
+    const list = Array.isArray(user.notifications) ? user.notifications : [];
+    if (!list.some((n: any) => n?.read !== true)) return;
+
+    const updatedNotifications = list.map((n: any) => (
+      n?.read === true ? n : { ...n, read: true }
+    ));
+    setUser((prev: any) => ({ ...prev, notifications: updatedNotifications }));
+    void updateDoc(doc(db, "user-data", user.uid), { notifications: updatedNotifications }).catch((error) => {
+      console.log(error);
+    });
+  }, [open, user, setUser]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -60,11 +80,11 @@ export default function NotificationBell() {
       ) {
         return;
       }
-      setOpen(false);
+      closePanel();
     }
 
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") closePanel();
     }
 
     document.addEventListener("mousedown", handleOutside);
@@ -81,7 +101,10 @@ export default function NotificationBell() {
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          if (open) closePanel();
+          else setOpen(true);
+        }}
         aria-label="Notifications"
         aria-expanded={open}
         aria-controls="notifications-dropdown"
@@ -99,10 +122,10 @@ export default function NotificationBell() {
           <div
             ref={dropdownRef}
             id="notifications-dropdown"
-            className="fixed z-[200] min-w-[28rem] w-[min(90vw,32rem)] max-h-[75vh] overflow-hidden rounded-2xl border-2 color-shadow color-bg shadow-none"
+            className="fixed z-[200] w-[min(90vw,24rem)] max-h-[75vh] overflow-hidden rounded-2xl border-2 color-shadow color-bg shadow-none"
             style={{ top: pos.top, right: pos.right }}
           >
-            <Notifications />
+            <Notifications onClose={closePanel} />
           </div>,
           getThemedPortalTarget()
         )}

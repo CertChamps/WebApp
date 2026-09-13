@@ -42,6 +42,7 @@ type PostDoc = {
 
 type ReplyDoc = {
   id: string;
+  userId?: string;
   content: string;
   timestamp: any;
   username: string;
@@ -213,6 +214,7 @@ export function useReplies(id: string) {
               const img = await pathToUrl(r.imageUrl);
               return {
                 id: d.id,
+                userId: r.userId,
                 content: r.content ?? "",
                 timestamp: r.timestamp,
                 username: profile.username,
@@ -236,6 +238,7 @@ export function useReplies(id: string) {
               const img = await pathToUrl(r.imageUrl);
               return {
                 id: d.id,
+                userId: r.userId,
                 content: r.content ?? "",
                 timestamp: r.timestamp,
                 username: profile.username,
@@ -256,6 +259,7 @@ export function useReplies(id: string) {
               const img = await pathToUrl(r.imageUrl);
               return {
                 id: d.id,
+                userId: r.userId,
                 content: r.content ?? "",
                 timestamp: r.timestamp,
                 username: profile.username,

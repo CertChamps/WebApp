@@ -30,6 +30,7 @@ import {
 } from "../../lib/themeTextColor";
 import type { InjectedExchange } from "../ai/useAI";
 import { buildGradingChatMessage } from "../../lib/grading/annotationBuilder";
+import { ensureSelectionCaretInView, subscribeVisualViewport } from "../../utils/visualViewport";
 
 export type DocumentCanvasStroke = {
   points: { x: number; y: number; pressure: number }[];
@@ -47,7 +48,6 @@ type Props = {
   page: WhiteboardPage;
   attachments?: AttachedQuestion[];
   activeAttachmentId?: string | null;
-  onSelectAttachment?: (id: string) => void;
   canvasStrokes: DocumentCanvasStroke[];
   canvasObjects: CanvasObject[];
   onStrokesChange: (strokes: DocumentCanvasStroke[]) => void;
@@ -260,23 +260,15 @@ function documentText(editor: HTMLElement): string {
 
 function DocumentQuestionSheet({
   attachment,
-  active,
-  onSelect,
 }: {
   attachment: AttachedQuestion;
-  active: boolean;
-  onSelect?: (id: string) => void;
 }) {
   const media = useAttachedQuestionMedia(attachment);
-  const sheetClass = `overflow-hidden rounded-sm color-bg color-shadow border ${
-    active ? "outline outline-2 outline-offset-2 color-txt-accent" : ""
-  }`;
 
   return (
     <div
-      className={`w-full ${sheetClass}`}
+      className="w-full overflow-hidden color-bg color-shadow border"
       data-question-sheet={attachment.id}
-      onClick={() => onSelect?.(attachment.id)}
     >
       {media.audioPath && (
         <div className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
@@ -466,7 +458,6 @@ export default function DocumentEditor({
   page,
   attachments = [],
   activeAttachmentId = null,
-  onSelectAttachment,
   canvasStrokes,
   canvasObjects,
   onStrokesChange,
@@ -506,6 +497,8 @@ export default function DocumentEditor({
   onTouchRef.current = onTouch;
   const progressAliasIdRef = useRef(progressAliasId);
   progressAliasIdRef.current = progressAliasId;
+  const attachmentIdRef = useRef(activeAttachmentId);
+  attachmentIdRef.current = activeAttachmentId;
   const loadReadyRef = useRef(false);
   const { loadDocument, saveDocument } = useDocumentStorage();
 
@@ -528,19 +521,22 @@ export default function DocumentEditor({
     fontSize: "3",
   });
 
-  const draftKey = `document-draft:${page.id}`;
+  const draftKey = `document-draft:${page.id}:${activeAttachmentId ?? "page"}`;
+  const migrateLegacyContent = Boolean(activeAttachmentId) && attachments[0]?.id === activeAttachmentId;
+  const activeAttachment = attachments.find((attachment) => attachment.id === activeAttachmentId) ?? null;
 
   const flushSave = useCallback(async () => {
     const editor = editorRef.current;
     if (!loadReadyRef.current || !editor || pageIdRef.current !== page.id) return;
+    if (attachmentIdRef.current !== activeAttachmentId) return;
     const html = serializableHtml(editor);
     const revision = revisionRef.current;
     if (revision === savedRevisionRef.current) return;
     htmlRef.current = html;
     setSaveStatus("saving");
     try {
-      await saveDocument(page.id, html, progressAliasIdRef.current);
-      if (pageIdRef.current !== page.id) return;
+      await saveDocument(page.id, html, progressAliasIdRef.current, activeAttachmentId);
+      if (pageIdRef.current !== page.id || attachmentIdRef.current !== activeAttachmentId) return;
       if (revision === revisionRef.current) {
         savedRevisionRef.current = revision;
         setSaveStatus("saved");
@@ -549,9 +545,9 @@ export default function DocumentEditor({
       await onTouchRef.current();
     } catch (error) {
       console.error("[DocumentEditor] save failed", error);
-      if (pageIdRef.current === page.id) setSaveStatus("error");
+      if (pageIdRef.current === page.id && attachmentIdRef.current === activeAttachmentId) setSaveStatus("error");
     }
-  }, [draftKey, page.id, saveDocument]);
+  }, [activeAttachmentId, draftKey, page.id, saveDocument]);
 
   const scheduleSave = useCallback(() => {
     const editor = editorRef.current;
@@ -601,6 +597,7 @@ export default function DocumentEditor({
 
   useEffect(() => {
     pageIdRef.current = page.id;
+    attachmentIdRef.current = activeAttachmentId;
     loadReadyRef.current = false;
     runIdRef.current += 1;
     importRunIdRef.current += 1;
@@ -619,13 +616,17 @@ export default function DocumentEditor({
     const editor = editorRef.current;
     if (!editor) return;
     let cancelled = false;
+    const loadPageId = page.id;
+    const loadAttachmentId = activeAttachmentId;
     void (async () => {
       let stored: { html: string; updatedAt: number } | null = null;
       try {
-        const loaded = await loadDocument(page.id);
+        const loaded = await loadDocument(loadPageId, loadAttachmentId, {
+          fallbackToPage: migrateLegacyContent,
+        });
         if (loaded) stored = { html: loaded.html, updatedAt: loaded.updatedAt };
       } catch (error) {
-        if (cancelled || pageIdRef.current !== page.id) return;
+        if (cancelled || pageIdRef.current !== loadPageId || attachmentIdRef.current !== loadAttachmentId) return;
         console.error("[DocumentEditor] load failed", error);
         setLoadError("This document couldn't be loaded safely. Your saved content has not been changed.");
         setSaveStatus("loading");
@@ -636,8 +637,8 @@ export default function DocumentEditor({
       const hasRecoverableDraft = typeof draft?.html === "string" && draft.html !== stored?.html &&
         (Number(draft.updatedAt) || 0) >= (stored?.updatedAt ?? 0);
       const initial = hasRecoverableDraft && typeof draft?.html === "string"
-        ? draft.html : stored?.html || page.documentContent || EMPTY_PAGE_HTML;
-      if (cancelled || pageIdRef.current !== page.id) return;
+        ? draft.html : stored?.html || (!loadAttachmentId ? page.documentContent : "") || EMPTY_PAGE_HTML;
+      if (cancelled || pageIdRef.current !== loadPageId || attachmentIdRef.current !== loadAttachmentId) return;
       const safe = flattenSavedHtml(initial);
       editor.innerHTML = safe;
       htmlRef.current = serializableHtml(editor);
@@ -650,28 +651,22 @@ export default function DocumentEditor({
       }
     })();
     return () => { cancelled = true; };
-  }, [draftKey, flushSave, loadDocument, loadAttempt, page.documentContent, page.id]);
+  }, [activeAttachmentId, draftKey, flushSave, loadDocument, loadAttempt, migrateLegacyContent, page.documentContent, page.id]);
 
   useEffect(() => {
     const handleVisibility = () => { if (document.visibilityState === "hidden") void flushSave(); };
     document.addEventListener("visibilitychange", handleVisibility);
+    const pageId = page.id;
+    const attachmentId = activeAttachmentId;
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
       requestControllerRef.current?.abort();
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       if (loadReadyRef.current && revisionRef.current !== savedRevisionRef.current && htmlRef.current) {
-        void saveDocument(page.id, htmlRef.current, progressAliasIdRef.current);
+        void saveDocument(pageId, htmlRef.current, progressAliasIdRef.current, attachmentId);
       }
     };
-  }, [flushSave, page.id, saveDocument]);
-
-  useEffect(() => {
-    if (!activeAttachmentId) return;
-    const sheet = documentViewportRef.current?.querySelector(
-      `[data-question-sheet="${CSS.escape(activeAttachmentId)}"]`
-    );
-    sheet?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [activeAttachmentId]);
+  }, [activeAttachmentId, flushSave, page.id, saveDocument]);
 
   const rememberSelection = useCallback(() => {
     const selection = window.getSelection();
@@ -989,22 +984,45 @@ export default function DocumentEditor({
     });
   }, [activeFeedback]);
 
+  useEffect(() => {
+    if (mode !== "text") return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    let frame = 0;
+    const revealCaret = () => {
+      if (document.activeElement !== editor) return;
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        ensureSelectionCaretInView(editor);
+      });
+    };
+    editor.addEventListener("input", revealCaret);
+    editor.addEventListener("keyup", revealCaret);
+    document.addEventListener("selectionchange", revealCaret);
+    const stopViewport = subscribeVisualViewport(revealCaret);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      editor.removeEventListener("input", revealCaret);
+      editor.removeEventListener("keyup", revealCaret);
+      document.removeEventListener("selectionchange", revealCaret);
+      stopViewport();
+    };
+  }, [mode]);
+
   return (
     <div ref={documentViewportRef} className="relative h-full min-h-0 w-full overflow-hidden color-bg-grey-5">
-      <div className={`h-full overflow-auto px-3 pb-24 scrollbar-minimal sm:px-8 ${
-        attachments.length > 0 ? "pt-14 sm:pt-16" : "pt-5 sm:pt-8"
+      <div className={`h-full overflow-auto px-2 pb-16 scrollbar-minimal sm:px-4 ${
+        attachments.length > 0 ? "pt-12 sm:pt-14" : "pt-3 sm:pt-4"
       } ${viewportClassName ?? ""}`}>
-        <div className={`relative mx-auto flex flex-col gap-6 ${DOCUMENT_WIDTH_CLASS}`}>
-          {attachments.map((attachment) => (
+        <div className={`relative mx-auto flex flex-col gap-4 ${DOCUMENT_WIDTH_CLASS}`}>
+          {activeAttachment ? (
             <DocumentQuestionSheet
-              key={attachment.id}
-              attachment={attachment}
-              active={attachment.id === activeAttachmentId}
-              onSelect={onSelectAttachment}
+              key={activeAttachment.id}
+              attachment={activeAttachment}
             />
-          ))}
+          ) : null}
 
-          <div className="relative min-h-[1056px] overflow-hidden rounded-sm color-bg color-shadow border">
+          <div className="relative min-h-[1056px] overflow-hidden color-bg color-shadow border">
             <div
               ref={editorRef}
               contentEditable={mode === "text" && !loadError && saveStatus !== "loading"}
@@ -1029,7 +1047,11 @@ export default function DocumentEditor({
               onCompositionEnd={() => pruneEditedMarks()}
               onMouseUp={() => { rememberSelection(); syncFormatState(); }}
               onKeyUp={() => { rememberSelection(); syncFormatState(); }}
-              onFocus={() => { rememberSelection(); syncFormatState(); }}
+              onFocus={() => {
+                rememberSelection();
+                syncFormatState();
+                requestAnimationFrame(() => ensureSelectionCaretInView(editorRef.current));
+              }}
               onPaste={(event) => {
                 event.preventDefault();
                 const html = event.clipboardData.getData("text/html");
@@ -1040,7 +1062,7 @@ export default function DocumentEditor({
                 syncFormatState();
               }}
               onClick={handleEditorClick}
-              className={`relative z-10 min-h-[1056px] px-8 py-12 text-[16px] leading-7 color-txt-main outline-none sm:px-14 sm:py-16 [&_blockquote]:border-l-2 [&_blockquote]:pl-4 [&_figcaption]:color-txt-sub [&_img]:h-auto [&_img]:max-w-full [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 ${mode === "text" ? "cursor-text" : "pointer-events-none select-none"}`}
+              className={`relative z-10 min-h-[1056px] px-5 py-6 text-[16px] leading-7 color-txt-main outline-none sm:px-8 sm:py-8 [&_blockquote]:border-l-2 [&_blockquote]:pl-4 [&_figcaption]:color-txt-sub [&_img]:h-auto [&_img]:max-w-full [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6 ${mode === "text" ? "cursor-text" : "pointer-events-none select-none"}`}
             />
           </div>
 

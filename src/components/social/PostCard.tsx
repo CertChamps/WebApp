@@ -3,9 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { storage } from "../../../firebase";
 import { getDownloadURL, ref } from "firebase/storage";
 import useNotifications from "../../hooks/useNotifications";
-
-// Styles and Icons 
-import { LuMessageCircleMore } from "react-icons/lu"
+import { LuMessageCircle } from "react-icons/lu"
 
 interface PostCardProps {
     content: string;
@@ -13,10 +11,10 @@ interface PostCardProps {
     rank?: number;
     userImage?: string;
     username?: string;
-    time?: any; // Firestore Timestamp
+    time?: any;
     replyCount?: number;
-    imageURL?: string; // Optional image URL for the post
-    isFlashcard?: boolean; 
+    imageURL?: string;
+    isFlashcard?: boolean;
     onPressReplies?: () => void;
   }
 
@@ -36,6 +34,7 @@ interface PostCardProps {
     const [displayImageUrl, setDisplayImageUrl] = useState<string | null>(null);
     const {timeAgoFormatter} = useNotifications()
     const formattedDate = timeAgoFormatter(time)
+    const replies = replyCount ?? 0
 
     const handleUserClick = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -44,15 +43,17 @@ interface PostCardProps {
         }
     }
 
-    //======================== Fetch Image URL from Firebase Storage =========================
     useEffect(() => {
         const fetchImageUrl = async () => {
             if (imageURL) {
                 try {
+                    if (imageURL.startsWith("http")) {
+                        setDisplayImageUrl(imageURL);
+                        return;
+                    }
                     const imageRef = ref(storage, imageURL);
                     const imageUrl = await getDownloadURL(imageRef);
                     setDisplayImageUrl(imageUrl);
-                    // console.log(imageUrl);
                 } catch (error) {
                     console.error('Error fetching image:', error);
                     setDisplayImageUrl(null);
@@ -64,44 +65,56 @@ interface PostCardProps {
     
         fetchImageUrl();
     }, [imageURL]);
-    //==========================================================================================
   
     return (
-        <div className="post-card-main">
-            <div className="post-card-user">
-                <img 
-                    src={userImage} 
-                    alt={username} 
-                    className="post-card-user-img cursor-pointer" 
-                    onClick={handleUserClick}
-                />
-                <div>
-                    <p className="post-card-user-name cursor-pointer hover:opacity-80 transition-opacity" onClick={handleUserClick}>{username}</p>
-                    {/* Rank hidden for now */}
-                </div>
-                <span className="post-card-date">{formattedDate}</span>
-            </div>
-            
-            <div className="post-card-content">
-                <p className="post-card-content-txt">{content}</p>
-                {displayImageUrl && (
-                    <img 
-                        src={displayImageUrl} 
-                        alt="Post content" 
-                        className="post-card-content-img"
+        <article
+            className="px-1 py-5 cursor-pointer hover:color-bg-grey-5 transition-colors"
+            onClick={onPressReplies}
+        >
+            <div className="flex items-start gap-3">
+                {userImage ? (
+                    <img
+                        src={userImage}
+                        alt={username}
+                        className="w-11 h-11 rounded-full object-cover shrink-0 cursor-pointer"
+                        onClick={handleUserClick}
                     />
+                ) : (
+                    <div className="w-11 h-11 rounded-full color-bg-grey-10 shrink-0" />
                 )}
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2 min-w-0">
+                        <button
+                            type="button"
+                            className="text-[15px] font-bold color-txt-main truncate cursor-pointer hover:opacity-80"
+                            onClick={handleUserClick}
+                        >
+                            {username}
+                        </button>
+                        <span className="text-sm color-txt-sub shrink-0">{formattedDate}</span>
+                    </div>
+                    {content ? (
+                        <p className="mt-1.5 text-[16px] leading-relaxed color-txt-main whitespace-pre-wrap break-words">
+                            {content}
+                        </p>
+                    ) : null}
+                    {displayImageUrl && (
+                        <img
+                            src={displayImageUrl}
+                            alt="Post content"
+                            className="mt-3 max-h-[28rem] w-full rounded-2xl object-cover"
+                        />
+                    )}
+                    <div className="mt-3 flex items-center">
+                        <span className="inline-flex items-center gap-1.5 text-sm font-semibold color-txt-sub">
+                            <LuMessageCircle size={17} />
+                            {replies}
+                            <span className="font-medium">{replies === 1 ? "reply" : "replies"}</span>
+                        </span>
+                    </div>
+                </div>
             </div>
-            
-            <div className="post-card-footer" onClick={onPressReplies}>
-                <LuMessageCircleMore size={24} strokeWidth={1}/>
-                <span   
-                    className="post-card-footer-replies mx-0.5"
-                >
-                    {replyCount} 
-                </span>
-            </div>
-        </div>
+        </article>
     );
 }
 

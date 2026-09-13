@@ -86,14 +86,14 @@ export default function ActivityHeatmap({ uid }: Props) {
 
   if (loading) {
     return (
-      <div className="activity-heatmap rounded-lg p-4 animate-pulse">
+      <div className="rounded-xl color-bg-grey-5 p-4 animate-pulse">
         <div className="h-[140px] w-full rounded color-bg-grey-10" />
       </div>
     );
   }
 
   return (
-    <div className="activity-heatmap rounded-lg p-4">
+    <div className="rounded-xl color-bg-grey-5 p-4">
       <div className="overflow-x-auto scrollbar-minimal color-txt-accent flex justify-center">
         <div className="inline-grid gap-[5px]" style={{
           gridTemplateColumns: `auto repeat(${TOTAL_WEEKS}, 1fr)`,

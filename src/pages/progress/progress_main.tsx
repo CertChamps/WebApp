@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAllPaperProgress } from "../../hooks/usePaperProgress";
 import { useSubjectLevels } from "../../hooks/useSubjectLevels";
-import { useExamPapers, normalizePaperLevel } from "../../hooks/useExamPapers";
+import { normalizePaperLevel } from "../../hooks/useExamPapers";
 import SubjectProgressCard from "../../components/progress/SubjectProgressCard";
 import { paperProgressEntryMatchesSubjectLevel } from "../../lib/matchPaperProgressEntry";
 import {
@@ -58,32 +58,19 @@ const Progress = () => {
   const { pairs: subjectLevels, loading: subjectLevelsLoading } = useSubjectLevels();
   const favouriteSubjectIds = useSyncedFavouriteSubjectIds();
   const hiddenSubjectLevelKeys = useProgressHiddenSubjectLevelKeys(progressEntries);
-  const {
-    papers: leavingCertPapers,
-    loading: leavingCertPapersLoading,
-    error: leavingCertPapersError,
-  } = useExamPapers(null, { loadAllWhenNull: true });
 
   const visibleSubjectLevels = useMemo(() => {
-    if (leavingCertPapersError) return subjectLevels;
-
     const normLevel = (l: string) => normalizePaperLevel(l) || l.trim().toLowerCase();
 
-    const fromCurriculum =
-      subjectLevels.length === 0
-        ? []
-        : subjectLevels.filter(({ subject, level }) => {
-            const hasExamPapers = leavingCertPapers.some(
-              (p) =>
-                (p.subject ?? "").toLowerCase() === subject.toLowerCase() &&
-                normalizePaperLevel(p.level) === normalizePaperLevel(level)
-            );
-            if (hasExamPapers) return true;
-
-            return progressEntries.some((e) =>
-              paperProgressEntryMatchesSubjectLevel(e, subject, level)
-            );
-          });
+    // Prefer curriculum subject+level pairs the user has touched, plus favourites.
+    // Avoids a full past-paper catalogue scan on the overview (was hundreds of reads).
+    const fromCurriculum = subjectLevels.filter(({ subject, level }) => {
+      const isFavourite = subjectMatchesFavourite(subject, favouriteSubjectIds);
+      if (isFavourite) return true;
+      return progressEntries.some((e) =>
+        paperProgressEntryMatchesSubjectLevel(e, subject, level)
+      );
+    });
 
     const keys = new Set(
       fromCurriculum.map((p) => `${p.subject.toLowerCase()}||${normLevel(p.level)}`)
@@ -113,16 +100,9 @@ const Progress = () => {
         if (af !== bf) return af ? -1 : 1;
         return a.subject.localeCompare(b.subject, undefined, { sensitivity: "base" });
       });
-  }, [
-    subjectLevels,
-    leavingCertPapers,
-    progressEntries,
-    leavingCertPapersError,
-    hiddenSubjectLevelKeys,
-    favouriteSubjectIds,
-  ]);
+  }, [subjectLevels, progressEntries, hiddenSubjectLevelKeys, favouriteSubjectIds]);
 
-  const subjectGridLoading = subjectLevelsLoading || leavingCertPapersLoading || progressLoading;
+  const subjectGridLoading = subjectLevelsLoading || progressLoading;
   const [quote] = useState(() => {
     const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
     return q;

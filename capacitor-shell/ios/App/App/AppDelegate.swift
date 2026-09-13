@@ -14,6 +14,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIPencilInteractionDelega
         // Override point for customization after application launch.
         DispatchQueue.main.async { [weak self] in
             self?.installPencilInteractionIfNeeded()
+            self?.configureWebViewIfNeeded()
         }
         return true
     }
@@ -44,6 +45,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIPencilInteractionDelega
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
         installPencilInteractionIfNeeded()
+        configureWebViewIfNeeded()
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
@@ -67,6 +69,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIPencilInteractionDelega
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        NotificationCenter.default.post(name: Notification.Name("didReceiveRemoteNotification"), object: completionHandler, userInfo: userInfo)
+    }
+
     private func installPencilInteractionIfNeeded() {
         guard UIDevice.current.userInterfaceIdiom == .pad,
               pencilInteraction == nil,
@@ -76,6 +90,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIPencilInteractionDelega
         interaction.delegate = self
         rootView.addInteraction(interaction)
         pencilInteraction = interaction
+    }
+
+    /// Stop Apple Pencil from panning the WKWebView itself. Finger scrolling in
+    /// inner overflow:auto regions is unchanged; JS preventDefault covers those.
+    private func configureWebViewIfNeeded() {
+        guard let rootView = window?.rootViewController?.view,
+              let webView = findWebView(in: rootView) else { return }
+
+        let scrollView = webView.scrollView
+        scrollView.bounces = false
+        scrollView.alwaysBounceVertical = false
+        scrollView.alwaysBounceHorizontal = false
+        scrollView.keyboardDismissMode = .none
+        if #available(iOS 11.0, *) {
+            scrollView.contentInsetAdjustmentBehavior = .never
+        }
+        scrollView.panGestureRecognizer.allowedTouchTypes = [
+            NSNumber(value: UITouch.TouchType.direct.rawValue)
+        ]
     }
 
     private func dispatchWebEvent(_ name: String) {

@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { Capacitor } from "@capacitor/core";
 import { UserContext } from "./context/UserContext";
 import { OptionsContext } from "./context/OptionsContext";
 import AppRouter from "./Router";
 import { initPayments } from "./lib/payments";
 import { iapDebug } from "./lib/payments/paymentsDebug";
+import { registerPushNotifications } from "./lib/registerPushNotifications";
+import { getVisualViewportBounds, isKeyboardOpen, subscribeVisualViewport } from "./utils/visualViewport";
 //import CustomCursor from "./components/CustomCursor"
 
 export default function App() {
@@ -80,6 +82,29 @@ export default function App() {
 
     return () => window.clearInterval(heartbeat);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    void registerPushNotifications(user.uid);
+  }, [user?.uid]);
+
+  // Keep the app shell inside the visible viewport so iOS keyboard open
+  // does not slide the top bar off-screen.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const sync = () => {
+      const bounds = getVisualViewportBounds();
+      root.style.setProperty("--vv-offset-top", `${bounds.offsetTop}px`);
+      root.style.setProperty("--vv-offset-left", `${bounds.left}px`);
+      root.style.setProperty("--vv-height", `${bounds.height}px`);
+      root.style.setProperty("--vv-width", `${bounds.width}px`);
+      root.style.setProperty("--keyboard-inset-bottom", `${bounds.keyboardBottom}px`);
+      root.classList.toggle("vv-keyboard-open", isKeyboardOpen(bounds));
+      if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+    };
+    sync();
+    return subscribeVisualViewport(sync);
   }, []);
 
   // Native shell UX controls (Android back handling + touch-safe viewport)

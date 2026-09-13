@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Document } from "react-pdf";
+import "../../lib/pdfWorker";
 import PdfThemeWrapper from "../PdfThemeWrapper";
 import { ZoomableSurface } from "./ZoomableQuestionImage";
 import Lottie from "lottie-react";

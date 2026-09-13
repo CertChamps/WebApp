@@ -82,7 +82,12 @@ export const CollapsibleSidebar: FC<CollapsibleSidebarProps> = function Collapsi
   const panelClosedX = isLeft ? "-100%" : "100%";
 
   return (
-    <div className={`collapsible-sidebar relative h-full w-full  ${className}`.trim()}>
+    <div
+      className={`collapsible-sidebar relative h-full w-full  ${className}`.trim()}
+      // When closed, only the open-tab should capture hits so floating widgets
+      // (timer / Spotify) under this strip stay clickable.
+      style={!isOpen ? { pointerEvents: "none" } : undefined}
+    >
       <motion.button
         type="button"
         aria-label="Open sidebar"

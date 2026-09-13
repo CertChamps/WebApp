@@ -16,6 +16,8 @@ import { UserContext } from "../context/UserContext";
 import {
   documentCanvasId,
   documentContentStorageId,
+  documentQuestionCanvasId,
+  documentQuestionContentStorageId,
   buildWhiteboardTree,
   ORDER_STEP,
   UNSET_ORDER,
@@ -274,9 +276,11 @@ export function useWhiteboards(subject: string | null) {
         whiteboardCanvasId(page.id),
         documentCanvasId(page.id),
         documentContentStorageId(page.id),
-        ...page.attachedQuestions.map((attachment) =>
-          whiteboardQuestionCanvasId(page.id, attachment.id)
-        ),
+        ...page.attachedQuestions.flatMap((attachment) => [
+          whiteboardQuestionCanvasId(page.id, attachment.id),
+          documentQuestionCanvasId(page.id, attachment.id),
+          documentQuestionContentStorageId(page.id, attachment.id),
+        ]),
       ];
       storageIds.forEach((storageId) => {
         void deleteDoc(doc(db, "user-data", uid, "question-data", storageId)).catch(() => {});

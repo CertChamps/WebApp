@@ -172,10 +172,10 @@ const router = createHashRouter([
     path: "/social/social",
     element: (
       <ProtectedRoute>
-        <>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <Social />
-        </>
+        </div>
       </ProtectedRoute>
     ),
   },
@@ -205,10 +205,10 @@ const router = createHashRouter([
     path: "/social/replies",
     element: (
       <ProtectedRoute>
-        <>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <Replies />
-        </>
+        </div>
       </ProtectedRoute>
     ),
   },
@@ -347,10 +347,10 @@ const router = createHashRouter([
     path: "/viewProfile/:userID",
     element: (
       <ProtectedRoute>
-        <>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <ProfileViewer />
-        </>
+        </div>
       </ProtectedRoute>
     ),
   },
@@ -358,10 +358,10 @@ const router = createHashRouter([
     path: "/post/:id",
     element: (
       <ProtectedRoute>
-        <>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <Replies />
-        </>
+        </div>
       </ProtectedRoute>
     ),
   },
