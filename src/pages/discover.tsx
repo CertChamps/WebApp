@@ -15,6 +15,7 @@ import {
     serverTimestamp,
     setDoc,
     updateDoc,
+    where,
 } from "firebase/firestore";
 import { aiResponseError, authenticatedAiFetch, METERED_CHAT_API_URL } from "../lib/aiApi";
 import { deleteObject, getDownloadURL, ref as storageRef } from "firebase/storage";
@@ -167,53 +168,6 @@ function resourceMatchesSelectedSubject(resource: DiscoverResource, selectedLabe
 const MAX_COMMENT = 500;
 const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
 const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
-
-const STARTER_RESOURCES: DiscoverResource[] = [
-    {
-        id: "starter-english-macbeth",
-        title: "Macbeth theme notes and quote bank",
-        subject: "English",
-        type: "Notes",
-        description: "A starter listing for Paper 2 revision: themes, character notes, and short quote prompts.",
-        sourceName: "CertChamps starter idea",
-        tags: ["Macbeth", "Paper 2", "Quotes"],
-        comments: 12,
-        saves: 86,
-    },
-    {
-        id: "starter-biology-enzymes",
-        title: "Biology enzymes explained quickly",
-        subject: "Biology",
-        type: "Videos",
-        description: "Short video-style resource card for students who need the topic explained before doing questions.",
-        sourceName: "CertChamps starter idea",
-        tags: ["Enzymes", "Experiments", "Definitions"],
-        comments: 7,
-        saves: 64,
-    },
-    {
-        id: "starter-irish-oral",
-        title: "Irish oral opinion phrases",
-        subject: "Irish",
-        type: "Flashcards",
-        description: "Useful phrases grouped by topic so students can build answers without starting from scratch.",
-        sourceName: "CertChamps starter idea",
-        tags: ["Oral", "Opinions", "Sraith Pictiur"],
-        comments: 19,
-        saves: 102,
-    },
-    {
-        id: "starter-maths-calculus",
-        title: "Higher Level calculus notes pack",
-        subject: "Mathematics",
-        type: "Notes",
-        description: "A resource card for curated question practice, topic notes, and worked examples in one place.",
-        sourceName: "CertChamps starter idea",
-        tags: ["Calculus", "Higher Level"],
-        comments: 5,
-        saves: 48,
-    },
-];
 
 function timeAgo(seconds: number | null): string {
     if (!seconds) return "";
@@ -629,6 +583,7 @@ export default function Discover() {
     useEffect(() => {
         const q = query(
             collection(db, "discover-notes"),
+            where("moderationStatus", "==", "approved"),
             orderBy("timestamp", "desc"),
             limit(100)
         );
@@ -873,10 +828,9 @@ export default function Discover() {
     );
 
     const resources = useMemo(() => {
-        const liveResources = notes
+        return notes
             .filter((note) => note.moderationStatus === "approved")
             .map(noteToResource);
-        return liveResources.length > 0 ? liveResources : STARTER_RESOURCES;
     }, [notes]);
 
     const clearAiSearch = useCallback(() => {
@@ -1438,6 +1392,9 @@ export default function Discover() {
                         <LuSearch size={22} />
                     </div>
                     <h3 className="text-lg font-semibold color-txt-main">No matches yet</h3>
+                    <p className="text-sm color-txt-sub">
+                        Shared resources appear here after they are approved.
+                    </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -1455,6 +1412,7 @@ export default function Discover() {
         const username = resource.username || "Unknown";
         const canOpenResource = Boolean(resource.websiteUrl?.trim() || resource.pdfPath);
         const ownsResource = Boolean(user?.uid && resource.userId === user.uid);
+        const canDelete = Boolean(user?.uid && (isAdmin || ownsResource));
         const linkedQuestions = resource.note?.linkedQuestions?.length
             ? resource.note.linkedQuestions
             : parseLinkedQuestions(resource.note as Record<string, unknown> | undefined);
@@ -1479,7 +1437,7 @@ export default function Discover() {
                         <LuArrowLeft size={16} />
                         Discover
                     </button>
-                    {ownsResource && (
+                    {canDelete && (
                         <button
                             type="button"
                             onClick={() => setShowDeleteConfirm(true)}

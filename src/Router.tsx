@@ -37,6 +37,7 @@ import { SpotifyCallback } from "./components/spotify";
 import NotFound from "./pages/notFound";
 import ForgotPassword from "./pages/forgotPassword";
 import LegalTermsPrompt from "./components/prompts/legal_terms_prompt";
+import GoogleAnalytics from "./components/GoogleAnalytics";
 
 /** Redirects /practice/:id (deck links from social) to /decks/:id */
 function PracticeToDeckRedirect() {
@@ -77,6 +78,7 @@ function RootLayout() {
       <UsernamePrompt />
       <ReleaseNotesPrompt />
       <LegalTermsPrompt />
+      <GoogleAnalytics />
     </SpotifyProvider>
   );
 }

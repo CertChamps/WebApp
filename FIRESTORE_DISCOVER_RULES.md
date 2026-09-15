@@ -61,13 +61,45 @@ match /discover-notes/{noteId} {
 
   allow delete: if request.auth != null
     && (resource.data.userId == request.auth.uid
+        || request.auth.uid in [
+             'NkN9UBqoPEYpE21MC89fipLn0SP2',
+             'gJIqKYlc1OdXUQGZQkR4IzfCIoL2',
+             'AN3cIuQxmXfXb5kEmXuHcM5vWyH3'
+           ]
+        || request.auth.token.email == 'cian.brady@certchamps.ie'
         || request.auth.token.admin == true);
 }
 ```
 
-> If you don't use a custom `admin` claim, replace the admin check with an
-> explicit `uid` list (matching `src/constants/adminUids.ts`) or remove the
-> admin branch and delete listings manually from the Firebase console.
+> Publish this delete rule (or the equivalent `isAdmin` helper you already use) so hardcoded admin accounts can remove any listing from the app, not only their own.
+
+### Indexes
+
+Public Discover queries approved listings only:
+
+`where moderationStatus == "approved"` + `orderBy timestamp desc`
+
+That composite index lives in `firestore.indexes.json`. Create it from the error link in the browser console the first time the feed runs, or add it in Firebase Console → Firestore → Indexes.
+
+## Discussion posts
+
+Collection: `posts/{postId}`
+
+Admins should be able to delete any discussion post as well:
+
+```
+match /posts/{postId} {
+  allow delete: if request.auth != null
+    && (resource.data.userId == request.auth.uid
+        || request.auth.uid in [
+             'NkN9UBqoPEYpE21MC89fipLn0SP2',
+             'gJIqKYlc1OdXUQGZQkR4IzfCIoL2',
+             'AN3cIuQxmXfXb5kEmXuHcM5vWyH3'
+           ]
+        || request.auth.token.email == 'cian.brady@certchamps.ie'
+        || request.auth.token.admin == true);
+}
+```
 
 ## Storage
 

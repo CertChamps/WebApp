@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   deleteDoc,
   doc,
@@ -37,6 +37,7 @@ import {
 import { getPracticeSubjectId, getSubjectLabel } from "../data/practiceHubSubjects";
 import { SubjectDropdown } from "../components/practiceHub";
 import DiscoverMediaPreview from "../components/discover/DiscoverMediaPreview";
+import DiscoverRejectModal from "../components/discover/DiscoverRejectModal";
 import ZoomableQuestionImage from "../components/questions/ZoomableQuestionImage";
 import { linkedQuestionsPayload, withDiscoverSidebar, type LinkedDiscoverQuestion } from "../lib/discoverLinks";
 import { lookupDiscoverAuthor } from "../lib/discoverAuthor";
@@ -151,7 +152,9 @@ const inputClass =
 
 export default function DiscoverModerationReview() {
   const { noteId } = useParams<{ noteId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const listHref = `/admin/discover-moderation${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
   const { user } = useContext(UserContext);
   const isAdmin = isAdminUid(user?.uid, user?.email);
 
@@ -163,6 +166,7 @@ export default function DiscoverModerationReview() {
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState(false);
   const [busy, setBusy] = useState<"save" | "approve" | "reject" | null>(null);
+  const [showReject, setShowReject] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [questionPreview, setQuestionPreview] = useState<LinkedQuestionPreview | null>(null);
@@ -437,7 +441,7 @@ export default function DiscoverModerationReview() {
             }
           : {}),
       });
-      navigate("/admin/discover-moderation");
+      navigate(listHref);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not approve resource.");
     } finally {
@@ -445,9 +449,13 @@ export default function DiscoverModerationReview() {
     }
   };
 
-  const reject = async () => {
+  const reject = async (reason: string) => {
     if (!noteId || !note) return;
-    if (!window.confirm("Reject and delete this Discover resource?")) return;
+    const why = reason.trim();
+    if (!why) {
+      setError("Add a reason before rejecting.");
+      return;
+    }
     setBusy("reject");
     setError(null);
     try {
@@ -458,6 +466,7 @@ export default function DiscoverModerationReview() {
         type: "post-rejected",
         postId: note.id,
         postTitle: form?.title || note.title,
+        reason: why,
       });
       if (note.uploadedThumbnailPath) {
         try {
@@ -473,7 +482,7 @@ export default function DiscoverModerationReview() {
           console.warn("Failed to delete rejected PDF:", deleteErr);
         }
       }
-      navigate("/admin/discover-moderation");
+      navigate(listHref);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not reject resource.");
     } finally {
@@ -507,7 +516,7 @@ export default function DiscoverModerationReview() {
       <div className="flex flex-col flex-1 min-h-0 color-bg p-6">
         <button
           type="button"
-          onClick={() => navigate("/admin/discover-moderation")}
+          onClick={() => navigate(listHref)}
           className="self-start inline-flex items-center gap-2 color-bg-grey-5 px-3 py-2 rounded-xl color-txt-main"
         >
           <LuArrowLeft size={18} />
@@ -535,7 +544,7 @@ export default function DiscoverModerationReview() {
           <div className="flex items-start gap-4 min-w-0">
             <button
               type="button"
-              onClick={() => navigate("/admin/discover-moderation")}
+              onClick={() => navigate(listHref)}
               className="color-bg-grey-5 p-2.5 rounded-xl hover:color-bg-grey-10 transition-all shrink-0"
               aria-label="Back to pending list"
             >
@@ -574,7 +583,10 @@ export default function DiscoverModerationReview() {
             </button>
             <button
               type="button"
-              onClick={() => void reject()}
+              onClick={() => {
+                setError(null);
+                setShowReject(true);
+              }}
               disabled={busy != null}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
             >
@@ -583,7 +595,7 @@ export default function DiscoverModerationReview() {
             </button>
           </div>
         </div>
-        {error && (
+        {error && !showReject && (
           <div className="mt-4 rounded-xl color-bg-grey-5 px-4 py-3 text-sm text-red-500">{error}</div>
         )}
       </div>
@@ -989,6 +1001,16 @@ export default function DiscoverModerationReview() {
           </section>
         </div>
       </div>
+      <DiscoverRejectModal
+        open={showReject}
+        title={form.title ? `Reject “${form.title}”` : "Reject resource"}
+        busy={busy === "reject"}
+        error={error}
+        onClose={() => {
+          if (busy !== "reject") setShowReject(false);
+        }}
+        onConfirm={(reason) => void reject(reason)}
+      />
     </div>
   );
 }

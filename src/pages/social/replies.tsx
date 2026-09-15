@@ -12,6 +12,7 @@ import { LuArrowLeft, LuArrowUpRight, LuImage, LuTrash, LuX } from "react-icons/
 import useNotifications from "../../hooks/useNotifications";
 import { useContext, useEffect, useState } from "react";
 import { UserContext } from "../../context/UserContext";
+import { isAdminUid } from "../../constants/adminUids";
 import { getBlob, ref as storageRef } from "firebase/storage";
 import { doc, getDoc } from "firebase/firestore";
 import { db, storage } from "../../../firebase";
@@ -23,6 +24,7 @@ export default function Replies() {
   const { toRoman } = useQuestions();
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
+  const isAdmin = isAdminUid(user?.uid, user?.email);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [replyError, setReplyError] = useState<string>("");
   const [composerOpen, setComposerOpen] = useState(false);
@@ -311,7 +313,7 @@ export default function Replies() {
                           <span className="text-sm color-txt-sub shrink-0">
                             {timeAgoFormatter(post.timestamp)}
                           </span>
-                          {user?.uid === post.userId && (
+                          {(user?.uid === post.userId || isAdmin) && (
                             <button
                               type="button"
                               onClick={() => setShowConfirmDelete(true)}

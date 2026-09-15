@@ -14,6 +14,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref as storageRef } from "firebase/storage";
 import {
@@ -27,6 +28,7 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { db, storage } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
+import { isAdminUid } from "../../constants/adminUids";
 import DiscoverMediaPreview from "../discover/DiscoverMediaPreview";
 import DiscoverShareModal from "../discover/DiscoverShareModal";
 import LinkedQuestionJump from "../discover/LinkedQuestionJump";
@@ -203,6 +205,7 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
 
 export default function QuestionDiscover({ question }: { question?: unknown }) {
   const { user } = useContext(UserContext);
+  const isAdmin = isAdminUid(user?.uid, user?.email);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const context = useMemo(() => getQuestionDiscoveryContext(question), [question]);
@@ -227,6 +230,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
   useEffect(() => {
     const resourcesQuery = query(
       collection(db, "discover-notes"),
+      where("moderationStatus", "==", "approved"),
       orderBy("timestamp", "desc"),
       limit(100)
     );
@@ -419,7 +423,9 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
   };
 
   const handleDelete = async (note: DiscoverNote) => {
-    if (!user?.uid || deleting || note.userId !== user.uid) return;
+    if (!user?.uid || deleting) return;
+    const canDelete = isAdmin || note.userId === user.uid;
+    if (!canDelete) return;
     setDeleting(true);
     try {
       await deleteDoc(doc(db, "discover-notes", note.id));
@@ -651,6 +657,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
     const username = resource.username || "Unknown";
     const canOpenResource = Boolean(resource.websiteUrl?.trim() || resource.pdfPath);
     const ownsResource = Boolean(user?.uid && resource.userId === user.uid);
+    const canDelete = Boolean(user?.uid && (isAdmin || ownsResource));
     const linkedQuestions = resource.note?.linkedQuestions?.length
       ? resource.note.linkedQuestions
       : parseLinkedQuestions(resource.note as Record<string, unknown> | undefined);
@@ -668,7 +675,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
             <LuArrowLeft size={16} />
             Discover
           </button>
-          {ownsResource && (
+          {canDelete && (
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
