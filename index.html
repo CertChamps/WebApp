@@ -13,9 +13,29 @@
     <link rel="manifest" href="./manifest.json" />
     <link rel="apple-touch-icon" href="./crown.png" />
     <title>CertChamps</title>
-
-    <script type="module" crossorigin src="./assets/index-C7p1Q0N-.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Dz9iPkxy.css">
+    <!-- Google tag (gtag.js) -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      (function () {
+        var granted = false;
+        try { granted = localStorage.getItem("certchamps-analytics-consent") === "granted"; } catch (e) {}
+        gtag("consent", "default", {
+          analytics_storage: granted ? "granted" : "denied",
+          ad_storage: "denied",
+          ad_user_data: "denied",
+          ad_personalization: "denied"
+        });
+        gtag("js", new Date());
+        if (granted) {
+          var debug = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+          gtag("config", "G-T9KRDYV6J", { anonymize_ip: true, debug_mode: debug });
+        }
+      })();
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-T9KRDYV6J"></script>
+    <script type="module" crossorigin src="./assets/index-6yGlCoUY.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-D8tbo0F8.css">
   </head>
   <body>
     <div id="root"><p></p></div>
@@ -42,7 +62,7 @@
         }
       }(window.location))
     </script>
-    <!-- End Single Page Apps for GitHub Pages -->
+    <!-- End Single Page Apps for GitHub Pages -->
     <!-- Captcha Importing -->
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
