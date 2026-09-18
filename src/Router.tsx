@@ -19,6 +19,7 @@ import DeckViewer from "./pages/deckViewer";
 import AddQuestions from "./pages/addQuestions";
 import AdminCanvasViewer from "./pages/adminCanvasViewer";
 import DiscoverModeration from "./pages/discoverModeration";
+import DiscoverModerationReview from "./pages/discoverModerationReview";
 import HelpReports from "./pages/helpReports";
 import ProfileViewer from "./pages/profileViewer";
 import { ProtectedRoute } from "./components/protectedRoute";
@@ -36,6 +37,7 @@ import { SpotifyCallback } from "./components/spotify";
 import NotFound from "./pages/notFound";
 import ForgotPassword from "./pages/forgotPassword";
 import LegalTermsPrompt from "./components/prompts/legal_terms_prompt";
+import GoogleAnalytics from "./components/GoogleAnalytics";
 
 /** Redirects /practice/:id (deck links from social) to /decks/:id */
 function PracticeToDeckRedirect() {
@@ -76,6 +78,7 @@ function RootLayout() {
       <UsernamePrompt />
       <ReleaseNotesPrompt />
       <LegalTermsPrompt />
+      <GoogleAnalytics />
     </SpotifyProvider>
   );
 }
@@ -263,6 +266,17 @@ const router = createHashRouter([
         <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <DiscoverModeration />
+        </div>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/discover-moderation/:noteId",
+    element: (
+      <ProtectedRoute>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+          <Navbar />
+          <DiscoverModerationReview />
         </div>
       </ProtectedRoute>
     ),

@@ -13,7 +13,27 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/crown.png" />
     <title>CertChamps</title>
-
+    <!-- Google tag (gtag.js) -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      (function () {
+        var granted = false;
+        try { granted = localStorage.getItem("certchamps-analytics-consent") === "granted"; } catch (e) {}
+        gtag("consent", "default", {
+          analytics_storage: granted ? "granted" : "denied",
+          ad_storage: "denied",
+          ad_user_data: "denied",
+          ad_personalization: "denied"
+        });
+        gtag("js", new Date());
+        if (granted) {
+          var debug = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+          gtag("config", "G-T9KRDYV6J", { anonymize_ip: true, debug_mode: debug });
+        }
+      })();
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-T9KRDYV6J"></script>
   </head>
   <body>
     <div id="root"><p></p></div>

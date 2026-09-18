@@ -14,23 +14,31 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref as storageRef } from "firebase/storage";
 import {
   LuArrowLeft,
-  LuArrowUpRight,
   LuBookmark,
   LuLoader,
   LuPlus,
   LuStar,
   LuTrash,
 } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { db, storage } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
+import { isAdminUid } from "../../constants/adminUids";
 import DiscoverMediaPreview from "../discover/DiscoverMediaPreview";
 import DiscoverShareModal from "../discover/DiscoverShareModal";
+import LinkedQuestionJump from "../discover/LinkedQuestionJump";
 import { getQuestionDiscoveryContext } from "../../lib/questionDiscovery";
+import { isAllSubjectsResource } from "../../data/practiceHubSubjects";
+import {
+  noteLinksQuestion,
+  parseLinkedQuestions,
+  type LinkedDiscoverQuestion,
+} from "../../lib/discoverLinks";
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
@@ -81,6 +89,7 @@ type DiscoverNote = {
   linkedQuestionLevel?: string;
   linkedQuestionTopic?: string;
   linkedQuestionSource?: string;
+  linkedQuestions?: LinkedDiscoverQuestion[];
   moderationStatus?: string;
 };
 
@@ -196,7 +205,9 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
 
 export default function QuestionDiscover({ question }: { question?: unknown }) {
   const { user } = useContext(UserContext);
+  const isAdmin = isAdminUid(user?.uid, user?.email);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const context = useMemo(() => getQuestionDiscoveryContext(question), [question]);
   const [notes, setNotes] = useState<DiscoverNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -219,6 +230,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
   useEffect(() => {
     const resourcesQuery = query(
       collection(db, "discover-notes"),
+      where("moderationStatus", "==", "approved"),
       orderBy("timestamp", "desc"),
       limit(100)
     );
@@ -261,6 +273,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
               linkedQuestionLevel: data.linkedQuestionLevel,
               linkedQuestionTopic: data.linkedQuestionTopic,
               linkedQuestionSource: data.linkedQuestionSource,
+              linkedQuestions: parseLinkedQuestions(data as Record<string, unknown>),
               moderationStatus: data.moderationStatus ?? "approved",
             };
           })
@@ -339,12 +352,15 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
       return { questionResources: [] as DiscoverResource[], subjectResources: approved.slice(0, 12) };
     }
 
-    const questionItems = approved.filter((resource) => resource.note?.linkedQuestionId === context.id);
+    const questionItems = approved.filter((resource) =>
+      noteLinksQuestion(resource.note, context.id)
+    );
     const questionIds = new Set(questionItems.map((resource) => resource.id));
     const subjectId = context.subjectId?.toLowerCase();
     const subjectLabel = context.subjectLabel?.toLowerCase();
     const subjectItems = approved.filter((resource) => {
       if (questionIds.has(resource.id)) return false;
+      if (isAllSubjectsResource(resource.note?.subjectId, resource.subject)) return true;
       return (
         (subjectId && resource.note?.subjectId?.toLowerCase() === subjectId) ||
         (subjectLabel && resource.subject.toLowerCase() === subjectLabel)
@@ -356,6 +372,18 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
       subjectResources: subjectItems.slice(0, 12),
     };
   }, [approved, context]);
+
+  const autoOpenedResource = useRef<string | null>(null);
+  useEffect(() => {
+    const resourceId = searchParams.get("discoverResource")?.trim();
+    if (!resourceId || autoOpenedResource.current === resourceId) return;
+    const match =
+      approved.find((resource) => resource.id === resourceId) ||
+      notes.filter((note) => note.id === resourceId).map(noteToResource)[0];
+    if (!match) return;
+    autoOpenedResource.current = resourceId;
+    setSelectedResource(match);
+  }, [approved, notes, searchParams]);
 
   const relatedResources = useMemo(() => {
     if (!selectedResource) return [];
@@ -395,7 +423,9 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
   };
 
   const handleDelete = async (note: DiscoverNote) => {
-    if (!user?.uid || deleting || note.userId !== user.uid) return;
+    if (!user?.uid || deleting) return;
+    const canDelete = isAdmin || note.userId === user.uid;
+    if (!canDelete) return;
     setDeleting(true);
     try {
       await deleteDoc(doc(db, "discover-notes", note.id));
@@ -627,8 +657,10 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
     const username = resource.username || "Unknown";
     const canOpenResource = Boolean(resource.websiteUrl?.trim() || resource.pdfPath);
     const ownsResource = Boolean(user?.uid && resource.userId === user.uid);
-    const linkedQuestionName = resource.note?.linkedQuestionName?.trim() || "";
-    const linkedQuestionUrl = resource.note?.linkedQuestionPracticeUrl?.trim() || "";
+    const canDelete = Boolean(user?.uid && (isAdmin || ownsResource));
+    const linkedQuestions = resource.note?.linkedQuestions?.length
+      ? resource.note.linkedQuestions
+      : parseLinkedQuestions(resource.note as Record<string, unknown> | undefined);
     const commentCount = comments.length;
     const composerActive = commentComposerOpen || Boolean(commentText);
 
@@ -643,7 +675,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
             <LuArrowLeft size={16} />
             Discover
           </button>
-          {ownsResource && (
+          {canDelete && (
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
@@ -704,16 +736,11 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
                 <h1 className="text-sm font-bold color-txt-main leading-snug">
                   {resource.title}
                 </h1>
-                {linkedQuestionName && linkedQuestionUrl && (
-                  <button
-                    type="button"
-                    onClick={() => navigate(linkedQuestionUrl)}
-                    className="inline-flex items-center gap-1 max-w-full rounded-lg color-bg-accent color-txt-accent px-2 py-0.5 text-[11px] font-semibold cursor-pointer hover:opacity-90"
-                  >
-                    <LuArrowUpRight size={13} className="shrink-0" />
-                    <span className="truncate">{linkedQuestionName}</span>
-                  </button>
-                )}
+                <LinkedQuestionJump
+                  questions={linkedQuestions}
+                  resourceId={resource.id}
+                  compact
+                />
               </div>
             </div>
           </div>

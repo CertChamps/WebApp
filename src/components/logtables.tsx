@@ -13,6 +13,7 @@ import PdfThemeWrapper from "./PdfThemeWrapper";
 import Lottie from "lottie-react";
 import loadingAnim from "../assets/animations/loading.json";
 import { getLogTablesAssetUrl } from "../utils/logTablesPdf";
+import { ZoomableSurface } from "./questions/ZoomableQuestionImage";
 
 type QuestionType = {
   pgNumber: string;
@@ -230,6 +231,7 @@ const LogTables = forwardRef<LogTablesHandle, QuestionType>(
           {file != null && (
             embedded ? (
               <div ref={scrollRef} className={scrollClassName} onScroll={updateVisibleRangeFromScroll}>
+                <ZoomableSurface>
                 <div style={{ width: containerWidth, height: scaledHeightPx, minHeight: "100%" }}>
                   <div
                     style={{
@@ -252,6 +254,7 @@ const LogTables = forwardRef<LogTablesHandle, QuestionType>(
                     </Document>
                   </div>
                 </div>
+                </ZoomableSurface>
               </div>
             ) : (
               <div
@@ -259,6 +262,7 @@ const LogTables = forwardRef<LogTablesHandle, QuestionType>(
                 className={scrollClassName}
                 onScroll={updateVisibleRangeFromScroll}
               >
+                <ZoomableSurface>
                 <Document
                   file={file}
                   onLoadSuccess={onDocumentLoad}
@@ -270,6 +274,7 @@ const LogTables = forwardRef<LogTablesHandle, QuestionType>(
                 >
                   {pdfPages}
                 </Document>
+                </ZoomableSurface>
               </div>
             )
           )}

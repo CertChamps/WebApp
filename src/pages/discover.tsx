@@ -15,6 +15,7 @@ import {
     serverTimestamp,
     setDoc,
     updateDoc,
+    where,
 } from "firebase/firestore";
 import { aiResponseError, authenticatedAiFetch, METERED_CHAT_API_URL } from "../lib/aiApi";
 import { deleteObject, getDownloadURL, ref as storageRef } from "firebase/storage";
@@ -32,6 +33,7 @@ import {
 import {
     FAVOURITES_CHANGED_EVENT,
     getFavouriteSubjectIds,
+    isAllSubjectsResource,
     PRACTICE_HUB_SUBJECTS,
     useSyncedFavouriteSubjectIds,
 } from "../data/practiceHubSubjects";
@@ -39,7 +41,6 @@ import { SubjectDropdown } from "../components/practiceHub";
 import {
     LuArrowLeft,
     LuArrowRight,
-    LuArrowUpRight,
     LuBookOpen,
     LuBookmark,
     LuExternalLink,
@@ -57,6 +58,12 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import VideoEmbedModal from "../components/discover/VideoEmbedModal";
 import DiscoverMediaPreview from "../components/discover/DiscoverMediaPreview";
+import LinkedQuestionJump from "../components/discover/LinkedQuestionJump";
+import {
+    noteLinksQuestion,
+    parseLinkedQuestions,
+    type LinkedDiscoverQuestion,
+} from "../lib/discoverLinks";
 
 type DiscoverNote = {
     id: string;
@@ -99,6 +106,7 @@ type DiscoverNote = {
     linkedQuestionLevel?: string;
     linkedQuestionTopic?: string;
     linkedQuestionSource?: string;
+    linkedQuestions?: LinkedDiscoverQuestion[];
 };
 
 type DiscoverQuestionPost = {
@@ -155,56 +163,19 @@ type DiscoverResource = {
     note?: DiscoverNote;
 };
 
+function resourceMatchesSelectedSubject(resource: DiscoverResource, selectedLabel?: string) {
+    if (!selectedLabel) return true;
+    if (isAllSubjectsResource(resource.note?.subjectId, resource.subject)) return true;
+    const needle = selectedLabel.toLowerCase();
+    return (
+        resource.subject.toLowerCase() === needle ||
+        resource.tags.some((tag) => tag.toLowerCase() === needle)
+    );
+}
+
 const MAX_COMMENT = 500;
 const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
 const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
-
-const STARTER_RESOURCES: DiscoverResource[] = [
-    {
-        id: "starter-english-macbeth",
-        title: "Macbeth theme notes and quote bank",
-        subject: "English",
-        type: "Notes",
-        description: "A starter listing for Paper 2 revision: themes, character notes, and short quote prompts.",
-        sourceName: "CertChamps starter idea",
-        tags: ["Macbeth", "Paper 2", "Quotes"],
-        comments: 12,
-        saves: 86,
-    },
-    {
-        id: "starter-biology-enzymes",
-        title: "Biology enzymes explained quickly",
-        subject: "Biology",
-        type: "Videos",
-        description: "Short video-style resource card for students who need the topic explained before doing questions.",
-        sourceName: "CertChamps starter idea",
-        tags: ["Enzymes", "Experiments", "Definitions"],
-        comments: 7,
-        saves: 64,
-    },
-    {
-        id: "starter-irish-oral",
-        title: "Irish oral opinion phrases",
-        subject: "Irish",
-        type: "Flashcards",
-        description: "Useful phrases grouped by topic so students can build answers without starting from scratch.",
-        sourceName: "CertChamps starter idea",
-        tags: ["Oral", "Opinions", "Sraith Pictiur"],
-        comments: 19,
-        saves: 102,
-    },
-    {
-        id: "starter-maths-calculus",
-        title: "Higher Level calculus notes pack",
-        subject: "Mathematics",
-        type: "Notes",
-        description: "A resource card for curated question practice, topic notes, and worked examples in one place.",
-        sourceName: "CertChamps starter idea",
-        tags: ["Calculus", "Higher Level"],
-        comments: 5,
-        saves: 48,
-    },
-];
 
 function timeAgo(seconds: number | null): string {
     if (!seconds) return "";
@@ -385,7 +356,10 @@ function scoreDiscoverSearch(
     const description = resource.description ?? "";
     const sourceName = resource.sourceName ?? "";
     const siteName = resource.note?.siteName ?? "";
-    const linkedName = resource.note?.linkedQuestionName ?? "";
+    const linkedName = [
+        resource.note?.linkedQuestionName ?? "",
+        ...(resource.note?.linkedQuestions ?? []).map((item) => item.name),
+    ].join(" ");
     const tags = [
         ...resource.tags,
         ...(resource.types ?? [resource.type]),
@@ -638,13 +612,57 @@ export default function Discover() {
     useEffect(() => {
         const q = query(
             collection(db, "discover-notes"),
+            where("moderationStatus", "==", "approved"),
             orderBy("timestamp", "desc"),
             limit(100)
         );
         const unsub = onSnapshot(
             q,
             (snap) => {
-                const rows: DiscoverNote[] = snap.docs.map((d) => firestoreToDiscoverNote(d.id, d.data()));
+                const rows: DiscoverNote[] = snap.docs.map((d) => {
+                    const data = d.data();
+                    return {
+                        id: d.id,
+                        userId: data.userId ?? "",
+                        username: data.username ?? "Unknown",
+                        userPicture: data.userPicture ?? null,
+                        title: data.title ?? "",
+                        description: data.description ?? "",
+                        websiteUrl: data.websiteUrl ?? "",
+                        resourceSource: data.resourceSource === "pdf" ? "pdf" : "website",
+                        pdfPath: data.pdfPath ?? null,
+                        pdfFileName: data.pdfFileName ?? null,
+                        thumbnailUrl: data.thumbnailUrl ?? "",
+                        thumbnailPath: data.thumbnailPath ?? null,
+                        uploadedThumbnailUrl: data.uploadedThumbnailUrl ?? null,
+                        uploadedThumbnailPath: data.uploadedThumbnailPath ?? null,
+                        thumbnailStatus: data.thumbnailStatus ?? "none",
+                        moderationStatus: data.moderationStatus ?? "approved",
+                        faviconUrl: data.faviconUrl ?? null,
+                        siteName: data.siteName ?? "",
+                        subjectId: data.subjectId ?? undefined,
+                        subjectLabel: data.subjectLabel ?? undefined,
+                        level: data.level ?? undefined,
+                        levels: Array.isArray(data.levels) ? data.levels : [],
+                        resourceType: data.resourceType ?? undefined,
+                        resourceTypes: Array.isArray(data.resourceTypes) ? data.resourceTypes : [],
+                        topics: Array.isArray(data.topics) ? data.topics : [],
+                        likeCount: typeof data.likeCount === "number" ? data.likeCount : 0,
+                        commentCount: typeof data.commentCount === "number" ? data.commentCount : 0,
+                        ratingAverage: typeof data.ratingAverage === "number" ? data.ratingAverage : 0,
+                        ratingCount: typeof data.ratingCount === "number" ? data.ratingCount : 0,
+                        timestamp: data.timestamp?.seconds ?? null,
+                        linkedQuestionId: data.linkedQuestionId ?? undefined,
+                        linkedQuestionName: data.linkedQuestionName ?? undefined,
+                        linkedQuestionPracticeUrl: data.linkedQuestionPracticeUrl ?? undefined,
+                        linkedQuestionSubjectId: data.linkedQuestionSubjectId ?? undefined,
+                        linkedQuestionSubjectLabel: data.linkedQuestionSubjectLabel ?? undefined,
+                        linkedQuestionLevel: data.linkedQuestionLevel ?? undefined,
+                        linkedQuestionTopic: data.linkedQuestionTopic ?? undefined,
+                        linkedQuestionSource: data.linkedQuestionSource ?? undefined,
+                        linkedQuestions: parseLinkedQuestions(data as Record<string, unknown>),
+                    };
+                });
                 setNotes(rows);
                 setLoading(false);
             },
@@ -839,10 +857,9 @@ export default function Discover() {
     );
 
     const resources = useMemo(() => {
-        const liveResources = notes
+        return notes
             .filter((note) => note.moderationStatus === "approved")
             .map(noteToResource);
-        return liveResources.length > 0 ? liveResources : STARTER_RESOURCES;
     }, [notes]);
 
     const clearAiSearch = useCallback(() => {
@@ -878,12 +895,8 @@ export default function Discover() {
             return;
         }
 
-        const selectedSubjectLabel = selectedSubject?.label.toLowerCase();
         const candidateResources = resources.filter((resource) => {
-            const matchesSubject = selectedSubjectLabel
-                ? resource.subject.toLowerCase() === selectedSubjectLabel ||
-                  resource.tags.some((tag) => tag.toLowerCase() === selectedSubjectLabel)
-                : true;
+            const matchesSubject = resourceMatchesSelectedSubject(resource, selectedSubject?.label);
             const matchesType =
                 selectedTypes.length === 0 ||
                 (resource.types ?? [resource.type]).some((type) => selectedTypes.includes(type));
@@ -991,16 +1004,12 @@ export default function Discover() {
     }, [aiSearchEnabled, aiSearching, clearAiSearch]);
 
     const filteredResources = useMemo(() => {
-        const selectedSubjectLabel = selectedSubject?.label.toLowerCase();
         const aiOrder = aiResultIds ? new Map(aiResultIds.map((id, index) => [id, index])) : null;
         const searchQuery = (submittedQuery ?? "").trim().toLowerCase();
         const searchTokens = tokenizeSearch(searchQuery);
 
         const scored = resources.flatMap((resource) => {
-            const matchesSubject = selectedSubjectLabel
-                ? resource.subject.toLowerCase() === selectedSubjectLabel ||
-                  resource.tags.some((tag) => tag.toLowerCase() === selectedSubjectLabel)
-                : true;
+            const matchesSubject = resourceMatchesSelectedSubject(resource, selectedSubject?.label);
             const matchesType =
                 selectedTypes.length === 0 ||
                 (resource.types ?? [resource.type]).some((type) => selectedTypes.includes(type));
@@ -1044,7 +1053,7 @@ export default function Discover() {
 
     const recommendedResources = useMemo(() => {
         const base = filteredResources.filter((resource) => {
-            if (selectedSubject) return resource.subject.toLowerCase() === selectedSubject.label.toLowerCase();
+            if (selectedSubject) return resourceMatchesSelectedSubject(resource, selectedSubject.label);
             if (favouriteSubjectLabels.size === 0) return true;
             return favouriteSubjectLabels.has(resource.subject.toLowerCase());
         });
@@ -1061,16 +1070,17 @@ export default function Discover() {
 
     const linkedQuestionResources = useMemo(() => {
         if (!linkedQuestion) return { exact: [] as DiscoverResource[], fallback: [] as DiscoverResource[] };
-        const exact = filteredResources.filter(
-            (resource) => resource.note?.linkedQuestionId === linkedQuestion.id
+        const exact = filteredResources.filter((resource) =>
+            noteLinksQuestion(resource.note, linkedQuestion.id)
         );
-        const subjectId = linkedQuestion.subjectId?.toLowerCase();
-        const subjectLabel = linkedQuestion.subjectLabel?.toLowerCase();
         const fallback = filteredResources.filter((resource) => {
-            if (resource.note?.linkedQuestionId === linkedQuestion.id) return false;
+            if (noteLinksQuestion(resource.note, linkedQuestion.id)) return false;
             return (
-                (subjectId && resource.note?.subjectId?.toLowerCase() === subjectId) ||
-                (subjectLabel && resource.subject.toLowerCase() === subjectLabel)
+                resourceMatchesSelectedSubject(resource, linkedQuestion.subjectLabel) ||
+                Boolean(
+                    linkedQuestion.subjectId &&
+                    resource.note?.subjectId?.toLowerCase() === linkedQuestion.subjectId.toLowerCase()
+                )
             );
         });
         return { exact: exact.slice(0, 12), fallback: fallback.slice(0, 12) };
@@ -1431,6 +1441,9 @@ export default function Discover() {
                         <LuSearch size={22} />
                     </div>
                     <h3 className="text-lg font-semibold color-txt-main">No matches yet</h3>
+                    <p className="text-sm color-txt-sub">
+                        Shared resources appear here after they are approved.
+                    </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -1448,8 +1461,10 @@ export default function Discover() {
         const username = resource.username || "Unknown";
         const canOpenResource = Boolean(resource.websiteUrl?.trim() || resource.pdfPath || resource.imagePath);
         const ownsResource = Boolean(user?.uid && resource.userId === user.uid);
-        const linkedQuestionName = resource.note?.linkedQuestionName?.trim() || "";
-        const linkedQuestionUrl = resource.note?.linkedQuestionPracticeUrl?.trim() || "";
+        const canDelete = Boolean(user?.uid && (isAdmin || ownsResource));
+        const linkedQuestions = resource.note?.linkedQuestions?.length
+            ? resource.note.linkedQuestions
+            : parseLinkedQuestions(resource.note as Record<string, unknown> | undefined);
         const commentCount = comments.length;
         const composerActive = commentComposerOpen || Boolean(commentText);
 
@@ -1471,7 +1486,7 @@ export default function Discover() {
                         <LuArrowLeft size={16} />
                         Discover
                     </button>
-                    {ownsResource && (
+                    {canDelete && (
                         <button
                             type="button"
                             onClick={() => setShowDeleteConfirm(true)}
@@ -1533,16 +1548,10 @@ export default function Discover() {
                                     <h1 className="text-xl sm:text-2xl font-bold color-txt-main leading-snug">
                                         {resource.title}
                                     </h1>
-                                    {linkedQuestionName && linkedQuestionUrl && (
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate(linkedQuestionUrl)}
-                                            className="inline-flex items-center gap-1.5 max-w-full rounded-xl color-bg-accent color-txt-accent px-2.5 py-1 text-sm font-semibold cursor-pointer hover:opacity-90"
-                                        >
-                                            <LuArrowUpRight size={15} className="shrink-0" />
-                                            <span className="truncate">{linkedQuestionName}</span>
-                                        </button>
-                                    )}
+                                    <LinkedQuestionJump
+                                        questions={linkedQuestions}
+                                        resourceId={resource.id}
+                                    />
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0 ml-auto pl-2">

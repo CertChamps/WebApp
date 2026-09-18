@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Document } from "react-pdf";
 import "../../lib/pdfWorker";
 import PdfThemeWrapper from "../PdfThemeWrapper";
+import { ZoomableSurface } from "./ZoomableQuestionImage";
 import Lottie from "lottie-react";
 import loadingAnim from "../../assets/animations/loading.json";
 
@@ -97,6 +98,7 @@ export default function PastPaperMarkingScheme({
         </div>
       )}
       <div ref={fillWidth ? scrollRef : undefined} className="flex-1 min-h-0 overflow-y-auto py-1 w-full">
+        <ZoomableSurface>
         <div
           className="mx-auto overflow-hidden rounded-[10px] color-shadow color-bg-grey-5/50"
           style={{ width: effectiveWidth }}
@@ -130,6 +132,7 @@ export default function PastPaperMarkingScheme({
               })}
           </Document>
         </div>
+        </ZoomableSurface>
       </div>
       {numPages === 0 && !loadError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center color-bg rounded-xl">

@@ -41,6 +41,7 @@ export default function ImageMarkingScheme({
                   ? questionName ?? "Marking scheme"
                   : `${questionName ?? "Marking scheme"} part ${idx + 1}`,
             }))}
+            className="w-full h-auto"
             roundStack
           />
         </div>
