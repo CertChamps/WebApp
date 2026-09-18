@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import {
   LuCheck,
   LuFileText,
-  LuLayoutPanelTop,
   LuLoaderCircle,
+  LuPencil,
   LuPlus,
   LuSearch,
 } from "react-icons/lu";
@@ -16,6 +16,7 @@ type Props = {
   subject: string;
   attachment: AttachedQuestion;
   onClose: () => void;
+  onSaved?: () => void;
 };
 
 type DestinationMode = "existing" | "new";
@@ -43,10 +44,11 @@ export default function SaveQuestionToCanvasModal({
   subject,
   attachment,
   onClose,
+  onSaved,
 }: Props) {
   const navigate = useNavigate();
   const { pages, loading, createPage, updatePage } = useWhiteboards(subject);
-  const [mode, setMode] = useState<DestinationMode>("existing");
+  const [mode, setMode] = useState<DestinationMode>("new");
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [newPageName, setNewPageName] = useState(attachment.label);
   const [newPageType, setNewPageType] = useState<NewPageType>("whiteboard");
@@ -85,6 +87,7 @@ export default function SaveQuestionToCanvasModal({
             attachedQuestions: [...target.attachedQuestions, attachment],
           });
         }
+        onSaved?.();
         onClose();
         navigate(`/whiteboards/page/${target.id}?q=${encodeURIComponent(attachmentId)}`);
         return;
@@ -96,6 +99,7 @@ export default function SaveQuestionToCanvasModal({
         attachedQuestions: [attachment],
         pageType: newPageType,
       });
+      onSaved?.();
       onClose();
       navigate(`/whiteboards/page/${created.id}?q=${encodeURIComponent(attachment.id)}`);
     } catch (saveError) {
@@ -139,24 +143,15 @@ export default function SaveQuestionToCanvasModal({
           <LuFileText size={18} className="shrink-0 color-txt-sub" />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold color-txt-main">{attachment.label}</p>
-            <p className="text-xs color-txt-sub">This question will stay linked to the question bank.</p>
+            <p className="text-xs color-txt-sub">
+              {attachment.source === "custom"
+                ? "This uploaded question will be added to your page."
+                : "This question will stay linked to the question bank."}
+            </p>
           </div>
         </div>
 
         <div className="flex gap-1 rounded-xl color-bg-grey-5 p-1">
-          <button
-            type="button"
-            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-              mode === "existing" ? "color-bg color-txt-main" : "color-txt-sub hover:color-txt-main"
-            }`}
-            onClick={() => {
-              setMode("existing");
-              setError(null);
-            }}
-          >
-            <LuCheck size={15} />
-            Existing page
-          </button>
           <button
             type="button"
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
@@ -168,7 +163,20 @@ export default function SaveQuestionToCanvasModal({
             }}
           >
             <LuPlus size={15} />
-            New page
+            New Page
+          </button>
+          <button
+            type="button"
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+              mode === "existing" ? "color-bg color-txt-main" : "color-txt-sub hover:color-txt-main"
+            }`}
+            onClick={() => {
+              setMode("existing");
+              setError(null);
+            }}
+          >
+            <LuCheck size={15} />
+            Existing Page
           </button>
         </div>
 
@@ -228,7 +236,7 @@ export default function SaveQuestionToCanvasModal({
                           ? <span className="text-base">{page.emoji}</span>
                           : page.pageType === "document"
                             ? <LuFileText size={17} />
-                            : <LuLayoutPanelTop size={17} />}
+                            : <LuPencil size={17} />}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">{page.name}</span>
@@ -266,7 +274,7 @@ export default function SaveQuestionToCanvasModal({
               <span className="text-sm font-semibold color-txt-main">Page type</span>
               <div className="grid grid-cols-2 gap-2">
                 {([
-                  { id: "whiteboard" as const, label: "Whiteboard", Icon: LuLayoutPanelTop },
+                  { id: "whiteboard" as const, label: "Whiteboard", Icon: LuPencil },
                   { id: "document" as const, label: "Document", Icon: LuFileText },
                 ]).map(({ id, label, Icon }) => (
                   <button

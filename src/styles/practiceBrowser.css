@@ -507,6 +507,11 @@
   vertical-align: top;
 }
 
+.practice-browser__question-images .zoomable-question-page__img,
+.practice-browser__marking-images .zoomable-question-page__img {
+  background: white;
+}
+
 /* One continuous stack: round only the outer corners */
 .practice-browser__question-images > .practice-browser__question-image:first-child {
   border-radius: var(--pb-radius-in) var(--pb-radius-in) 0 0;

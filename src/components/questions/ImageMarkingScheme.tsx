@@ -1,4 +1,5 @@
 import type { ImageQuestion } from "../../hooks/useImageQuestions";
+import ZoomableQuestionImage from "./ZoomableQuestionImage";
 
 type ImageMarkingSchemeProps = {
   images: ImageQuestion[];
@@ -31,20 +32,17 @@ export default function ImageMarkingScheme({
       )}
       <div className="flex flex-col items-center p-2 w-full">
         <div className="w-full overflow-hidden color-shadow rounded-[10px]">
-          {images.map((img, idx) => (
-            <img
-              key={img.storagePath}
-              src={img.downloadUrl}
-              alt={
+          <ZoomableQuestionImage
+            images={images.map((img, idx) => ({
+              key: img.storagePath,
+              src: img.downloadUrl,
+              alt:
                 idx === 0
                   ? questionName ?? "Marking scheme"
-                  : `${questionName ?? "Marking scheme"} part ${idx + 1}`
-              }
-              className="w-full h-auto block"
-              style={{ objectFit: "contain", display: "block" }}
-              draggable={false}
-            />
-          ))}
+                  : `${questionName ?? "Marking scheme"} part ${idx + 1}`,
+            }))}
+            roundStack
+          />
         </div>
       </div>
     </div>

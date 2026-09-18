@@ -798,6 +798,8 @@ export default function AddQuestionModal({ subject, onAdd, onClose, mode = "add"
               <input
                 id="wb-upload-label"
                 type="text"
+                enterKeyHint="done"
+                autoComplete="off"
                 value={uploadLabel}
                 onChange={(e) => setUploadLabel(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl text-sm color-bg-grey-5 color-txt-main outline-none"

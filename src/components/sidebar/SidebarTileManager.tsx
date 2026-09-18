@@ -27,7 +27,7 @@ export type SidebarPanelDef = {
 
 const PANELS: SidebarPanelDef[] = [
   { id: "ai", label: "AI", icon: <LuSparkles size={20} strokeWidth={2} /> },
-  { id: "threads", label: "Threads", icon: <LuMessageSquare size={20} strokeWidth={2} /> },
+  { id: "threads", label: "Threads", icon: <LuSearch size={20} strokeWidth={2} /> },
   { id: "timer", label: "Timer", icon: <LuTimer size={20} strokeWidth={2} /> },
   { id: "spotify", label: "Spotify", icon: <SpotifyLogo className="h-5 w-5" /> },
   { id: "markingscheme", label: "Marking scheme", icon: <LuClipboardList size={20} strokeWidth={2} /> },
@@ -65,6 +65,10 @@ export type SidebarTileManagerProps = {
   onMarkCompleteFromGrading?: (() => void) | null;
   /** Whether the current question is already marked complete. */
   questionCompleted?: boolean;
+  /** External "AI is working" signal (e.g. Check My Answer grading in progress). */
+  aiThinking?: boolean;
+  /** Rotating status messages to show while `aiThinking` is true. */
+  aiThinkingMessages?: string[];
 };
 
 export function SidebarTileManager({
@@ -85,6 +89,8 @@ export function SidebarTileManager({
   aiInjectedExchange,
   onMarkCompleteFromGrading,
   questionCompleted = false,
+  aiThinking = false,
+  aiThinkingMessages,
 }: SidebarTileManagerProps) {
   const [internalPanel, setInternalPanel] = useState<SidebarPanelId | null>("ai");
   const isControlled = controlledPanel !== undefined;
@@ -180,6 +186,8 @@ export function SidebarTileManager({
                   aiInjectedExchange={aiInjectedExchange}
                   onMarkCompleteFromGrading={onMarkCompleteFromGrading}
                   questionCompleted={questionCompleted}
+                  aiThinking={aiThinking}
+                  aiThinkingMessages={aiThinkingMessages}
                   onClosePanel={() => setOpenPanel(null)}
                 />
               </div>
@@ -217,6 +225,8 @@ function TileContent({
   aiInjectedExchange,
   onMarkCompleteFromGrading,
   questionCompleted = false,
+  aiThinking = false,
+  aiThinkingMessages,
   onClosePanel: _onClosePanel,
 }: {
   panelId: SidebarPanelId;
@@ -233,6 +243,8 @@ function TileContent({
   aiInjectedExchange?: InjectedExchange | null;
   onMarkCompleteFromGrading?: (() => void) | null;
   questionCompleted?: boolean;
+  aiThinking?: boolean;
+  aiThinkingMessages?: string[];
   onClosePanel?: () => void;
 }) {
   const part = 0;
@@ -249,6 +261,8 @@ function TileContent({
           getWorkspaceText={getWorkspaceText}
           injectedExchange={aiInjectedExchange}
           onMarkCompleteFromGrading={onMarkCompleteFromGrading}
+          aiThinking={aiThinking}
+          aiThinkingMessages={aiThinkingMessages}
         />
       );
     case "threads": {

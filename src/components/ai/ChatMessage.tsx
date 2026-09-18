@@ -6,6 +6,7 @@ import rehypeKatex from "rehype-katex";
 import { motion } from "framer-motion";
 import "katex/dist/katex.min.css";
 import type { Message } from "./useAI";
+import { AiLoadingText } from "./AiLoadingText";
 
 /**
  * Normalise math delimiters and ensure block math is recognised by remark-math.
@@ -99,9 +100,15 @@ export function ChatMessage({ message, isStreaming = false }: ChatMessageProps) 
   );
 }
 
-type ChatMessageLoadingProps = { streamingContent: string };
+type ChatMessageLoadingProps = {
+  streamingContent: string;
+  /** When set, cycles these status messages (Check My Answer). Otherwise shows dots (AI chat). */
+  thinkingMessages?: string[];
+};
 
-export function ChatMessageLoading({ streamingContent }: ChatMessageLoadingProps) {
+export function ChatMessageLoading({ streamingContent, thinkingMessages }: ChatMessageLoadingProps) {
+  const showCyclingStatus = !streamingContent && thinkingMessages && thinkingMessages.length > 0;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -115,6 +122,8 @@ export function ChatMessageLoading({ streamingContent }: ChatMessageLoadingProps
             <MessageContent content={streamingContent} />
             <span className="animate-pulse inline-block ml-0.5">▊</span>
           </motion.div>
+        ) : showCyclingStatus ? (
+          <AiLoadingText messages={thinkingMessages} className="text-xs color-txt-sub" />
         ) : (
           <span className="inline-flex gap-1">
             <span className="animate-bounce" style={{ animationDelay: "0ms" }}>.</span>

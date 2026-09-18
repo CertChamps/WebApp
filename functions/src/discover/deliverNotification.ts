@@ -11,6 +11,7 @@ const ADMIN_EMAILS = new Set(["cian.brady@certchamps.ie"]);
 const POST_TYPES = new Set([
     "post-comment",
     "post-rating",
+    "post-save",
     "post-approved",
     "post-rejected",
     "post-removed",
@@ -76,6 +77,9 @@ function discoverNotificationCopy(input: {
         const rated = score ? `${name} rated ${yourPostLower} ${score}/5` : `${name} rated ${yourPostLower}`;
         return { title: "New rating", body: rated };
     }
+    if (input.type === "post-save") {
+        return { title: "Resource saved", body: `${name} saved ${yourPostLower}` };
+    }
     return { title: "Notification", body: "You have a new notification" };
 }
 
@@ -87,7 +91,7 @@ function isAdminUser(decoded: admin.auth.DecodedIdToken, userData: admin.firesto
         || ADMIN_EMAILS.has(email);
 }
 
-async function sendPush(uid: string, title: string, body: string, data: Record<string, string>) {
+export async function sendPush(uid: string, title: string, body: string, data: Record<string, string>) {
     const userRef = admin.firestore().doc(`user-data/${uid}`);
     const snap = await userRef.get();
     const rawTokens = snap.data()?.fcmTokens;
@@ -167,6 +171,7 @@ export async function deliverDiscoverNotification(
         await sendPush(uid, copy.title, copy.body, {
             type,
             postId: record.postId ?? "",
+            resourceId: record.postId ?? "",
             route: "/discover",
         });
     } catch (err) {
@@ -183,7 +188,9 @@ async function notifyPostFromResource(
     const ownerId = typeof post?.userId === "string" ? post.userId : "";
     if (!ownerId) return;
     const actorId = typeof extras.from === "string" ? extras.from : "";
-    if (actorId && actorId === ownerId && (type === "post-comment" || type === "post-rating")) {
+    if (actorId && actorId === ownerId && (
+        type === "post-comment" || type === "post-rating" || type === "post-save"
+    )) {
         return;
     }
     await deliverDiscoverNotification(ownerId, {
@@ -295,6 +302,27 @@ export const onDiscoverRatingCreated = functions.firestore.onDocumentCreated({
     });
 });
 
+export const onDiscoverLikeCreated = functions.firestore.onDocumentCreated({
+    document: "discover-notes/{postId}/likes/{likeId}",
+    region: "us-central1",
+}, async (event) => {
+    const like = event.data?.data();
+    if (!like) return;
+    const postId = event.params.postId;
+    const actorId = typeof like.userId === "string" ? like.userId : event.params.likeId;
+    let fromName: string | null = null;
+    if (actorId) {
+        const actorSnap = await admin.firestore().doc(`user-data/${actorId}`).get();
+        const username = actorSnap.data()?.username;
+        fromName = typeof username === "string" ? username : null;
+    }
+    const postSnap = await admin.firestore().doc(`discover-notes/${postId}`).get();
+    await notifyPostFromResource(postId, postSnap.data(), "post-save", {
+        from: actorId || null,
+        fromName,
+    });
+});
+
 export const onDiscoverResourceWritten = functions.firestore.onDocumentWritten({
     document: "discover-notes/{postId}",
     region: "us-central1",
@@ -323,11 +351,5 @@ export const onDiscoverResourceWritten = functions.firestore.onDocumentWritten({
     const status = beforeData.moderationStatus;
     if (status === "approved") {
         await notifyPostFromResource(postId, beforeData, "post-removed");
-        return;
-    }
-    if (status === "pending") {
-        await notifyPostFromResource(postId, beforeData, "post-rejected", {
-            reason: typeof beforeData.rejectionReason === "string" ? beforeData.rejectionReason : null,
-        });
     }
 });

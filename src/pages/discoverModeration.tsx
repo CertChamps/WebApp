@@ -28,9 +28,11 @@ type PendingResource = {
   title: string;
   description: string;
   websiteUrl: string;
-  resourceSource: "website" | "pdf";
+  resourceSource: "website" | "pdf" | "image";
   pdfPath: string;
   pdfFileName: string;
+  imagePath: string;
+  imageFileName: string;
   thumbnailUrl: string;
   uploadedThumbnailUrl: string;
   uploadedThumbnailPath: string;
@@ -82,9 +84,16 @@ export default function DiscoverModeration() {
               title: data.title ?? "Untitled",
               description: data.description ?? "",
               websiteUrl: data.websiteUrl ?? "",
-              resourceSource: data.resourceSource === "pdf" ? "pdf" as const : "website" as const,
+              resourceSource:
+                data.resourceSource === "pdf"
+                  ? "pdf" as const
+                  : data.resourceSource === "image"
+                    ? "image" as const
+                    : "website" as const,
               pdfPath: data.pdfPath ?? "",
               pdfFileName: data.pdfFileName ?? "",
+              imagePath: data.imagePath ?? "",
+              imageFileName: data.imageFileName ?? "",
               thumbnailUrl: data.thumbnailUrl ?? "",
               uploadedThumbnailUrl: data.uploadedThumbnailUrl ?? "",
               uploadedThumbnailPath: data.uploadedThumbnailPath ?? "",
@@ -158,6 +167,13 @@ export default function DiscoverModeration() {
           await deleteObject(storageRef(storage, item.pdfPath));
         } catch (deleteErr) {
           console.warn("Failed to delete rejected PDF:", deleteErr);
+        }
+      }
+      if (item.imagePath) {
+        try {
+          await deleteObject(storageRef(storage, item.imagePath));
+        } catch (deleteErr) {
+          console.warn("Failed to delete rejected image:", deleteErr);
         }
       }
     } catch (err: any) {
@@ -250,7 +266,11 @@ export default function DiscoverModeration() {
                     <h2 className="font-bold color-txt-main">{item.title}</h2>
                     <p className="text-sm color-txt-sub line-clamp-2 mt-1">{item.description}</p>
                     <p className="text-xs color-txt-sub mt-2">
-                      {item.subjectLabel} · {item.resourceSource === "pdf" ? item.pdfFileName || "PDF" : "Website"} · shared by {item.username} {item.timestamp ? `· ${timeAgo(item.timestamp)}` : ""}
+                      {item.subjectLabel} · {item.resourceSource === "pdf"
+                        ? item.pdfFileName || "PDF"
+                        : item.resourceSource === "image"
+                          ? item.imageFileName || "Image"
+                          : "Website"} · shared by {item.username} {item.timestamp ? `· ${timeAgo(item.timestamp)}` : ""}
                     </p>
                   </div>
 
@@ -288,7 +308,11 @@ export default function DiscoverModeration() {
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg color-txt-main text-sm font-semibold hover:opacity-90 cursor-pointer"
                     >
                       <LuExternalLink size={15} />
-                      {item.resourceSource === "pdf" ? "Open PDF" : "Open link"}
+                      {item.resourceSource === "pdf"
+                        ? "Open PDF"
+                        : item.resourceSource === "image"
+                          ? "Open image"
+                          : "Open link"}
                     </button>
                   </div>
                 </div>

@@ -25,6 +25,11 @@ import NotificationBell from "../components/social/NotificationBell";
 import DiscoverFiltersModal, { type DiscoverSortBy } from "../components/discover/DiscoverFiltersModal";
 import DiscoverShareModal from "../components/discover/DiscoverShareModal";
 import {
+    completeIncomingShare,
+    getIncomingShare,
+    subscribeIncomingShare,
+} from "../lib/nativeShareIntake";
+import {
     FAVOURITES_CHANGED_EVENT,
     getFavouriteSubjectIds,
     PRACTICE_HUB_SUBJECTS,
@@ -64,6 +69,8 @@ type DiscoverNote = {
     resourceSource?: ResourceSource;
     pdfPath?: string | null;
     pdfFileName?: string | null;
+    imagePath?: string | null;
+    imageFileName?: string | null;
     thumbnailUrl: string;
     thumbnailPath?: string | null;
     uploadedThumbnailUrl?: string | null;
@@ -110,7 +117,7 @@ type DiscoverQuestionPost = {
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
-type ResourceSource = "website" | "pdf";
+type ResourceSource = "website" | "pdf" | "image";
 
 type DiscoverComment = {
     id: string;
@@ -139,6 +146,7 @@ type DiscoverResource = {
     websiteUrl?: string;
     resourceSource?: ResourceSource;
     pdfPath?: string | null;
+    imagePath?: string | null;
     thumbnailUrl?: string;
     userId?: string;
     username?: string;
@@ -417,9 +425,16 @@ function firestoreToDiscoverNote(id: string, data: Record<string, any>): Discove
         title: data.title ?? "",
         description: data.description ?? "",
         websiteUrl: data.websiteUrl ?? "",
-        resourceSource: data.resourceSource === "pdf" ? "pdf" : "website",
+        resourceSource:
+            data.resourceSource === "pdf"
+                ? "pdf"
+                : data.resourceSource === "image"
+                    ? "image"
+                    : "website",
         pdfPath: data.pdfPath ?? null,
         pdfFileName: data.pdfFileName ?? null,
+        imagePath: data.imagePath ?? null,
+        imageFileName: data.imageFileName ?? null,
         thumbnailUrl: data.thumbnailUrl ?? "",
         thumbnailPath: data.thumbnailPath ?? null,
         uploadedThumbnailUrl: data.uploadedThumbnailUrl ?? null,
@@ -472,8 +487,9 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
         ratingAverage: note.ratingAverage ?? 0,
         ratingCount: note.ratingCount ?? 0,
         websiteUrl: note.websiteUrl,
-        resourceSource: note.resourceSource ?? (note.pdfPath ? "pdf" : "website"),
+        resourceSource: note.resourceSource ?? (note.pdfPath ? "pdf" : note.imagePath ? "image" : "website"),
         pdfPath: note.pdfPath,
+        imagePath: note.imagePath,
         thumbnailUrl: note.thumbnailUrl,
         userId: note.userId,
         username: note.username,
@@ -532,10 +548,23 @@ export default function Discover() {
     const syncedFavouriteSubjectIds = useSyncedFavouriteSubjectIds();
 
     const [showForm, setShowForm] = useState(false);
+    const [incomingShareVersion, setIncomingShareVersion] = useState(0);
+    const incomingShare = useMemo(
+        () => getIncomingShare("discover"),
+        [incomingShareVersion]
+    );
+    // Discover doesn't take image uploads for now. The share extension already blocks
+    // this, so this only catches shares queued by an older build.
+    const unsupportedShare = incomingShare?.kind === "image" ? incomingShare : null;
     const [submittedToast, setSubmittedToast] = useState(false);
     const [selectedResource, setSelectedResource] = useState<DiscoverResource | null>(null);
     const [videoResource, setVideoResource] = useState<DiscoverResource | null>(null);
     const [comments, setComments] = useState<DiscoverComment[]>([]);
+
+    useEffect(
+        () => subscribeIncomingShare(() => setIncomingShareVersion((version) => version + 1)),
+        []
+    );
     const [commentText, setCommentText] = useState("");
     const [commentComposerOpen, setCommentComposerOpen] = useState(false);
     const [commentSubmitting, setCommentSubmitting] = useState(false);
@@ -579,8 +608,8 @@ export default function Discover() {
             if (linkedQuestion.subjectId) {
                 setSelectedSubjectId(linkedQuestion.subjectId);
             }
-            if (searchParams.get("share") === "1") setShowForm(true);
         }
+        if (searchParams.get("share") === "1") setShowForm(true);
     }, [linkedQuestion, searchParams]);
 
     useEffect(() => {
@@ -1066,13 +1095,24 @@ export default function Discover() {
         return resources.filter((resource) => resource.id !== selectedResource.id).slice(0, 8);
     }, [resources, selectedResource]);
 
-    const closeForm = () => {
-        setShowForm(false);
+    const clearShareParam = () => {
         if (searchParams.get("share") === "1") {
             const next = new URLSearchParams(searchParams);
             next.delete("share");
             setSearchParams(next, { replace: true });
         }
+    };
+
+    const closeForm = () => {
+        setShowForm(false);
+        if (incomingShare) void completeIncomingShare(incomingShare);
+        clearShareParam();
+    };
+
+    const dismissUnsupportedShare = () => {
+        setShowForm(false);
+        if (unsupportedShare) void completeIncomingShare(unsupportedShare);
+        clearShareParam();
     };
 
     const handleDelete = async (note: DiscoverNote) => {
@@ -1082,7 +1122,12 @@ export default function Discover() {
         setDeleting(true);
         try {
             await deleteDoc(doc(db, "discover-notes", note.id));
-            const storagePaths = [note.uploadedThumbnailPath, note.thumbnailPath, note.pdfPath].filter(Boolean) as string[];
+            const storagePaths = [
+                note.uploadedThumbnailPath,
+                note.thumbnailPath,
+                note.pdfPath,
+                note.imagePath,
+            ].filter(Boolean) as string[];
             await Promise.all(storagePaths.map((path) =>
                 deleteObject(storageRef(storage, path)).catch((err) => {
                     console.warn("Failed to delete Discover upload:", err);
@@ -1099,9 +1144,9 @@ export default function Discover() {
 
     const handleVisit = async (url: string | undefined, resource?: DiscoverResource) => {
         let target = url?.trim() || "";
-        if (!target && resource?.pdfPath) {
+        if (!target && (resource?.pdfPath || resource?.imagePath)) {
             try {
-                target = await getDownloadURL(storageRef(storage, resource.pdfPath));
+                target = await getDownloadURL(storageRef(storage, resource.pdfPath || resource.imagePath || ""));
             } catch (err) {
                 console.error("Failed to open PDF:", err);
                 return;
@@ -1273,7 +1318,11 @@ export default function Discover() {
                     <div className="relative aspect-[16/10] rounded-lg color-bg-grey-10 overflow-hidden">
                         <DiscoverMediaPreview resource={resource} variant="thumb" />
                         <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full color-bg color-txt-main text-xs font-bold">
-                            {resource.resourceSource === "pdf" ? "PDF" : resource.type}
+                            {resource.resourceSource === "pdf"
+                                ? "PDF"
+                                : resource.resourceSource === "image"
+                                    ? "Image"
+                                    : resource.type}
                         </span>
                     </div>
 
@@ -1397,7 +1446,7 @@ export default function Discover() {
 
     const renderResourceDetailPage = (resource: DiscoverResource) => {
         const username = resource.username || "Unknown";
-        const canOpenResource = Boolean(resource.websiteUrl?.trim() || resource.pdfPath);
+        const canOpenResource = Boolean(resource.websiteUrl?.trim() || resource.pdfPath || resource.imagePath);
         const ownsResource = Boolean(user?.uid && resource.userId === user.uid);
         const linkedQuestionName = resource.note?.linkedQuestionName?.trim() || "";
         const linkedQuestionUrl = resource.note?.linkedQuestionPracticeUrl?.trim() || "";
@@ -2091,10 +2140,40 @@ export default function Discover() {
                 resourceTypes={RESOURCE_TYPES}
             />
 
-            {showForm && (
+            {unsupportedShare && (
+                <div
+                    className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    onClick={dismissUnsupportedShare}
+                >
+                    <div
+                        className="w-full max-w-sm rounded-2xl color-bg p-6 space-y-4 shadow-md"
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                    >
+                        <h3 className="text-lg font-bold color-txt-main text-center">Format unavailable</h3>
+                        <p className="text-sm color-txt-sub text-center">
+                            Discover doesn’t accept image uploads yet. Share a PDF or a link instead, or
+                            add the image to a question from your whiteboards.
+                        </p>
+                        <div className="flex justify-center pt-1">
+                            <button
+                                type="button"
+                                onClick={dismissUnsupportedShare}
+                                className="px-5 py-2 rounded-xl text-sm font-semibold color-bg-accent color-txt-accent cursor-pointer"
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showForm && !unsupportedShare && (
                 <DiscoverShareModal
                     open={showForm}
                     onClose={closeForm}
+                    initialShare={incomingShare}
                     onSubmitted={() => {
                         setSubmittedToast(true);
                         setTimeout(() => setSubmittedToast(false), 2800);

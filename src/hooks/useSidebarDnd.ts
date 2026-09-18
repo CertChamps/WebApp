@@ -19,7 +19,7 @@ import {
 } from "../data/whiteboards";
 import { isIPad } from "../utils/isIPad";
 
-/** Delay before a sustained hover over a collapsed folder auto-expands it. */
+/** Delay before a sustained hover over a folder opens it mid-drag. */
 const HOLD_EXPAND_MS = 550;
 
 /** Data attached to each droppable so drop-intent can be derived without prop-drilling. */
@@ -29,8 +29,10 @@ export type DroppableData =
       item: SidebarDragItem;
       isFolder: boolean;
     }
-  | { role: "empty-folder"; folderId: string }
-  | { role: "root" };
+  /** Empty space around the rows — drops land directly in `folderId` (null = root). */
+  | { role: "container"; folderId: string | null }
+  /** The back/breadcrumb row — drops move the item out to the parent folder. */
+  | { role: "up-level"; folderId: string | null };
 
 type Options = {
   folders: WhiteboardFolder[];
@@ -59,15 +61,21 @@ function sameIntent(a: SidebarDropIntent | null, b: SidebarDropIntent | null): b
   return a.kind === b.kind; // into-root
 }
 
+/** Droppable id of the catch-all around the rows. */
+export const SIDEBAR_CONTAINER_DROPPABLE = "sidebar-container";
+
+const containerIntent = (folderId: string | null): SidebarDropIntent =>
+  folderId ? { kind: "into", folderId } : { kind: "into-root" };
+
 /**
- * Prefer the deepest row under the pointer over the catch-all root droppable, so
- * hovering a specific row always wins and only truly-empty space resolves to root.
+ * Prefer the row under the pointer over the catch-all container droppable, so
+ * hovering a specific row always wins and only truly-empty space resolves to the container.
  */
 const collisionDetection: CollisionDetection = (args) => {
   const hits = pointerWithin(args);
   if (hits.length <= 1) return hits;
-  const nonRoot = hits.filter((h) => h.id !== "root");
-  return nonRoot.length ? nonRoot : hits;
+  const nonContainer = hits.filter((h) => h.id !== SIDEBAR_CONTAINER_DROPPABLE);
+  return nonContainer.length ? nonContainer : hits;
 };
 
 /** Sticky drop zones so tiny pointer jitter doesn't flip before/into/after. */
@@ -199,11 +207,12 @@ export function useSidebarDnd({ folders, pages, isCollapsed, onExpand, onMove }:
       if (!data) return;
 
       let intent: SidebarDropIntent | null = null;
-      if (data.role === "root") {
-        if (prev && prev.kind !== "into-root") return;
-        intent = { kind: "into-root" };
-      } else if (data.role === "empty-folder") {
-        intent = { kind: "into", folderId: data.folderId };
+      if (data.role === "container") {
+        intent = containerIntent(data.folderId);
+        // Gaps between rows briefly resolve to the container; keep the row slot instead.
+        if (prev && !sameIntent(prev, intent)) return;
+      } else if (data.role === "up-level") {
+        intent = containerIntent(data.folderId);
       } else if (data.role === "row") {
         const rect = over.rect;
         const rel = rect.height > 0 ? (pointerY.current - rect.top) / rect.height : 0.5;
@@ -222,8 +231,8 @@ export function useSidebarDnd({ folders, pages, isCollapsed, onExpand, onMove }:
 
       commitIntent(intent);
 
-      // Hover-to-expand only while intending to drop *into* a collapsed folder.
-      if (intent && intent.kind === "into" && isCollapsed(intent.folderId)) {
+      // Hover-to-open only while intending to drop *into* a folder row.
+      if (data.role === "row" && intent?.kind === "into" && isCollapsed(intent.folderId)) {
         scheduleHold(intent.folderId);
       } else {
         clearHold();

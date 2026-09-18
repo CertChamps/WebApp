@@ -22,6 +22,10 @@ type AIChatProps = {
   injectedExchange?: InjectedExchange | null;
   /** Optional action for grading flow (full-marks completion CTA). */
   onMarkCompleteFromGrading?: (() => void) | null;
+  /** External "AI is working" signal (e.g. Check My Answer grading in progress). */
+  aiThinking?: boolean;
+  /** Rotating status messages to show while `aiThinking` is true. */
+  aiThinkingMessages?: string[];
 };
 
 const AI_PLACEHOLDERS = [
@@ -38,7 +42,7 @@ const AI_PLACEHOLDERS = [
   "No question is a stupid question:)",
 ];
 
-export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPaperSnapshot, getWorkspaceText, injectedExchange, onMarkCompleteFromGrading }: AIChatProps) {
+export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPaperSnapshot, getWorkspaceText, injectedExchange, onMarkCompleteFromGrading, aiThinking = false, aiThinkingMessages }: AIChatProps) {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
   const [aiPlaceholder] = useState(() => AI_PLACEHOLDERS[Math.floor(Math.random() * AI_PLACEHOLDERS.length)]);
@@ -119,7 +123,7 @@ export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPape
       onPointerDown={(event) => event.stopPropagation()}
     >
       <div ref={messagesContainerRef} className="ai-chat-messages overflow-y-auto overflow-x-hidden px-4 pt-4 pb-3 space-y-4 min-h-0">
-        {messages.length === 0 && !loading && (
+        {messages.length === 0 && !loading && !aiThinking && (
           <div className="text-center h-[90%] flex flex-col justify-center items-center">
             <h3 className="font-bold color-txt-main mb-2 text-2xl">Hey, {displayName}</h3>
             <p className="text-sm color-txt-sub w-3/4 mx-auto">{emptyMessage}</p>
@@ -129,7 +133,12 @@ export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPape
           {messages.map((msg, i) => (
             <ChatMessage key={i} message={msg} />
           ))}
-          {loading && <ChatMessageLoading streamingContent={streamingContent} />}
+          {(loading || aiThinking) && (
+            <ChatMessageLoading
+              streamingContent={streamingContent}
+              thinkingMessages={loading ? undefined : aiThinkingMessages}
+            />
+          )}
         </AnimatePresence>
         {error && (
           <div className={`ai-chat-notice ${allowanceReached ? "ai-chat-notice--allowance" : ""}`} role="alert">

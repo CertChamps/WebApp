@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { LuArrowLeft, LuPenTool } from "react-icons/lu";
+import { LuArrowLeft, LuPencil } from "react-icons/lu";
 
 type QuestionsMode = "certchamps" | "pastpaper" | "imagequestions";
 
@@ -53,7 +53,7 @@ export default function QuestionsTopBar({
             aria-label={whiteboardOn ? "Turn whiteboard off and switch to laptop mode" : "Turn whiteboard on and switch to tablet mode"}
             aria-pressed={whiteboardOn}
           >
-            <LuPenTool size={20} strokeWidth={2} className="shrink-0" />
+            <LuPencil size={20} strokeWidth={2} className="shrink-0" />
             <span>Whiteboard</span>
           </button>
 

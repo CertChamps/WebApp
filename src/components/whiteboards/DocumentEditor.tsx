@@ -6,7 +6,9 @@ import {
 import { z } from "zod";
 import DrawingCanvas, {
   type CanvasObject,
+  type GetExportImageFn,
   type RegisterDrawingSnapshot,
+  type RegisterGetExportImage,
   type RegisterGetGradingCapture,
   type ToolMode,
 } from "../questions/DrawingCanvas";
@@ -30,6 +32,8 @@ import {
 } from "../../lib/themeTextColor";
 import type { InjectedExchange } from "../ai/useAI";
 import { buildGradingChatMessage } from "../../lib/grading/annotationBuilder";
+import { stackImageUrlsForAi } from "../../lib/stackImages";
+import { captureElementToPng, compositeImages, type ExportImage } from "../../lib/exportFile";
 import { ensureSelectionCaretInView, subscribeVisualViewport } from "../../utils/visualViewport";
 
 export type DocumentCanvasStroke = {
@@ -55,6 +59,7 @@ type Props = {
   onUploadImage: (blob: Blob) => Promise<string>;
   registerDrawingSnapshot?: RegisterDrawingSnapshot;
   registerGetGradingCapture?: RegisterGetGradingCapture;
+  registerGetExportImage?: RegisterGetExportImage;
   registerGetDocumentText?: (fn: (() => string) | null) => void;
   registerCheckAnswer?: (fn: (() => Promise<void>) | null) => void;
   questionLabel?: string;
@@ -465,6 +470,7 @@ export default function DocumentEditor({
   onUploadImage,
   registerDrawingSnapshot,
   registerGetGradingCapture,
+  registerGetExportImage,
   registerGetDocumentText,
   registerCheckAnswer,
   questionLabel,
@@ -482,7 +488,13 @@ export default function DocumentEditor({
   toolbarExtras,
 }: Props) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const documentPageRef = useRef<HTMLDivElement>(null);
+  const documentColumnRef = useRef<HTMLDivElement>(null);
   const documentViewportRef = useRef<HTMLDivElement>(null);
+  const canvasExportRef = useRef<GetExportImageFn | null>(null);
+  const registerCanvasExportImage = useCallback<RegisterGetExportImage>((fn) => {
+    canvasExportRef.current = fn;
+  }, []);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -742,6 +754,50 @@ export default function DocumentEditor({
     return () => registerGetDocumentText(null);
   }, [registerGetDocumentText]);
 
+  useEffect(() => {
+    if (!registerGetExportImage) return;
+    const getExportImage: GetExportImageFn = async (options) => {
+      if (options?.worldBounds || options?.transparent) {
+        return canvasExportRef.current?.(options) ?? null;
+      }
+
+      const pageEl = documentPageRef.current;
+      const columnEl = documentColumnRef.current;
+      if (!pageEl || !columnEl) {
+        return (await canvasExportRef.current?.(options)) ?? null;
+      }
+
+      try {
+        const pageRect = pageEl.getBoundingClientRect();
+        const columnRect = columnEl.getBoundingClientRect();
+        const worldBounds = {
+          x: pageRect.left - columnRect.left,
+          y: pageRect.top - columnRect.top,
+          width: Math.max(1, pageEl.offsetWidth),
+          height: Math.max(1, pageEl.scrollHeight || pageEl.offsetHeight),
+        };
+
+        const htmlCapture = await captureElementToPng(pageEl);
+        const ink = await canvasExportRef.current?.({
+          worldBounds,
+          transparent: true,
+        });
+        const composited: ExportImage = await compositeImages(htmlCapture, ink?.dataUrl ?? null);
+        return {
+          dataUrl: composited.dataUrl,
+          width: composited.width,
+          height: composited.height,
+          worldBounds,
+        };
+      } catch (error) {
+        console.error("[DocumentEditor] export capture failed", error);
+        throw error;
+      }
+    };
+    registerGetExportImage(getExportImage);
+    return () => registerGetExportImage(null);
+  }, [registerGetExportImage]);
+
   const handleFiles = useCallback(async (files: FileList | null) => {
     const file = files?.[0];
     if (!file || importStatus) return;
@@ -873,6 +929,8 @@ export default function DocumentEditor({
     ].join("\n");
     let lastError: unknown;
     try {
+      const stackedQuestionImages = await stackImageUrlsForAi(questionImages);
+      const stackedMarkingImages = await stackImageUrlsForAi(markingSchemeImages);
       let result: z.infer<typeof resultSchema> | null = null;
       for (let attempt = 0; attempt < 3 && !result; attempt += 1) {
         if (runId !== runIdRef.current || pageIdRef.current !== page.id) return;
@@ -885,8 +943,8 @@ export default function DocumentEditor({
               role: "user",
               content: [
                 { type: "text", text: prompt },
-                ...questionImages.slice(0, 4).map((url) => ({ type: "image_url" as const, image_url: { url } })),
-                ...markingSchemeImages.slice(0, 4).map((url) => ({ type: "image_url" as const, image_url: { url } })),
+                ...stackedQuestionImages.map((url) => ({ type: "image_url" as const, image_url: { url } })),
+                ...stackedMarkingImages.map((url) => ({ type: "image_url" as const, image_url: { url } })),
               ],
             }],
             temperature: 0.2,
@@ -933,9 +991,19 @@ export default function DocumentEditor({
     } catch (error) {
       if ((error as { name?: string })?.name !== "AbortError") {
         console.error("[DocumentEditor] check failed", error);
-        setCheckError(error instanceof AiRequestError && error.code === "AI_QUOTA_EXCEEDED"
+        const quota = error instanceof AiRequestError && error.code === "AI_QUOTA_EXCEEDED";
+        setCheckError(quota
           ? error.message
           : `${error instanceof Error ? error.message : "Couldn't check your answer"}. You can retry.`);
+        // Check My Answer must ALWAYS respond in the AI chat, even on failure.
+        onGradingComplete?.({
+          nonce: `${Date.now()}`,
+          userMessage: "Check Answer",
+          assistantMessage: quota
+            ? error.message
+            : "I couldn't check your answer just now — this usually happens when the connection drops. Your work is saved, so try Check Answer again in a moment.",
+          action: null,
+        });
       }
     } finally {
       if (runId === runIdRef.current) {
@@ -1012,9 +1080,9 @@ export default function DocumentEditor({
   return (
     <div ref={documentViewportRef} className="relative h-full min-h-0 w-full overflow-hidden color-bg-grey-5">
       <div className={`h-full overflow-auto px-2 pb-16 scrollbar-minimal sm:px-4 ${
-        attachments.length > 0 ? "pt-12 sm:pt-14" : "pt-3 sm:pt-4"
+        attachments.length > 0 ? "pt-16 sm:pt-20" : "pt-14 sm:pt-16"
       } ${viewportClassName ?? ""}`}>
-        <div className={`relative mx-auto flex flex-col gap-4 ${DOCUMENT_WIDTH_CLASS}`}>
+        <div ref={documentColumnRef} className={`relative mx-auto flex flex-col gap-4 ${DOCUMENT_WIDTH_CLASS}`}>
           {activeAttachment ? (
             <DocumentQuestionSheet
               key={activeAttachment.id}
@@ -1022,7 +1090,7 @@ export default function DocumentEditor({
             />
           ) : null}
 
-          <div className="relative min-h-[1056px] overflow-hidden color-bg color-shadow border">
+          <div ref={documentPageRef} className="relative min-h-[1056px] overflow-hidden color-bg color-shadow border">
             <div
               ref={editorRef}
               contentEditable={mode === "text" && !loadError && saveStatus !== "loading"}
@@ -1075,6 +1143,7 @@ export default function DocumentEditor({
               onUploadImage={onUploadImage}
               registerDrawingSnapshot={registerDrawingSnapshot}
               registerGetGradingCapture={registerGetGradingCapture}
+              registerGetExportImage={registerCanvasExportImage}
               wrapperClassName="bg-transparent"
               defaultGridMode="off"
               editorMode={mode}

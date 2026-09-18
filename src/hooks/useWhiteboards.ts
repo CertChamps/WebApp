@@ -13,6 +13,7 @@ import {
 import { deleteObject, listAll, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "../../firebase";
 import { UserContext } from "../context/UserContext";
+import { normalizeImageFile } from "../lib/normalizeImageFile";
 import {
   documentCanvasId,
   documentContentStorageId,
@@ -460,10 +461,11 @@ export async function uploadWhiteboardAsset(
   file: File
 ): Promise<{ storagePath: string; fileType: "pdf" | "image" }> {
   const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-  const ext = isPdf ? "pdf" : (file.name.split(".").pop() || "png").toLowerCase();
+  const prepared = isPdf ? file : await normalizeImageFile(file);
+  const ext = isPdf ? "pdf" : (prepared.name.split(".").pop() || "jpg").toLowerCase();
   const storagePath = `whiteboards/${uid}/attachments/${attachmentId}/${kind}.${ext}`;
-  await uploadBytes(ref(storage, storagePath), file, {
-    contentType: file.type || (isPdf ? "application/pdf" : "image/png"),
+  await uploadBytes(ref(storage, storagePath), prepared, {
+    contentType: prepared.type || (isPdf ? "application/pdf" : "image/jpeg"),
   });
   return { storagePath, fileType: isPdf ? "pdf" : "image" };
 }

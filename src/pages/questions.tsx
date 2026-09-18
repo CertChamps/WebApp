@@ -41,12 +41,18 @@ import { getPracticeSubjectId, getSubjectLabel } from "../data/practiceHubSubjec
 
 // Components
 import { createPortal } from "react-dom";
-import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle, LuEye, LuEyeOff, LuPencil } from "react-icons/lu";
+import { LuMaximize2, LuMinimize2, LuX, LuClipboardList, LuBookOpen, LuCalculator, LuChevronLeft, LuChevronRight, LuChevronDown, LuFilter, LuSearch, LuCircleCheck, LuCircle, LuEye, LuEyeOff, LuPencil, LuDownload } from "react-icons/lu";
 import { TbDice5 } from "react-icons/tb";
 import QuestionsTopBar from "../components/questions/QuestionsTopBar";
 import QuestionTitlePicker, { type QuestionPickerItem } from "../components/questions/QuestionTitlePicker";
 import QSearch from "../components/questions/qSearch";
-import DrawingCanvas, { type RegisterDrawingSnapshot, type RegisterGetGradingCapture, type RegisterGetStaveAnalysis } from "../components/questions/DrawingCanvas";
+import DrawingCanvas, {
+    type RegisterDrawingSnapshot,
+    type RegisterGetExportImage,
+    type RegisterGetGradingCapture,
+    type RegisterGetStaveAnalysis,
+    type GetExportImageFn,
+} from "../components/questions/DrawingCanvas";
 import { useCanvasStorage } from "../hooks/useCanvasStorage";
 import RenderMath from "../components/math/mathdisplay";
 import { motion } from "framer-motion";
@@ -80,6 +86,7 @@ import { runGrading } from "../lib/grading/GradingEngine";
 import type { CanvasAnnotation, CanvasCapturePayload, GradingStatus, Pass1Result } from "../lib/grading/GradingTypes";
 import { buildGradingChatMessage, gradingChatInputFromPass2 } from "../lib/grading/annotationBuilder";
 import { BlankCanvasError } from "../lib/grading/canvasCapture";
+import ExportModal from "../components/whiteboards/ExportModal";
 
 // Style Imports
 import "../styles/questions.css";
@@ -143,6 +150,17 @@ function gradingStatusLabel(status: GradingStatus): string {
         default: return "Check my answer";
     }
 }
+
+const PRACTICE_GRADING_MESSAGES = [
+    "Reading your workings…",
+    "Looking at what's on your whiteboard…",
+    "Checking against the marking scheme…",
+    "Comparing with the question…",
+    "Reviewing each step…",
+    "Working out your marks…",
+    "Writing your feedback…",
+    "Almost done…",
+];
 
 export type QuestionsMode = "certchamps" | "pastpaper" | "imagequestions";
 
@@ -418,6 +436,16 @@ export default function Questions() {
             getGradingCaptureRef.current = fn;
         }, []);
         const getGradingCapture = useCallback((mode: "default" | "full-ink" | "retry-aggressive" = "default") => getGradingCaptureRef.current?.(mode) ?? null, []);
+
+    const getExportImageRef = useRef<GetExportImageFn | null>(null);
+    const registerGetExportImage = useCallback<RegisterGetExportImage>((fn) => {
+        getExportImageRef.current = fn;
+    }, []);
+    const getExportImage = useCallback<GetExportImageFn>(
+        (options) => getExportImageRef.current?.(options) ?? null,
+        [],
+    );
+    const [showExportModal, setShowExportModal] = useState(false);
 
     const getStaveAnalysisRef = useRef<(() => string | null) | null>(null);
     const registerGetStaveAnalysis = useCallback<RegisterGetStaveAnalysis>((fn) => {
@@ -937,6 +965,7 @@ export default function Questions() {
     }, []);
 
     const canCheckNow = gradingStatus === "idle" || gradingStatus === "done" || gradingStatus === "error";
+    const aiCheckThinking = gradingStatus !== "idle" && gradingStatus !== "done" && gradingStatus !== "error";
 
     const handleToggleQuestionCompleted = useCallback(() => {
         if (mode === "pastpaper" && selectedPaper && currentPaperQuestion) {
@@ -1696,6 +1725,7 @@ export default function Questions() {
                         onEditInteraction={handleCanvasEditInteraction}
                         onStrokesChange={handleStrokesChange}
                         registerGetGradingCapture={registerGetGradingCapture}
+                        registerGetExportImage={registerGetExportImage}
                         gradingAnnotations={gradingAnnotations}
                     />
                     {mode === "pastpaper" && selectedPaper && currentPaperQuestion && (
@@ -1753,7 +1783,7 @@ export default function Questions() {
             {/* Sidebar: left or right depending on left-hand mode */}
             <div
                 ref={sidebarTutorialRef}
-                className={`ai-session-sidebar absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-none ${options.leftHandMode ? "left-0" : "right-0"} w-[35%]`}
+                className={`ai-session-sidebar absolute bottom-0 top-11 z-20 overflow-hidden pointer-events-none ${options.leftHandMode ? "left-0" : "right-0"} w-[35%] min-w-[min(460px,100%)]`}
                 style={{
                     transition: "clip-path 300ms cubic-bezier(0.25,0.1,0.25,1)",
                     clipPath: sidebarOpen
@@ -1880,6 +1910,8 @@ export default function Questions() {
                                 ? isQuestionCompleted(currentGroupedQuestion.key)
                                 : false
                     }
+                    aiThinking={aiCheckThinking}
+                    aiThinkingMessages={PRACTICE_GRADING_MESSAGES}
                 />
             </div>
 
@@ -2230,6 +2262,19 @@ export default function Questions() {
                                     >
                                         <LuPencil size={18} strokeWidth={2} />
                                         <span>canvas</span>
+                                    </button>
+                                )}
+                                {!options.laptopMode && (
+                                    <button
+                                        type="button"
+                                        aria-label="Export"
+                                        title="Export your work"
+                                        className={`question-selector-button pointer-events-auto ${showExportModal ? "question-selector-button-active" : ""}`}
+                                        onClick={() => setShowExportModal(true)}
+                                        aria-pressed={showExportModal}
+                                    >
+                                        <LuDownload size={18} strokeWidth={2} />
+                                        <span>export</span>
                                     </button>
                                 )}
                             </div>
@@ -2908,6 +2953,19 @@ export default function Questions() {
                     subject={whiteboardSubject}
                     attachment={currentWhiteboardAttachment}
                     onClose={() => setShowSaveToCanvas(false)}
+                />
+            )}
+
+            {showExportModal && (
+                <ExportModal
+                    defaultName="workings"
+                    allowCrop
+                    getImage={async () => {
+                        const result = await getExportImage();
+                        if (!result) return null;
+                        return { dataUrl: result.dataUrl, width: result.width, height: result.height };
+                    }}
+                    onClose={() => setShowExportModal(false)}
                 />
             )}
 

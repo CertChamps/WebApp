@@ -6,6 +6,7 @@ import AppRouter from "./Router";
 import { initPayments } from "./lib/payments";
 import { iapDebug } from "./lib/payments/paymentsDebug";
 import { registerPushNotifications } from "./lib/registerPushNotifications";
+import { startNativeShareIntake } from "./lib/nativeShareIntake";
 import { getVisualViewportBounds, isKeyboardOpen, subscribeVisualViewport } from "./utils/visualViewport";
 //import CustomCursor from "./components/CustomCursor"
 
@@ -89,6 +90,20 @@ export default function App() {
     void registerPushNotifications(user.uid);
   }, [user?.uid]);
 
+  useEffect(() => {
+    if (!user?.uid || !Capacitor.isNativePlatform()) return;
+    let cancelled = false;
+    let stop: (() => void) | null = null;
+    void startNativeShareIntake().then((cleanup) => {
+      if (cancelled) cleanup();
+      else stop = cleanup;
+    });
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [user?.uid]);
+
   // Keep the app shell inside the visible viewport so iOS keyboard open
   // does not slide the top bar off-screen.
   useLayoutEffect(() => {
@@ -101,7 +116,10 @@ export default function App() {
       root.style.setProperty("--vv-width", `${bounds.width}px`);
       root.style.setProperty("--keyboard-inset-bottom", `${bounds.keyboardBottom}px`);
       root.classList.toggle("vv-keyboard-open", isKeyboardOpen(bounds));
-      if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+      const active = document.activeElement;
+      const viewportModalFocused = active instanceof HTMLElement
+        && active.closest("[data-visual-viewport-modal]") !== null;
+      if (!viewportModalFocused && (window.scrollY !== 0 || window.scrollX !== 0)) window.scrollTo(0, 0);
     };
     sync();
     return subscribeVisualViewport(sync);

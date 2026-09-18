@@ -192,36 +192,34 @@ export default function QuestionTitlePicker({
 
   return (
     <>
-      <div ref={containerRef} className="question-title-picker relative flex min-w-0 flex-col items-center overflow-hidden px-2">
+      <div ref={containerRef} className="question-title-picker relative flex min-w-0 flex-col items-center px-2">
         {canOpen ? (
           <button
             type="button"
-            className="question-title-picker__trigger pointer-events-auto flex min-w-0 max-w-[min(100%,280px)] flex-col items-center rounded-md px-1 py-0.5 text-center transition-colors duration-150 hover:color-bg-grey-5"
+            className="question-title-picker__trigger pointer-events-auto flex min-w-0 w-full max-w-[280px] flex-col items-center rounded-md px-1 py-0.5 text-center transition-colors duration-150 hover:color-bg-grey-5"
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
             aria-haspopup="listbox"
             aria-label={`${title}. Show question list`}
           >
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={titleKey ?? title}
-                initial={{ opacity: 0, x: 8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -8 }}
-                transition={{ duration: 0.15, ease: [0.25, 0.4, 0.25, 1] }}
-                className="flex min-w-0 items-center gap-1"
-              >
-                <span className="question-selector-title question-selector-truncate color-txt-accent text-sm font-bold leading-tight">
-                  {title}
-                </span>
-                <LuChevronDown
-                  size={14}
-                  strokeWidth={2.5}
-                  className={`shrink-0 color-txt-sub transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-                  aria-hidden
-                />
-              </motion.span>
-            </AnimatePresence>
+            <span className="flex w-full min-w-0 items-center gap-1">
+              <span className="min-w-0 flex-1 overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={titleKey ?? title}
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
+                    transition={{ duration: 0.15, ease: [0.25, 0.4, 0.25, 1] }}
+                    className="block truncate color-txt-accent text-sm font-bold leading-tight"
+                    title={title}
+                  >
+                    {title}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+              <LuChevronDown size={14} strokeWidth={2.5} className={`shrink-0 color-txt-sub transition-transform duration-200 ${open ? "rotate-180" : ""}`} aria-hidden />
+            </span>
             {tagsDisplay && (
               <p className="question-selector-truncate color-txt-sub mt-0.5 text-xs font-normal">
                 {tagsDisplay}

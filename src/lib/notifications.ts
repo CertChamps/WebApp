@@ -4,6 +4,7 @@ import { auth, db } from "../../firebase";
 export type PostNotificationType =
   | "post-comment"
   | "post-rating"
+  | "post-save"
   | "post-approved"
   | "post-removed"
   | "post-rejected";
@@ -73,6 +74,12 @@ export function discoverNotificationCopy({
       body: score
         ? `${name} rated ${yourPostLower} ${score}/5`
         : `${name} rated ${yourPostLower}`,
+    };
+  }
+  if (type === "post-save") {
+    return {
+      title: "Resource saved",
+      body: `${name} saved ${yourPostLower}`,
     };
   }
   return {
@@ -165,7 +172,7 @@ export function notifyPostOwner({
   if (
     actorId &&
     ownerId === actorId &&
-    (type === "post-comment" || type === "post-rating")
+    (type === "post-comment" || type === "post-rating" || type === "post-save")
   ) {
     return Promise.resolve();
   }
