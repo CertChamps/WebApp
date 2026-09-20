@@ -31,10 +31,20 @@ export async function registerPushNotifications(uid?: string | null) {
       await FirebaseMessaging.addListener("tokenReceived", ({ token }) => {
         if (startedForUid && token) void saveToken(startedForUid, token);
       });
-      await FirebaseMessaging.addListener("notificationActionPerformed", () => {
-        if (!window.location.hash.startsWith("#/discover")) {
-          window.location.hash = "#/discover";
-        }
+      await FirebaseMessaging.addListener("notificationActionPerformed", (action) => {
+        const data = action.notification?.data as Record<string, unknown> | undefined;
+        const type = typeof data?.type === "string" ? data.type : "";
+        const resourceId =
+          typeof data?.postId === "string" && data.postId
+            ? data.postId
+            : typeof data?.resourceId === "string"
+              ? data.resourceId
+              : "";
+        const route = type === "discover-moderation"
+          ? "/admin/discover-moderation"
+          : "/discover";
+        const query = resourceId ? `?resource=${encodeURIComponent(resourceId)}` : "";
+        window.location.hash = `#${route}${query}`;
       });
       listenersBound = true;
     }

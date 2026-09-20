@@ -131,7 +131,7 @@ function parseTypesParam(value: string | null): ResourceType[] {
 
 function parseSourcesParam(value: string | null): ModerationSourceFilter[] {
   return parseCsvParam(value).filter(
-    (item): item is ModerationSourceFilter => item === "website" || item === "pdf"
+    (item): item is ModerationSourceFilter => item === "website" || item === "pdf" || item === "image"
   );
 }
 
@@ -262,6 +262,7 @@ export default function DiscoverModeration() {
           item.subjectLabel,
           item.siteName,
           item.pdfFileName,
+          item.imageFileName,
           ...types,
           ...levelLabels,
         ]
@@ -345,6 +346,13 @@ export default function DiscoverModeration() {
           await deleteObject(storageRef(storage, item.pdfPath));
         } catch (deleteErr) {
           console.warn("Failed to delete rejected PDF:", deleteErr);
+        }
+      }
+      if (item.imagePath) {
+        try {
+          await deleteObject(storageRef(storage, item.imagePath));
+        } catch (deleteErr) {
+          console.warn("Failed to delete rejected image:", deleteErr);
         }
       }
       setRejecting(null);
@@ -492,7 +500,7 @@ export default function DiscoverModeration() {
                 }
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg color-bg-accent color-txt-accent text-xs font-semibold cursor-pointer"
               >
-                {source === "pdf" ? "PDF" : "Website"}
+                {source === "pdf" ? "PDF" : source === "image" ? "Image" : "Website"}
                 <LuX size={12} />
               </button>
             ))}
@@ -566,6 +574,7 @@ export default function DiscoverModeration() {
                       websiteUrl: item.websiteUrl,
                       resourceSource: item.resourceSource,
                       pdfPath: item.pdfPath,
+                      imagePath: item.imagePath,
                       thumbnailUrl: item.uploadedThumbnailUrl || item.thumbnailUrl,
                       faviconUrl: item.faviconUrl,
                     }}
@@ -589,7 +598,7 @@ export default function DiscoverModeration() {
                           ? ` · ${item.linkedQuestions.length} linked questions`
                           : ` · ${item.linkedQuestionName}`
                         : ""}
-                      {` · ${item.resourceSource === "pdf" ? item.pdfFileName || "PDF" : item.siteName || "Website"}`}
+                      {` · ${item.resourceSource === "pdf" ? item.pdfFileName || "PDF" : item.resourceSource === "image" ? item.imageFileName || "Image" : item.siteName || "Website"}`}
                       {` · ${item.username}`}
                       {item.timestamp ? ` · ${timeAgo(item.timestamp)}` : ""}
                     </p>
@@ -641,7 +650,11 @@ export default function DiscoverModeration() {
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg color-txt-main text-sm font-semibold hover:opacity-90 cursor-pointer"
                     >
                       <LuExternalLink size={15} />
-                      Open
+                      {item.resourceSource === "pdf"
+                        ? "Open PDF"
+                        : item.resourceSource === "image"
+                          ? "Open image"
+                          : "Open link"}
                     </button>
                   </div>
                 </div>

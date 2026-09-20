@@ -18,6 +18,7 @@ import { DISCOVER_SIDEBAR_PARAM } from "../lib/discoverLinks";
 import { FloatingWidgets } from "../components/floating/FloatingWidgets";
 import QuestionTitlePicker from "../components/questions/QuestionTitlePicker";
 import QuestionAudioPlayer from "../components/questions/QuestionAudioPlayer";
+import ZoomableQuestionImage from "../components/questions/ZoomableQuestionImage";
 import { OptionsContext } from "../context/OptionsContext";
 import { TimerProvider } from "../context/TimerContext";
 import {
@@ -116,15 +117,14 @@ function InlineMarkingScheme({ files }: { files: MarkingSchemeFile[] }) {
               Marking scheme couldn’t be loaded for this question.
             </p>
           ) : (
-            images.map((image) => (
-              <img
-                key={image.storagePath}
-                src={image.downloadUrl}
-                alt={image.displayName}
-                loading="lazy"
-                className="practice-browser__question-image"
-              />
-            ))
+            <ZoomableQuestionImage
+              images={images.map((image) => ({
+                key: image.storagePath,
+                src: image.downloadUrl,
+                alt: image.displayName,
+              }))}
+              roundStack
+            />
           )}
         </div>
       )}
@@ -233,15 +233,14 @@ function QuestionCard({
       )}
 
       <div className="practice-browser__question-images">
-        {question.images.map((image) => (
-          <img
-            key={image.storagePath}
-            src={image.downloadUrl}
-            alt={image.displayName}
-            loading="lazy"
-            className="practice-browser__question-image"
-          />
-        ))}
+        <ZoomableQuestionImage
+          images={question.images.map((image) => ({
+            key: image.storagePath,
+            src: image.downloadUrl,
+            alt: image.displayName,
+          }))}
+          roundStack
+        />
       </div>
 
       <InlineMarkingScheme files={files} />

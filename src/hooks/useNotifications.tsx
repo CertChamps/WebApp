@@ -57,6 +57,7 @@ export default function useNotifications() {
                     else if (
                         noti.type == 'post-comment' ||
                         noti.type == 'post-rating' ||
+                        noti.type == 'post-save' ||
                         noti.type == 'post-approved' ||
                         noti.type == 'post-rejected' ||
                         noti.type == 'post-removed'

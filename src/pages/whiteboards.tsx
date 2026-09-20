@@ -1,15 +1,16 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { deleteObject, ref as storageRef } from "firebase/storage";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   LuArrowRight,
   LuChevronDown,
   LuFileText,
   LuFolder,
-  LuLayoutPanelTop,
   LuLoaderCircle,
   LuLock,
   LuPencil,
+  LuPlus,
   LuSearch,
   LuSparkles,
 } from "react-icons/lu";
@@ -17,20 +18,32 @@ import SubjectDropdown from "../components/practiceHub/SubjectDropdown";
 import PageDetailsModal from "../components/whiteboards/PageDetailsModal";
 import FolderModal from "../components/whiteboards/FolderModal";
 import WhiteboardModal from "../components/whiteboards/WhiteboardModal";
-import { useWhiteboards } from "../hooks/useWhiteboards";
+import SaveQuestionToCanvasModal from "../components/whiteboards/SaveQuestionToCanvasModal";
+import { uploadWhiteboardAsset, useWhiteboards } from "../hooks/useWhiteboards";
 import { useWhiteboardAIMatch, type AIProposal } from "../hooks/useWhiteboardAIMatch";
 import {
   getLastWhiteboardsSubject,
+  newAttachmentId,
   setLastWhiteboardsSubject,
+  type AttachedQuestion,
   type WhiteboardFolder,
   type WhiteboardPage,
 } from "../data/whiteboards";
-import { getFavouriteSubjectIds, useSyncedFavouriteSubjectIds } from "../data/practiceHubSubjects";
+import { getFavouriteSubjectIds, getSubjectLabel, useSyncedFavouriteSubjectIds } from "../data/practiceHubSubjects";
 import { UserContext } from "../context/UserContext";
 import { hasAceAccess } from "../lib/contentAccess";
+import { storage } from "../../firebase";
+import {
+  completeIncomingShare,
+  getIncomingShare,
+  incomingShareDisplayName,
+  incomingShareFile,
+  subscribeIncomingShare,
+  type NativeIncomingShare,
+} from "../lib/nativeShareIntake";
 import "../styles/practiceHub.css";
 
-const RECENTS_PREVIEW_COUNT = 8;
+const RECENTS_PREVIEW_COUNT = 4;
 
 const AI_SEARCH_STATUS_MESSAGES = [
   "Reading through the question bank…",
@@ -45,23 +58,26 @@ type AIPageType = "whiteboard" | "document";
 const AI_PAGE_TYPES: Array<{
   id: AIPageType;
   label: string;
-  Icon: typeof LuLayoutPanelTop;
+  Icon: typeof LuPencil;
 }> = [
-  { id: "whiteboard", label: "Whiteboard", Icon: LuLayoutPanelTop },
+  { id: "whiteboard", label: "Whiteboard", Icon: LuPencil },
   { id: "document", label: "Document", Icon: LuFileText },
 ];
 
-const surfaceClassName = "rounded-lg border-2 color-shadow color-bg transition-colors";
+/** Landing page uses hairlines instead of framed cards to separate items. */
+const hairline = "border-grey/15";
+const dividedList = "flex w-full flex-col divide-y divide-grey/15";
 
 const actionCardClassName =
-  "flex flex-col items-start gap-2 rounded-lg color-bg-grey-5 px-5 py-4 text-left transition-colors cursor-pointer hover:color-bg-grey-10 disabled:opacity-50 disabled:cursor-default";
+  "flex flex-col items-start gap-2 rounded-2xl color-bg-grey-5 px-5 py-4 text-left transition-colors cursor-pointer hover:color-bg-grey-10 disabled:opacity-50 disabled:cursor-default";
 
-const recentRowClassName = `${surfaceClassName} flex w-full items-center gap-3 px-3 py-2.5 text-left cursor-pointer hover:color-bg-accent`;
+const recentRowClassName =
+  "flex w-full items-center gap-2.5 px-1 py-2 text-left cursor-pointer transition-colors hover:color-bg-grey-5";
 
-const surfacePanelClassName = `${surfaceClassName} px-4 py-3`;
+const surfacePanelClassName = `border-b ${hairline} px-1 py-3`;
 
 const secondaryButtonClassName =
-  "flex-1 rounded-lg border-2 color-shadow color-bg py-2 text-sm font-semibold color-txt-main hover:color-bg-accent transition-colors cursor-pointer";
+  "flex-1 rounded-lg py-2 text-sm font-semibold color-txt-sub hover:color-txt-main transition-colors cursor-pointer";
 
 const fadeUp = {
   initial: { opacity: 0, y: 10 },
@@ -97,7 +113,7 @@ function PageRecentGlyph({ page, size = 16 }: { page: WhiteboardPage; size?: num
   if (page.pageType === "document") {
     return <LuFileText size={size} className="color-txt-accent" />;
   }
-  return <LuLayoutPanelTop size={size} className="color-txt-accent" />;
+  return <LuPencil size={size} className="color-txt-accent" />;
 }
 
 export default function Whiteboards() {
@@ -111,6 +127,8 @@ export default function Whiteboards() {
   const favouriteSubjectIds = useSyncedFavouriteSubjectIds();
   const {
     recentItems,
+    folders,
+    pages,
     loading,
     createPage,
     updateFolder,
@@ -120,6 +138,63 @@ export default function Whiteboards() {
   const [showCreatePage, setShowCreatePage] = useState(false);
   const [editingFolder, setEditingFolder] = useState<WhiteboardFolder | null>(null);
   const [showRecentsModal, setShowRecentsModal] = useState(false);
+  const [incomingAttachment, setIncomingAttachment] = useState<{
+    attachment: AttachedQuestion;
+    share: NativeIncomingShare;
+  } | null>(null);
+  const [incomingShareVersion, setIncomingShareVersion] = useState(0);
+  const importingShareIdRef = useRef<string | null>(null);
+  const incomingShareSavedRef = useRef(false);
+
+  useEffect(
+    () => subscribeIncomingShare(() => setIncomingShareVersion((version) => version + 1)),
+    []
+  );
+
+  useEffect(() => {
+    const share = getIncomingShare("question");
+    if (!share || !subject || !user?.uid || incomingAttachment) return;
+    if (importingShareIdRef.current === share.id) return;
+    importingShareIdRef.current = share.id;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        if (share.kind === "url") {
+          throw new Error("Links can be uploaded to Discover, but questions must be an image or PDF.");
+        }
+        const file = await incomingShareFile(share);
+        const attachmentId = newAttachmentId();
+        const uploaded = await uploadWhiteboardAsset(user.uid, attachmentId, "question", file);
+        if (cancelled) {
+          await deleteObject(storageRef(storage, uploaded.storagePath)).catch(() => undefined);
+          if (importingShareIdRef.current === share.id) importingShareIdRef.current = null;
+          return;
+        }
+        const attachment: AttachedQuestion = {
+          id: attachmentId,
+          source: "custom",
+          label: incomingShareDisplayName(share, file),
+          custom: {
+            questionPath: uploaded.storagePath,
+            questionType: uploaded.fileType,
+            markingSchemePath: null,
+            markingSchemeType: null,
+          },
+        };
+        setIncomingAttachment({ attachment, share });
+      } catch (error) {
+        console.error("[native share] Question import failed:", error);
+        window.alert(error instanceof Error ? error.message : "The shared question could not be imported.");
+        await completeIncomingShare(share);
+        importingShareIdRef.current = null;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [incomingAttachment, incomingShareVersion, subject, user?.uid]);
 
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiPageType, setAiPageType] = useState<AIPageType>("whiteboard");
@@ -216,6 +291,34 @@ export default function Whiteboards() {
     [navigate]
   );
 
+  const openFolder = useCallback(
+    (folder: WhiteboardFolder) => {
+      const folderIds = new Set<string>([folder.id]);
+      let grew = true;
+      while (grew) {
+        grew = false;
+        for (const item of folders) {
+          if (item.parentId && folderIds.has(item.parentId) && !folderIds.has(item.id)) {
+            folderIds.add(item.id);
+            grew = true;
+          }
+        }
+      }
+      const recency = (page: WhiteboardPage) => Math.max(page.lastOpenedAt, page.updatedAt, page.createdAt);
+      const inFolder = pages
+        .filter((page) => page.folderId != null && folderIds.has(page.folderId))
+        .sort((a, b) => recency(b) - recency(a));
+      const fallback = [...pages].sort((a, b) => recency(b) - recency(a))[0];
+      const target = inFolder[0] ?? fallback;
+      if (target) {
+        navigate(`/whiteboards/page/${target.id}?folder=${encodeURIComponent(folder.id)}`);
+        return;
+      }
+      setEditingFolder(folder);
+    },
+    [folders, pages, navigate]
+  );
+
   const createPageFromProposal = useCallback(
     async (proposal: AIProposal, pageType: AIPageType = aiPageType) => {
       if (!subject) return;
@@ -258,7 +361,7 @@ export default function Whiteboards() {
 
   return (
     <div className="flex h-full w-full flex-1 min-w-0 overflow-y-auto scrollbar-minimal color-bg">
-      <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-8 px-6 py-12">
+      <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 px-6 py-8">
         {/* Welcome + subject */}
         <motion.div className="flex w-full flex-col items-center gap-5" {...fadeUp}>
           <div className="text-center">
@@ -277,7 +380,7 @@ export default function Whiteboards() {
         </motion.div>
 
         {/* Action cards — matching, whole card is the tap target */}
-        <div className="grid w-full grid-cols-2 gap-4">
+        <div className="grid w-full grid-cols-2 gap-3">
           <motion.button
             type="button"
             className={actionCardClassName}
@@ -288,7 +391,7 @@ export default function Whiteboards() {
             transition={{ duration: 0.35, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
             whileTap={{ scale: 0.98 }}
           >
-            <LuPencil size={20} strokeWidth={2.25} className="color-txt-accent" aria-hidden />
+            <LuPlus size={20} strokeWidth={2.25} className="color-txt-accent" aria-hidden />
             <span className="text-base font-black color-txt-main">Create Page</span>
             <span className="text-xs leading-snug color-txt-sub">
               Start a new whiteboard page for this subject
@@ -516,41 +619,45 @@ export default function Whiteboards() {
 
         {/* Recents — one full-width row per item */}
         <motion.div
-          className="flex w-full flex-col gap-3"
+          className="flex min-h-0 w-full flex-1 flex-col gap-1.5"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black color-txt-main">Recents</h2>
-            {subject && !loading && recentItems.length > 0 && (
+          <div className={`flex items-center justify-between border-b ${hairline} pb-1`}>
+            <h2 className="text-lg font-black color-txt-main">
+              {subject ? `Recent ${getSubjectLabel(subject)} Pages` : "Recent Pages"}
+            </h2>
+            {subject && !loading && recentItems.length > RECENTS_PREVIEW_COUNT && (
               <button
                 type="button"
-                className="inline-flex items-center gap-1 text-xs font-bold color-txt-accent hover:opacity-80 transition-opacity cursor-pointer"
+                className="inline-flex items-center gap-1 py-1 text-xs font-bold color-txt-accent hover:opacity-80 transition-opacity cursor-pointer"
                 onClick={() => setShowRecentsModal(true)}
               >
                 View all
-                <LuArrowRight size={14} />
+                <LuArrowRight size={13} />
               </button>
             )}
           </div>
 
           {!subject ? (
-            <p className={`py-5 text-sm color-txt-sub ${surfacePanelClassName}`}>
+            <p className={`text-sm color-txt-sub ${surfacePanelClassName}`}>
               Choose a subject to see your recent pages and folders.
             </p>
           ) : loading ? (
-            <div className="flex w-full flex-col gap-1.5">
+            <div className={dividedList}>
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className={`h-11 w-full animate-pulse ${surfaceClassName}`} />
+                <div key={i} className="h-12 w-full">
+                  <div className="mt-3 h-4 w-2/3 animate-pulse rounded color-bg-grey-5" />
+                </div>
               ))}
             </div>
           ) : recentItems.length === 0 ? (
-            <p className={`py-5 text-sm color-txt-sub ${surfacePanelClassName}`}>
-              Nothing here yet — create your first page to get going.
+            <p className="px-1 py-3 text-sm color-txt-sub">
+              No Results
             </p>
           ) : (
-            <div className="flex w-full flex-col gap-1.5">
+            <div className={dividedList}>
               {previewRecents.map((item) =>
                 item.type === "page" ? (
                   <button
@@ -572,7 +679,7 @@ export default function Whiteboards() {
                     key={`folder-${item.folder.id}`}
                     type="button"
                     className={recentRowClassName}
-                    onClick={() => setEditingFolder(item.folder)}
+                    onClick={() => openFolder(item.folder)}
                   >
                     <span className="flex size-8 shrink-0 items-center justify-center text-base leading-none color-txt-accent">
                       <FolderRecentGlyph folder={item.folder} />
@@ -591,13 +698,13 @@ export default function Whiteboards() {
 
       {showRecentsModal && (
         <WhiteboardModal title="Recents" onClose={() => setShowRecentsModal(false)}>
-          <div className="flex flex-col gap-1 px-1 pb-1">
+          <div className={`${dividedList} max-h-[min(28rem,70dvh)] overflow-y-auto scrollbar-minimal`}>
             {recentItems.map((item) =>
               item.type === "page" ? (
                 <button
                   key={`modal-page-${item.page.id}`}
                   type="button"
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left color-txt-main hover:color-bg-accent transition-colors cursor-pointer"
+                  className={recentRowClassName}
                   onClick={() => {
                     setShowRecentsModal(false);
                     openPage(item.page.id);
@@ -613,10 +720,10 @@ export default function Whiteboards() {
                 <button
                   key={`modal-folder-${item.folder.id}`}
                   type="button"
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left color-txt-main hover:color-bg-accent transition-colors cursor-pointer"
+                  className={recentRowClassName}
                   onClick={() => {
                     setShowRecentsModal(false);
-                    setEditingFolder(item.folder);
+                    openFolder(item.folder);
                   }}
                 >
                   <span className="flex size-8 shrink-0 items-center justify-center text-base leading-none color-txt-accent">
@@ -629,6 +736,31 @@ export default function Whiteboards() {
             )}
           </div>
         </WhiteboardModal>
+      )}
+
+      {incomingAttachment && subject && (
+        <SaveQuestionToCanvasModal
+          subject={subject}
+          attachment={incomingAttachment.attachment}
+          onSaved={() => {
+            incomingShareSavedRef.current = true;
+            void completeIncomingShare(incomingAttachment.share);
+            importingShareIdRef.current = null;
+            setIncomingAttachment(null);
+          }}
+          onClose={() => {
+            if (incomingShareSavedRef.current) {
+              incomingShareSavedRef.current = false;
+              return;
+            }
+            const current = incomingAttachment;
+            setIncomingAttachment(null);
+            importingShareIdRef.current = null;
+            const path = current.attachment.custom?.questionPath;
+            if (path) void deleteObject(storageRef(storage, path)).catch(() => undefined);
+            void completeIncomingShare(current.share);
+          }}
+        />
       )}
 
       {showCreatePage && subject && (

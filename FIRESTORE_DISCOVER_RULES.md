@@ -18,6 +18,9 @@ Document fields:
 | `title` | string | Max 80 chars |
 | `description` | string | Max 240 chars |
 | `websiteUrl` | string | Validated `https://…` link |
+| `resourceSource` | string | `website`, `pdf`, or `image` |
+| `pdfPath` | string \| null | Primary PDF upload path |
+| `imagePath` | string \| null | Primary image upload path |
 | `thumbnailUrl` | string | Firebase Storage download URL |
 | `thumbnailPath` | string | Storage path for cleanup on delete |
 | `timestamp` | server timestamp | Created at |
@@ -103,20 +106,40 @@ match /posts/{postId} {
 
 ## Storage
 
-Thumbnails are uploaded to:
+Discover files are uploaded to:
 
 ```
-discover-thumbnails/{uid}/{timestamp}-{filename}
+discover-thumbnail-uploads/{uid}/{timestamp}-{filename}
+discover-pdf-uploads/{uid}/{timestamp}-{filename}
+discover-image-uploads/{uid}/{timestamp}-{filename}
 ```
 
 ### Suggested storage rules
 
 ```
-match /discover-thumbnails/{uid}/{file=**} {
+match /discover-thumbnail-uploads/{uid}/{file=**} {
   allow read: if request.auth != null;
   allow write: if request.auth != null
     && request.auth.uid == uid
     && request.resource.size < 4 * 1024 * 1024
+    && request.resource.contentType.matches('image/.*');
+  allow delete: if request.auth != null && request.auth.uid == uid;
+}
+
+match /discover-pdf-uploads/{uid}/{file=**} {
+  allow read: if request.auth != null;
+  allow write: if request.auth != null
+    && request.auth.uid == uid
+    && request.resource.size < 25 * 1024 * 1024
+    && request.resource.contentType == 'application/pdf';
+  allow delete: if request.auth != null && request.auth.uid == uid;
+}
+
+match /discover-image-uploads/{uid}/{file=**} {
+  allow read: if request.auth != null;
+  allow write: if request.auth != null
+    && request.auth.uid == uid
+    && request.resource.size < 25 * 1024 * 1024
     && request.resource.contentType.matches('image/.*');
   allow delete: if request.auth != null && request.auth.uid == uid;
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LuFileText, LuLayoutPanelTop, LuPlus, LuTrash2, LuX } from "react-icons/lu";
+import { LuFileText, LuPencil, LuPlus, LuTrash2, LuX } from "react-icons/lu";
 import WhiteboardModal from "./WhiteboardModal";
 import EmojiPicker from "./EmojiPicker";
 import AddQuestionModal from "./AddQuestionModal";
@@ -182,7 +182,7 @@ export default function PageDetailsModal({
               <span className="text-xs font-semibold color-txt-sub">Page type</span>
               <div className="grid grid-cols-2 gap-2">
                 {([
-                  { id: "whiteboard" as const, label: "Whiteboard", Icon: LuLayoutPanelTop, detail: "Freeform canvas" },
+                  { id: "whiteboard" as const, label: "Whiteboard", Icon: LuPencil, detail: "Freeform canvas" },
                   { id: "document" as const, label: "Document", Icon: LuFileText, detail: "Word-style page" },
                 ]).map(({ id, label, Icon, detail }) => (
                   <button

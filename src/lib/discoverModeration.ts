@@ -15,7 +15,7 @@ import {
 
 export type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 export type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
-export type ResourceSource = "website" | "pdf";
+export type ResourceSource = "website" | "pdf" | "image";
 
 export const RESOURCE_TYPES: ResourceType[] = [
   "Notes",
@@ -40,6 +40,8 @@ export type DiscoverModerationNote = {
   resourceSource: ResourceSource;
   pdfPath: string;
   pdfFileName: string;
+  imagePath: string;
+  imageFileName: string;
   thumbnailUrl: string;
   thumbnailPath: string;
   uploadedThumbnailUrl: string;
@@ -115,9 +117,11 @@ export function parseDiscoverModerationNote(
     title: asString(data.title) || "Untitled",
     description: asString(data.description),
     websiteUrl: asString(data.websiteUrl),
-    resourceSource: data.resourceSource === "pdf" ? "pdf" : "website",
+    resourceSource: data.resourceSource === "pdf" ? "pdf" : data.resourceSource === "image" ? "image" : "website",
     pdfPath: asString(data.pdfPath),
     pdfFileName: asString(data.pdfFileName),
+    imagePath: asString(data.imagePath),
+    imageFileName: asString(data.imageFileName),
     thumbnailUrl: asString(data.thumbnailUrl),
     thumbnailPath: asString(data.thumbnailPath),
     uploadedThumbnailUrl: asString(data.uploadedThumbnailUrl),

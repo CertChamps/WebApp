@@ -15,10 +15,14 @@ You will be given:
 You are looking at a student's handwritten exam workings.
 Your task is to find and transcribe their attempt at each question part.
 
+This can be ANY subject — maths, the sciences, languages, essays,
+history, geography, business, music notation, diagrams, and so on.
+
 Important: students write on a whiteboard, so strokes may be faint,
-imprecise, or partially erased. Treat all mathematical notation,
-numbers, letters, equations, diagrams, and working steps as valid
-workings even if they appear rough or incomplete.
+imprecise, or partially erased. Treat all writing — words, sentences,
+mathematical notation, numbers, letters, equations, diagrams, labels,
+and working steps — as valid workings even if they appear rough or
+incomplete.
 
 Set attempted: false ONLY if the image contains literally zero
 marks, pixels, or strokes anywhere in the region for this part.
@@ -407,7 +411,7 @@ export async function runGrading(input: GradingInput): Promise<GradingResult> {
           text: [
             `Question:\n${input.questionText}`,
             `Capture world bounds: ${JSON.stringify(capturePayload.captureWorldBounds)}`,
-            "canvasDensityNote: This image contains handwritten mathematical workings. Pencil strokes may appear faint. Treat any marks, numbers, symbols, or letters as intentional workings unless they are clearly decorative doodles unrelated to the question.",
+            "canvasDensityNote: This image contains the student's handwritten workings for any subject (maths, sciences, languages, essays, diagrams, music, etc.). Pencil strokes may appear faint. Treat any marks, numbers, symbols, words, or letters as intentional workings unless they are clearly decorative doodles unrelated to the question.",
             instruction,
             (input.questionImages?.length ?? 0) > 0
               ? "Question images are attached after this text (before the student whiteboard). Use them to understand what was asked."

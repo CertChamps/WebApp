@@ -31,18 +31,20 @@ export default function ImageMarkingScheme({
         </div>
       )}
       <div className="flex flex-col items-center p-2 w-full">
-        <ZoomableQuestionImage
-          images={images.map((img, idx) => ({
-            key: img.storagePath,
-            src: img.downloadUrl,
-            alt:
-              idx === 0
-                ? questionName ?? "Marking scheme"
-                : `${questionName ?? "Marking scheme"} part ${idx + 1}`,
-          }))}
-          className="w-full h-auto"
-          roundStack
-        />
+        <div className="w-full overflow-hidden color-shadow rounded-[10px]">
+          <ZoomableQuestionImage
+            images={images.map((img, idx) => ({
+              key: img.storagePath,
+              src: img.downloadUrl,
+              alt:
+                idx === 0
+                  ? questionName ?? "Marking scheme"
+                  : `${questionName ?? "Marking scheme"} part ${idx + 1}`,
+            }))}
+            className="w-full h-auto"
+            roundStack
+          />
+        </div>
       </div>
     </div>
   );

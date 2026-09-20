@@ -1,6 +1,5 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import * as admin from "firebase-admin";
-import { asString, collectExpoPushTokens, sendExpoPush } from "../push/expoPush";
+import { sendPush } from "../discover/deliverNotification";
 
 /** Keep in sync with App `constants/discover.ts` and WebApp `constants/adminUids.ts`. */
 const ADMIN_UIDS = [
@@ -9,22 +8,13 @@ const ADMIN_UIDS = [
     "AN3cIuQxmXfXb5kEmXuHcM5vWyH3",
 ];
 
-async function loadAdminPushTokens(): Promise<string[]> {
-    const snapshots = await Promise.all(
-        ADMIN_UIDS.map((uid) => admin.firestore().doc(`user-data/${uid}`).get())
-    );
-    const tokens = new Set<string>();
-    for (const snap of snapshots) {
-        for (const token of collectExpoPushTokens(snap.data())) {
-            tokens.add(token);
-        }
-    }
-    return [...tokens];
+function asString(value: unknown): string {
+    return typeof value === "string" ? value.trim() : "";
 }
 
 /**
- * When a Discover resource is submitted for moderation, ping every developer
- * device that has registered an Expo push token.
+ * When a Discover resource is submitted for moderation, ping every admin
+ * device that has registered an FCM token.
  */
 export const notifyAdminsOnPendingDiscover = onDocumentCreated(
     "discover-notes/{noteId}",
@@ -35,28 +25,16 @@ export const notifyAdminsOnPendingDiscover = onDocumentCreated(
         const data = snapshot.data() ?? {};
         if (asString(data.moderationStatus) !== "pending") return;
 
-        const tokens = await loadAdminPushTokens();
-        if (tokens.length === 0) {
-            console.warn("No admin Expo push tokens registered; skipping moderation notify");
-            return;
-        }
-
         const title = asString(data.title) || "New Discover resource";
         const username = asString(data.username) || "someone";
         const noteId = event.params.noteId;
 
-        await sendExpoPush(
-            tokens.map((to) => ({
-                to,
-                title: "Discover needs moderation",
-                body: `"${title}" by ${username}`,
-                sound: "default",
-                channelId: "moderation",
-                data: {
-                    type: "discover-moderation",
-                    resourceId: noteId,
-                },
-            }))
-        );
+        await Promise.all(ADMIN_UIDS.map((uid) =>
+            sendPush(uid, "Discover needs moderation", `"${title}" by ${username}`, {
+                type: "discover-moderation",
+                resourceId: noteId,
+                route: "/admin/discover-moderation",
+            })
+        ));
     }
 );

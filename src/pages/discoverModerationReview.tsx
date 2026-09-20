@@ -282,10 +282,11 @@ export default function DiscoverModerationReview() {
       websiteUrl: form.websiteUrl,
       resourceSource: form.resourceSource,
       pdfPath: note?.pdfPath ?? "",
+      imagePath: note?.imagePath ?? "",
       thumbnailUrl: form.thumbnailUrl,
       faviconUrl: note?.faviconUrl ?? "",
     };
-  }, [form, note?.faviconUrl, note?.pdfPath]);
+  }, [form, note?.faviconUrl, note?.pdfPath, note?.imagePath]);
 
   const patchForm = (partial: Partial<FormState>) => {
     setForm((current) => (current ? { ...current, ...partial } : current));
@@ -480,6 +481,13 @@ export default function DiscoverModerationReview() {
           await deleteObject(storageRef(storage, note.pdfPath));
         } catch (deleteErr) {
           console.warn("Failed to delete rejected PDF:", deleteErr);
+        }
+      }
+      if (note.imagePath) {
+        try {
+          await deleteObject(storageRef(storage, note.imagePath));
+        } catch (deleteErr) {
+          console.warn("Failed to delete rejected image:", deleteErr);
         }
       }
       navigate(listHref);
@@ -780,8 +788,8 @@ export default function DiscoverModerationReview() {
                 </p>
               </div>
               <Field label="Source type">
-                <div className="grid grid-cols-2 gap-1 rounded-xl color-bg-grey-10 p-1">
-                  {(["website", "pdf"] as ResourceSource[]).map((source) => (
+                <div className="grid grid-cols-3 gap-1 rounded-xl color-bg-grey-10 p-1">
+                  {(["website", "pdf", "image"] as ResourceSource[]).map((source) => (
                     <button
                       key={source}
                       type="button"
@@ -792,7 +800,7 @@ export default function DiscoverModerationReview() {
                           : "color-txt-sub hover:color-txt-main"
                       }`}
                     >
-                      {source === "website" ? "Website / video" : "PDF"}
+                      {source === "website" ? "Website / video" : source === "image" ? "Image" : "PDF"}
                     </button>
                   ))}
                 </div>

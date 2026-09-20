@@ -27,6 +27,7 @@ import { extractYoutubeId, getDiscoverVideoPoster, isDiscoverVideoUrl } from "..
 import { renderPdfFirstPageJpeg } from "../../lib/discoverPreview";
 import { captureWebsiteThumbnailBlob } from "../../lib/discoverCapture";
 import type { QuestionDiscoveryContext } from "../../lib/questionDiscovery";
+import { incomingShareDisplayName, incomingShareFile, type NativeIncomingShare } from "../../lib/nativeShareIntake";
 import { linkedQuestionsPayload } from "../../lib/discoverLinks";
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
@@ -97,6 +98,7 @@ export type DiscoverShareModalProps = {
   onClose: () => void;
   onSubmitted?: () => void;
   linkedQuestion?: QuestionDiscoveryContext | null;
+  initialShare?: NativeIncomingShare | null;
 };
 
 export default function DiscoverShareModal({
@@ -104,6 +106,7 @@ export default function DiscoverShareModal({
   onClose,
   onSubmitted,
   linkedQuestion = null,
+  initialShare = null,
 }: DiscoverShareModalProps) {
   const { user } = useContext(UserContext);
   const isAdmin = isAdminUid(user?.uid, user?.email);
@@ -199,9 +202,38 @@ export default function DiscoverShareModal({
   useEffect(() => {
     if (!open) return;
     resetForm();
-    // Seed defaults when the modal opens for this question.
+    if (initialShare?.kind === "url" && initialShare.url) {
+      setResourceSource("website");
+      setWebsiteUrl(initialShare.url);
+      setTitle(initialShare.title?.slice(0, MAX_TITLE) ?? "");
+      setDescription(initialShare.description?.slice(0, MAX_DESCRIPTION) ?? "");
+      return;
+    }
+    if (initialShare?.kind === "image") {
+      setFormError("Discover doesn’t accept image uploads yet — share a PDF or a link instead.");
+      return;
+    }
+    if (initialShare?.kind === "pdf") {
+      let cancelled = false;
+      void incomingShareFile(initialShare)
+        .then((file) => {
+          if (cancelled) return;
+          setTitle(incomingShareDisplayName(initialShare, file).slice(0, MAX_TITLE));
+          setDescription(initialShare.description?.slice(0, MAX_DESCRIPTION) ?? "");
+          setResourceSource("pdf");
+          setPdfFile(file);
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            setFormError(error instanceof Error ? error.message : "The shared file could not be opened.");
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, linkedQuestion?.id]);
+  }, [open, linkedQuestion?.id, initialShare?.id]);
 
   const fetchLinkPreview = async (validUrl: string): Promise<LinkPreview> => {
     setPreviewLoading(true);
@@ -496,6 +528,8 @@ export default function DiscoverShareModal({
         resourceSource,
         pdfPath: uploadedPdfPath,
         pdfFileName: resourceSource === "pdf" ? pdfFile?.name ?? "" : "",
+        imagePath: null,
+        imageFileName: "",
         thumbnailUrl: listingThumbnailUrl,
         thumbnailPath: listingThumbnailPath,
         uploadedThumbnailUrl,
@@ -639,9 +673,7 @@ export default function DiscoverShareModal({
     }
     setPdfFile(file);
     setFormError(null);
-    setTitle((current) => current.trim()
-      ? current
-      : file.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").slice(0, MAX_TITLE));
+    setTitle((current) => current.trim() ? current : file.name.replace(/\.pdf$/i, "").slice(0, MAX_TITLE));
   };
 
   const handlePickThumbnail = (file: File | undefined | null) => {
@@ -869,7 +901,7 @@ export default function DiscoverShareModal({
                           ? "Generating preview…"
                           : formPreviewReady
                             ? "Preview unavailable"
-                            : "Paste a link or upload a PDF to generate a preview"}
+                            : "Paste a link or upload a file to generate a preview"}
                       </span>
                     </div>
                   )}

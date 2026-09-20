@@ -4,7 +4,7 @@ import { LuX } from "react-icons/lu";
 import { getThemedPortalTarget } from "../../utils/themedPortal";
 import type { ResourceType } from "../../lib/discoverModeration";
 
-export type ModerationSourceFilter = "website" | "pdf";
+export type ModerationSourceFilter = "website" | "pdf" | "image";
 export type ModerationLinkedFilter = "all" | "linked" | "unlinked";
 
 export type ModerationSubjectOption = { id: string; label: string };
@@ -31,6 +31,7 @@ type Props = {
 const SOURCE_OPTIONS: Array<{ id: ModerationSourceFilter; label: string }> = [
   { id: "website", label: "Website" },
   { id: "pdf", label: "PDF" },
+  { id: "image", label: "Image" },
 ];
 
 const LINKED_OPTIONS: Array<{ id: ModerationLinkedFilter; label: string }> = [

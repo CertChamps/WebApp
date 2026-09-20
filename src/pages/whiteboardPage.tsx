@@ -17,10 +17,11 @@ import {
   LuChevronRight,
   LuCircleCheck,
   LuClipboardList,
+  LuDownload,
   LuFileText,
   LuLoaderCircle,
-  LuPanelLeftClose,
-  LuPanelLeftOpen,
+  LuMaximize2,
+  LuMinimize2,
   LuPencil,
   LuPin,
   LuPlus,
@@ -28,10 +29,12 @@ import {
 } from "react-icons/lu";
 import DrawingCanvas, {
   type RegisterDrawingSnapshot,
+  type RegisterGetExportImage,
   type RegisterGetGradingCapture,
   type AttachQuestionImagesFn,
   type RestoreCanvasObjectFn,
   type CanvasObject,
+  type GetExportImageFn,
   type ToolMode,
   questionAttachmentObjectId,
 } from "../components/questions/DrawingCanvas";
@@ -43,6 +46,7 @@ import WhiteboardsSidebar from "../components/whiteboards/WhiteboardsSidebar";
 import { applyThemeTextColor } from "../lib/themeTextColor";
 import PageDetailsModal from "../components/whiteboards/PageDetailsModal";
 import DocumentEditor from "../components/whiteboards/DocumentEditor";
+import ExportModal from "../components/whiteboards/ExportModal";
 import FolderModal from "../components/whiteboards/FolderModal";
 import AddQuestionModal from "../components/whiteboards/AddQuestionModal";
 import FloatingCalculator from "../components/calculator/FloatingCalculator";
@@ -78,6 +82,7 @@ import { AiRequestError, aiResponseError, authenticatedAiFetch, createAiUsageId,
 import { runGrading } from "../lib/grading/GradingEngine";
 import type { CanvasAnnotation, CanvasCapturePayload, GradingStatus, Pass1Result } from "../lib/grading/GradingTypes";
 import { buildGradingChatMessage, gradingChatInputFromPass2 } from "../lib/grading/annotationBuilder";
+import { stackImageUrlsForAi } from "../lib/stackImages";
 import { BlankCanvasError } from "../lib/grading/canvasCapture";
 import { getPracticeSubjectId, getSubjectLabel } from "../data/practiceHubSubjects";
 import { usePaperProgress, buildImageTopicExamPaper } from "../hooks/usePaperProgress";
@@ -323,6 +328,28 @@ function toImageQuestions(
     downloadUrl: img.src,
   }));
 }
+
+const CANVAS_GRADING_MESSAGES = [
+  "Reading your workings…",
+  "Looking at what's on your whiteboard…",
+  "Checking against the marking scheme…",
+  "Comparing with the question…",
+  "Reviewing each step…",
+  "Working out your marks…",
+  "Writing your feedback…",
+  "Almost done…",
+];
+
+const DOCUMENT_GRADING_MESSAGES = [
+  "Reading your answer…",
+  "Reviewing your writing…",
+  "Checking against the marking scheme…",
+  "Comparing with the question…",
+  "Looking for key points…",
+  "Working out your marks…",
+  "Writing your feedback…",
+  "Almost done…",
+];
 
 export default function WhiteboardPageView() {
   return (
@@ -592,6 +619,16 @@ function WhiteboardPageViewInner() {
       getGradingCaptureRef.current?.(mode) ?? null,
     []
   );
+
+  const getExportImageRef = useRef<GetExportImageFn | null>(null);
+  const registerGetExportImage = useCallback<RegisterGetExportImage>((fn) => {
+    getExportImageRef.current = fn;
+  }, []);
+  const getExportImage = useCallback<GetExportImageFn>(
+    (options) => getExportImageRef.current?.(options) ?? null,
+    [],
+  );
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Persist the previous question board before loading the next (keeps drawings isolated).
   useEffect(() => {
@@ -870,6 +907,8 @@ function WhiteboardPageViewInner() {
   );
 
   const canCheckNow = gradingStatus === "idle" || gradingStatus === "done" || gradingStatus === "error";
+  const canvasGradingBusy = gradingStatus !== "idle" && gradingStatus !== "done" && gradingStatus !== "error";
+  const aiCheckThinking = page?.pageType === "document" ? documentChecking : canvasGradingBusy;
 
   const injectGradingMessage = useCallback((result: Awaited<ReturnType<typeof runGrading>>) => {
     setAiInjectedExchange({
@@ -1085,8 +1124,12 @@ function WhiteboardPageViewInner() {
         throw new BlankCanvasError();
       }
 
-      const questionImages = media.questionImages.map((img) => img.src).filter(Boolean).slice(0, 4);
-      const schemeImages = media.markingSchemeImages.map((img) => img.src).filter(Boolean).slice(0, 4);
+      const questionImages = await stackImageUrlsForAi(
+        media.questionImages.map((img) => img.src).filter(Boolean),
+      );
+      const schemeImages = await stackImageUrlsForAi(
+        media.markingSchemeImages.map((img) => img.src).filter(Boolean),
+      );
       const hasScheme = schemeImages.length > 0;
       const isCustom = currentAttachment?.source === "custom";
       const adaptiveMarking = !hasScheme || isCustom;
@@ -1144,13 +1187,29 @@ function WhiteboardPageViewInner() {
       setCheckAnswerStatus(null);
     } catch (err) {
       setGradingStatus("error");
+      // Check My Answer must ALWAYS respond in the AI chat, even when grading
+      // can't run (blank canvas, offline, quota, or any other failure).
+      let assistantMessage: string;
       if (err instanceof BlankCanvasError) {
         setCheckAnswerStatus("Your canvas looks empty - write your workings and try again.");
+        assistantMessage =
+          "I couldn't see any workings on your whiteboard yet. Jot down your attempt, then tap Check Answer again and I'll mark it for you.";
       } else if (err instanceof AiRequestError && err.code === "AI_QUOTA_EXCEEDED") {
         setCheckAnswerStatus(err.message);
+        assistantMessage = err.message;
       } else {
         setCheckAnswerStatus("Something went wrong - try again");
+        assistantMessage =
+          "I couldn't grade your answer just now — this usually happens when the connection drops. Your work is saved, so give Check Answer another tap in a moment.";
       }
+      setAiInjectedExchange({
+        nonce: `${Date.now()}`,
+        userMessage: "Check Answer",
+        assistantMessage,
+        action: null,
+      });
+      setSessionSidebarOpen(true);
+      setSidebarOpenPanel("ai");
       console.error("[whiteboard grading] failed", err);
     }
   }, [
@@ -1177,6 +1236,8 @@ function WhiteboardPageViewInner() {
   const [creatingPage, setCreatingPage] = useState(false);
   const [editingFolder, setEditingFolder] = useState<WhiteboardFolder | null>(null);
   const [creatingFolder, setCreatingFolder] = useState(false);
+  /** Folder the sidebar was showing when "new page"/"new folder" was tapped. */
+  const [createInFolderId, setCreateInFolderId] = useState<string | null>(null);
   const [questionModalMode, setQuestionModalMode] = useState<"add" | "attach" | null>(null);
 
   const handleAddAttachments = useCallback(
@@ -1274,6 +1335,7 @@ function WhiteboardPageViewInner() {
       id: discoverId,
       properties: { name: currentAttachment.label },
       imageUrls: media.questionImages.map((img) => img.src),
+      markingSchemeImageUrls: media.markingSchemeImages.map((img) => img.src),
       _paperThread: bank?.kind === "paper",
       paperId: bank?.paperId,
       paperQuestionId: bank?.questionId,
@@ -1293,7 +1355,7 @@ function WhiteboardPageViewInner() {
       _discoverSource: "whiteboard",
       _practiceUrl: practiceUrl,
     };
-  }, [currentAttachment, page, media.questionImages]);
+  }, [currentAttachment, page, media.questionImages, media.markingSchemeImages]);
 
   const snippetWidth = Math.min(400, Math.floor(typeof window !== "undefined" ? window.innerWidth * 0.3 : 360));
 
@@ -1342,7 +1404,7 @@ function WhiteboardPageViewInner() {
         let leftInset = 0;
         let rightInset = 0;
         if (isXl && sessionSidebarOpen) {
-          const sidebarInset = rect.width * 0.35;
+          const sidebarInset = Math.min(rect.width, Math.max(460, rect.width * 0.35));
           if (options.leftHandMode) leftInset += sidebarInset;
           else rightInset += sidebarInset;
         }
@@ -1391,6 +1453,9 @@ function WhiteboardPageViewInner() {
   }
 
   const activeToolbarPage = page?.id === pageId && !canvasLoading && !canvasLoadError ? page : null;
+  const checkAnswerLabel = isDocumentPage
+    ? (documentChecking ? "Checking…" : "Check Answer")
+    : (!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check Answer");
   const pageToolbarExtras = activeToolbarPage ? (
     <>
       <span className="mx-1 h-4 w-px shrink-0 color-bg-grey-10" aria-hidden />
@@ -1412,11 +1477,24 @@ function WhiteboardPageViewInner() {
           disabled={isDocumentPage ? documentChecking : !canCheckNow}
           title="Check Answer with AI"
         >
-          <LuCircleCheck size={14} strokeWidth={2} />
-          <span>
-            {isDocumentPage
-              ? (documentChecking ? "Checking…" : "Check Answer")
-              : (!canCheckNow ? gradingStatusLabel(gradingStatus) : "Check Answer")}
+          <LuCircleCheck size={14} strokeWidth={2} className="shrink-0" />
+          <span key={aiCheckThinking ? "checking" : "ready"} className="relative inline-grid overflow-hidden text-left">
+            <span className="invisible col-start-1 row-start-1" aria-hidden>
+              {aiCheckThinking ? (isDocumentPage ? "Checking…" : "Reading your workings...") : "Check Answer"}
+            </span>
+            <AnimatePresence initial={false} mode="wait">
+              <motion.span
+                key={checkAnswerLabel}
+                className="col-start-1 row-start-1 text-left"
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: "-100%", opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                aria-live="polite"
+              >
+                {checkAnswerLabel}
+              </motion.span>
+            </AnimatePresence>
           </span>
         </button>
         {!isDocumentPage && checkAnswerStatus && (
@@ -1440,7 +1518,7 @@ function WhiteboardPageViewInner() {
           setSessionSidebarOpen(true);
           setSidebarOpenPanel("markingscheme");
         }}
-        className="flex h-[30px] items-center gap-1.5 rounded-in px-2 text-sm font-semibold color-txt-main hover:color-bg-grey-10"
+        className="flex h-[30px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-in px-2 text-sm font-semibold color-txt-main hover:color-bg-grey-10"
         aria-label="Reveal marking scheme"
         title="Reveal marking scheme"
       >
@@ -1472,87 +1550,96 @@ function WhiteboardPageViewInner() {
           onOpenQuestion={openQuestion}
           onEditPage={(target) => setEditingPage(target)}
           onEditFolder={(folder) => setEditingFolder(folder)}
-          onCreatePage={() => setCreatingPage(true)}
-          onCreateFolder={() => setCreatingFolder(true)}
+          onCreatePage={(folderId) => {
+            setCreateInFolderId(folderId);
+            setCreatingPage(true);
+          }}
+          onCreateFolder={(parentId) => {
+            setCreateInFolderId(parentId);
+            setCreatingFolder(true);
+          }}
           onHome={() => navigate("/whiteboards")}
           onMove={(drag, move) => void moveItem(drag, move)}
+          openFolderId={searchParams.get("folder")}
         />
       </div>
 
       <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* ---- Top bar (kept) ---- */}
-        <div className="relative z-50 flex h-10 shrink-0 items-center gap-1 px-2 color-bg">
+        <div className="relative z-50 flex min-h-10 shrink-0 flex-wrap items-center gap-1 px-2 py-1 color-bg">
           <button
             type="button"
             className="shrink-0 rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
             onClick={() => setFoldersSidebarOpen((open) => !open)}
-            aria-label={foldersSidebarOpen ? "Collapse navigation" : "Open navigation"}
-            title={foldersSidebarOpen ? "Collapse navigation" : "Open navigation"}
+            aria-label={foldersSidebarOpen ? "Enter fullscreen" : "Exit fullscreen"}
+            title={foldersSidebarOpen ? "Enter fullscreen" : "Exit fullscreen"}
           >
             {foldersSidebarOpen ? (
-              <LuPanelLeftClose size={16} />
+              <LuMaximize2 size={17} strokeWidth={2} className="text-black" />
             ) : (
-              <LuPanelLeftOpen size={16} />
+              <LuMinimize2 size={17} strokeWidth={2} className="text-black" />
             )}
           </button>
 
-          <div className="flex min-w-0 items-center gap-1.5">
-            <span className="shrink-0 text-base leading-none" aria-hidden>
-              {page?.emoji ?? <LuFileText size={15} className="color-txt-sub" />}
-            </span>
-            <span className="min-w-0 truncate text-sm font-bold color-txt-main">
-              {page?.name ?? (pageLoading ? "…" : "Untitled page")}
-            </span>
-            <button
-              type="button"
-              className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
-              onClick={() => page && setEditingPage(page)}
-              aria-label="Edit page details"
-              title="Edit page details"
-            >
-              <LuPencil size={13} />
-            </button>
-          </div>
-
-          {attachments.length > 0 && (
-            <div
-              ref={centerTitleRowRef}
-              className="absolute left-1/2 top-1/2 z-10 flex w-[min(45%,360px)] min-w-0 -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-0.5"
-            >
+          <div className="flex min-w-0 flex-1 basis-[240px] items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              <span className="shrink-0 text-base leading-none" aria-hidden>
+                {page?.emoji ?? <LuFileText size={15} className="color-txt-sub" />}
+              </span>
+              <span className="min-w-0 truncate text-sm font-bold color-txt-main">
+                {page?.name ?? (pageLoading ? "…" : "Untitled page")}
+              </span>
               <button
                 type="button"
-                className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
-                onClick={() => setAttachmentIndex((i) => Math.max(0, i - 1))}
-                disabled={attachmentIndex <= 0}
-                aria-label="Previous question"
+                className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
+                onClick={() => page && setEditingPage(page)}
+                aria-label="Edit page details"
+                title="Edit page details"
               >
-                <LuChevronLeft size={16} />
-              </button>
-              <QuestionTitlePicker
-                anchorRef={centerTitleRowRef}
-                title={currentAttachment?.label ?? ""}
-                titleKey={currentAttachment?.id}
-                items={pickerItems}
-                currentIndex={attachmentIndex}
-                onSelect={(index) => {
-                  setAttachmentIndex(index);
-                  const next = attachments[index];
-                  if (next) pendingQuestionSeedsRef.current.add(next.id);
-                }}
-              />
-              <button
-                type="button"
-                className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
-                onClick={() => setAttachmentIndex((i) => Math.min(attachments.length - 1, i + 1))}
-                disabled={attachmentIndex >= attachments.length - 1}
-                aria-label="Next question"
-              >
-                <LuChevronRight size={16} />
+                <LuPencil size={13} />
               </button>
             </div>
-          )}
 
-          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {attachments.length > 0 && (
+              <div
+                ref={centerTitleRowRef}
+                className="flex min-w-0 flex-1 items-center justify-center gap-0.5"
+              >
+                <button
+                  type="button"
+                  className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
+                  onClick={() => setAttachmentIndex((i) => Math.max(0, i - 1))}
+                  disabled={attachmentIndex <= 0}
+                  aria-label="Previous question"
+                >
+                  <LuChevronLeft size={16} />
+                </button>
+                <QuestionTitlePicker
+                  anchorRef={centerTitleRowRef}
+                  title={currentAttachment?.label ?? ""}
+                  titleKey={currentAttachment?.id}
+                  items={pickerItems}
+                  currentIndex={attachmentIndex}
+                  onSelect={(index) => {
+                    setAttachmentIndex(index);
+                    const next = attachments[index];
+                    if (next) pendingQuestionSeedsRef.current.add(next.id);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
+                  onClick={() => setAttachmentIndex((i) => Math.min(attachments.length - 1, i + 1))}
+                  disabled={attachmentIndex >= attachments.length - 1}
+                  aria-label="Next question"
+                >
+                  <LuChevronRight size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1">
             <ToolsMenu
               showCalculator={showCalculator}
               showLogTables={showLogTables}
@@ -1565,7 +1652,18 @@ function WhiteboardPageViewInner() {
               onClick={() => setQuestionModalMode("add")}
             >
               <LuPlus size={13} strokeWidth={2.5} />
-              Add question
+              <span className="whitespace-nowrap">Add question</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowExportModal(true)}
+              disabled={!activeToolbarPage}
+              className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold color-txt-main color-bg-grey-5 hover:color-bg-grey-10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
+              aria-label="Export"
+              title="Export"
+            >
+              <LuDownload size={13} strokeWidth={2} />
+              <span>Export</span>
             </button>
           </div>
         </div>
@@ -1585,6 +1683,7 @@ function WhiteboardPageViewInner() {
               onUploadImage={handleUploadImage}
               registerDrawingSnapshot={registerDrawingSnapshot}
               registerGetGradingCapture={registerGetGradingCapture}
+              registerGetExportImage={registerGetExportImage}
               registerGetDocumentText={registerGetDocumentText}
               registerCheckAnswer={registerDocumentCheckAnswer}
               questionLabel={currentAttachment?.label}
@@ -1609,8 +1708,8 @@ function WhiteboardPageViewInner() {
               viewportClassName={
                 sessionSidebarOpen
                   ? options.leftHandMode
-                    ? "xl:pl-[35%]"
-                    : "xl:pr-[35%]"
+                    ? "xl:pl-[min(100%,max(35%,460px))]"
+                    : "xl:pr-[min(100%,max(35%,460px))]"
                   : ""
               }
             />
@@ -1623,6 +1722,7 @@ function WhiteboardPageViewInner() {
                 onEditInteraction={handleCanvasEditInteraction}
                 registerDrawingSnapshot={registerDrawingSnapshot}
                 registerGetGradingCapture={registerGetGradingCapture}
+                registerGetExportImage={registerGetExportImage}
                 gradingAnnotations={gradingAnnotations}
                 showGradingOverlay={false}
                 enableAttachments
@@ -1820,8 +1920,21 @@ function WhiteboardPageViewInner() {
                   }`}
                 >
                   <div className="min-h-0 min-w-0 h-full flex flex-col pl-2 pr-1 overflow-hidden pointer-events-none">
-                    <div className="flex-1 min-h-0 relative pointer-events-none pt-4">
-                      <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide h-full py-2 pb-8 items-center pointer-events-auto">
+                    <div className="flex flex-1 min-h-0 flex-col relative pointer-events-none pt-14">
+                      <button
+                        type="button"
+                        onClick={handleUnpinFromSide}
+                        className="relative mb-2 ml-1 flex shrink-0 self-start items-center gap-1.5 rounded-md color-bg color-txt-main color-shadow border px-2.5 py-1.5 pointer-events-auto cursor-pointer hover:color-bg-grey-10 transition-colors"
+                        style={{
+                          borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
+                        }}
+                        aria-label="Unpin from side"
+                        title="Unpin from side"
+                      >
+                        <LuPin size={14} strokeWidth={2} />
+                        <span className="text-xs font-semibold leading-none">Unpin</span>
+                      </button>
+                      <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide min-h-0 flex-1 py-2 pb-8 items-center pointer-events-auto">
                         {currentAttachment &&
                           pinnedSideObject?.id === questionAttachmentObjectId(currentAttachment.id) &&
                           !media.loading &&
@@ -1841,19 +1954,6 @@ function WhiteboardPageViewInner() {
                           className="flex flex-col items-center w-full gap-2"
                           style={{ maxWidth: snippetWidth }}
                         >
-                          <button
-                            type="button"
-                            onClick={handleUnpinFromSide}
-                            className="self-start flex items-center gap-1 rounded-md color-bg color-txt-main color-shadow border px-2 py-1 hover:color-bg-grey-10 transition-colors"
-                            style={{
-                              borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
-                            }}
-                            aria-label="Unpin from side"
-                            title="Unpin from side"
-                          >
-                            <LuPin size={12} strokeWidth={2} />
-                            <span className="text-[10px] font-semibold leading-none">Unpin</span>
-                          </button>
                           {sidePanelImages.length > 0 && (
                             <ZoomableQuestionImage
                               images={sidePanelImages}
@@ -1874,7 +1974,7 @@ function WhiteboardPageViewInner() {
           <div
             className={`ai-session-sidebar absolute bottom-0 top-10 z-20 overflow-hidden pointer-events-none ${
               options.leftHandMode ? "left-0" : "right-0"
-            } w-[35%]`}
+            } w-[35%] min-w-[min(460px,100%)]`}
             style={{
               transition: "clip-path 300ms cubic-bezier(0.25,0.1,0.25,1)",
               clipPath: sessionSidebarOpen
@@ -1901,6 +2001,8 @@ function WhiteboardPageViewInner() {
               aiInjectedExchange={aiInjectedExchange}
               onMarkCompleteFromGrading={attachmentProgress ? handleToggleQuestionCompleted : null}
               questionCompleted={attachmentProgress ? isQuestionCompleted(attachmentProgress.questionId) : false}
+              aiThinking={aiCheckThinking}
+              aiThinkingMessages={isDocumentPage ? DOCUMENT_GRADING_MESSAGES : CANVAS_GRADING_MESSAGES}
             />
           </div>
         </div>
@@ -1937,7 +2039,11 @@ function WhiteboardPageViewInner() {
         <PageDetailsModal
           subject={sidebarSubject}
           onSave={async (result) => {
-            const created = await createPage({ ...result, subject: sidebarSubject });
+            const created = await createPage({
+              ...result,
+              subject: sidebarSubject,
+              folderId: createInFolderId,
+            });
             navigate(`/whiteboards/page/${created.id}`);
           }}
           onClose={() => setCreatingPage(false)}
@@ -1956,7 +2062,7 @@ function WhiteboardPageViewInner() {
       {creatingFolder && sidebarSubject && (
         <FolderModal
           onSave={(result) => {
-            void createFolder({ ...result, subject: sidebarSubject });
+            void createFolder({ ...result, subject: sidebarSubject, parentId: createInFolderId });
           }}
           onClose={() => setCreatingFolder(false)}
         />
@@ -1968,6 +2074,19 @@ function WhiteboardPageViewInner() {
           mode={questionModalMode}
           onAdd={questionModalMode === "attach" ? handleAttachQuestionImages : handleAddAttachments}
           onClose={() => setQuestionModalMode(null)}
+        />
+      )}
+
+      {showExportModal && (
+        <ExportModal
+          defaultName={page?.name || (isDocumentPage ? "document" : "whiteboard")}
+          allowCrop={!isDocumentPage}
+          getImage={async () => {
+            const result = await getExportImage();
+            if (!result) return null;
+            return { dataUrl: result.dataUrl, width: result.width, height: result.height };
+          }}
+          onClose={() => setShowExportModal(false)}
         />
       )}
 

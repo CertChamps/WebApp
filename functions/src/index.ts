@@ -12,12 +12,11 @@ export { revenueCatWebhook, verifyAppleEntitlement } from "./iap/revenueCatWebho
 export { deleteAccount } from "./account/deleteAccount";
 export { notifyAdminsOnPendingDiscover } from "./moderation/notifyPendingDiscover";
 export { registerExpoPushToken, registerAdminPushToken } from "./push/registerExpoPushToken";
-export { notifyAuthorOnDiscoverComment } from "./push/notifyDiscoverComment";
-export { notifyAuthorOnDiscoverRating } from "./push/notifyDiscoverRating";
 export { captureWebsiteThumbnail } from "./discover/captureWebsiteThumbnail";
 export {
     deliverUserNotification,
     onDiscoverCommentCreated,
+    onDiscoverLikeCreated,
     onDiscoverRatingCreated,
     onDiscoverResourceWritten,
 } from "./discover/deliverNotification";
@@ -43,7 +42,8 @@ Style:
 
 Teaching:
 - Prefer the next hint or step over the full solution, unless the student explicitly asks for the answer.
-- If a marking scheme image is attached, treat it as the authoritative answer, but do not reproduce it verbatim unless asked.`;
+- If a marking scheme image is attached, treat it as the authoritative answer, but do not reproduce it verbatim unless asked.
+- If a whiteboard/canvas image is attached, it shows the student's live handwriting and drawings. You MUST read it and refer to their actual work when answering.`;
 
 type AiPurpose = "tutor" | "grading" | "discover" | "whiteboard";
 
@@ -171,8 +171,11 @@ async function consumeAiAllowance(args: {
 }
 
 const MAX_CHAT_MESSAGES = 40;
-const MAX_CHAT_IMAGES = 6;
+/** Slot budget per request — individual images are byte-capped separately. */
+const MAX_CHAT_IMAGES = 12;
 const MAX_CHAT_CHARACTERS = 6_000_000;
+/** Reject a single base64 image larger than this (~2 MB encoded). */
+const MAX_SINGLE_IMAGE_CHARACTERS = 2_800_000;
 const MAX_CONTEXT_CHARACTERS = 60_000;
 
 type ChatContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
@@ -219,6 +222,7 @@ function sanitizeChatMessages(messages: unknown[]): ChatMessage[] {
             if (part?.type === "image_url" && typeof part.image_url?.url === "string") {
                 const url = part.image_url.url as string;
                 if (imageBudget <= 0 || url.length > characterBudget) continue;
+                if (url.length > MAX_SINGLE_IMAGE_CHARACTERS) continue;
                 characterBudget -= url.length;
                 imageBudget -= 1;
                 parts.push({ type: "image_url", image_url: { url } });
@@ -466,7 +470,7 @@ function createMeteredChatFunction() {
             role: "system",
             content: purpose === "tutor"
                 ? `${TUTOR_SYSTEM_PROMPT}\n\n---\n${trimmedContext}\n---`
-                : `The user is working on the following math question. Use this as context when answering. If the context specifies a particular question part, stay strictly within that part unless the user explicitly asks to switch. Do not give away the final answer unless they ask; prefer hints, explanations, and step-by-step guidance.\n\n---\n${trimmedContext}\n---`
+                : `The user is working on the following question (it may be any subject). Use this as context when answering. If the context specifies a particular question part, stay strictly within that part unless the user explicitly asks to switch. Do not give away the final answer unless they ask; prefer hints, explanations, and step-by-step guidance.\n\n---\n${trimmedContext}\n---`
         }
         : null;
 

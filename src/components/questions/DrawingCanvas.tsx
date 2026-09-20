@@ -666,6 +666,25 @@ export type RegisterGetLineCount = (fn: ((region?: WhiteboardRelevantRegion | nu
 export type RegisterGetGradingCapture = (fn: (((mode?: "default" | "full-ink" | "retry-aggressive") => CanvasCapturePayload | null) | null)) => void;
 /** Call with a function that returns a stave analysis string (note positions), or null. */
 export type RegisterGetStaveAnalysis = (fn: (() => string | null) | null) => void;
+/** World-space region + rendering options for user-facing export. */
+export type ExportCaptureOptions = {
+	/** When set, export exactly this world rect instead of auto content bounds. */
+	worldBounds?: { x: number; y: number; width: number; height: number };
+	/** Transparent background (for compositing over a document page capture). */
+	transparent?: boolean;
+	/** Extra padding around auto content bounds (ratio of size). */
+	paddingRatio?: number;
+};
+export type ExportCaptureResult = {
+	dataUrl: string;
+	width: number;
+	height: number;
+	worldBounds: { x: number; y: number; width: number; height: number };
+};
+export type GetExportImageFn = (
+	options?: ExportCaptureOptions,
+) => ExportCaptureResult | null | Promise<ExportCaptureResult | null>;
+export type RegisterGetExportImage = (fn: GetExportImageFn | null) => void;
 /**
  * Attach a question's page images as one continuous canvas object (stacked vertically).
  * Returns true when a new object was placed; false if skipped (already present / empty).
@@ -837,6 +856,8 @@ type DrawingCanvasProps = {
 	registerGetGradingCapture?: RegisterGetGradingCapture;
 	/** Register a getter for music stave analysis (note positions as text). */
 	registerGetStaveAnalysis?: RegisterGetStaveAnalysis;
+	/** Register a getter that exports ink/objects/text as a PNG (content-bounded by default). */
+	registerGetExportImage?: RegisterGetExportImage;
 	/** Pre-populate canvas with previously saved strokes. */
 	initialStrokes?: Stroke[] | null;
 	/** Called (debounced) when strokes change (stroke completed, erased, or cleared). */
@@ -1019,6 +1040,7 @@ export default function DrawingCanvas({
 	registerGetLineCount,
 	registerGetGradingCapture,
 	registerGetStaveAnalysis,
+	registerGetExportImage,
 	initialStrokes,
 	onStrokesChange,
 	onEditInteraction,
@@ -2145,14 +2167,27 @@ export default function DrawingCanvas({
 
 	// Expose current drawing as PNG for AI/vision (includes music staves when active)
 	const getSnapshot = useCallback(() => {
+		const strokesNow = strokesRef.current;
+		const objectsNow = objectsRef.current;
+		const textBoxesNow = captureTextBoxesRef.current;
+		const panNow = panRef.current;
+		const scaleNow = scaleRef.current;
 		const liveStroke = currentStrokeRef.current;
-		if (strokes.length === 0 && !liveStroke && objects.length === 0 && !captureTextBoxes.some((box) => box.text.trim())) return null;
+		if (
+			strokesNow.length === 0 &&
+			!liveStroke &&
+			objectsNow.length === 0 &&
+			!textBoxesNow.some((box) => box.text.trim())
+		) {
+			return null;
+		}
 		const canvas = canvasRef.current;
 		if (!canvas || canvas.width === 0 || canvas.height === 0) return null;
 		const dpr = window.devicePixelRatio || 1;
 		const rect = canvas.getBoundingClientRect();
 		const w = rect.width;
 		const h = rect.height;
+		if (w <= 0 || h <= 0) return null;
 		const off = document.createElement("canvas");
 		off.width = w * dpr;
 		off.height = h * dpr;
@@ -2163,19 +2198,19 @@ export default function DrawingCanvas({
 		ctx.fillStyle = "#ffffff";
 		ctx.fillRect(0, 0, w, h);
 		ctx.save();
-		ctx.translate(pan.x, pan.y);
-		ctx.scale(scale, scale);
+		ctx.translate(panNow.x, panNow.y);
+		ctx.scale(scaleNow, scaleNow);
 
 		if (gridMode === "music") {
-			const left = -pan.x / scale;
-			const top = -pan.y / scale;
-			const right = left + w / scale;
-			const bottom = top + h / scale;
+			const left = -panNow.x / scaleNow;
+			const top = -panNow.y / scaleNow;
+			const right = left + w / scaleNow;
+			const bottom = top + h / scaleNow;
 			const startStave = Math.floor(top / MUSIC_STAVE_REPEAT);
 			const endStave = Math.ceil(bottom / MUSIC_STAVE_REPEAT);
 
 			ctx.strokeStyle = "#555555";
-			ctx.lineWidth = 1.8 / scale;
+			ctx.lineWidth = 1.8 / scaleNow;
 			ctx.beginPath();
 			for (let s = startStave; s <= endStave; s++) {
 				const staveTop = s * MUSIC_STAVE_REPEAT;
@@ -2188,21 +2223,21 @@ export default function DrawingCanvas({
 			ctx.stroke();
 
 			ctx.strokeStyle = "#555555";
-			ctx.lineWidth = 2.5 / scale;
+			ctx.lineWidth = 2.5 / scaleNow;
 			ctx.beginPath();
 			for (let s = startStave; s <= endStave; s++) {
 				const staveTop = s * MUSIC_STAVE_REPEAT;
-				const bx = left + 4 / scale;
+				const bx = left + 4 / scaleNow;
 				ctx.moveTo(bx, staveTop);
 				ctx.lineTo(bx, staveTop + MUSIC_STAFF_HEIGHT);
 			}
 			ctx.stroke();
 
-			const fontSize = Math.max(9, 11 / scale);
+			const fontSize = Math.max(9, 11 / scaleNow);
 			ctx.font = `bold ${fontSize}px sans-serif`;
 			ctx.textBaseline = "middle";
 			ctx.fillStyle = "#333333";
-			const labelX = left + 10 / scale;
+			const labelX = left + 10 / scaleNow;
 			for (let s = startStave; s <= endStave; s++) {
 				const staveTop = s * MUSIC_STAVE_REPEAT;
 				for (let i = 0; i < MUSIC_STAFF_LINES; i++) {
@@ -2215,15 +2250,15 @@ export default function DrawingCanvas({
 				}
 			}
 		} else if (gridMode === "essay") {
-			const left = -pan.x / scale;
-			const top = -pan.y / scale;
-			const right = left + w / scale;
-			const bottom = top + h / scale;
-			drawEssayGrid(ctx, left, top, right, bottom, scale, "#BBBBBB", 1);
+			const left = -panNow.x / scaleNow;
+			const top = -panNow.y / scaleNow;
+			const right = left + w / scaleNow;
+			const bottom = top + h / scaleNow;
+			drawEssayGrid(ctx, left, top, right, bottom, scaleNow, "#BBBBBB", 1);
 		}
 
 		// Images above grid, under ink
-		for (const obj of objects) {
+		for (const obj of objectsNow) {
 			if (obj.pinnedToSide) continue;
 			if (!obj.src || obj.width <= 0 || obj.height <= 0) continue;
 			const img = objectImageCacheRef.current.get(obj.src);
@@ -2235,7 +2270,7 @@ export default function DrawingCanvas({
 			}
 		}
 
-		drawCaptureTextBoxes(ctx, captureTextBoxes);
+		drawCaptureTextBoxes(ctx, textBoxesNow);
 		const drawSnapshotPenStroke = (stroke: Stroke) => {
 			if (stroke.tool !== "pen" || stroke.points.length < 2) return;
 			ctx.globalCompositeOperation = "source-over";
@@ -2275,7 +2310,7 @@ export default function DrawingCanvas({
 			}
 		};
 
-		for (const stroke of strokes) drawSnapshotPenStroke(stroke);
+		for (const stroke of strokesNow) drawSnapshotPenStroke(stroke);
 		if (liveStroke?.tool === "pen") drawSnapshotPenStroke(liveStroke);
 		ctx.restore();
 		try {
@@ -2284,7 +2319,7 @@ export default function DrawingCanvas({
 			console.error("[DrawingCanvas] snapshot failed (possibly tainted canvas):", err);
 			return null;
 		}
-	}, [pan, scale, strokes, gridMode, penPalette, activePenColorIndex, objects, objectImagesVersion, captureTextBoxes]);
+	}, [gridMode, penPalette, activePenColorIndex, objectImagesVersion]);
 	const getGradingCapture = useCallback((mode: "default" | "full-ink" | "retry-aggressive" = "default"): CanvasCapturePayload | null => {
 		const liveStroke = currentStrokeRef.current;
 		const renderStrokes = [...strokes, ...(liveStroke ? [liveStroke] : [])];
@@ -2317,6 +2352,169 @@ export default function DrawingCanvas({
 		registerGetGradingCapture(getGradingCapture);
 		return () => registerGetGradingCapture(null);
 	}, [registerGetGradingCapture, getGradingCapture]);
+
+	const getExportImage = useCallback(async (options?: ExportCaptureOptions): Promise<ExportCaptureResult | null> => {
+		const strokesNow = strokesRef.current;
+		const objectsNow = objectsRef.current;
+		const textBoxesNow = captureTextBoxesRef.current;
+		const liveStroke = currentStrokeRef.current;
+		const renderStrokes = [...strokesNow, ...(liveStroke ? [liveStroke] : [])];
+		const hasPen = renderStrokes.some((stroke) => stroke.tool === "pen" && stroke.points.length > 1);
+		const visibleObjects = objectsNow.filter((obj) => !obj.pinnedToSide && obj.src && obj.width > 0 && obj.height > 0);
+		const hasText = textBoxesNow.some((box) => box.text.trim());
+		if (!options?.worldBounds && !hasPen && visibleObjects.length === 0 && !hasText) return null;
+
+		let minX = Number.POSITIVE_INFINITY;
+		let minY = Number.POSITIVE_INFINITY;
+		let maxX = Number.NEGATIVE_INFINITY;
+		let maxY = Number.NEGATIVE_INFINITY;
+		const expandPoint = (x: number, y: number, pad = 0) => {
+			if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+			minX = Math.min(minX, x - pad);
+			minY = Math.min(minY, y - pad);
+			maxX = Math.max(maxX, x + pad);
+			maxY = Math.max(maxY, y + pad);
+		};
+
+		for (const stroke of renderStrokes) {
+			if (stroke.tool !== "pen" || stroke.points.length < 2) continue;
+			const thickness =
+				PEN_THICKNESS_LEVELS[
+					Math.max(0, Math.min(PEN_THICKNESS_LEVELS.length - 1, stroke.thicknessIndex ?? DEFAULT_PEN_THICKNESS_INDEX))
+				];
+			const pad = thickness * 2;
+			for (const point of stroke.points) expandPoint(point.x, point.y, pad);
+		}
+		for (const obj of visibleObjects) {
+			expandPoint(obj.x, obj.y);
+			expandPoint(obj.x + obj.width, obj.y + obj.height);
+		}
+		for (const box of textBoxesNow) {
+			if (!box.text.trim()) continue;
+			expandPoint(box.x, box.y);
+			expandPoint(box.x + Math.max(1, box.width), box.y + Math.max(1, box.height));
+		}
+
+		const hasContent = Number.isFinite(minX) && Number.isFinite(minY) && Number.isFinite(maxX) && Number.isFinite(maxY);
+		const paddingRatio = typeof options?.paddingRatio === "number" ? options.paddingRatio : 0.02;
+		let worldBounds = options?.worldBounds ?? null;
+		if (!worldBounds) {
+			if (!hasContent) return null;
+			const padX = Math.max(12, (maxX - minX) * paddingRatio);
+			const padY = Math.max(12, (maxY - minY) * paddingRatio);
+			worldBounds = {
+				x: minX - padX,
+				y: minY - padY,
+				width: Math.max(1, maxX - minX + padX * 2),
+				height: Math.max(1, maxY - minY + padY * 2),
+			};
+		}
+
+		const maxEdge = 2400;
+		const aspect = worldBounds.height / Math.max(1, worldBounds.width);
+		let targetWidth = Math.max(1, Math.round(Math.min(maxEdge, worldBounds.width * 2)));
+		let targetHeight = Math.max(1, Math.round(targetWidth * aspect));
+		if (targetHeight > maxEdge) {
+			targetHeight = maxEdge;
+			targetWidth = Math.max(1, Math.round(targetHeight / aspect));
+		}
+
+		const off = document.createElement("canvas");
+		off.width = targetWidth;
+		off.height = targetHeight;
+		const ctx = off.getContext("2d");
+		if (!ctx) return null;
+		if (!options?.transparent) {
+			ctx.fillStyle = "#ffffff";
+			ctx.fillRect(0, 0, targetWidth, targetHeight);
+		} else {
+			ctx.clearRect(0, 0, targetWidth, targetHeight);
+		}
+
+		const sx = targetWidth / worldBounds.width;
+		const sy = targetHeight / worldBounds.height;
+		ctx.save();
+		ctx.translate(-worldBounds.x * sx, -worldBounds.y * sy);
+		ctx.scale(sx, sy);
+
+		// Load export images separately: display-cache images have no CORS mode and
+		// would taint the output canvas for remote question/attachment URLs.
+		const exportImages = await Promise.all(visibleObjects.map(async (obj) => {
+			const response = await fetch(obj.src, { signal: AbortSignal.timeout(20_000) });
+			if (!response.ok) throw new Error("Could not load an attached image for export.");
+			const src = await blobToDataUrl(await response.blob());
+			return new Promise<HTMLImageElement>((resolve, reject) => {
+				const image = new Image();
+				image.onload = () => resolve(image);
+				image.onerror = () => reject(new Error("Could not decode an attached image for export."));
+				image.src = src;
+			});
+		}));
+		visibleObjects.forEach((obj, index) => {
+			ctx.drawImage(exportImages[index], obj.x, obj.y, obj.width, obj.height);
+		});
+
+		drawCaptureTextBoxes(ctx, textBoxesNow);
+
+		const drawExportPenStroke = (stroke: Stroke) => {
+			if (stroke.tool !== "pen" || stroke.points.length < 2) return;
+			ctx.globalCompositeOperation = "source-over";
+			const paletteColor =
+				typeof stroke.colorIndex === "number"
+					? penPalette[Math.max(0, Math.min(penPalette.length - 1, stroke.colorIndex))]
+					: penPalette[0];
+			ctx.strokeStyle = paletteColor || penPalette[activePenColorIndex] || "#111827";
+			ctx.lineCap = "round";
+			ctx.lineJoin = "round";
+			const baseWidth =
+				PEN_THICKNESS_LEVELS[
+					Math.max(0, Math.min(PEN_THICKNESS_LEVELS.length - 1, stroke.thicknessIndex ?? DEFAULT_PEN_THICKNESS_INDEX))
+				];
+			for (let i = 1; i < stroke.points.length - 1; i++) {
+				const prev = stroke.points[i - 1];
+				const curr = stroke.points[i];
+				const next = stroke.points[i + 1];
+				const startX = (prev.x + curr.x) / 2;
+				const startY = (prev.y + curr.y) / 2;
+				const endX = (curr.x + next.x) / 2;
+				const endY = (curr.y + next.y) / 2;
+				ctx.lineWidth = baseWidth * (Math.max(0.2, curr.pressure) + 0.55);
+				ctx.beginPath();
+				ctx.moveTo(startX, startY);
+				ctx.quadraticCurveTo(curr.x, curr.y, endX, endY);
+				ctx.stroke();
+			}
+			if (stroke.points.length === 2) {
+				const p0 = stroke.points[0];
+				const p1 = stroke.points[1];
+				ctx.lineWidth = baseWidth * (Math.max(0.2, p0.pressure) + 0.55);
+				ctx.beginPath();
+				ctx.moveTo(p0.x, p0.y);
+				ctx.lineTo(p1.x, p1.y);
+				ctx.stroke();
+			}
+		};
+		for (const stroke of renderStrokes) drawExportPenStroke(stroke);
+		ctx.restore();
+
+		try {
+			return {
+				dataUrl: off.toDataURL("image/png"),
+				width: targetWidth,
+				height: targetHeight,
+				worldBounds,
+			};
+		} catch (err) {
+			console.error("[DrawingCanvas] export failed:", err);
+			return null;
+		}
+	}, [penPalette, activePenColorIndex, objectImagesVersion]);
+
+	useEffect(() => {
+		if (!registerGetExportImage) return;
+		registerGetExportImage(getExportImage);
+		return () => registerGetExportImage(null);
+	}, [registerGetExportImage, getExportImage]);
 
 	const getStaveAnalysis = useCallback((): string | null => {
 		if (gridMode !== "music") return null;
@@ -3430,6 +3628,53 @@ export default function DrawingCanvas({
 	const isPenMode = !isTextMode && !isSelectMode && tool === "pen";
 	const showToolbar = !suppressToolbar && (hasUnifiedEditor || !readOnly);
 	const interactionLocked = readOnly && tool !== "lasso";
+
+	// Top toolbar auto-fit: when the canvas/document isn't full-screen the available
+	// width shrinks, so scale the toolbar pill down to keep every control visible and
+	// let it expand back to its natural size (scale 1) once there's room again.
+	const topToolbarSurfaceRef = useRef<HTMLDivElement>(null);
+	const topToolbarWidthRef = useRef(0);
+	topToolbarWidthRef.current = topToolbarBounds?.width ?? 0;
+	const [topToolbarScale, setTopToolbarScale] = useState(1);
+	const measureTopToolbarRef = useRef<() => void>(() => {});
+	useLayoutEffect(() => {
+		const measure = () => {
+			const surface = topToolbarSurfaceRef.current;
+			const available = topToolbarWidthRef.current;
+			if (!topToolbar || !showToolbar || !surface || !available) {
+				setTopToolbarScale(1);
+				return;
+			}
+			const natural = surface.scrollWidth;
+			// Outer wrapper keeps horizontal breathing room (px-3 => 12px each side).
+			const usable = Math.max(0, available - 24);
+			if (natural <= 0 || usable <= 0) return;
+			const next = Math.min(1, usable / natural);
+			setTopToolbarScale((prev) => (Math.abs(prev - next) > 0.004 ? next : prev));
+		};
+		measureTopToolbarRef.current = measure;
+		let frame = 0;
+		const schedule = () => {
+			window.cancelAnimationFrame(frame);
+			frame = window.requestAnimationFrame(measure);
+		};
+		schedule();
+		const surface = topToolbarSurfaceRef.current;
+		const ro =
+			typeof ResizeObserver === "undefined" || !surface
+				? null
+				: new ResizeObserver(schedule);
+		if (surface) ro?.observe(surface);
+		window.addEventListener("resize", schedule);
+		return () => {
+			window.cancelAnimationFrame(frame);
+			ro?.disconnect();
+			window.removeEventListener("resize", schedule);
+		};
+	}, [topToolbar, showToolbar]);
+	useLayoutEffect(() => {
+		measureTopToolbarRef.current?.();
+	}, [topToolbarBounds?.width]);
 	const canUndo = isTextMode ? true : undoStack.length > 0;
 	const canRedo = isTextMode ? true : redoStack.length > 0;
 	const handleUndo = () => {
@@ -3718,11 +3963,18 @@ export default function DrawingCanvas({
 				{/* Portaled toolbar is measured against the canvas so overlay layers cannot steal clicks. */}
 				{showToolbar && (() => {
 				const toolbarClassName = topToolbar
-					? "drawing-canvas-toolbar pointer-events-auto fixed z-40 flex items-center justify-center gap-0.5 overflow-x-auto color-bg px-3 py-1.5 scrollbar-minimal"
+					? "drawing-canvas-toolbar pointer-events-auto fixed z-40 flex items-center justify-center gap-0.5 overflow-hidden color-bg px-3 py-1.5"
 					: `drawing-canvas-toolbar pointer-events-auto ${portalToolbar ? "fixed" : "absolute"} bottom-4 left-1/2 -translate-x-1/2 z-40 flex h-8 max-w-[calc(100%-1rem)] items-center justify-center gap-0.5 px-1.5 rounded-out color-bg color-shadow border`;
 				const toolbarSurfaceClassName = topToolbar
-					? "flex h-8 min-w-0 max-w-full flex-nowrap items-center justify-center gap-0.5 overflow-x-auto overflow-y-hidden rounded-full color-bg-grey-5 px-2.5 scrollbar-minimal"
+					? "flex h-8 w-max flex-nowrap items-center justify-center gap-0.5 rounded-full color-bg-grey-5 px-2.5"
 					: "contents";
+				const toolbarSurfaceStyle = topToolbar
+					? {
+						transform: `scale(${topToolbarScale})`,
+						transformOrigin: "center center" as const,
+						transition: "transform 200ms cubic-bezier(0.22, 1, 0.36, 1)",
+					}
+					: undefined;
 				const toolbarStyle = topToolbar
 					? {
 						left: topToolbarBounds?.left ?? 0,
@@ -3744,7 +3996,7 @@ export default function DrawingCanvas({
 					className={toolbarClassName}
 					style={toolbarStyle}
 				>
-				<div className={toolbarSurfaceClassName}>
+				<div ref={topToolbar ? topToolbarSurfaceRef : undefined} className={toolbarSurfaceClassName} style={toolbarSurfaceStyle}>
 				{hasUnifiedEditor && (
 					<>
 						<button

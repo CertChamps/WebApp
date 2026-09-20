@@ -1,10 +1,14 @@
 /**
- * Whiteboards sidebar — folder/page tree with full drag-and-drop.
+ * Whiteboards sidebar — folder/page browser with full drag-and-drop.
+ *
+ * Navigation model: folders are *entered*, not expanded. The list always shows one
+ * folder's contents; entering pushes onto `folderPath` and the two lists cross-slide.
+ * Nesting is unlimited; the breadcrumb row doubles as the back button.
  *
  * DnD library: @dnd-kit/core (actively maintained; gives accessible pointer sensors,
  * a `DragOverlay` for the custom themed drag preview, and built-in edge auto-scroll).
  * We drive drop-intent ourselves (top-third → before, middle → into, bottom-third → after)
- * because the tree's "reorder vs. nest" + hover-to-expand interaction is bespoke and doesn't
+ * because the tree's "reorder vs. nest" + hover-to-open interaction is bespoke and doesn't
  * map onto @dnd-kit/sortable's flat-list strategy. The reorder/cycle/no-op logic lives in
  * `resolveDrop` (data layer) and the transient drag state in the `useSidebarDnd` hook.
  *
@@ -12,7 +16,7 @@
  * ordering space) so items can be manually reordered. Legacy items with no `order` sort last
  * alphabetically until first reordered; a move reindexes the whole destination sibling list.
  */
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   DndContext,
@@ -21,19 +25,21 @@ import {
   useDroppable,
 } from "@dnd-kit/core";
 import {
-  LuChevronDown,
-  LuChevronRight,
+  LuChevronLeft,
   LuFileText,
   LuFolder,
   LuFolderPlus,
   LuHouse,
-  LuLayoutPanelTop,
   LuLink,
   LuPencil,
   LuPlus,
 } from "react-icons/lu";
 import SubjectDropdown from "../practiceHub/SubjectDropdown";
-import { useSidebarDnd, type DroppableData } from "../../hooks/useSidebarDnd";
+import {
+  SIDEBAR_CONTAINER_DROPPABLE,
+  useSidebarDnd,
+  type DroppableData,
+} from "../../hooks/useSidebarDnd";
 import {
   countDescendants,
   type ResolvedMove,
@@ -61,23 +67,31 @@ type Props = {
   onEditPage: (page: WhiteboardPage) => void;
   onEditFolder: (folder: WhiteboardFolder) => void;
   onCreatePage: (folderId: string | null) => void;
-  onCreateFolder: () => void;
+  onCreateFolder: (parentId: string | null) => void;
   onHome: () => void;
   onMove: (drag: SidebarDragItem, move: ResolvedMove) => void;
+  /** Drill into this folder on mount (e.g. opening a folder from Recents). */
+  openFolderId?: string | null;
   className?: string;
 };
 
+/** Highlight lives on this shell — no radius, no horizontal padding — so it
+ *  paints edge-to-edge. Inner buttons carry the text inset. */
 const rowBase =
-  "group relative flex w-full items-center gap-2 rounded-xl py-1.5 text-left text-[15px] leading-snug transition-colors select-none";
+  "group relative flex w-full items-center gap-1 py-1.5 text-left text-[15px] leading-snug transition-colors select-none rounded-none";
 
 const ICON = 18;
-const CHEVRON = 18;
 const EDIT_ICON = 16;
 const HEADER_ICON = 20;
-const LINK_ICON = 14;
-const ROW_GUTTER = 20;
+const LINK_ICON = 12;
 
-const indentPx = (depth: number) => 4 + depth * 12;
+const SLIDE = { duration: 0.24, ease: [0.22, 1, 0.36, 1] as const };
+const slideVariants = {
+  enter: (direction: number) => ({ x: direction > 0 ? "100%" : "-100%", opacity: 0.4 }),
+  center: { x: "0%", opacity: 1 },
+  exit: (direction: number) => ({ x: direction > 0 ? "-100%" : "100%", opacity: 0.4 }),
+};
+
 const sameItem = (a: SidebarDragItem, b: SidebarDragItem) => a.type === b.type && a.id === b.id;
 
 // ============================= shared row context ============================= //
@@ -85,11 +99,11 @@ const sameItem = (a: SidebarDragItem, b: SidebarDragItem) => a.type === b.type &
 type SidebarCtxValue = {
   currentPageId: string | null;
   currentQuestionId: string | null;
-  collapsedFolders: Set<string>;
   expandedPages: Set<string>;
   activeDrag: SidebarDragItem | null;
   dropIntent: SidebarDropIntent | null;
-  toggleFolder: (id: string) => void;
+  ignoreClick: () => boolean;
+  onEnterFolder: (folderId: string) => void;
   togglePage: (id: string) => void;
   onOpenPage: (page: WhiteboardPage) => void;
   onOpenQuestion: (page: WhiteboardPage, attachmentId: string) => void;
@@ -139,19 +153,15 @@ function PageGlyph({ page, muted = true }: { page: WhiteboardPage; muted?: boole
   if (page.pageType === "document") {
     return <LuFileText size={14} className={`shrink-0 ${iconClass}`} aria-hidden />;
   }
-  return <LuLayoutPanelTop size={14} className={`shrink-0 ${iconClass}`} aria-hidden />;
+  return <LuPencil size={14} className={`shrink-0 ${iconClass}`} aria-hidden />;
 }
 
-/** Thin accent insertion line, indented to the target row's nesting depth. */
-function DropLine({ position, depth }: { position: "before" | "after"; depth: number }) {
+/** Thin accent insertion line spanning the row. */
+function DropLine({ position }: { position: "before" | "after" }) {
   return (
     <span
-      className="pointer-events-none absolute z-10 h-[3px] rounded-full color-cursor"
-      style={{
-        left: `${indentPx(depth)}px`,
-        right: "8px",
-        [position === "before" ? "top" : "bottom"]: "-1px",
-      }}
+      className="pointer-events-none absolute inset-x-0 z-10 h-[3px] color-cursor"
+      style={{ [position === "before" ? "top" : "bottom"]: "-1px" }}
       aria-hidden
     />
   );
@@ -211,7 +221,7 @@ function DragPreview({
 
 // ============================= draggable rows ============================= //
 
-function PageRow({ page, depth }: { page: WhiteboardPage; depth: number }) {
+function PageRow({ page }: { page: WhiteboardPage }) {
   const ctx = useSidebarCtx();
   const item: SidebarDragItem = { type: "page", id: page.id };
   const isActive = page.id === ctx.currentPageId;
@@ -238,17 +248,16 @@ function PageRow({ page, depth }: { page: WhiteboardPage; depth: number }) {
         className={`${rowBase} cursor-grab active:cursor-grabbing ${
           isActive ? "color-bg-accent color-txt-accent font-bold" : "color-txt-main hover:color-bg-grey-5"
         }`}
-        style={{ paddingLeft: `${indentPx(depth)}px`, WebkitTouchCallout: "none" }}
+        style={{ WebkitTouchCallout: "none" }}
         onContextMenu={(e) => e.preventDefault()}
       >
-        {showBefore && <DropLine position="before" depth={depth} />}
-        {showAfter && <DropLine position="after" depth={depth} />}
-        {/* Spacer keeps page icons aligned with folder icons (folders have a chevron here). */}
-        <span className="w-[20px] shrink-0" aria-hidden />
+        {showBefore && <DropLine position="before" />}
+        {showAfter && <DropLine position="after" />}
         <button
           type="button"
-          className="flex min-w-0 flex-1 items-center gap-2 text-left cursor-pointer"
+          className="flex min-w-0 flex-1 items-center gap-2 py-0.5 pl-2.5 text-left cursor-pointer"
           onClick={() => {
+            if (ctx.ignoreClick()) return;
             ctx.onOpenPage(page);
             if (hasQuestions) ctx.togglePage(page.id);
           }}
@@ -259,7 +268,7 @@ function PageRow({ page, depth }: { page: WhiteboardPage; depth: number }) {
         </button>
         <button
           type="button"
-          className="shrink-0 rounded-lg p-1.5 color-txt-sub opacity-0 transition-opacity cursor-pointer group-hover:opacity-100 hover:color-bg-grey-10"
+          className="mr-1 shrink-0 rounded-lg p-1.5 color-txt-sub opacity-0 transition-opacity cursor-pointer group-hover:opacity-100 hover:color-bg-grey-10"
           onClick={() => ctx.onEditPage(page)}
           onPointerDown={(e) => e.stopPropagation()}
           aria-label={`Edit ${page.name}`}
@@ -278,25 +287,32 @@ function PageRow({ page, depth }: { page: WhiteboardPage; depth: number }) {
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            {page.attachedQuestions.map((attachment) => {
-              const isQuestionActive = attachment.id === ctx.currentQuestionId;
-              return (
-                <button
-                  key={attachment.id}
-                  type="button"
-                  className={`${rowBase} cursor-pointer ${
-                    isQuestionActive
-                      ? "font-bold color-txt-main"
-                      : "color-txt-sub hover:color-bg-grey-5"
-                  }`}
-                  style={{ paddingLeft: `${indentPx(depth + 1) + ROW_GUTTER}px` }}
-                  onClick={() => ctx.onOpenQuestion(page, attachment.id)}
-                >
-                  <LuLink size={LINK_ICON} className="shrink-0" />
-                  <span className="min-w-0 flex-1 truncate text-sm">{attachment.label}</span>
-                </button>
-              );
-            })}
+            <div className="relative ml-3.5">
+              <span
+                className="pointer-events-none absolute top-1.5 bottom-1.5 left-0 w-px bg-grey/35"
+                aria-hidden
+              />
+              <div className="flex flex-col py-0.5">
+                {page.attachedQuestions.map((attachment) => {
+                  const isQuestionActive = attachment.id === ctx.currentQuestionId;
+                  return (
+                    <button
+                      key={attachment.id}
+                      type="button"
+                      className={`flex w-full items-center gap-1.5 py-0.5 pl-2.5 pr-2 text-left leading-snug transition-colors cursor-pointer ${
+                        isQuestionActive
+                          ? "font-semibold color-txt-main"
+                          : "color-txt-sub hover:color-bg-grey-5"
+                      }`}
+                      onClick={() => ctx.onOpenQuestion(page, attachment.id)}
+                    >
+                      <LuLink size={LINK_ICON} className="shrink-0 opacity-70" />
+                      <span className="min-w-0 flex-1 truncate text-[12px]">{attachment.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -304,24 +320,10 @@ function PageRow({ page, depth }: { page: WhiteboardPage; depth: number }) {
   );
 }
 
-function EmptyFolderDrop({ folderId, depth }: { folderId: string; depth: number }) {
-  const { setNodeRef } = useDroppable({ id: `empty:${folderId}`, data: { role: "empty-folder", folderId } });
-  return (
-    <div
-      ref={setNodeRef}
-      className="px-2 py-1.5 text-sm italic color-txt-sub"
-      style={{ paddingLeft: `${indentPx(depth)}px` }}
-    >
-      Empty folder
-    </div>
-  );
-}
-
-function FolderRow({ node, depth }: { node: WhiteboardTreeNode; depth: number }) {
+function FolderRow({ node }: { node: WhiteboardTreeNode }) {
   const ctx = useSidebarCtx();
   const { folder } = node;
   const item: SidebarDragItem = { type: "folder", id: folder.id };
-  const isCollapsed = ctx.collapsedFolders.has(folder.id);
   const isDraggingThis = ctx.activeDrag != null && sameItem(ctx.activeDrag, item);
   const intoThis = ctx.dropIntent?.kind === "into" && ctx.dropIntent.folderId === folder.id;
   const showBefore = ctx.dropIntent?.kind === "before" && sameItem(ctx.dropIntent.target, item);
@@ -336,82 +338,79 @@ function FolderRow({ node, depth }: { node: WhiteboardTreeNode; depth: number })
   };
 
   return (
-    <div className={`flex flex-col ${isDraggingThis ? "opacity-40" : ""}`}>
-      <div
-        ref={setRef}
-        {...attributes}
-        {...listeners}
-        className={`${rowBase} cursor-grab active:cursor-grabbing color-txt-main hover:color-bg-grey-5 ${
-          intoThis ? "color-bg-accent ring-2 ring-inset color-shadow-accent" : ""
-        }`}
-        style={{
-          paddingLeft: `${indentPx(depth)}px`,
-          WebkitTouchCallout: "none",
-          ...(intoThis && folder.colour ? { boxShadow: `inset 0 0 0 2px ${folder.colour}` } : undefined),
+    <div
+      ref={setRef}
+      {...attributes}
+      {...listeners}
+      className={`${rowBase} cursor-grab active:cursor-grabbing color-txt-main hover:color-bg-grey-5 ${
+        isDraggingThis ? "opacity-40" : ""
+      } ${intoThis ? "color-bg-accent" : ""}`}
+      style={{ WebkitTouchCallout: "none" }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {showBefore && <DropLine position="before" />}
+      {showAfter && <DropLine position="after" />}
+      <button
+        type="button"
+        className="flex min-w-0 flex-1 items-center gap-2 py-0.5 pl-2.5 text-left cursor-pointer"
+        onClick={() => {
+          if (ctx.ignoreClick()) return;
+          ctx.onEnterFolder(folder.id);
         }}
-        onContextMenu={(e) => e.preventDefault()}
+        aria-label={`Open ${folder.name}`}
       >
-        {showBefore && <DropLine position="before" depth={depth} />}
-        {showAfter && <DropLine position="after" depth={depth} />}
-        <button
-          type="button"
-          className="shrink-0 rounded-lg p-1 transition-colors cursor-pointer hover:color-bg-grey-10"
-          onClick={() => ctx.toggleFolder(folder.id)}
-          onPointerDown={(e) => e.stopPropagation()}
-          aria-label={isCollapsed ? "Expand folder" : "Collapse folder"}
-          aria-expanded={!isCollapsed}
-        >
-          {isCollapsed ? <LuChevronRight size={CHEVRON} /> : <LuChevronDown size={CHEVRON} />}
-        </button>
-        <button
-          type="button"
-          className="flex min-w-0 flex-1 items-center gap-2 text-left cursor-pointer"
-          onClick={() => ctx.toggleFolder(folder.id)}
-        >
-          <FolderGlyph folder={folder} />
-          <span className="min-w-0 flex-1 truncate font-bold">{folder.name}</span>
-        </button>
-        <button
-          type="button"
-          className="shrink-0 rounded-lg p-1.5 color-txt-sub opacity-0 transition-opacity cursor-pointer group-hover:opacity-100 hover:color-bg-grey-10"
-          onClick={() => ctx.onEditFolder(folder)}
-          onPointerDown={(e) => e.stopPropagation()}
-          aria-label={`Edit ${folder.name}`}
-          title="Edit folder"
-        >
-          <LuPencil size={EDIT_ICON} />
-        </button>
-      </div>
-
-      <AnimatePresence initial={false}>
-        {!isCollapsed && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            {node.items.length === 0 ? (
-              <EmptyFolderDrop folderId={folder.id} depth={depth + 1} />
-            ) : (
-              <TreeItems items={node.items} depth={depth + 1} />
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <FolderGlyph folder={folder} />
+        <span className="min-w-0 flex-1 truncate font-bold">{folder.name}</span>
+      </button>
+      <button
+        type="button"
+        className="mr-1 shrink-0 rounded-lg p-1.5 color-txt-sub opacity-0 transition-opacity cursor-pointer group-hover:opacity-100 hover:color-bg-grey-10"
+        onClick={() => ctx.onEditFolder(folder)}
+        onPointerDown={(e) => e.stopPropagation()}
+        aria-label={`Edit ${folder.name}`}
+        title="Edit folder"
+      >
+        <LuPencil size={EDIT_ICON} />
+      </button>
     </div>
   );
 }
 
-function TreeItems({ items, depth }: { items: WhiteboardTreeItem[]; depth: number }) {
+/** Current folder heading with a back button and subtle divider. */
+function FolderHeader({ path, parentId, onNavigate, onEdit, highlighted }: {
+  path: WhiteboardFolder[];
+  parentId: string | null;
+  onNavigate: (depth: number) => void;
+  onEdit: () => void;
+  highlighted: boolean;
+}) {
+  const folder = path[path.length - 1];
+  const dropData: DroppableData = { role: "up-level", folderId: parentId };
+  const { setNodeRef } = useDroppable({ id: "sidebar-up-level", data: dropData });
+  return (
+    <div ref={setNodeRef} className={`flex min-w-0 shrink-0 items-center gap-1 border-b border-current/20 px-2.5 py-1 color-txt-sub ${highlighted ? "color-bg-accent" : ""}`}>
+      <button type="button" onClick={() => onNavigate(path.length - 1)} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg cursor-pointer hover:color-bg-grey-5" aria-label="Back to parent folder" title="Back">
+        <LuChevronLeft size={16} />
+      </button>
+      <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
+        <FolderGlyph folder={folder} />
+        <span className="min-w-0 truncate text-[14px] font-normal" title={folder.name}>{folder.name}</span>
+      </div>
+      <button type="button" onClick={onEdit} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg cursor-pointer hover:color-bg-grey-10" aria-label={`Edit ${folder.name}`} title="Edit folder">
+        <LuPencil size={14} />
+      </button>
+    </div>
+  );
+}
+
+function TreeItems({ items }: { items: WhiteboardTreeItem[] }) {
   return (
     <>
       {items.map((it) =>
         it.kind === "folder" ? (
-          <FolderRow key={`f:${it.node.folder.id}`} node={it.node} depth={depth} />
+          <FolderRow key={`f:${it.node.folder.id}`} node={it.node} />
         ) : (
-          <PageRow key={`p:${it.page.id}`} page={it.page} depth={depth} />
+          <PageRow key={`p:${it.page.id}`} page={it.page} />
         )
       )}
     </>
@@ -437,10 +436,98 @@ export default function WhiteboardsSidebar({
   onCreateFolder,
   onHome,
   onMove,
+  openFolderId = null,
   className = "",
 }: Props) {
-  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  const [folderPath, setFolderPath] = useState<string[]>([]);
+  const [slideDirection, setSlideDirection] = useState(1);
   const [expandedPages, setExpandedPages] = useState<Set<string>>(new Set());
+  const revealedPageRef = useRef<string | null>(null);
+  const revealedFolderRef = useRef<string | null>(null);
+  const ignoreClicksUntilRef = useRef(0);
+  const folderPathAtDragStartRef = useRef<string[]>([]);
+
+  const folderById = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders]);
+  const nodeById = useMemo(() => {
+    const map = new Map<string, WhiteboardTreeNode>();
+    const walk = (nodes: WhiteboardTreeNode[]) => {
+      nodes.forEach((node) => {
+        map.set(node.folder.id, node);
+        walk(node.children);
+      });
+    };
+    walk(tree.rootFolders);
+    return map;
+  }, [tree]);
+
+  // Deleted / moved folders can leave a stale path; stop at the first missing link.
+  const activePath = useMemo(() => {
+    const chain: WhiteboardFolder[] = [];
+    for (const id of folderPath) {
+      const folder = folderById.get(id);
+      if (!folder) break;
+      chain.push(folder);
+    }
+    return chain;
+  }, [folderPath, folderById]);
+
+  const currentFolder = activePath[activePath.length - 1] ?? null;
+  const parentFolderId = activePath.length > 1 ? activePath[activePath.length - 2].id : null;
+  const currentItems = currentFolder
+    ? nodeById.get(currentFolder.id)?.items ?? []
+    : tree.rootItems;
+
+  const enterFolder = useCallback((folderId: string) => {
+    setSlideDirection(1);
+    setFolderPath((prev) => (prev[prev.length - 1] === folderId ? prev : [...prev, folderId]));
+  }, []);
+
+  const navigateToDepth = useCallback((depth: number) => {
+    setSlideDirection(-1);
+    setFolderPath((prev) => prev.slice(0, depth));
+  }, []);
+
+  useEffect(() => {
+    setFolderPath([]);
+    setSlideDirection(-1);
+    revealedPageRef.current = null;
+    revealedFolderRef.current = null;
+  }, [subject]);
+
+  // Opening a page from anywhere else should surface it in its own folder.
+  // An explicit `openFolderId` (from Recents) wins so empty folders still open.
+  useEffect(() => {
+    if (!openFolderId) revealedFolderRef.current = null;
+    if (openFolderId && revealedFolderRef.current !== openFolderId && folderById.has(openFolderId)) {
+      revealedFolderRef.current = openFolderId;
+      const chain: string[] = [];
+      let id: string | null = openFolderId;
+      while (id) {
+        chain.unshift(id);
+        id = folderById.get(id)?.parentId ?? null;
+      }
+      revealedPageRef.current = currentPageId;
+      setSlideDirection(1);
+      setFolderPath((prev) =>
+        prev.length === chain.length && prev.every((value, i) => value === chain[i]) ? prev : chain
+      );
+      return;
+    }
+    if (!currentPageId || revealedPageRef.current === currentPageId) return;
+    const page = pages.find((p) => p.id === currentPageId);
+    if (!page) return;
+    revealedPageRef.current = currentPageId;
+    const chain: string[] = [];
+    let id = page.folderId;
+    while (id) {
+      chain.unshift(id);
+      id = folderById.get(id)?.parentId ?? null;
+    }
+    setSlideDirection(1);
+    setFolderPath((prev) =>
+      prev.length === chain.length && prev.every((value, i) => value === chain[i]) ? prev : chain
+    );
+  }, [openFolderId, currentPageId, pages, folderById]);
 
   useEffect(() => {
     if (!currentQuestionId) return;
@@ -452,26 +539,20 @@ export default function WhiteboardsSidebar({
     });
   }, [currentQuestionId, pages]);
 
-  const isCollapsed = (id: string) => collapsedFolders.has(id);
-  const expandFolder = (id: string) =>
-    setCollapsedFolders((prev) => {
-      if (!prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  const toggleFolder = (id: string) =>
-    setCollapsedFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  const togglePage = (id: string) =>
-    setExpandedPages((prev) => {
-      if (prev.has(id)) return new Set();
-      return new Set([id]);
-    });
+  const togglePage = useCallback(
+    (id: string) =>
+      setExpandedPages((prev) => (prev.has(id) ? new Set<string>() : new Set([id]))),
+    []
+  );
+
+  // Every folder row shows a folder we are *not* inside, so hovering one mid-drag
+  // should drill into it.
+  const isCollapsed = useCallback(
+    (folderId: string) => folderId !== currentFolder?.id,
+    [currentFolder?.id]
+  );
+
+  const ignoreClick = useCallback(() => Date.now() < ignoreClicksUntilRef.current, []);
 
   const {
     sensors,
@@ -482,21 +563,53 @@ export default function WhiteboardsSidebar({
     handleDragMove,
     handleDragEnd,
     handleDragCancel,
-  } = useSidebarDnd({ folders, pages, isCollapsed, onExpand: expandFolder, onMove });
+  } = useSidebarDnd({ folders, pages, isCollapsed, onExpand: enterFolder, onMove });
 
-  const isEmpty = tree.rootItems.length === 0;
-  const rootHighlighted = dropIntent?.kind === "into-root";
+  const onDragStart = useCallback(
+    (event: Parameters<typeof handleDragStart>[0]) => {
+      folderPathAtDragStartRef.current = folderPath;
+      handleDragStart(event);
+    },
+    [folderPath, handleDragStart]
+  );
 
-  const { setNodeRef: setRootDropRef } = useDroppable({ id: "root", data: { role: "root" } });
+  const onDragEnd = useCallback(
+    (event: Parameters<typeof handleDragEnd>[0]) => {
+      handleDragEnd(event);
+      ignoreClicksUntilRef.current = Date.now() + 500;
+      // Hover-to-open is only for targeting during the drag. Stay put after drop.
+      setFolderPath(folderPathAtDragStartRef.current);
+    },
+    [handleDragEnd]
+  );
+
+  const onDragCancel = useCallback(() => {
+    handleDragCancel();
+    ignoreClicksUntilRef.current = Date.now() + 500;
+    setFolderPath(folderPathAtDragStartRef.current);
+  }, [handleDragCancel]);
+
+  const containerData: DroppableData = { role: "container", folderId: currentFolder?.id ?? null };
+  const { setNodeRef: setContainerDropRef } = useDroppable({
+    id: SIDEBAR_CONTAINER_DROPPABLE,
+    data: containerData,
+  });
+
+  const containerHighlighted = currentFolder
+    ? dropIntent?.kind === "into" && dropIntent.folderId === currentFolder.id
+    : dropIntent?.kind === "into-root";
+  const upLevelHighlighted = parentFolderId
+    ? dropIntent?.kind === "into" && dropIntent.folderId === parentFolderId
+    : dropIntent?.kind === "into-root" && activePath.length === 1;
 
   const ctxValue: SidebarCtxValue = {
     currentPageId,
     currentQuestionId,
-    collapsedFolders,
     expandedPages,
     activeDrag,
     dropIntent,
-    toggleFolder,
+    ignoreClick,
+    onEnterFolder: enterFolder,
     togglePage,
     onOpenPage,
     onOpenQuestion,
@@ -506,9 +619,9 @@ export default function WhiteboardsSidebar({
 
   return (
     <aside
-      className={`flex h-full min-h-0 w-full flex-col gap-2 border-r border-grey/15 py-2 pl-1.5 pr-2 ${className}`.trim()}
+      className={`flex h-full min-h-0 w-full flex-col gap-2 overflow-x-hidden border-r border-grey/15 py-2 ${className}`.trim()}
     >
-      <div className="flex min-w-0 shrink-0 items-center gap-1">
+      <div className="flex min-w-0 shrink-0 items-center gap-1 pl-1.5 pr-2">
         <button
           type="button"
           className="shrink-0 rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
@@ -523,25 +636,25 @@ export default function WhiteboardsSidebar({
           <button
             type="button"
             className="rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
-            onClick={() => onCreatePage(null)}
+            onClick={() => onCreatePage(currentFolder?.id ?? null)}
             aria-label="New page"
-            title="New page"
+            title={currentFolder ? `New page in ${currentFolder.name}` : "New page"}
           >
             <LuPlus size={HEADER_ICON} />
           </button>
           <button
             type="button"
             className="rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
-            onClick={onCreateFolder}
+            onClick={() => onCreateFolder(currentFolder?.id ?? null)}
             aria-label="New folder"
-            title="New folder"
+            title={currentFolder ? `New folder in ${currentFolder.name}` : "New folder"}
           >
             <LuFolderPlus size={HEADER_ICON} />
           </button>
         </div>
       </div>
 
-      <div className="min-w-0 shrink-0">
+      <div className="min-w-0 shrink-0 pl-1.5 pr-2">
         <SubjectDropdown
           value={subject}
           onChange={onSubjectChange}
@@ -555,39 +668,80 @@ export default function WhiteboardsSidebar({
         sensors={sensors}
         collisionDetection={collisionDetection}
         autoScroll={{ threshold: { x: 0, y: 0.2 }, acceleration: 14 }}
-        onDragStart={handleDragStart}
+        onDragStart={onDragStart}
         onDragMove={handleDragMove}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
+        onDragEnd={onDragEnd}
+        onDragCancel={onDragCancel}
       >
-        <div
-          ref={setRootDropRef}
-          className={`flex-1 min-h-0 overflow-y-auto scrollbar-minimal rounded-xl transition-colors ${
-            rootHighlighted ? "color-bg-grey-5" : ""
-          }`}
-        >
-          {loading ? (
-            <div className="flex flex-col gap-1 pt-1">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-9 rounded-lg color-bg-grey-5 animate-pulse" />
-              ))}
-            </div>
-          ) : isEmpty ? (
-            <button
-              type="button"
-              className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-[15px] color-txt-main hover:color-bg-grey-5 cursor-pointer"
-              onClick={() => onCreatePage(null)}
-            >
-              <LuPlus size={ICON} className="shrink-0 color-txt-sub" />
-              <span>New page</span>
-            </button>
-          ) : (
-            <SidebarCtx.Provider value={ctxValue}>
-              <div className="flex flex-col pt-1">
-                <TreeItems items={tree.rootItems} depth={0} />
-              </div>
-            </SidebarCtx.Provider>
+        <div className="flex min-h-0 flex-1 flex-col">
+          {currentFolder && (
+            <FolderHeader
+              path={activePath}
+              parentId={parentFolderId}
+              onNavigate={(depth) => {
+                if (ignoreClick()) return;
+                navigateToDepth(depth);
+              }}
+              onEdit={() => onEditFolder(currentFolder)}
+              highlighted={Boolean(upLevelHighlighted)}
+            />
           )}
+
+          <div
+            ref={setContainerDropRef}
+            className={`relative flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-minimal transition-colors ${
+              containerHighlighted ? "color-bg-grey-5" : ""
+            }`}
+          >
+            {loading ? (
+              <div className="flex flex-col gap-1 px-1.5">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-9 rounded-lg color-bg-grey-5 animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <SidebarCtx.Provider value={ctxValue}>
+                <AnimatePresence initial={false} mode="popLayout" custom={slideDirection}>
+                  <motion.div
+                    key={currentFolder?.id ?? "root"}
+                    className="flex w-full flex-col"
+                    custom={slideDirection}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    // Sliding transforms would make @dnd-kit measure stale rects, so a
+                    // hover-to-open during a drag switches folders instantly instead.
+                    transition={activeDrag ? { duration: 0 } : SLIDE}
+                  >
+                    {currentItems.length === 0 ? (
+                      currentFolder ? (
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-[15px] color-txt-sub hover:color-bg-grey-5 cursor-pointer"
+                          onClick={() => onCreatePage(currentFolder.id)}
+                        >
+                          <LuPlus size={ICON} className="shrink-0" />
+                          <span>Add a page here</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-[15px] color-txt-main hover:color-bg-grey-5 cursor-pointer"
+                          onClick={() => onCreatePage(null)}
+                        >
+                          <LuPlus size={ICON} className="shrink-0 color-txt-sub" />
+                          <span>New page</span>
+                        </button>
+                      )
+                    ) : (
+                      <TreeItems items={currentItems} />
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </SidebarCtx.Provider>
+            )}
+          </div>
         </div>
 
         <DragOverlay dropAnimation={null}>

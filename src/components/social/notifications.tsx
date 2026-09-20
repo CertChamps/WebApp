@@ -19,6 +19,7 @@ function NotificationCopy({ noti }: { noti: any }) {
   if (noti.type === "friend-request") return <>{Name} sent you a friend request</>
   if (noti.type === "deck-share") return <>{Name} sent you a deck</>
   if (noti.type === "post-comment") return <>{Name} commented on your post {post}</>
+  if (noti.type === "post-save") return <>{Name} saved your post {post}</>
   if (noti.type === "post-rating") {
     const raw = typeof noti.rating === "number" ? noti.rating : Number(noti.rating)
     const score = Number.isFinite(raw) ? Math.round(raw) : null

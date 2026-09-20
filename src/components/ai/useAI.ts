@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AiRequestError, aiResponseError, authenticatedAiFetch, METERED_CHAT_API_URL } from "../../lib/aiApi";
+import { dataUrlByteSize, stackImagesVertically } from "../../lib/stackImages";
 
 export type Message = { role: "user" | "assistant"; content: string; source?: "chat" | "injected" };
 export type AIChatError = {
@@ -77,58 +78,91 @@ function parsePartIndexFromName(name: string | undefined): number | null {
 }
 
 /**
- * Attachment and history budgets. The chat endpoint rejects anything larger, so
- * the payload is trimmed here by priority rather than letting a multi-page
- * question fail the whole request.
+ * Attachment budgets. Chained question / marking-scheme pages are stacked into
+ * single images so the model sees the full paper without burning image slots.
+ * Total payload is capped by bytes, not a hard per-page image count.
  */
-const MAX_ATTACHED_IMAGES = 6;
-const MAX_QUESTION_IMAGES = 4;
-const MAX_MARKING_SCHEME_IMAGES = 2;
+const MAX_ATTACHMENT_SLOTS = 8;
+/** Max encoded bytes per individual attachment (~1.6M base64 chars on the wire). */
+const MAX_ATTACHMENT_BYTES = 1_400_000;
+/** Max combined attachment bytes for one chat turn. */
+const MAX_TURN_ATTACHMENT_BYTES = 5_000_000;
 const MAX_HISTORY_MESSAGES = 16;
 const MAX_MESSAGE_CHARACTERS = 8_000;
 
 type AttachmentKind = "question" | "work" | "markingScheme" | "paper";
 
 const ATTACHMENT_LABELS: Record<AttachmentKind, string> = {
-  question: "the current question",
-  work: "the student's own handwritten work",
-  markingScheme: "the official marking scheme for this question",
+  question: "the full question (all parts/pages stacked top-to-bottom in reading order)",
+  work: "the student's live whiteboard / canvas (handwriting, diagrams, and drawings — read this carefully)",
+  markingScheme: "the full marking scheme (all pages stacked top-to-bottom in reading order)",
   paper: "the exam paper the student has open",
 };
 
-function selectAttachments(sources: {
+async function prepareAttachments(sources: {
   questionImageUrls: string[];
   markingSchemeImageUrls: string[];
   drawingDataUrl: string | null;
   paperDataUrl: string | null;
-}): { url: string; kind: AttachmentKind }[] {
-  const tiers: { kind: AttachmentKind; urls: (string | null)[]; limit: number }[] = [
-    { kind: "question", urls: sources.questionImageUrls, limit: MAX_QUESTION_IMAGES },
-    { kind: "work", urls: [sources.drawingDataUrl], limit: 1 },
-    { kind: "markingScheme", urls: sources.markingSchemeImageUrls, limit: MAX_MARKING_SCHEME_IMAGES },
-    { kind: "paper", urls: [sources.paperDataUrl], limit: 1 },
-  ];
-
-  const seen = new Set<string>();
+}): Promise<{ url: string; kind: AttachmentKind }[]> {
   const selected: { url: string; kind: AttachmentKind }[] = [];
-  for (const tier of tiers) {
-    let taken = 0;
-    for (const url of tier.urls) {
-      if (selected.length >= MAX_ATTACHED_IMAGES) return selected;
-      if (taken >= tier.limit) break;
-      if (!url || seen.has(url)) continue;
-      seen.add(url);
-      selected.push({ url, kind: tier.kind });
-      taken += 1;
+  let bytesUsed = 0;
+
+  const tryAdd = (url: string | null | undefined, kind: AttachmentKind) => {
+    if (!url || selected.length >= MAX_ATTACHMENT_SLOTS) return;
+    const size = dataUrlByteSize(url);
+    if (size <= 0 || size > MAX_ATTACHMENT_BYTES) return;
+    if (bytesUsed + size > MAX_TURN_ATTACHMENT_BYTES) return;
+    bytesUsed += size;
+    selected.push({ url, kind });
+  };
+
+  // Student whiteboard work is the top priority — never drop it for question PDFs.
+  tryAdd(sources.drawingDataUrl, "work");
+
+  if (sources.questionImageUrls.length > 0) {
+    let questionImage = sources.questionImageUrls[0];
+    if (sources.questionImageUrls.length > 1) {
+      try {
+        questionImage = (await stackImagesVertically(sources.questionImageUrls, {
+          maxBytes: MAX_ATTACHMENT_BYTES,
+        })) ?? questionImage;
+      } catch {
+        // CORS / load failure — fall back to first page rather than sending nothing.
+      }
     }
+    tryAdd(questionImage, "question");
   }
+
+  if (sources.markingSchemeImageUrls.length > 0) {
+    let markingImage = sources.markingSchemeImageUrls[0];
+    if (sources.markingSchemeImageUrls.length > 1) {
+      try {
+        markingImage = (await stackImagesVertically(sources.markingSchemeImageUrls, {
+          maxBytes: MAX_ATTACHMENT_BYTES,
+        })) ?? markingImage;
+      } catch {
+        // fall back to first page
+      }
+    }
+    tryAdd(markingImage, "markingScheme");
+  }
+
+  tryAdd(sources.paperDataUrl, "paper");
+
   return selected;
 }
 
 function describeAttachments(attachments: { kind: AttachmentKind }[]): string | null {
   if (attachments.length === 0) return null;
   const lines = attachments.map((a, i) => `Image ${i + 1}: ${ATTACHMENT_LABELS[a.kind]}`);
-  return `Attached images, in order:\n${lines.join("\n")}`;
+  const parts = [`Attached images, in order:\n${lines.join("\n")}`];
+  if (attachments.some((a) => a.kind === "work")) {
+    parts.push(
+      "IMPORTANT: One attached image is the student's current whiteboard/canvas. It shows their live handwriting, workings, diagrams, and annotations. You MUST examine this image and refer to what they actually wrote or drew when answering.",
+    );
+  }
+  return parts.join("\n\n");
 }
 
 function trimHistory(history: Message[]): { role: Message["role"]; content: string }[] {
@@ -228,20 +262,18 @@ export function useAI(
   }, []);
   useEffect(() => scrollToBottom(), [messages, streamingContent]);
 
+  const lastInjectedNonceRef = useRef<string | null>(null);
   const questionId = question?.id;
   useEffect(() => {
     setMessages([]);
     setStreamingContent("");
     setError(null);
+    lastInjectedNonceRef.current = null;
   }, [questionId]);
 
-  const lastInjectedNonceRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!injectedExchange) {
-      lastInjectedNonceRef.current = null;
-      setMessages((prev) => prev.filter((msg) => msg.source !== "injected"));
-      return;
-    }
+    // Dismissing grading controls must keep the discussion and grading context.
+    if (!injectedExchange) return;
 
     if (!injectedExchange?.nonce) return;
     if (lastInjectedNonceRef.current === injectedExchange.nonce) return;
@@ -278,7 +310,7 @@ export function useAI(
         : [];
       const apiMessages: { role: Message["role"]; content: unknown }[] = trimHistory([...messages, userMessage]);
       const lastUserContent = apiMessages[apiMessages.length - 1].content;
-      const attachments = selectAttachments({
+      const attachments = await prepareAttachments({
         questionImageUrls,
         markingSchemeImageUrls,
         drawingDataUrl,
