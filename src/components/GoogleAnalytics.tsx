@@ -3,7 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { useLocation } from "react-router-dom";
 import { PRIVACY_URL } from "../lib/legal";
 
-const MEASUREMENT_ID = "G-T9KRDYV6J";
+const MEASUREMENT_ID = "G-7SKFDGYV8J";
 const CONSENT_KEY = "certchamps-analytics-consent";
 
 declare global {
