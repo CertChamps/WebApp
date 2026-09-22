@@ -4,7 +4,10 @@ export const ADMIN_UIDS = [
   "AN3cIuQxmXfXb5kEmXuHcM5vWyH3",
 ];
 
-export const ADMIN_EMAILS = ["cian.brady@certchamps.ie"];
+export const ADMIN_EMAILS = [
+  "cian.brady@certchamps.ie",
+  "sharmaabhay758@gmail.com",
+];
 
 export function isAdminUid(
   uid?: string | null,
