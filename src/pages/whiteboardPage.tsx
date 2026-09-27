@@ -1511,7 +1511,11 @@ function WhiteboardPageViewInner() {
           disabled={isDocumentPage ? documentChecking : !canCheckNow}
           title="Check Answer with AI"
         >
-          <LuCircleCheck size={14} strokeWidth={2} className="shrink-0" />
+          {aiCheckThinking ? (
+            <LuLoaderCircle size={14} strokeWidth={2} className="shrink-0 animate-spin" aria-hidden />
+          ) : (
+            <LuCircleCheck size={14} strokeWidth={2} className="shrink-0" aria-hidden />
+          )}
           <span key={aiCheckThinking ? "checking" : "ready"} className="relative inline-grid overflow-hidden text-left">
             <span className="invisible col-start-1 row-start-1" aria-hidden>
               {aiCheckThinking ? (isDocumentPage ? "Checking…" : "Reading your workings...") : "Check Answer"}

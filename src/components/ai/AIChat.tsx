@@ -186,7 +186,7 @@ export function AIChat({ question, getDrawingSnapshot, getStaveAnalysis, getPape
       </div>
 
       <div className="ai-chat-composer color-bg border-t border-grey/15 p-3 pt-2" data-no-sidebar-drag>
-        <div className="relative flex items-start rounded-out border border-grey/25 color-bg overflow-hidden focus-within:ring-2 focus-within:ring-inset focus-within:ring-grey/20">
+        <div className="themed-input-shell relative flex items-start rounded-out border border-grey/25 color-bg overflow-hidden">
           <input
             ref={decoyInputRef}
             type="text"

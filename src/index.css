@@ -1168,6 +1168,75 @@ html :is(
   outline-offset: 2px;
 }
 
+/* Composite text fields put the focus treatment around their full shell so
+   leading/trailing icons remain inside one coherent control. */
+.themed-input-shell {
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.themed-input-shell:focus-within {
+  border-color: color-mix(in srgb, var(--theme-txt-accent) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-txt-accent) 18%, transparent);
+}
+
+html .themed-input-shell :is(input, textarea):focus {
+  outline: none;
+}
+
+.themed-standalone-field {
+  border: 1px solid transparent;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+html .themed-standalone-field:focus {
+  border-color: color-mix(in srgb, var(--theme-txt-accent) 55%, transparent);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-txt-accent) 18%, transparent);
+}
+
+/* Keyboard-aware modals use a stable layout frame. The oversized backdrop
+   prevents iOS visual-viewport panning from exposing a white seam for a frame. */
+.keyboard-modal-root {
+  overflow: visible;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+.keyboard-modal-backdrop {
+  position: absolute;
+  inset: -100vh -100vw;
+  background: rgb(0 0 0 / 0.5);
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.5);
+  pointer-events: none;
+}
+
+.keyboard-modal-backdrop--light {
+  background: rgb(0 0 0 / 0.4);
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.4);
+}
+
+.keyboard-modal-panel {
+  will-change: transform;
+  transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.keyboard-modal-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+/* The application stays pinned to its pre-keyboard layout while the modal's
+   panel moves independently above the keyboard. */
+html.keyboard-modal-open .app-viewport {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--keyboard-modal-layout-width, 100%);
+  height: var(--keyboard-modal-layout-height, 100%);
+  min-height: 0;
+}
+
 /* Search fields already have their own chrome — don't double up. */
 html :is(
   input[type="search"],

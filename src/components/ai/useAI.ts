@@ -218,13 +218,6 @@ export function useAI(
   useEffect(() => scrollToBottom(), [messages, streamingContent]);
 
   const lastInjectedNonceRef = useRef<string | null>(null);
-  const questionId = question?.id;
-  useEffect(() => {
-    setMessages([]);
-    setStreamingContent("");
-    setError(null);
-    lastInjectedNonceRef.current = null;
-  }, [questionId]);
 
   useEffect(() => {
     // Dismissing grading controls must keep the discussion and grading context.

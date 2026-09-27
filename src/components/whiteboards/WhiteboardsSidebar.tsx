@@ -246,9 +246,14 @@ function PageRow({ page }: { page: WhiteboardPage }) {
         {...attributes}
         {...listeners}
         className={`${rowBase} cursor-grab active:cursor-grabbing ${
-          isActive ? "color-bg-accent color-txt-accent font-bold" : "color-txt-main hover:color-bg-grey-5"
+          isActive ? "color-txt-accent font-bold" : "color-txt-main hover:color-bg-grey-5"
         }`}
-        style={{ WebkitTouchCallout: "none" }}
+        style={{
+          WebkitTouchCallout: "none",
+          backgroundColor: isActive
+            ? "color-mix(in srgb, var(--theme-txt-accent) 4%, transparent)"
+            : undefined,
+        }}
         onContextMenu={(e) => e.preventDefault()}
       >
         {showBefore && <DropLine position="before" />}
