@@ -6,7 +6,10 @@ const ADMIN_UIDS = new Set([
     "gJIqKYlc1OdXUQGZQkR4IzfCIoL2",
     "AN3cIuQxmXfXb5kEmXuHcM5vWyH3",
 ]);
-const ADMIN_EMAILS = new Set(["cian.brady@certchamps.ie"]);
+const ADMIN_EMAILS = new Set([
+    "cian.brady@certchamps.ie",
+    "sharmaabhay758@gmail.com",
+]);
 
 const POST_TYPES = new Set([
     "post-comment",
