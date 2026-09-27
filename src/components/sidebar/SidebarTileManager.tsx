@@ -45,7 +45,7 @@ export type SidebarTileManagerProps = {
   /** Called when user requests to collapse the sidebar (e.g. collapse button). */
   onCollapse?: () => void;
   /** Optional: return current drawing as PNG data URL so AI can see handwriting/maths. */
-  getDrawingSnapshot?: (() => string | null) | null;
+  getDrawingSnapshot?: (() => string | string[] | null | Promise<string | string[] | null>) | null;
   /** Optional: return music stave analysis (detected note positions as text). */
   getStaveAnalysis?: (() => string | null) | null;
   /** Optional: return current exam paper (first page) as image data URL so AI can see the paper. */
@@ -233,7 +233,7 @@ function TileContent({
 }: {
   panelId: SidebarPanelId;
   question?: any;
-  getDrawingSnapshot?: (() => string | null) | null;
+  getDrawingSnapshot?: (() => string | string[] | null | Promise<string | string[] | null>) | null;
   getStaveAnalysis?: (() => string | null) | null;
   getPaperSnapshot?: (() => string | null) | null;
   getWorkspaceText?: (() => string | null) | null;
@@ -269,7 +269,7 @@ function TileContent({
       );
     case "threads": {
       const isPaperThread = !!question?._paperThread;
-      return <ThreadsPanel questionId={questionId} part={part} isPaperThread={isPaperThread} question={question} />;
+      return <ThreadsPanel questionId={questionId} part={part} isPaperThread={isPaperThread} question={question} onClosePanel={_onClosePanel} />;
     }
     case "timer":
       return (
@@ -351,7 +351,7 @@ function TileContent({
   }
 }
 
-function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionId: string; part: number; isPaperThread: boolean; question?: any }) {
+function ThreadsPanel({ questionId, part, isPaperThread, question, onClosePanel }: { questionId: string; part: number; isPaperThread: boolean; question?: any; onClosePanel?: () => void }) {
   const { user } = useContext(UserContext);
   const [searchParams] = useSearchParams();
   const [threadView, setThreadView] = useState<"discover" | "discussion">("discover");
@@ -414,7 +414,7 @@ function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionI
 
       <div className="min-h-0 flex-1 overflow-hidden">
         {threadView === "discover" ? (
-          <QuestionDiscover question={question} />
+          <QuestionDiscover question={question} onPopOut={onClosePanel} />
         ) : questionId ? (
           <QThread
             questionId={questionId}

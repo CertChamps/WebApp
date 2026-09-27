@@ -60,6 +60,7 @@ type Props = {
   registerDrawingSnapshot?: RegisterDrawingSnapshot;
   registerGetGradingCapture?: RegisterGetGradingCapture;
   registerGetExportImage?: RegisterGetExportImage;
+  registerGetChatImages?: (fn: (() => Promise<string[]>) | null) => void;
   registerGetDocumentText?: (fn: (() => string) | null) => void;
   registerCheckAnswer?: (fn: (() => Promise<void>) | null) => void;
   questionLabel?: string;
@@ -138,8 +139,6 @@ const ALLOWED_CONTENT_CLASSES = new Set([
   "px-2", "px-3", "py-1", "py-3", "text-xs", "text-sm", "font-semibold", "cursor-pointer",
   "mx-auto", "h-auto", "max-w-full", "mt-1", "text-center",
 ]);
-const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
-const MAX_PDF_BYTES = 25 * 1024 * 1024;
 const SAVE_DELAY_MS = 900;
 const MAX_AI_ESSAY_CHARS = 30_000;
 
@@ -472,6 +471,7 @@ export default function DocumentEditor({
   registerGetGradingCapture,
   registerGetExportImage,
   registerGetDocumentText,
+  registerGetChatImages,
   registerCheckAnswer,
   questionLabel,
   questionImages = [],
@@ -755,7 +755,7 @@ export default function DocumentEditor({
   }, [registerGetDocumentText]);
 
   useEffect(() => {
-    if (!registerGetExportImage) return;
+    if (!registerGetExportImage && !registerGetChatImages) return;
     const getExportImage: GetExportImageFn = async (options) => {
       if (options?.worldBounds || options?.transparent) {
         return canvasExportRef.current?.(options) ?? null;
@@ -794,63 +794,90 @@ export default function DocumentEditor({
         throw error;
       }
     };
-    registerGetExportImage(getExportImage);
-    return () => registerGetExportImage(null);
-  }, [registerGetExportImage]);
+    registerGetExportImage?.(getExportImage);
+    registerGetChatImages?.(async () => {
+      const pageEl = documentPageRef.current;
+      const columnEl = documentColumnRef.current;
+      if (!pageEl || !columnEl || !canvasExportRef.current) throw new Error("Your document is still loading. Please retry.");
+      const pageRect = pageEl.getBoundingClientRect();
+      const columnRect = columnEl.getBoundingClientRect();
+      const width = Math.max(1, pageEl.offsetWidth);
+      const height = Math.max(1, pageEl.scrollHeight);
+      const images: string[] = [];
+      // Capture before scaling: every page retains readable text and handwriting.
+      for (let y = 0; y < height; y += 1000) {
+        for (let x = 0; x < width; x += 1000) {
+          const region = { x, y, width: Math.min(1000, width - x), height: Math.min(1000, height - y) };
+          const html = await captureElementToPng(pageEl, region);
+          const ink = await canvasExportRef.current?.({
+            worldBounds: {
+              ...region,
+              x: pageRect.left - columnRect.left + x,
+              y: pageRect.top - columnRect.top + y,
+            },
+            transparent: true,
+          });
+          if (!ink) throw new Error("Could not capture your document handwriting. Please retry.");
+          const composited = await compositeImages(html, ink.dataUrl);
+          images.push(composited.dataUrl);
+        }
+      }
+      return images;
+    });
+    return () => {
+      registerGetExportImage?.(null);
+      registerGetChatImages?.(null);
+    };
+  }, [registerGetExportImage, registerGetChatImages]);
 
   const handleFiles = useCallback(async (files: FileList | null) => {
-    const file = files?.[0];
-    if (!file || importStatus) return;
+    if (!files?.length || importStatus) return;
     const targetPageId = page.id;
     const importRunId = ++importRunIdRef.current;
     const isCurrent = () => pageIdRef.current === targetPageId && importRunIdRef.current === importRunId;
-    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-    if ((!isPdf && !file.type.startsWith("image/")) || file.size > (isPdf ? MAX_PDF_BYTES : MAX_IMAGE_BYTES)) {
-      setCheckError(isPdf ? "PDFs must be 25 MB or smaller." : "Images must be 12 MB or smaller.");
-      return;
-    }
     setCheckError("");
-    setImportStatus(isPdf ? "Preparing PDF..." : "Uploading image...");
+    setImportStatus("Preparing files...");
     try {
-      const pageDataUrls = isPdf ? await renderPdfPages(file) : [];
-      const totalPages = isPdf ? pageDataUrls.length : 1;
-      if (totalPages === 0) throw new Error("The PDF has no importable pages");
-      const sources: string[] = [];
-      for (let index = 0; index < totalPages; index += 1) {
-        setImportStatus(isPdf ? `Uploading PDF page ${index + 1} of ${totalPages}...` : "Uploading image...");
-        const blob = isPdf ? await dataUrlToBlob(pageDataUrls[index]) : file;
-        if (!isCurrent()) return;
-        const source = await onUploadImage(blob);
-        if (!isCurrent()) return;
-        sources.push(source);
-      }
-      if (!isCurrent()) return;
-      for (let index = 0; index < sources.length; index += 1) {
-        const figure = document.createElement("figure");
-        figure.className = "my-5";
-        const image = document.createElement("img");
-        image.src = sources[index];
-        image.alt = isPdf ? `${file.name}, page ${index + 1}` : file.name;
-        image.className = "mx-auto h-auto max-w-full rounded-lg";
-        image.draggable = false;
-        figure.append(image);
-        if (isPdf) {
-          const caption = document.createElement("figcaption");
-          caption.className = "mt-1 text-center text-xs color-txt-sub";
-          caption.textContent = `Imported from ${file.name} · page ${index + 1}`;
-          figure.append(caption);
+      for (const file of Array.from(files)) {
+        const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+        if (!isPdf && !file.type.startsWith("image/")) {
+          throw new Error(`"${file.name}" isn't an image or PDF.`);
         }
-        insertNode(figure);
-      }
-      if (isPdf && totalPages >= 12) {
-        setCheckError(
-          "PDF imports are limited to the first 12 pages; all 12 available import slots were added."
-        );
+        const pageDataUrls = isPdf ? await renderPdfPages(file) : [];
+        const totalPages = isPdf ? pageDataUrls.length : 1;
+        if (totalPages === 0) throw new Error("The PDF has no importable pages");
+        const sources: string[] = [];
+        for (let index = 0; index < totalPages; index += 1) {
+          setImportStatus(isPdf ? `Uploading PDF page ${index + 1} of ${totalPages}...` : "Uploading image...");
+          const blob = isPdf ? await dataUrlToBlob(pageDataUrls[index]) : file;
+          if (!isCurrent()) return;
+          const source = await onUploadImage(blob);
+          if (!isCurrent()) return;
+          sources.push(source);
+        }
+        if (!isCurrent()) return;
+        for (let index = 0; index < sources.length; index += 1) {
+          const figure = document.createElement("figure");
+          figure.className = "my-5";
+          const image = document.createElement("img");
+          image.src = sources[index];
+          image.alt = isPdf ? `${file.name}, page ${index + 1}` : file.name;
+          image.className = "mx-auto h-auto max-w-full rounded-lg";
+          image.draggable = false;
+          figure.append(image);
+          if (isPdf) {
+            const caption = document.createElement("figcaption");
+            caption.className = "mt-1 text-center text-xs color-txt-sub";
+            caption.textContent = `Imported from ${file.name} · page ${index + 1}`;
+            figure.append(caption);
+          }
+          insertNode(figure);
+        }
       }
     } catch (error) {
       if (isCurrent()) {
         console.error("[DocumentEditor] import failed", error);
-        setCheckError("That file couldn't be added cleanly. Please retry.");
+        setCheckError(error instanceof Error ? error.message : "That file couldn't be added cleanly. Please retry.");
       }
     } finally {
       if (isCurrent()) {
@@ -1204,7 +1231,7 @@ export default function DocumentEditor({
         />
       ) : null}
 
-      <input ref={fileInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={(event) => void handleFiles(event.target.files)} />
+      <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={(event) => void handleFiles(event.target.files)} />
     </div>
   );
 }

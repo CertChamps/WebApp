@@ -1,3 +1,4 @@
+import { popOutDiscoverResource } from "../discover/FloatingDiscoverResource";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   addDoc,
@@ -16,7 +17,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { deleteObject, getDownloadURL, ref as storageRef } from "firebase/storage";
+import { deleteObject, ref as storageRef } from "firebase/storage";
 import {
   LuArrowLeft,
   LuBookmark,
@@ -42,7 +43,7 @@ import {
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
-type ResourceSource = "website" | "pdf";
+type ResourceSource = "website" | "pdf" | "image";
 
 const MAX_COMMENT = 500;
 const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
@@ -66,6 +67,7 @@ type DiscoverNote = {
   websiteUrl: string;
   resourceSource?: ResourceSource;
   pdfPath?: string | null;
+  imagePath?: string | null;
   thumbnailUrl: string;
   faviconUrl?: string | null;
   siteName?: string;
@@ -120,6 +122,7 @@ type DiscoverResource = {
   websiteUrl?: string;
   resourceSource?: ResourceSource;
   pdfPath?: string | null;
+  imagePath?: string | null;
   thumbnailUrl?: string;
   userId?: string;
   username?: string;
@@ -194,6 +197,7 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
     websiteUrl: note.websiteUrl,
     resourceSource: note.resourceSource ?? (note.pdfPath ? "pdf" : "website"),
     pdfPath: note.pdfPath,
+    imagePath: note.imagePath,
     thumbnailUrl: note.thumbnailUrl,
     userId: note.userId,
     username: note.username,
@@ -203,7 +207,7 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
   };
 }
 
-export default function QuestionDiscover({ question }: { question?: unknown }) {
+export default function QuestionDiscover({ question, onPopOut }: { question?: unknown; onPopOut?: () => void }) {
   const { user } = useContext(UserContext);
   const isAdmin = isAdminUid(user?.uid, user?.email);
   const navigate = useNavigate();
@@ -248,8 +252,9 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
               title: data.title ?? "Untitled resource",
               description: data.description ?? "",
               websiteUrl: data.websiteUrl ?? "",
-              resourceSource: data.resourceSource === "pdf" ? "pdf" : "website",
+              resourceSource: data.resourceSource === "pdf" ? "pdf" : data.resourceSource === "image" ? "image" : "website",
               pdfPath: data.pdfPath ?? null,
+              imagePath: data.imagePath ?? null,
               thumbnailUrl: data.thumbnailUrl ?? "",
               faviconUrl: data.faviconUrl ?? null,
               siteName: data.siteName ?? "",
@@ -403,24 +408,6 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
     if (scored.length > 0) return scored.slice(0, 8);
     return approved.filter((resource) => resource.id !== selectedResource.id).slice(0, 6);
   }, [approved, selectedResource]);
-
-  const handleVisit = async (url: string | undefined, resource?: DiscoverResource) => {
-    let target = url?.trim() || "";
-    if (!target && resource?.pdfPath) {
-      try {
-        target = await getDownloadURL(storageRef(storage, resource.pdfPath));
-      } catch (err) {
-        console.error("Failed to open PDF:", err);
-        return;
-      }
-    }
-    if (!target) return;
-    try {
-      window.open(target, "_blank", "noopener,noreferrer");
-    } catch (err) {
-      console.error("Failed to open link:", err);
-    }
-  };
 
   const handleDelete = async (note: DiscoverNote) => {
     if (!user?.uid || deleting) return;
@@ -655,7 +642,6 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
 
   const renderResourceDetail = (resource: DiscoverResource) => {
     const username = resource.username || "Unknown";
-    const canOpenResource = Boolean(resource.websiteUrl?.trim() || resource.pdfPath);
     const ownsResource = Boolean(user?.uid && resource.userId === user.uid);
     const canDelete = Boolean(user?.uid && (isAdmin || ownsResource));
     const linkedQuestions = resource.note?.linkedQuestions?.length
@@ -693,11 +679,11 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
               key={resource.id}
               resource={resource}
               variant="hero"
-              onOpenResource={
-                canOpenResource
-                  ? () => void handleVisit(resource.websiteUrl, resource)
-                  : undefined
-              }
+              resourceActionLabel="Pop out"
+              onOpenResource={() => {
+                popOutDiscoverResource(resource);
+                onPopOut?.();
+              }}
             />
           </div>
 

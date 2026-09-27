@@ -1,3 +1,4 @@
+import FloatingDiscoverResource from "./components/discover/FloatingDiscoverResource";
 // src/AppRouter.tsx
 import { createHashRouter, RouterProvider, Outlet, Navigate, useParams } from "react-router-dom";
 import { useEffect } from "react";
@@ -79,6 +80,7 @@ function RootLayout() {
       <ReleaseNotesPrompt />
       <LegalTermsPrompt />
       <GoogleAnalytics />
+      <FloatingDiscoverResource />
     </SpotifyProvider>
   );
 }

@@ -394,7 +394,7 @@ function FolderHeader({ path, parentId, onNavigate, onEdit, highlighted }: {
       </button>
       <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
         <FolderGlyph folder={folder} />
-        <span className="min-w-0 truncate text-[14px] font-normal" title={folder.name}>{folder.name}</span>
+        <span className="min-w-0 truncate text-[14px] font-bold color-txt-main" title={folder.name}>{folder.name}</span>
       </div>
       <button type="button" onClick={onEdit} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg cursor-pointer hover:color-bg-grey-10" aria-label={`Edit ${folder.name}`} title="Edit folder">
         <LuPencil size={14} />

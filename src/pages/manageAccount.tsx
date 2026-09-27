@@ -1,3 +1,4 @@
+import { hasAceAccess } from "../lib/contentAccess";
 import { useContext, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -16,7 +17,6 @@ import {
     LuTrash2,
     LuUpload,
     LuX,
-    LuWandSparkles,
 } from "react-icons/lu";
 import { collection, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
@@ -272,15 +272,11 @@ const usageItems: Array<{
         description: "AI-assisted searches across community resources.",
         icon: <LuSearch size={20} />,
     },
-    {
-        purpose: "whiteboard",
-        label: "Whiteboard matches",
-        description: "AI-created study pages matched to your request.",
-        icon: <LuWandSparkles size={20} />,
-    },
 ];
 
 function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
+    const { user } = useContext(UserContext);
+    const hasAce = hasAceAccess(user);
     const [summary, setSummary] = useState<AiUsageSummary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -320,7 +316,7 @@ function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
                 <div>
                     <h1 className="profile-heading text-3xl font-bold mb-2">Usage & limits</h1>
                     <p className="color-txt-sub text-base">
-                        Your AI activity for the current monthly allowance.
+                        Your monthly AI activity and study page limits per subject.
                     </p>
                 </div>
                 {summary && (
@@ -353,6 +349,8 @@ function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
                     </button>
                 </motion.div>
             )}
+
+
 
             {!loading && summary && (
                 <>
@@ -400,6 +398,17 @@ function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
                                 </motion.div>
                             );
                         })}
+                        <motion.div variants={fadeUp} className="rounded-2xl color-bg-grey-5 p-5 border border-[var(--color-grey)]/15">
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl color-bg color-txt-accent"><LuPencil size={20} /></span>
+                                <span className="text-sm font-bold color-txt-main">{hasAce ? "Unlimited" : "1 per subject"}</span>
+                            </div>
+                            <h2 className="mt-4 font-bold color-txt-main">Whiteboards & documents</h2>
+                            <p className="mt-1 text-xs leading-relaxed color-txt-sub">{hasAce
+                                ? "Create as many study pages as you need for each subject. AI question matching is included with ACE."
+                                : "Your free plan includes one study page per subject, as a whiteboard or document. Create it yourself or let AI match questions for it. Additional pages require ACE."}</p>
+                            {!hasAce && <button type="button" onClick={onViewPlans} className="mt-4 rounded-xl color-bg-accent color-txt-accent px-4 py-2 text-sm font-bold cursor-pointer">Upgrade to ACE</button>}
+                        </motion.div>
                     </div>
 
                     <motion.div variants={fadeUp} className="mt-6 rounded-2xl color-bg p-5 shadow-small">
@@ -407,7 +416,7 @@ function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
                             <div>
                                 <p className="font-semibold color-txt-main">Monthly reset</p>
                                 <p className="text-sm color-txt-sub mt-1">
-                                    Allowances reset on {resetLabel}. Community features and free study tools have no usage limit.
+                                    AI allowances reset on {resetLabel}. Study page limits do not reset monthly. Community features remain free.
                                 </p>
                             </div>
                             <button

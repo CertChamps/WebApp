@@ -171,23 +171,16 @@ async function consumeAiAllowance(args: {
 }
 
 const MAX_CHAT_MESSAGES = 40;
-/** Slot budget per request — individual images are byte-capped separately. */
-const MAX_CHAT_IMAGES = 12;
 const MAX_CHAT_CHARACTERS = 6_000_000;
-/** Reject a single base64 image larger than this (~2 MB encoded). */
-const MAX_SINGLE_IMAGE_CHARACTERS = 2_800_000;
-const MAX_CONTEXT_CHARACTERS = 60_000;
 
 type ChatContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 type ChatMessage = { role: string; content: string | ChatContentPart[] };
 
 /**
- * Fits a conversation inside the model budget instead of rejecting it. Walks
- * newest-first so the current turn keeps its question and marking scheme images
- * and older history is what gets dropped.
+ * Trim older conversation text while preserving every supplied image. Never
+ * silently omit workings; upstream request limits must surface as errors.
  */
 function sanitizeChatMessages(messages: unknown[]): ChatMessage[] {
-    let imageBudget = MAX_CHAT_IMAGES;
     let characterBudget = MAX_CHAT_CHARACTERS;
 
     const takeText = (value: string): string | null => {
@@ -221,10 +214,6 @@ function sanitizeChatMessages(messages: unknown[]): ChatMessage[] {
             }
             if (part?.type === "image_url" && typeof part.image_url?.url === "string") {
                 const url = part.image_url.url as string;
-                if (imageBudget <= 0 || url.length > characterBudget) continue;
-                if (url.length > MAX_SINGLE_IMAGE_CHARACTERS) continue;
-                characterBudget -= url.length;
-                imageBudget -= 1;
                 parts.push({ type: "image_url", image_url: { url } });
             }
         }
@@ -439,12 +428,31 @@ function createMeteredChatFunction() {
         res.status(400).json({ error: "messages array is required" });
         return;
     }
-    const trimmedContext = typeof context === "string" ? context.slice(0, MAX_CONTEXT_CHARACTERS) : "";
+    const trimmedContext = typeof context === "string" ? context : "";
 
     const purpose = parseAiPurpose(purposeValue);
     let allowance: { used: number; limit: number };
     try {
-        allowance = await consumeAiAllowance({ ...access, purpose, usageId });
+        if (purpose === "whiteboard" && !access.isPro && !access.isAdmin) {
+            const subject = typeof req.body.subject === "string" ? req.body.subject.trim() : "";
+            if (!subject) {
+                res.status(400).json({ error: "Choose a subject before matching questions." });
+                return;
+            }
+            const pages = await admin.firestore().collection(`user-data/${access.uid}/whiteboards-pages`)
+                .where("subject", "==", subject).limit(1).get();
+            if (!pages.empty) {
+                res.status(403).json({
+                    error: "Your free plan includes one study page per subject. Upgrade to ACE to create another.",
+                    code: "WHITEBOARD_LIMIT", upgradeRequired: true,
+                });
+                return;
+            }
+            // Matching previews do not use the free slot; creating a page does.
+            allowance = { used: 0, limit: 1 };
+        } else {
+            allowance = await consumeAiAllowance({ ...access, purpose, usageId });
+        }
     } catch (error) {
         if (error instanceof AiQuotaError) {
             res.status(429).json({

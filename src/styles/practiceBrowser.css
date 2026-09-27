@@ -600,7 +600,8 @@
   }
 }
 
-.practice-browser__cycle-toggle {
+.practice-browser__cycle-toggle,
+.practice-browser__browse-toggle {
   --pb-toggle-pad: 0.2rem;
   --pb-toggle-count: 2;
   position: relative;
@@ -615,45 +616,24 @@
   background: color-mix(in srgb, var(--color-blue) 12%, #ffffff);
 }
 
-.practice-browser__cycle-toggle .practice-browser__toggle-thumb {
-  display: block;
-  border-radius: 999px;
-  background: var(--color-blue);
-  box-shadow: none;
-}
-
-.practice-browser__browse-toggle {
-  --pb-toggle-pad: 0.2rem;
-  --pb-toggle-count: 2;
-  position: relative;
-  display: inline-grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  margin-top: 1rem;
-  padding: var(--pb-toggle-pad);
-  border: var(--pb-border);
-  border-radius: var(--pb-radius);
-  background: color-mix(in srgb, var(--theme-txt-sub) 8%, transparent);
-}
-
 .practice-browser__toggle-thumb {
   position: absolute;
+  display: block;
   top: var(--pb-toggle-pad);
   bottom: var(--pb-toggle-pad);
   left: var(--pb-toggle-pad);
   z-index: 0;
   width: calc((100% - (2 * var(--pb-toggle-pad))) / var(--pb-toggle-count));
-  border-radius: var(--pb-radius-in);
-  background: color-mix(in srgb, var(--theme-txt-accent) 22%, transparent);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--theme-txt-accent) 40%, transparent),
-    0 1px 2px color-mix(in srgb, var(--theme-txt-accent) 18%, transparent);
+  border-radius: 999px;
+  background: var(--color-blue);
+  box-shadow: none;
   transform: translateX(calc(var(--pb-toggle-index, 0) * 100%));
   transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
 }
 
-.practice-browser__cycle-toggle button {
+.practice-browser__cycle-toggle button,
+.practice-browser__browse-toggle button {
   position: relative;
   z-index: 1;
   border: 0;
@@ -667,35 +647,15 @@
   transition: color 180ms ease;
 }
 
-.practice-browser__browse-toggle button {
-  position: relative;
-  z-index: 1;
-  border: 0;
-  border-radius: var(--pb-radius-in);
-  padding: 0.5rem 1.05rem;
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: var(--theme-txt-sub);
-  background: transparent;
-  cursor: pointer;
-  transition: color 180ms ease;
-}
-
-.practice-browser__cycle-toggle button:hover:not(.is-active) {
+.practice-browser__cycle-toggle button:hover:not(.is-active),
+.practice-browser__browse-toggle button:hover:not(.is-active) {
   color: var(--color-blue);
 }
 
-.practice-browser__browse-toggle button:hover:not(.is-active) {
-  color: var(--theme-txt-main);
-}
-
-.practice-browser__cycle-toggle button.is-active {
+.practice-browser__cycle-toggle button.is-active,
+.practice-browser__browse-toggle button.is-active {
   color: #ffffff;
   background: transparent;
-}
-
-.practice-browser__browse-toggle button.is-active {
-  color: var(--theme-txt-accent);
 }
 
 .practice-browser__cycle-toggle button:focus-visible,

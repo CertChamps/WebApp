@@ -11,7 +11,7 @@ import type { InjectedExchange } from "./useAI";
 type AIChatProps = {
   question?: any;
   /** Optional: return current drawing as PNG data URL so the AI can see handwriting/maths. */
-  getDrawingSnapshot?: (() => string | null) | null;
+  getDrawingSnapshot?: (() => string | string[] | null | Promise<string | string[] | null>) | null;
   /** Optional: return music stave analysis (detected note positions as text). */
   getStaveAnalysis?: (() => string | null) | null;
   /** Optional: return current exam paper (first page) as image so the AI can see the paper. */

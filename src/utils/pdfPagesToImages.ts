@@ -2,7 +2,6 @@ import { getDocumentCached } from "./pdfDocumentCache";
 import type { PaperPageRegion } from "../hooks/useExamPapers";
 
 const DEFAULT_RENDER_SCALE = 2;
-const MAX_PAGES = 12;
 
 export type PdfRenderOptions = {
   /** PDF.js viewport scale. Default 2. Use ~1.35 for whiteboard previews. */
@@ -33,7 +32,7 @@ export async function renderPdfPages(
   const docPdf = await getDocumentCached(blob);
   const scale = opts?.scale ?? DEFAULT_RENDER_SCALE;
   const start = Math.max(1, range?.[0] ?? 1);
-  const end = Math.min(docPdf.numPages, range?.[1] ?? docPdf.numPages, start + MAX_PAGES - 1);
+  const end = Math.min(docPdf.numPages, range?.[1] ?? docPdf.numPages);
   const urls: string[] = [];
   for (let i = start; i <= end; i++) {
     const page = await docPdf.getPage(i);
@@ -63,7 +62,7 @@ export async function renderPdfRegions(
   const urls: string[] = [];
   const pageCanvasCache = new Map<number, { canvas: HTMLCanvasElement; scale: number }>();
 
-  for (const region of regions.slice(0, MAX_PAGES)) {
+  for (const region of regions) {
     const pageNum = Math.max(1, Math.min(region.page ?? 1, docPdf.numPages));
     let cached = pageCanvasCache.get(pageNum);
     if (!cached) {

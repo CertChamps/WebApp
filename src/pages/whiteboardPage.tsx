@@ -310,7 +310,7 @@ function ToolsMenu({
         }`}
       >
         <LuWrench size={13} strokeWidth={2.5} />
-        Tools
+        <span className="hidden @[700px]:inline">Tools</span>
       </button>
       {dropdownPortal}
     </>
@@ -384,6 +384,8 @@ function WhiteboardPageViewInner() {
     tree,
     loading: treeLoading,
     createPage,
+    requestCreatePage,
+    aceGateModal,
     updatePage,
     deletePage,
     touchPageOpened,
@@ -592,7 +594,10 @@ function WhiteboardPageViewInner() {
   const registerDrawingSnapshot = useCallback<RegisterDrawingSnapshot>((fn) => {
     getDrawingSnapshotRef.current = fn;
   }, []);
-  const getDrawingSnapshot = useCallback(() => getDrawingSnapshotRef.current?.() ?? null, []);
+  const getDocumentChatImagesRef = useRef<(() => Promise<string[]>) | null>(null);
+  const registerGetChatImages = useCallback((fn: (() => Promise<string[]>) | null) => {
+    getDocumentChatImagesRef.current = fn;
+  }, []);
   const getDocumentTextRef = useRef<(() => string) | null>(null);
   const registerGetDocumentText = useCallback((fn: (() => string) | null) => {
     getDocumentTextRef.current = fn;
@@ -629,6 +634,35 @@ function WhiteboardPageViewInner() {
     [],
   );
   const [showExportModal, setShowExportModal] = useState(false);
+  const getDrawingSnapshot = useCallback(async () => {
+    const capture = getExportImageRef.current;
+    if (!capture) throw new Error("Your workspace is still loading. Try again in a moment.");
+    if (page?.pageType === "document") {
+      const getImages = getDocumentChatImagesRef.current;
+      if (!getImages) throw new Error("Your document is still loading. Please retry.");
+      return getImages();
+    }
+    const image = await capture();
+    if (!image) return null;
+    // Capture all content, including work outside the current pan/zoom viewport.
+    // Tile in world coordinates to keep handwriting readable on large boards.
+    const bounds = image.worldBounds;
+    const tileSize = 1000;
+    if (bounds.width <= tileSize && bounds.height <= tileSize) return image.dataUrl;
+    const images: string[] = [];
+    for (let y = bounds.y; y < bounds.y + bounds.height; y += tileSize) {
+      for (let x = bounds.x; x < bounds.x + bounds.width; x += tileSize) {
+        const tile = await capture({ worldBounds: {
+          x, y,
+          width: Math.min(tileSize, bounds.x + bounds.width - x),
+          height: Math.min(tileSize, bounds.y + bounds.height - y),
+        } });
+        if (!tile) throw new Error("Could not capture all your workings. Please retry.");
+        images.push(tile.dataUrl);
+      }
+    }
+    return images;
+  }, [page?.pageType]);
 
   // Persist the previous question board before loading the next (keeps drawings isolated).
   useEffect(() => {
@@ -1551,6 +1585,7 @@ function WhiteboardPageViewInner() {
           onEditPage={(target) => setEditingPage(target)}
           onEditFolder={(folder) => setEditingFolder(folder)}
           onCreatePage={(folderId) => {
+            if (!requestCreatePage()) return;
             setCreateInFolderId(folderId);
             setCreatingPage(true);
           }}
@@ -1564,24 +1599,24 @@ function WhiteboardPageViewInner() {
         />
       </div>
 
-      <div className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="@container relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* ---- Top bar (kept) ---- */}
-        <div className="relative z-50 flex min-h-10 shrink-0 flex-wrap items-center gap-1 px-2 py-1 color-bg">
-          <button
-            type="button"
-            className="shrink-0 rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
-            onClick={() => setFoldersSidebarOpen((open) => !open)}
-            aria-label={foldersSidebarOpen ? "Enter fullscreen" : "Exit fullscreen"}
-            title={foldersSidebarOpen ? "Enter fullscreen" : "Exit fullscreen"}
-          >
-            {foldersSidebarOpen ? (
-              <LuMaximize2 size={17} strokeWidth={2} className="text-black" />
-            ) : (
-              <LuMinimize2 size={17} strokeWidth={2} className="text-black" />
-            )}
-          </button>
-
+        <div className="relative z-50 grid min-h-10 shrink-0 grid-cols-[minmax(110px,1fr)_minmax(0,1fr)_minmax(110px,1fr)] items-center gap-1 px-2 py-1 color-bg @[700px]:grid-cols-[minmax(280px,1fr)_minmax(0,1fr)_minmax(280px,1fr)]">
           <div className="flex min-w-0 flex-1 basis-[240px] items-center gap-2">
+            <button
+              type="button"
+              className="shrink-0 rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
+              onClick={() => setFoldersSidebarOpen((open) => !open)}
+              aria-label={foldersSidebarOpen ? "Enter fullscreen" : "Exit fullscreen"}
+              title={foldersSidebarOpen ? "Enter fullscreen" : "Exit fullscreen"}
+            >
+              {foldersSidebarOpen ? (
+                <LuMaximize2 size={17} strokeWidth={2} className="text-black" />
+              ) : (
+                <LuMinimize2 size={17} strokeWidth={2} className="text-black" />
+              )}
+            </button>
+
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <span className="shrink-0 text-base leading-none" aria-hidden>
                 {page?.emoji ?? <LuFileText size={15} className="color-txt-sub" />}
@@ -1600,46 +1635,49 @@ function WhiteboardPageViewInner() {
               </button>
             </div>
 
-            {attachments.length > 0 && (
-              <div
-                ref={centerTitleRowRef}
-                className="flex min-w-0 flex-1 items-center justify-center gap-0.5"
-              >
-                <button
-                  type="button"
-                  className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
-                  onClick={() => setAttachmentIndex((i) => Math.max(0, i - 1))}
-                  disabled={attachmentIndex <= 0}
-                  aria-label="Previous question"
-                >
-                  <LuChevronLeft size={16} />
-                </button>
-                <QuestionTitlePicker
-                  anchorRef={centerTitleRowRef}
-                  title={currentAttachment?.label ?? ""}
-                  titleKey={currentAttachment?.id}
-                  items={pickerItems}
-                  currentIndex={attachmentIndex}
-                  onSelect={(index) => {
-                    setAttachmentIndex(index);
-                    const next = attachments[index];
-                    if (next) pendingQuestionSeedsRef.current.add(next.id);
-                  }}
-                />
-                <button
-                  type="button"
-                  className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
-                  onClick={() => setAttachmentIndex((i) => Math.min(attachments.length - 1, i + 1))}
-                  disabled={attachmentIndex >= attachments.length - 1}
-                  aria-label="Next question"
-                >
-                  <LuChevronRight size={16} />
-                </button>
-              </div>
-            )}
           </div>
 
-          <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-1">
+          {attachments.length > 0 ? (
+            <div
+              ref={centerTitleRowRef}
+              className="flex min-w-0 flex-1 basis-[240px] items-center justify-center gap-0.5"
+            >
+              <button
+                type="button"
+                className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
+                onClick={() => setAttachmentIndex((i) => Math.max(0, i - 1))}
+                disabled={attachmentIndex <= 0}
+                aria-label="Previous question"
+              >
+                <LuChevronLeft size={16} />
+              </button>
+              <QuestionTitlePicker
+                anchorRef={centerTitleRowRef}
+                title={currentAttachment?.label ?? ""}
+                titleKey={currentAttachment?.id}
+                items={pickerItems}
+                currentIndex={attachmentIndex}
+                onSelect={(index) => {
+                  setAttachmentIndex(index);
+                  const next = attachments[index];
+                  if (next) pendingQuestionSeedsRef.current.add(next.id);
+                }}
+              />
+              <button
+                type="button"
+                className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
+                onClick={() => setAttachmentIndex((i) => Math.min(attachments.length - 1, i + 1))}
+                disabled={attachmentIndex >= attachments.length - 1}
+                aria-label="Next question"
+              >
+                <LuChevronRight size={16} />
+              </button>
+            </div>
+          ) : (
+            <div className="min-w-0" />
+          )}
+
+          <div className="flex min-w-0 flex-nowrap items-center justify-end gap-1">
             <ToolsMenu
               showCalculator={showCalculator}
               showLogTables={showLogTables}
@@ -1649,10 +1687,12 @@ function WhiteboardPageViewInner() {
             <button
               type="button"
               className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold color-txt-main color-bg-grey-5 hover:color-bg-grey-10 transition-colors cursor-pointer"
+              aria-label="Add question"
+              title="Add question"
               onClick={() => setQuestionModalMode("add")}
             >
               <LuPlus size={13} strokeWidth={2.5} />
-              <span className="whitespace-nowrap">Add question</span>
+              <span className="hidden whitespace-nowrap @[700px]:inline">Add question</span>
             </button>
             <button
               type="button"
@@ -1663,7 +1703,7 @@ function WhiteboardPageViewInner() {
               title="Export"
             >
               <LuDownload size={13} strokeWidth={2} />
-              <span>Export</span>
+              <span className="hidden @[700px]:inline">Export</span>
             </button>
           </div>
         </div>
@@ -1685,6 +1725,7 @@ function WhiteboardPageViewInner() {
               registerGetGradingCapture={registerGetGradingCapture}
               registerGetExportImage={registerGetExportImage}
               registerGetDocumentText={registerGetDocumentText}
+              registerGetChatImages={registerGetChatImages}
               registerCheckAnswer={registerDocumentCheckAnswer}
               questionLabel={currentAttachment?.label}
               questionImages={media.questionImages.map((image) => image.src).filter(Boolean)}
@@ -2044,7 +2085,7 @@ function WhiteboardPageViewInner() {
               subject: sidebarSubject,
               folderId: createInFolderId,
             });
-            navigate(`/whiteboards/page/${created.id}`);
+            if (created) navigate(`/whiteboards/page/${created.id}`);
           }}
           onClose={() => setCreatingPage(false)}
         />
@@ -2102,6 +2143,7 @@ function WhiteboardPageViewInner() {
           onClose={() => setShowLogTables(false)}
         />
       )}
+      {aceGateModal}
     </div>
   );
 }

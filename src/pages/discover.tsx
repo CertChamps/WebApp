@@ -852,8 +852,12 @@ export default function Discover() {
         : null;
 
     const subjectChips = useMemo(
-        () => favouriteSubjects.filter((subject): subject is NonNullable<typeof subject> => Boolean(subject)),
-        [favouriteSubjects]
+        () => {
+            const chips = favouriteSubjects.filter((subject): subject is NonNullable<typeof subject> => Boolean(subject));
+            if (selectedSubject && !chips.some(subject => subject.id === selectedSubject.id)) chips.unshift(selectedSubject);
+            return chips;
+        },
+        [favouriteSubjects, selectedSubject]
     );
 
     const resources = useMemo(() => {
