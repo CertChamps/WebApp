@@ -10,20 +10,19 @@
  * active.
  */
 
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { auth } from "../../../firebase";
-import type { PaymentProvider, PriceDetails, PurchaseResult } from "./types";
+import type { PaymentProvider, PriceDetails, PurchaseResult, SubscriptionPlan } from "./types";
 
 const CREATE_PRO_CHECKOUT_URL =
     "https://us-central1-certchamps-a7527.cloudfunctions.net/createProCheckout";
 const CREATE_BILLING_PORTAL_URL =
     "https://us-central1-certchamps-a7527.cloudfunctions.net/createBillingPortalSession";
 
-/** Static price shown on the Stripe upgrade card. Mirrors
- *  `PRO_YEARLY_PRICE_EUR_CENTS` in `functions/src/index.ts`. */
-const STRIPE_PRICE: PriceDetails = {
-    formatted: "€30",
-    period: "year",
-    currencyCode: "EUR",
+const STRIPE_PRICES: Record<SubscriptionPlan, PriceDetails> = {
+    monthly: { formatted: "€4", period: "month", currencyCode: "EUR" },
+    annual: { formatted: "€40", period: "year", currencyCode: "EUR" },
 };
 
 export const stripeProvider: PaymentProvider = {
@@ -33,11 +32,11 @@ export const stripeProvider: PaymentProvider = {
         return !!auth.currentUser;
     },
 
-    async getPrice() {
-        return STRIPE_PRICE;
+    async getPrice(plan) {
+        return STRIPE_PRICES[plan];
     },
 
-    async purchase(): Promise<PurchaseResult> {
+    async purchase(plan): Promise<PurchaseResult> {
         const currentUser = auth.currentUser;
         if (!currentUser) {
             return { success: false, error: "You must be signed in to subscribe." };
@@ -47,7 +46,7 @@ export const stripeProvider: PaymentProvider = {
             const res = await fetch(CREATE_PRO_CHECKOUT_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ idToken }),
+                body: JSON.stringify({ idToken, plan }),
             });
             const data = (await res.json().catch(() => ({}))) as {
                 url?: string;
@@ -88,7 +87,8 @@ export const stripeProvider: PaymentProvider = {
         if (!res.ok || !data.url) {
             throw new Error(data.error || "Failed to open billing portal");
         }
-        window.location.href = data.url;
+        if (Capacitor.isNativePlatform()) await Browser.open({ url: data.url });
+        else window.location.assign(data.url);
     },
 
     async restore(): Promise<PurchaseResult> {

@@ -1153,7 +1153,7 @@ math-field::part(virtual-keyboard-toggle) {
   }
 }
 
-/* Accent outline on every text field — including those that set outline-none. */
+/* Borderless text fields retain a visible focus fallback. */
 html :is(
   input:not([type]),
   input[type="text"],
@@ -1168,15 +1168,34 @@ html :is(
   outline-offset: 2px;
 }
 
+/* Existing borders provide focus feedback without a second outline. */
+html :is(
+  input:not([type]),
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="search"],
+  textarea
+):is(.txtbox, [class~="border"], [class~="border-2"], [class~="border-b"], .practice-hub__search-input):focus {
+  border-color: var(--theme-txt-accent);
+  outline: none;
+}
+
 /* Composite text fields put the focus treatment around their full shell so
    leading/trailing icons remain inside one coherent control. */
 .themed-input-shell {
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition: border-color 160ms ease;
+}
+
+.themed-input-shell:where(:not([class~="border"]):not([class~="border-2"])) {
+  border: 1px solid transparent;
 }
 
 .themed-input-shell:focus-within {
-  border-color: color-mix(in srgb, var(--theme-txt-accent) 55%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-txt-accent) 18%, transparent);
+  border-color: var(--theme-txt-accent);
 }
 
 html .themed-input-shell :is(input, textarea):focus {
@@ -1185,13 +1204,12 @@ html .themed-input-shell :is(input, textarea):focus {
 
 .themed-standalone-field {
   border: 1px solid transparent;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition: border-color 160ms ease;
 }
 
 html .themed-standalone-field:focus {
-  border-color: color-mix(in srgb, var(--theme-txt-accent) 55%, transparent);
+  border-color: var(--theme-txt-accent);
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-txt-accent) 18%, transparent);
 }
 
 /* Keyboard-aware modals use a stable layout frame. The oversized backdrop

@@ -139,7 +139,7 @@ export default function AddModuleModal({ onAdd, onClose }: Props) {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={step === "type" ? "Search modules…" : "Search subjects…"}
-                className="w-full pl-9 pr-3 py-2 rounded-xl text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none focus:ring-2 focus:ring-inset focus:ring-offset-0"
+                className="w-full pl-9 pr-3 py-2 rounded-xl border border-transparent text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none"
                 autoComplete="off"
               />
             </div>

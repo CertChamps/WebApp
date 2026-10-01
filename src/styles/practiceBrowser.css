@@ -102,13 +102,12 @@
   padding: 0.78rem 1.05rem;
   color: var(--theme-txt-sub);
   background: color-mix(in srgb, var(--theme-txt-sub) 5%, transparent);
-  transition: border-color 160ms, background-color 160ms, box-shadow 160ms;
+  transition: border-color 160ms, background-color 160ms;
 }
 
 .practice-browser__search:focus-within {
-  border-color: color-mix(in srgb, var(--theme-txt-accent) 55%, transparent);
+  border-color: var(--theme-txt-accent);
   background: color-mix(in srgb, var(--theme-txt-accent) 6%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-txt-accent) 16%, transparent);
   color: var(--theme-txt-main);
 }
 

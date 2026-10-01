@@ -46,7 +46,7 @@ export function getPostAuthPath(
   user: OnboardingUser | null | undefined,
   prevRoute?: string
 ): string {
-  if (needsOnboarding(user)) return "/onboarding";
+  if (needsOnboarding(user)) return `/onboarding?${new URLSearchParams({ returnTo: sanitizeReturnPath(prevRoute, "/practice") })}`;
   if (prevRoute) return prevRoute;
   return "/practice";
 }

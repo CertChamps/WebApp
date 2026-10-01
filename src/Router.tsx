@@ -39,6 +39,8 @@ import NotFound from "./pages/notFound";
 import ForgotPassword from "./pages/forgotPassword";
 import LegalTermsPrompt from "./components/prompts/legal_terms_prompt";
 import GoogleAnalytics from "./components/GoogleAnalytics";
+import useAuthentication from "./hooks/useAuthentication";
+import AuthEntryRoute from "./components/AuthEntryRoute";
 
 /** Redirects /practice/:id (deck links from social) to /decks/:id */
 function PracticeToDeckRedirect() {
@@ -67,6 +69,7 @@ function SpotifyOAuthPathBridge() {
 }
 
 function RootLayout() {
+  useAuthentication({ observeSession: true });
   // SpotifyProvider is mounted app-wide so playback and auth persist across
   // navigation (music keeps playing when switching pages) and both the sidebar
   // tab and the floating mini-player share one session.
@@ -90,8 +93,8 @@ const router = createHashRouter([
   {
     element: <RootLayout />,
     children: [
-      { path: "/", element: <SignUp /> },
-      { path: "/login", element: <Login /> },
+      { path: "/", element: <AuthEntryRoute><SignUp /></AuthEntryRoute> },
+      { path: "/login", element: <AuthEntryRoute><Login /></AuthEntryRoute> },
       { path: "/forgot-password", element: <ForgotPassword /> },
       { path: "/verify-email", element: <VerifyEmail /> },
       { path: "/spotify/callback", element: <SpotifyCallback /> },
@@ -104,16 +107,14 @@ const router = createHashRouter([
         ),
       },
 
-      // Protected routes
+      // Public practice browser
       {
         path: "/practice",
         element: (
-          <ProtectedRoute>
-            <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
-              <Navbar />
-              <PracticeHub />
-            </div>
-          </ProtectedRoute>
+          <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+            <Navbar />
+            <PracticeHub />
+          </div>
         ),
       },
       {
@@ -220,12 +221,10 @@ const router = createHashRouter([
   {
     path: "/discover",
     element: (
-      <ProtectedRoute>
         <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <Discover />
         </div>
-      </ProtectedRoute>
     ),
   },
   {

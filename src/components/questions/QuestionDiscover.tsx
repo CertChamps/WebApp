@@ -26,9 +26,10 @@ import {
   LuStar,
   LuTrash,
 } from "react-icons/lu";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { db, storage } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
+import { useRequireSignIn } from "../../hooks/useRequireSignIn";
 import { isAdminUid } from "../../constants/adminUids";
 import DiscoverMediaPreview from "../discover/DiscoverMediaPreview";
 import DiscoverShareModal from "../discover/DiscoverShareModal";
@@ -208,9 +209,12 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
 }
 
 export default function QuestionDiscover({ question, onPopOut }: { question?: unknown; onPopOut?: () => void }) {
+  const requireSignIn = useRequireSignIn();
   const { user } = useContext(UserContext);
   const isAdmin = isAdminUid(user?.uid, user?.email);
   const navigate = useNavigate();
+  const location = useLocation();
+  const backState = { backTo: location.pathname + location.search };
   const [searchParams] = useSearchParams();
   const context = useMemo(() => getQuestionDiscoveryContext(question), [question]);
   const [notes, setNotes] = useState<DiscoverNote[]>([]);
@@ -431,6 +435,7 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
   };
 
   const handleSave = async (resource: DiscoverResource) => {
+    if (!await requireSignIn("Save resource")) return;
     if (!user?.uid || !resource.note || saveSubmitting) return;
     const likeRef = doc(db, "discover-notes", resource.id, "likes", user.uid);
     const resourceRef = doc(db, "discover-notes", resource.id);
@@ -475,6 +480,7 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
   };
 
   const handleRate = async (value: number) => {
+    if (!await requireSignIn("Rate resource")) return;
     if (!user?.uid || !selectedResource?.note || ratingSubmitting) return;
     setRatingSubmitting(true);
     const ratingRef = doc(db, "discover-notes", selectedResource.id, "ratings", user.uid);
@@ -513,6 +519,7 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
   };
 
   const handleAddComment = async () => {
+    if (!await requireSignIn("Commenting")) return;
     if (!user?.uid || !selectedResource?.note || commentSubmitting) return;
     const text = commentText.trim();
     if (!text) return;
@@ -582,7 +589,7 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/viewProfile/${resource.userId}`);
+                  navigate(`/viewProfile/${resource.userId}`, { state: backState });
                 }}
                 className="shrink-0 cursor-pointer"
               >
@@ -691,7 +698,7 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
             {resource.userId ? (
               <button
                 type="button"
-                onClick={() => navigate(`/viewProfile/${resource.userId}`)}
+                onClick={() => navigate(`/viewProfile/${resource.userId}`, { state: backState })}
                 className="shrink-0 cursor-pointer"
               >
                 {resource.userPicture ? (
@@ -754,12 +761,12 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
             <button
               type="button"
               onClick={() => void handleSave(resource)}
-              disabled={!resource.note || !user?.uid}
+              disabled={!resource.note}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer hover:opacity-90 ${
                 userSaved
                   ? "color-bg-accent color-txt-accent"
                   : "color-bg-grey-5 color-txt-main"
-              } ${!resource.note || !user?.uid ? "opacity-50" : ""}`}
+              } ${!resource.note ? "opacity-50" : ""}`}
             >
               <LuBookmark size={13} fill={userSaved ? "currentColor" : "none"} />
               {userSaved ? "Saved" : "Save"} · {resource.saves}
@@ -834,7 +841,9 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
                     if (e.key === "Escape") cancelComment();
                   }}
                   placeholder={user?.uid ? "Add a comment..." : "Log in to comment"}
-                  disabled={!user?.uid || !resource.note}
+                  disabled={!resource.note}
+                  readOnly={!user?.uid}
+                  onClick={async () => { if (!user?.uid) await requireSignIn("Commenting"); }}
                   maxLength={MAX_COMMENT}
                   className="w-full bg-transparent color-txt-main text-xs outline-none border-0 border-b border-color-border pb-1.5 placeholder:color-txt-sub disabled:opacity-60"
                 />
@@ -874,7 +883,7 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
                     {comment.userId ? (
                       <button
                         type="button"
-                        onClick={() => navigate(`/viewProfile/${comment.userId}`)}
+                        onClick={() => navigate(`/viewProfile/${comment.userId}`, { state: backState })}
                         className="shrink-0 cursor-pointer mt-0.5"
                       >
                         {comment.userPicture ? (
@@ -962,7 +971,7 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
           <div className="shrink-0 px-3 pt-2 pb-1">
             <button
               type="button"
-              onClick={() => setShowShareForm(true)}
+              onClick={async () => { if (await requireSignIn("Share resource")) setShowShareForm(true); }}
               className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl color-bg-accent color-txt-accent px-3 py-2 text-xs font-bold hover:opacity-90 cursor-pointer"
             >
               <LuPlus size={14} /> Add resource

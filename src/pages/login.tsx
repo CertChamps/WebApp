@@ -2,25 +2,34 @@ import { useState } from 'react'
 import crown from '../assets/logo.png'
 import { FaGoogle, FaApple } from 'react-icons/fa'
 import useAuthentication from '../hooks/useAuthentication'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { LuArrowLeft } from 'react-icons/lu'
+import { signInDetails } from '../lib/signIn'
 
 export default function Login() {
 
     // ====================================== REACT HOOKS =================================== //
     const navigate = useNavigate()
+    const location = useLocation()
+    const { feature, returnTo, back } = signInDetails(location.search, location.state)
     
 
-    const {signInWithEmail, loginWithGoogle, loginWithApple, error } = useAuthentication()
+    const {signInWithEmail, loginWithGoogle, loginWithApple, error } = useAuthentication({ prevRoute: returnTo })
     const [email, setEmail] = useState<string>()
     const [password, setPassword] = useState<string>()
 
     const heading_style = "txt-sub text-xs font-bold w-9/12 mx-auto mb-1"
 
     return (
-        <div className=' h-full flex justify-center items-center w-full color-bg-grey-5 overflow-hidden' >
-            <div className=' py-8 w-72 h-9/12 color-shadow border-2 rounded-out color-bg' >
+        <div className='relative h-full flex flex-col items-center w-full color-bg-grey-5 overflow-y-auto px-4 py-16' >
+            <button type="button" onClick={() => navigate(back.path, { replace: true })}
+                className="absolute top-4 left-4 inline-flex items-center gap-2 text-sm font-semibold color-txt-sub hover:color-txt-main">
+                <LuArrowLeft size={18} /> Back to {back.label}
+            </button>
+            <div className='my-auto shrink-0 py-8 w-72 color-shadow border-2 rounded-out color-bg' >
                 <img src={crown}  className='w-32 m-auto object-cover h-24'/>
                 <h1 className="txt-heading-colour text-center text-2xl mb-4" >Login</h1>
+                {feature && <p className="px-6 mb-4 text-sm text-center color-txt-sub" role="status">Sign-in required for {feature}.</p>}
 
                 <p className='font-light text-red ml-0.5 text-center'>{error?.general ? error.general : ""}</p>
 
@@ -39,7 +48,7 @@ export default function Login() {
                 <button
                     type="button"
                     className="block w-9/12 mx-auto -mt-2 mb-3 text-right text-xs font-semibold color-txt-sub hover:color-txt-accent transition-colors"
-                    onClick={() => navigate('/forgot-password')}
+                    onClick={() => navigate(`/forgot-password${location.search}`)}
                 >
                     Forgot password?
                 </button>
@@ -71,7 +80,7 @@ export default function Login() {
                 </div>
 
                 <p className='txt-sub text-center mt-auto hover:color-txt-accent duration-250 transition-all' onClick={() => {
-                    navigate('/')
+                    navigate(`/${location.search}`, { state: location.state })
                 }}>Don't have an account? <span className="underline">Sign up here.</span></p>
             </div>
         </div>

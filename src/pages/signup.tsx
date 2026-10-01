@@ -4,11 +4,13 @@ import crown from "../assets/logo.png";
 import useAuthentication from "../hooks/useAuthentication";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PRIVACY_URL, TERMS_URL } from "../lib/legal";
+import { LuArrowLeft } from "react-icons/lu";
+import { signInDetails } from "../lib/signIn";
 
 export default function SignUp() {
   const navigate = useNavigate();
   const location = useLocation();
-  const prevRoute = location.state?.prevRoute;
+  const { feature, returnTo: prevRoute, back } = signInDetails(location.search, location.state);
 
   const { signUpWithEmail, loginWithGoogle, loginWithApple, error, setError } = useAuthentication({ prevRoute });
 
@@ -79,10 +81,15 @@ export default function SignUp() {
   };
 
   return (
-    <div className="h-full flex justify-center items-center w-full color-bg-grey-5 overflow-hidden">
-      <div className="w-72 py-5 h-min-9/12 color-shadow border-2 rounded-out color-bg">
+    <div className="relative h-full flex flex-col items-center w-full color-bg-grey-5 overflow-y-auto px-4 py-16">
+      <button type="button" onClick={() => navigate(back.path, { replace: true })}
+        className="absolute top-4 left-4 inline-flex items-center gap-2 text-sm font-semibold color-txt-sub hover:color-txt-main">
+        <LuArrowLeft size={18} /> Back to {back.label}
+      </button>
+      <div className="my-auto shrink-0 w-[410px] py-5 color-shadow border-2 rounded-out color-bg">
         <img src={crown} className="w-28 m-auto object-contain h-20 mb-4" />
         <h1 className="txt-heading-colour text-center text-2xl mb-4">Sign Up</h1>
+        {feature && <p className="px-6 mb-4 text-sm text-center color-txt-sub">Sign-in required for {feature}.</p>}
 
         <p className="font-light text-red ml-0.5 text-center">{error?.general || ""}</p>
 
@@ -202,7 +209,7 @@ export default function SignUp() {
 
         <p
           className="txt-sub text-center hover:color-txt-accent duration-250 transition-all cursor-pointer"
-          onClick={() => navigate("./login")}
+          onClick={() => navigate(`/login${location.search}`, { state: location.state })}
         >
           Already have an account? <span className="underline">Login here.</span>
         </p>

@@ -3,6 +3,8 @@ import React, { createContext } from "react";
 
 // ======================== USER TYPE =========================== // 
 export type UserContextType = {
+    authReady: boolean,
+    setAuthReady: React.Dispatch<React.SetStateAction<boolean>>,
     user: {
     uid: string,   
     username: string,
@@ -22,6 +24,9 @@ export type UserContextType = {
     emailVerified: boolean,
     isPro?: boolean,
     subscriptionPeriodEnd?: number,
+    subscriptionPlan?: "monthly" | "annual",
+    subscriptionCancelAtPeriodEnd?: boolean,
+    billingSubscriptions?: Partial<Record<"stripe" | "apple", { active: boolean; plan: "monthly" | "annual" | null; periodEnd: number | null; cancelAtPeriodEnd: boolean; status: string }>>,
     /** Where the user actually pays today. Drives the "Manage
      *  subscription" routing on the account page so that a user who
      *  signed up via Stripe on web can still cancel from inside the
@@ -44,6 +49,8 @@ export type UserContextType = {
 
 // ======================== USER CONTEXT  =========================== //
 export const UserContext = createContext<UserContextType>({
+    authReady: false,
+    setAuthReady: () => {},
     user: {
     uid: '', 
     username: '', 

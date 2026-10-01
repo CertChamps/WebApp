@@ -1,3 +1,4 @@
+import type { SubscriptionPlan, PriceDetails, PaymentProviderName } from "../lib/payments";
 import { hasAceAccess } from "../lib/contentAccess";
 import { useContext, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -60,8 +61,12 @@ interface PaymentsTabProps {
     /** Display price for the upgrade card. Null while loading. */
     priceFormatted: string | null;
     pricePeriod: "year" | "month";
+    prices: Record<SubscriptionPlan, PriceDetails | null>;
+    selectedPlan: SubscriptionPlan;
+    onSelectPlan: (plan: SubscriptionPlan) => void;
+    priceLoading: boolean;
     onUpgrade: () => void;
-    onManage: () => void;
+    onManage: (provider?: PaymentProviderName) => void;
     onRestore: () => void;
 }
 
@@ -77,6 +82,7 @@ const PaymentsTab = ({
     activeProvider,
     priceFormatted,
     pricePeriod,
+    prices, selectedPlan, onSelectPlan, priceLoading,
     onUpgrade,
     onManage,
     onRestore,
@@ -111,7 +117,7 @@ const PaymentsTab = ({
                         className="rounded-2xl p-4 mb-6 bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400 flex items-center gap-3"
                     >
                         <LuCheck size={20} />
-                        <span className="font-medium">Welcome to ACE! Your account has been upgraded.</span>
+                        <span className="font-medium">{isPro ? "Welcome to ACE! Your account has been upgraded." : "Confirming your subscription… Access will update once payment is verified."}</span>
                     </motion.div>
                 )}
                 {paymentCancel && (
@@ -148,16 +154,17 @@ const PaymentsTab = ({
                                     <span className="ace-active-dot" />
                                     Active subscription
                                 </motion.div>
+                                <p className="color-txt-sub text-sm">{user?.subscriptionPlan === "monthly" ? "Monthly plan" : user?.subscriptionPlan === "annual" ? "Annual plan" : "ACE membership"}</p>
                                 {user?.subscriptionPeriodEnd && (
                                     <p className="color-txt-sub text-sm">
-                                        Renews on{" "}
+                                        {user?.subscriptionCancelAtPeriodEnd ? "Access ends on" : "Current period ends on"}{" "}
                                         {new Date(user.subscriptionPeriodEnd * 1000).toLocaleDateString(undefined, { dateStyle: "long" })}
                                     </p>
                                 )}
                                 <div className="pt-2 flex flex-wrap gap-3">
                                     <button
                                         type="button"
-                                        onClick={onManage}
+                                        onClick={() => onManage()}
                                         disabled={portalLoading}
                                         className="px-5 py-2.5 rounded-xl border border-color-border color-txt-main hover:color-bg-grey-10 disabled:opacity-60 disabled:cursor-not-allowed transition-all text-sm font-medium cursor-pointer"
                                     >
@@ -168,9 +175,19 @@ const PaymentsTab = ({
                             </div>
                         ) : (
                             <>
+                                <div className="grid grid-cols-2 gap-3 mt-5 mb-5" role="group" aria-label="Billing period">
+                                    {(["monthly", "annual"] as const).map(plan => (
+                                        <button key={plan} type="button" aria-pressed={selectedPlan === plan}
+                                            disabled={checkoutLoading} onClick={() => onSelectPlan(plan)}
+                                            className={`rounded-xl border p-4 text-left cursor-pointer ${selectedPlan === plan ? "border-current color-txt-accent color-bg-accent" : "border-color-border color-txt-sub"}`}>
+                                            <span className="block font-bold">{plan === "monthly" ? "Monthly" : "Annual"}</span>
+                                            <span className="block text-sm mt-1">{prices[plan] ? `${prices[plan]!.formatted}/${prices[plan]!.period}` : priceLoading ? "Loading…" : "Unavailable"}</span>
+                                        </button>
+                                    ))}
+                                </div>
                                 <div className="flex items-baseline gap-2 mt-4 mb-6">
                                     <span className="text-4xl font-extrabold color-txt-main">
-                                        {priceFormatted ?? "€30"}
+                                        {priceFormatted ?? (priceLoading ? "Loading…" : "Unavailable")}
                                     </span>
                                     <span className="color-txt-sub text-base font-medium">/ {pricePeriod}</span>
                                 </div>
@@ -194,7 +211,7 @@ const PaymentsTab = ({
                                 <motion.button
                                     type="button"
                                     onClick={onUpgrade}
-                                    disabled={checkoutLoading}
+                                    disabled={checkoutLoading || priceLoading || !priceFormatted}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     className="ace-cta-btn w-full py-3.5 rounded-xl font-bold text-white text-base disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer relative overflow-hidden"
@@ -203,7 +220,7 @@ const PaymentsTab = ({
                                     <span className="relative z-[1] color-txt-main font-bold">
                                         {checkoutLoading
                                             ? (activeProvider === "apple" ? "Opening Apple…" : "Redirecting to checkout…")
-                                            : `Subscribe for ${priceFormatted ?? "€30"}/${pricePeriod}`}
+                                            : priceFormatted ? `Subscribe for ${priceFormatted}/${pricePeriod}` : priceLoading ? "Loading prices…" : "Subscription unavailable"}
                                     </span>
                                 </motion.button>
                                 <p className="mt-3 text-center text-[11px] leading-relaxed color-txt-sub">
@@ -244,6 +261,14 @@ const PaymentsTab = ({
                     </div>
                 </div>
             </motion.div>
+            {(user?.stripeCustomerId || user?.paymentProvider === "apple" || user?.appleOriginalTransactionId || user?.billingSubscriptions?.apple) && (
+                <div className="space-y-3 text-sm color-txt-sub">
+                    <p>Manage your plan, payment details or cancellation with your billing provider.</p>
+                    {user?.stripeCustomerId && <button type="button" disabled={portalLoading} onClick={() => onManage("stripe")} className="underline cursor-pointer mr-4">Manage or cancel website subscription</button>}
+                    {(user?.paymentProvider === "apple" || user?.appleOriginalTransactionId || user?.billingSubscriptions?.apple) && <button type="button" disabled={portalLoading} onClick={() => onManage("apple")} className="underline cursor-pointer">Manage or cancel Apple subscription</button>}
+                    {!isPro && portalError && <p className="text-red-500">{portalError}</p>}
+                </div>
+            )}
         </motion.div>
     );
 };
@@ -838,13 +863,15 @@ const ManageAccount = () => {
         const success = searchParams.get("success");
         const cancel = searchParams.get("cancel");
         if (success === "pro") {
+            setActiveTab("payments");
             setPaymentSuccess(true);
-            setSearchParams({}, { replace: true });
+            setSearchParams({ tab: "payments" }, { replace: true });
             void refetchSubscriptionState(setUser);
         }
         if (cancel === "pro") {
+            setActiveTab("payments");
             setPaymentCancel(true);
-            setSearchParams({}, { replace: true });
+            setSearchParams({ tab: "payments" }, { replace: true });
         }
     }, [searchParams, setSearchParams, setUser]);
 
@@ -868,8 +895,8 @@ const ManageAccount = () => {
         }
     };
 
-    const handleManageSubscription = async () => {
-        await payments.openManagement();
+    const handleManageSubscription = async (provider?: PaymentProviderName) => {
+        await payments.openManagement(provider);
     };
 
     const handleRestore = async () => {
@@ -1034,7 +1061,11 @@ const ManageAccount = () => {
                         restoreLoading={payments.restoreLoading}
                         activeProvider={payments.activeProvider}
                         priceFormatted={payments.price?.formatted ?? null}
-                        pricePeriod={payments.price?.period ?? "year"}
+                        pricePeriod={payments.selectedPlan === "monthly" ? "month" : "year"}
+                        prices={payments.prices}
+                        selectedPlan={payments.selectedPlan}
+                        onSelectPlan={payments.selectPlan}
+                        priceLoading={payments.priceLoading}
                         onUpgrade={handleUpgradeToPro}
                         onManage={handleManageSubscription}
                         onRestore={handleRestore}
@@ -1079,7 +1110,7 @@ const ManageAccount = () => {
                             Delete account permanently?
                         </h2>
                         <p className="color-txt-sub text-sm leading-relaxed">
-                            This removes your profile, progress, posts, and subscription data. This cannot be undone.
+                            This removes your profile, progress, posts, and subscription data. This cannot be undone. Apple subscriptions must be cancelled separately in the App Store; deleting your account does not cancel Apple billing.
                         </p>
                         <p className="color-txt-main text-sm mt-4">
                             Type your username <strong>{user?.username}</strong> to confirm.

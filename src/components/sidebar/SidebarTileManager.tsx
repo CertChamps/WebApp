@@ -16,6 +16,8 @@ import ProGate from "../ProGate";
 import { UserContext } from "../../context/UserContext";
 import { canUseAceFeature } from "../../lib/contentAccess";
 import { DISCOVER_RESOURCE_PARAM, DISCOVER_SIDEBAR_PARAM } from "../../lib/discoverLinks";
+import { auth } from "../../../firebase";
+import { useRequireSignIn } from "../../hooks/useRequireSignIn";
 
 const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const };
 
@@ -94,9 +96,12 @@ export function SidebarTileManager({
   aiThinking = false,
   aiThinkingMessages,
 }: SidebarTileManagerProps) {
+  const { authReady, user } = useContext(UserContext);
+  const requireSignIn = useRequireSignIn();
   const [internalPanel, setInternalPanel] = useState<SidebarPanelId | null>("ai");
   const isControlled = controlledPanel !== undefined;
-  const openPanelId = isControlled ? controlledPanel : internalPanel;
+  const requestedPanel = isControlled ? controlledPanel : internalPanel;
+  const signedIn = authReady && !!auth.currentUser && user?.uid === auth.currentUser.uid;
 
   const showMarkingScheme =
     !!(markingSchemeBlob && markingSchemePageRange) ||
@@ -104,6 +109,9 @@ export function SidebarTileManager({
     !!markingSchemeLoading ||
     !!forceShowMarkingSchemeTab;
   const visiblePanels = PANELS.filter((p) => p.id !== "markingscheme" || showMarkingScheme);
+  const openPanelId = requestedPanel === "ai" && !signedIn
+    ? (showMarkingScheme ? "markingscheme" : "threads")
+    : requestedPanel;
 
   const setOpenPanel = useCallback(
     (next: SidebarPanelId | null) => {
@@ -114,10 +122,11 @@ export function SidebarTileManager({
   );
 
   const togglePanel = useCallback(
-    (id: SidebarPanelId) => {
+    async (id: SidebarPanelId) => {
+      if (id === "ai" && !await requireSignIn("AI tutor")) return;
       setOpenPanel(openPanelId === id ? null : id);
     },
-    [openPanelId, setOpenPanel]
+    [openPanelId, setOpenPanel, requireSignIn]
   )
 
   return (

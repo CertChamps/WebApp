@@ -1,0 +1,161 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    /** ==================== HELPER FUNCTIONS ==================== **/
+    function isAdmin() {
+      return request.auth != null &&
+        (request.auth.uid == "NkN9UBqoPEYpE21MC89fipLn0SP2"
+         || request.auth.uid == "gJIqKYlc1OdXUQGZQkR4IzfCIoL2"
+         || request.auth.uid == "AN3cIuQxmXfXb5kEmXuHcM5vWyH3");
+    }
+    function isVerified() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function billingFields() {
+      return [
+        'isPro', 'paymentProvider', 'subscriptionPlan', 'subscriptionPeriodEnd',
+        'subscriptionCancelAtPeriodEnd', 'billingSubscriptions',
+        'stripeCustomerId', 'stripeSubscriptionId', 'stripeCheckoutSessionId',
+        'appleOriginalTransactionId', 'appleProductId', 'googleProductId',
+        'isAdmin'
+      ];
+    }
+    function safeInitialBilling() {
+      return request.resource.data.get('isPro', false) == false
+        && !request.resource.data.keys().hasAny([
+          'paymentProvider', 'subscriptionPlan', 'subscriptionPeriodEnd',
+          'subscriptionCancelAtPeriodEnd', 'billingSubscriptions',
+          'stripeCustomerId', 'stripeSubscriptionId', 'stripeCheckoutSessionId',
+          'appleOriginalTransactionId', 'appleProductId', 'googleProductId'
+        ]);
+    }
+    function leavesBillingUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(billingFields());
+    }
+  	function isDiscoverEngagementUpdate() {
+  		return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'likeCount', 'ratingAverage', 'ratingCount']);
+		}
+
+    /** ==================== COLLECTION RULES ==================== **/
+    match /user-data/{userId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && safeInitialBilling();
+      allow update: if request.auth != null
+        && leavesBillingUnchanged();
+      allow delete: if false;
+      match /{subcollection}/{subdoc} {
+        allow read: if true;
+        allow write: if true;
+        match /{allPaths=**} {
+          allow read: if true;
+          allow write: if true;
+        }
+      }
+    }
+
+    match /questions/{questionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+      match /{allPaths=**} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isAdmin() || isVerified();
+      allow update, delete: if isAdmin() || (isVerified() && resource.data.authorId == request.auth.uid);
+      match /{allPaths=**} {
+        allow read: if true;
+        allow create: if isAdmin() || isVerified();
+        allow update, delete: if isAdmin() || isVerified();
+      }
+    }
+
+    match /decks/{deckId} {
+      allow read: if true;
+      allow create: if isAdmin() || isVerified();
+      allow update, delete: if isAdmin() || (isVerified() && resource.data.userId == request.auth.uid);
+      match /{allPaths=**} {
+        allow read: if true;
+        allow create: if isAdmin() || isVerified();
+        allow update, delete: if isAdmin() || isVerified();
+      }
+    }
+
+    match /certchamps-questions/{docId} {
+      allow read: if true;
+      allow write: if true;
+      match /{allPaths=**} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    match /feedback/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (isAdmin() || resource.data.userId == request.auth.uid);
+    }
+
+  /** ==================== DISCOVER ==================== **/
+  match /discover-notes/{noteId} {
+    allow read: if request.auth != null
+      || resource.data.moderationStatus == 'approved';
+
+    allow create: if request.auth != null
+      && request.resource.data.userId == request.auth.uid;
+
+    allow update: if request.auth != null && (
+      isAdmin()
+      || (
+        resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+      )
+      || isDiscoverEngagementUpdate()
+    );
+
+    allow delete: if request.auth != null
+      && (resource.data.userId == request.auth.uid || isAdmin());
+
+    match /comments/{commentId} {
+      allow read: if request.auth != null
+        || get(/databases/$(database)/documents/discover-notes/$(noteId)).data.moderationStatus == 'approved';
+
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 500;
+
+      allow update, delete: if request.auth != null
+        && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /ratings/{ratingUserId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.auth.uid == ratingUserId
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && request.auth.uid == ratingUserId;
+    }
+
+    match /likes/{likeUserId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.auth.uid == likeUserId
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && request.auth.uid == likeUserId;
+    }
+  }
+
+    /** ==================== GLOBAL PROTECTION ==================== **/
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

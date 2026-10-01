@@ -48,6 +48,7 @@ import SaveQuestionToCanvasModal from "../components/whiteboards/SaveQuestionToC
 import { buildImageAttachment } from "../lib/whiteboardAttachments";
 import type { AttachedQuestion } from "../data/whiteboards";
 import "../styles/practiceBrowser.css";
+import { useRequireSignIn } from "../hooks/useRequireSignIn";
 
 const LEVEL_ORDER = ["higher", "ordinary", "foundation"];
 const EXAM_CYCLE_IDS = Object.keys(EXAM_CYCLES) as ExamCycleId[];
@@ -249,6 +250,7 @@ function QuestionCard({
 }
 
 function PracticeBrowserInner() {
+  const requireSignIn = useRequireSignIn();
   const { options } = useContext(OptionsContext);
   const [searchParams, setSearchParams] = useSearchParams();
   const subjectId = searchParams.get("subject");
@@ -800,7 +802,8 @@ function PracticeBrowserInner() {
                       else questionElements.current.delete(question.key);
                     }}
                     onActivate={() => activateQuestion(index)}
-                    onAddToCanvas={() => {
+                    onAddToCanvas={async () => {
+                      if (!await requireSignIn("Save to Whiteboards")) return;
                       if (!storageSubject || !selectedLevel) return;
                       const topicForAttach =
                         selectedTopic ??

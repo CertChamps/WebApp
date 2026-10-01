@@ -20,7 +20,7 @@ import { stripeProvider } from "./stripePayment";
 import { appleProvider } from "./applePayment";
 import { iapDebug } from "./paymentsDebug";
 
-export type { PaymentProvider, PaymentProviderName, PriceDetails, PurchaseResult } from "./types";
+export type { PaymentProvider, PaymentProviderName, PriceDetails, PurchaseResult, SubscriptionPlan } from "./types";
 export { ACE_ENTITLEMENT_ID, ACE_PRODUCT_IDENTIFIER, isAppleIapAvailable } from "./applePayment";
 export { initPayments, setPaymentsUser, clearPaymentsUser } from "./initPayments";
 

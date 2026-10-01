@@ -11,6 +11,7 @@ import { getVisualViewportBounds, isKeyboardOpen, subscribeVisualViewport } from
 //import CustomCursor from "./components/CustomCursor"
 
 export default function App() {
+  const [authReady, setAuthReady] = useState(false);
   // =================== CONTEXT SETUP ===================== //
   const [user, setUserState] = useState<any>(() => {
     const storedUser = localStorage.getItem("USER");
@@ -86,12 +87,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!authReady || !user?.uid) return;
     void registerPushNotifications(user.uid);
-  }, [user?.uid]);
+  }, [authReady, user?.uid]);
 
   useEffect(() => {
-    if (!user?.uid || !Capacitor.isNativePlatform()) return;
+    if (!authReady || !user?.uid || !Capacitor.isNativePlatform()) return;
     let cancelled = false;
     let stop: (() => void) | null = null;
     void startNativeShareIntake().then((cleanup) => {
@@ -102,7 +103,7 @@ export default function App() {
       cancelled = true;
       stop?.();
     };
-  }, [user?.uid]);
+  }, [authReady, user?.uid]);
 
   // Keep the app shell inside the visible viewport so iOS keyboard open
   // does not slide the top bar off-screen.
@@ -177,7 +178,7 @@ export default function App() {
   return (
     // ================ CONTEXT PROVIDERS ===================== //
     <OptionsContext.Provider value={{ options, setOptions }}>
-      <UserContext.Provider value={{ user, setUser }}>
+      <UserContext.Provider value={{ user: authReady ? user : {}, setUser, authReady, setAuthReady }}>
           {/* // ================ DIV THEME WRAPPER ===================== // */}
           <div id="themed-root" data-theme={options.theme}>
             <div className="app-viewport color-bg flex flex-row overflow-hidden">
