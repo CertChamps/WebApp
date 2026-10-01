@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
@@ -29,6 +29,8 @@ import { captureWebsiteThumbnailBlob } from "../../lib/discoverCapture";
 import type { QuestionDiscoveryContext } from "../../lib/questionDiscovery";
 import { incomingShareDisplayName, incomingShareFile, type NativeIncomingShare } from "../../lib/nativeShareIntake";
 import { linkedQuestionsPayload } from "../../lib/discoverLinks";
+import { getThemedPortalTarget } from "../../utils/themedPortal";
+import { acquireModalViewportLock, getVisualViewportBounds, isKeyboardOpen, subscribeVisualViewportResize } from "../../utils/visualViewport";
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
@@ -57,6 +59,23 @@ const PLACEHOLDER_TITLES = [
   "Chemistry definitions cheatsheet",
   "Free history timeline PDFs",
 ];
+
+const KEYBOARD_FIELD_GAP = 14;
+
+function isEditableElement(target: EventTarget | null): target is HTMLElement {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.matches("input, textarea, [contenteditable='true']");
+}
+
+function currentTranslateY(element: HTMLElement): number {
+  const transform = window.getComputedStyle(element).transform;
+  if (!transform || transform === "none") return 0;
+  try {
+    return new DOMMatrixReadOnly(transform).m42;
+  } catch {
+    return 0;
+  }
+}
 
 function normaliseUrl(input: string): string | null {
   const trimmed = input.trim();
@@ -139,6 +158,10 @@ export default function DiscoverShareModal({
   const syncedFavouriteSubjectIds = useSyncedFavouriteSubjectIds();
   const thumbnailInputRef = useRef<HTMLInputElement | null>(null);
   const pdfInputRef = useRef<HTMLInputElement | null>(null);
+  const modalPanelRef = useRef<HTMLDivElement | null>(null);
+  const [modalHeight, setModalHeight] = useState<number | null>(null);
+  const [modalViewportHeight, setModalViewportHeight] = useState<number | null>(null);
+  const [modalViewportWidth, setModalViewportWidth] = useState<number | null>(null);
   const [placeholderTitle] = useState(
     () => PLACEHOLDER_TITLES[Math.floor(Math.random() * PLACEHOLDER_TITLES.length)]
   );
@@ -156,6 +179,83 @@ export default function DiscoverShareModal({
   useEffect(() => {
     setFavouriteSubjectIds(syncedFavouriteSubjectIds);
   }, [syncedFavouriteSubjectIds]);
+
+  // Lock the sheet to its pre-keyboard height. The visual viewport may shrink
+  // several times during the iOS keyboard animation; letting CSS remeasure the
+  // panel on each step causes the resize/jump loop this modal must avoid.
+  useLayoutEffect(() => {
+    if (!open) {
+      setModalHeight(null);
+      setModalViewportHeight(null);
+      setModalViewportWidth(null);
+      return;
+    }
+    const layoutHeight = window.innerHeight;
+    setModalViewportHeight(layoutHeight);
+    setModalViewportWidth(window.innerWidth);
+    setModalHeight(Math.min(920, Math.round(layoutHeight * 0.92)));
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    return acquireModalViewportLock();
+  }, [open]);
+
+  // Keep the modal rigid and move it as one sheet when the software keyboard
+  // covers the active field. Re-running on input makes the sheet snap back to
+  // the correct position if the user scrolled the form before continuing to type.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const panel = modalPanelRef.current;
+    if (!panel) return;
+
+    let animationFrame = 0;
+    const syncToKeyboard = () => {
+      const bounds = getVisualViewportBounds();
+      const active = document.activeElement;
+
+      if (!isKeyboardOpen(bounds) || !isEditableElement(active) || !panel.contains(active)) {
+        panel.style.transform = "translate3d(0, 0, 0)";
+        return;
+      }
+
+      const field = active.closest<HTMLElement>(".themed-input-shell") ?? active;
+      const rect = field.getBoundingClientRect();
+      const renderedShift = currentTranslateY(panel);
+      const baseTop = rect.top - renderedShift;
+      const baseBottom = rect.bottom - renderedShift;
+      const visibleTop = bounds.top + KEYBOARD_FIELD_GAP;
+      const visibleBottom = bounds.bottom - KEYBOARD_FIELD_GAP;
+
+      // Start from the sheet's resting position every time. This prevents an
+      // earlier field's offset from accumulating as focus moves through the form.
+      let nextShift = Math.min(0, visibleBottom - baseBottom);
+      if (baseTop + nextShift < visibleTop) {
+        nextShift = Math.min(0, visibleTop - baseTop);
+      }
+
+      panel.style.transform = `translate3d(0, ${Math.round(nextShift)}px, 0)`;
+    };
+
+    const scheduleSync = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(syncToKeyboard);
+    };
+
+    scheduleSync();
+    panel.addEventListener("focusin", scheduleSync);
+    panel.addEventListener("input", scheduleSync);
+    panel.addEventListener("keydown", scheduleSync);
+    const unsubscribe = subscribeVisualViewportResize(scheduleSync);
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      panel.removeEventListener("focusin", scheduleSync);
+      panel.removeEventListener("input", scheduleSync);
+      panel.removeEventListener("keydown", scheduleSync);
+      unsubscribe();
+      panel.style.transform = "";
+    };
+  }, [open]);
 
   const resetForm = () => {
     setTitle("");
@@ -722,15 +822,30 @@ export default function DiscoverShareModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-6 bg-black/50 backdrop-blur-sm"
+      className="discover-share-modal keyboard-modal-root fixed inset-0 z-[80]"
       onClick={closeForm}
     >
+      <div className="keyboard-modal-backdrop" aria-hidden />
       <div
-        className="flex h-[min(920px,92vh)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl color-bg shadow-md"
-        onClick={(e) => e.stopPropagation()}
+        className="absolute left-0 top-0 flex items-center justify-center p-3 sm:p-6"
+        style={
+          modalViewportHeight == null || modalViewportWidth == null
+            ? undefined
+            : { height: `${modalViewportHeight}px`, width: `${modalViewportWidth}px` }
+        }
       >
+        <div
+          ref={modalPanelRef}
+          className="discover-share-modal__panel keyboard-modal-panel flex h-[min(920px,92vh)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl color-bg shadow-md"
+          style={modalHeight == null ? undefined : { height: `${modalHeight}px` }}
+          onClick={(e) => e.stopPropagation()}
+          data-visual-viewport-modal="true"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="discover-share-modal-title"
+        >
         <div className="flex shrink-0 items-center justify-between gap-4 px-6 pt-6 pb-4">
-          <h2 className="text-xl font-bold color-txt-main">
+          <h2 id="discover-share-modal-title" className="text-xl font-bold color-txt-main">
             Share a free resource
           </h2>
           <button
@@ -743,7 +858,7 @@ export default function DiscoverShareModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-minimal px-6">
+        <div className="keyboard-modal-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-minimal px-6">
           {linkedQuestion && (
             <div className="mb-5 rounded-2xl color-bg-accent px-4 py-3">
               <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide color-txt-accent">
@@ -763,7 +878,7 @@ export default function DiscoverShareModal({
                 value={title}
                 onChange={(e) => setTitle(e.target.value.slice(0, MAX_TITLE))}
                 placeholder={placeholderTitle}
-                className="w-full rounded-xl color-bg-grey-5 color-txt-main px-4 py-3 text-sm outline-none placeholder:color-txt-sub"
+                className="themed-standalone-field w-full rounded-xl color-bg-grey-5 color-txt-main px-4 py-3 text-sm outline-none placeholder:color-txt-sub"
               />
               <p className="text-[11px] color-txt-sub text-right">
                 {title.length}/{MAX_TITLE}
@@ -779,7 +894,7 @@ export default function DiscoverShareModal({
                 onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESCRIPTION))}
                 placeholder="What's in the resource? Which subjects and topics does it cover?"
                 rows={4}
-                className="w-full rounded-xl color-bg-grey-5 color-txt-main px-4 py-3 text-sm outline-none resize-none placeholder:color-txt-sub"
+                className="themed-standalone-field w-full rounded-xl color-bg-grey-5 color-txt-main px-4 py-3 text-sm outline-none resize-none placeholder:color-txt-sub"
               />
               <p className="text-[11px] color-txt-sub text-right">
                 {description.length}/{MAX_DESCRIPTION}
@@ -841,7 +956,7 @@ export default function DiscoverShareModal({
                     <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
                       Paste the link
                     </label>
-                    <div className="flex items-center gap-2 rounded-xl color-bg-grey-5 px-4 py-3">
+                    <div className="themed-input-shell flex items-center gap-2 rounded-xl color-bg-grey-5 px-4 py-3">
                       <LuLink size={16} className="color-txt-sub shrink-0" />
                       <input
                         type="url"
@@ -1002,7 +1117,7 @@ export default function DiscoverShareModal({
                 <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
                   Topics
                 </label>
-                <div className="flex items-center gap-2 rounded-xl color-bg-grey-5 px-3 py-2">
+                <div className="themed-input-shell flex items-center gap-2 rounded-xl color-bg-grey-5 px-3 py-2">
                   <span className="text-sm color-txt-sub">#</span>
                   <input
                     type="text"
@@ -1055,7 +1170,7 @@ export default function DiscoverShareModal({
                       }
                     }}
                     placeholder="Username or uid (leave blank for yourself)"
-                    className="flex-1 min-w-[16rem] rounded-xl color-bg-grey-5 color-txt-main px-4 py-3 text-sm outline-none placeholder:color-txt-sub"
+                    className="themed-standalone-field flex-1 min-w-[16rem] rounded-xl color-bg-grey-5 color-txt-main px-4 py-3 text-sm outline-none placeholder:color-txt-sub"
                   />
                   <button
                     type="button"
@@ -1076,7 +1191,7 @@ export default function DiscoverShareModal({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-color-border px-6 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-2 px-6 py-4">
           {formError && (
             <p className="mr-auto text-sm text-red-500">{formError}</p>
           )}
@@ -1107,8 +1222,9 @@ export default function DiscoverShareModal({
             )}
           </button>
         </div>
+        </div>
       </div>
     </div>,
-    document.body
+    getThemedPortalTarget()
   );
 }

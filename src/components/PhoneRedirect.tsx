@@ -13,7 +13,8 @@ export default function PhoneRedirect() {
       (/iPad/i.test(navigator.userAgent) ||
         (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
 
-    if (touch && width <= 600 && !nativeIPad) {
+    const publicOrAuthPage = ["/", "/login", "/forgot-password", "/verify-email", "/onboarding", "/practice", "/discover", "/mobileRedirect"].includes(location.pathname);
+    if (touch && width <= 600 && !publicOrAuthPage) {
       navigate("/mobileRedirect");
     }
   }, [navigate, location]);

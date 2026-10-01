@@ -13,11 +13,12 @@
  */
 
 export type PaymentProviderName = "stripe" | "apple";
+export type SubscriptionPlan = "monthly" | "annual";
 
 /** Pricing info to display on the upgrade card. Apple gives a localized
- *  price string from StoreKit; Stripe has a single hardcoded EUR price. */
+ *  price string from StoreKit; Stripe has fixed EUR prices. */
 export interface PriceDetails {
-    /** Pre-formatted display string, e.g. "€30.00" or "$32.99". */
+    /** Pre-formatted display string, e.g. "€40.00" or "$32.99". */
     formatted: string;
     /** Cadence label, e.g. "year". */
     period: "year" | "month";
@@ -48,13 +49,13 @@ export interface PaymentProvider {
     isReady(): Promise<boolean>;
 
     /** Get the displayable subscription price. Apple returns the
-     *  localized StoreKit price; Stripe returns a fixed €30/year. */
-    getPrice(): Promise<PriceDetails | null>;
+     *  localized StoreKit price; Stripe returns €4/month or €40/year. */
+    getPrice(plan: SubscriptionPlan): Promise<PriceDetails | null>;
 
     /** Kick off purchase. For Apple this resolves once the StoreKit
      *  sheet closes; for Stripe it returns immediately after the
      *  browser is redirected to Checkout. */
-    purchase(): Promise<PurchaseResult>;
+    purchase(plan: SubscriptionPlan): Promise<PurchaseResult>;
 
     /** Open whatever the platform considers the "manage subscription"
      *  surface (Stripe Billing Portal for stripe, iOS Settings sheet

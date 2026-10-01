@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UserContext } from "../context/UserContext";
 import { getStorage, ref, getDownloadURL } from "firebase/storage";
@@ -22,7 +22,8 @@ import {
   CURRENT_TERMS_VERSION,
 } from "../lib/legal";
 
-type authprops = { prevRoute?: string };
+type authprops = { prevRoute?: string; observeSession?: boolean };
+let manualAuthInProgress = false;
 
 function getCurrentAppPath(): string {
   const hashPath = window.location.hash.replace(/^#/, "");
@@ -37,14 +38,12 @@ function parseOnboardingStatus(value: unknown): boolean | undefined {
 }
 
 export default function useAuthentication(props?: authprops) {
-  const { setUser } = useContext(UserContext);
+  const { setUser, setAuthReady } = useContext(UserContext);
   const [error, setError] = useState<any>({});
   
-  // Track if we are currently handling a manual login to prevent the listener from interfering
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-
   const storage = getStorage();
   const navigate = useNavigate();
+  const setupRef = useRef<typeof userSetup | null>(null);
 
   /** ==================== CREATE / SETUP USER ==================== */
   const createUser = async (
@@ -90,6 +89,7 @@ export default function useAuthentication(props?: authprops) {
       } : {}),
     };
 
+    if (auth.currentUser?.uid !== uid) return;
     // 1. Set Context
     setUser({
       ...userData,
@@ -105,9 +105,11 @@ export default function useAuthentication(props?: authprops) {
     // 2. Write to DB
     await setDoc(doc(db, "user-data", uid), userData);
 
+    // Session restoration leaves public pages in place; auth entry routes redirect.
+    if (props?.observeSession) return;
     // 3. Redirect
     if (!emailVerified) {
-      navigate("/verify-email");
+      navigate(`/verify-email?${new URLSearchParams({ returnTo: props?.prevRoute ?? "/practice" })}`);
     } else {
       navigate(getPostAuthPath({ hasCompletedOnboarding: false }, props?.prevRoute));
     }
@@ -122,6 +124,7 @@ const userSetup = async (uid: string, username: string, email: string, legalAcce
 
     const userDoc = await getDoc(doc(db, "user-data", uid));
     const currentUser = auth.currentUser;
+    if (currentUser?.uid !== uid) return;
     const isEmailVerified = currentUser?.emailVerified ?? false;
 
     if (userDoc.exists()) {
@@ -175,6 +178,7 @@ const userSetup = async (uid: string, username: string, email: string, legalAcce
         setFavouriteSubjectIds(studyingSubjects);
       }
 
+      if (auth.currentUser?.uid !== uid) return;
       setUser({
         uid: userDoc.id,
         username: userData.username || username,
@@ -193,6 +197,9 @@ const userSetup = async (uid: string, username: string, email: string, legalAcce
         isAdmin: userData.isAdmin === true || isAdminUid(userDoc.id, userData.email || email),
         isPro: userData.isPro === true,
         subscriptionPeriodEnd: typeof userData.subscriptionPeriodEnd === "number" ? userData.subscriptionPeriodEnd : undefined,
+        subscriptionPlan: userData.subscriptionPlan,
+        subscriptionCancelAtPeriodEnd: userData.subscriptionCancelAtPeriodEnd === true,
+        billingSubscriptions: userData.billingSubscriptions ?? {},
         paymentProvider:
           userData.paymentProvider === "stripe" || userData.paymentProvider === "apple"
             ? userData.paymentProvider
@@ -228,16 +235,18 @@ const userSetup = async (uid: string, username: string, email: string, legalAcce
         console.warn("Failed to log daily login:", e);
       }
 
+      if (props?.observeSession) return { hasCompletedOnboarding };
+
       // --- NAVIGATION LOGIC ---
-      if (!isEmailVerified) {
+      if (currentUser?.providerData.some((provider) => provider.providerId === "password") && !isEmailVerified) {
         console.log("3. Redirecting to verify-email");
-        navigate("/verify-email");
+        navigate(`/verify-email?${new URLSearchParams({ returnTo: props?.prevRoute ?? "/practice" })}`);
         return { hasCompletedOnboarding };
       }
 
       const authPages = ["/login", "/signup", "/"];
       const isAuthPage = authPages.some(
-        (path) => currentPath === path || currentPath === `${path}/`
+        (path) => getCurrentAppPath() === path || getCurrentAppPath() === `${path}/`
       );
 
       if (isAuthPage) {
@@ -263,17 +272,20 @@ const userSetup = async (uid: string, username: string, email: string, legalAcce
 };
 
 /** ==================== AUTH LISTENER ==================== */
+setupRef.current = userSetup;
 useEffect(() => {
+  if (!props?.observeSession) return;
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
-    // We only want the auto-listener to run if the user is NOT in the middle 
-    // of a manual Google Login button click.
-    if (user && user.email && !isLoggingIn) {
-      console.log("Auth State Changed (Auto-Login)");
-      await userSetup(user.uid, user.displayName || "", user.email);
+    // Manual sign-in creates/hydrates its own profile, including signup details.
+    if (user && user.email && !manualAuthInProgress) {
+      await setupRef.current?.(user.uid, user.displayName || "", user.email);
+    } else if (!user) {
+      setUser({});
     }
+    setAuthReady(true);
   });
   return () => unsubscribe();
-}, [isLoggingIn]); // Listener restarts if isLoggingIn changes
+}, [props?.observeSession, setAuthReady, setUser]);
 
 
   /** ==================== GOOGLE LOGIN ====================
@@ -281,7 +293,7 @@ useEffect(() => {
    * iOS/Android Capacitor and the existing web popup on the browser.
    */
   const loginWithGoogle = async (legalAccepted: boolean = false) => {
-    setIsLoggingIn(true); // Stop auto-listener
+    manualAuthInProgress = true;
     try {
       const result = await signInWithGoogle();
       const user = result.user;
@@ -300,7 +312,7 @@ useEffect(() => {
         general: code ? `Google login failed (${code}): ${message}` : `Google login failed: ${message}`,
       }));
     } finally {
-      setIsLoggingIn(false);
+      manualAuthInProgress = false;
     }
   };
 
@@ -310,7 +322,7 @@ useEffect(() => {
    * (including iPad Safari).
    */
   const loginWithApple = async (legalAccepted: boolean = false) => {
-    setIsLoggingIn(true);
+    manualAuthInProgress = true;
     try {
       const result = await signInWithApple();
       const user = result.user;
@@ -344,7 +356,7 @@ useEffect(() => {
         }));
       }
     } finally {
-      setIsLoggingIn(false);
+      manualAuthInProgress = false;
     }
   };
 
@@ -394,6 +406,7 @@ useEffect(() => {
     // -------------------------------
 
     try {
+      manualAuthInProgress = true;
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -409,25 +422,25 @@ useEffect(() => {
       else if (code === "auth/weak-password")
         setError((prev: any) => ({ ...prev, password: "Password too weak." }));
       else setError((prev: any) => ({ ...prev, general: "Something went wrong. Try again." }));
+    } finally {
+      manualAuthInProgress = false;
     }
   };
 
   /** ==================== SIGN IN EMAIL ==================== */
   const signInWithEmail = async (email: string, password: string) => {
     setError({});
+    manualAuthInProgress = true;
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       if (user) {
-        if (!user.emailVerified) {
-          await userSetup(user.uid, "", email);
-          navigate("/verify-email");
-        } else {
-          await userSetup(user.uid, "", email);
-        }
+        await userSetup(user.uid, "", email);
       }
     } catch (err: any) {
       setError((prev: any) => ({ ...prev, general: "Invalid email or password." }));
+    } finally {
+      manualAuthInProgress = false;
     }
   };
 

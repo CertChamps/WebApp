@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { LuX } from "react-icons/lu";
 import { getThemedPortalTarget } from "../../utils/themedPortal";
-import { getVisualViewportBounds, subscribeVisualViewport } from "../../utils/visualViewport";
+import { acquireModalViewportLock, getVisualViewportBounds, isKeyboardOpen, subscribeVisualViewportResize } from "../../utils/visualViewport";
 
 type Props = {
   title: string;
@@ -17,12 +17,22 @@ type Props = {
 };
 
 const BACKDROP_TRANSITION = { duration: 0.22, ease: [0.22, 1, 0.36, 1] as const };
-const PANEL_TRANSITION = { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const };
+const KEYBOARD_FIELD_GAP = 14;
 
-function isEditableTarget(target: EventTarget | null): boolean {
+function isEditableTarget(target: EventTarget | null): target is HTMLElement {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
+}
+
+function currentTranslateY(element: HTMLElement): number {
+  const transform = window.getComputedStyle(element).transform;
+  if (!transform || transform === "none") return 0;
+  try {
+    return new DOMMatrixReadOnly(transform).m42;
+  } catch {
+    return 0;
+  }
 }
 
 /** Shared modal shell with a fade and keyboard-aware viewport frame. */
@@ -35,34 +45,37 @@ export default function WhiteboardModal({
   maxWidthClass = "max-w-lg",
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const bodyRef = useRef<HTMLDivElement>(null);
-  const frameRef = useRef<HTMLDivElement>(null);
-  const initialBounds = useRef(getVisualViewportBounds()).current;
+  const layoutBounds = useRef({ width: window.innerWidth, height: window.innerHeight }).current;
 
-  // Update the viewport frame before measuring the field. React's asynchronous
-  // state updates and forced page scrolling fight iOS's keyboard pan animation.
+  useLayoutEffect(() => acquireModalViewportLock(), []);
+
+  // Keep the panel at its original size and translate the entire sheet only when
+  // the focused field would otherwise sit behind the software keyboard.
   useLayoutEffect(() => {
     let animationFrame = 0;
     const sync = () => {
       const bounds = getVisualViewportBounds();
-      const frame = frameRef.current;
-      if (!frame) return;
-      frame.style.top = `${bounds.offsetTop}px`;
-      frame.style.left = `${bounds.left}px`;
-      frame.style.width = `${bounds.width}px`;
-      frame.style.height = `${bounds.height}px`;
+      const panel = panelRef.current;
+      if (!panel) return;
       const active = document.activeElement;
-      const scroller = bodyRef.current;
-      if (active instanceof HTMLElement && scroller?.contains(active) && isEditableTarget(active)) {
-        const visible = scroller.getBoundingClientRect();
-        const field = active.getBoundingClientRect();
-        const margin = 16;
-        if (field.bottom > visible.bottom - margin) {
-          scroller.scrollTop += field.bottom - (visible.bottom - margin);
-        } else if (field.top < visible.top + margin) {
-          scroller.scrollTop -= visible.top + margin - field.top;
-        }
+
+      if (!isKeyboardOpen(bounds) || !isEditableTarget(active) || !panel.contains(active)) {
+        panel.style.transform = "translate3d(0, 0, 0)";
+        return;
       }
+
+      const field = active.closest<HTMLElement>(".themed-input-shell") ?? active;
+      const rect = field.getBoundingClientRect();
+      const renderedShift = currentTranslateY(panel);
+      const baseTop = rect.top - renderedShift;
+      const baseBottom = rect.bottom - renderedShift;
+      const visibleTop = bounds.top + KEYBOARD_FIELD_GAP;
+      const visibleBottom = bounds.bottom - KEYBOARD_FIELD_GAP;
+      let nextShift = Math.min(0, visibleBottom - baseBottom);
+      if (baseTop + nextShift < visibleTop) {
+        nextShift = Math.min(0, visibleTop - baseTop);
+      }
+      panel.style.transform = `translate3d(0, ${Math.round(nextShift)}px, 0)`;
     };
     const schedule = () => {
       window.cancelAnimationFrame(animationFrame);
@@ -72,39 +85,39 @@ export default function WhiteboardModal({
     const panel = panelRef.current;
     panel?.addEventListener("focusin", schedule);
     panel?.addEventListener("input", schedule);
-    const unsubscribe = subscribeVisualViewport(schedule);
+    panel?.addEventListener("keydown", schedule);
+    const unsubscribe = subscribeVisualViewportResize(schedule);
     return () => {
       window.cancelAnimationFrame(animationFrame);
       panel?.removeEventListener("focusin", schedule);
       panel?.removeEventListener("input", schedule);
+      panel?.removeEventListener("keydown", schedule);
       unsubscribe();
+      if (panel) panel.style.transform = "";
     };
   }, []);
 
   return createPortal(
     <motion.div
-      className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm"
+      className="keyboard-modal-root fixed inset-0 z-[70]"
       onClick={onClose}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={BACKDROP_TRANSITION}
     >
+      <div className="keyboard-modal-backdrop keyboard-modal-backdrop--light" aria-hidden />
       <div
-        ref={frameRef}
         className="absolute flex items-center justify-center px-4 py-3"
-        style={{ top: initialBounds.offsetTop, left: initialBounds.left, width: initialBounds.width, height: initialBounds.height }}
+        style={{ top: 0, left: 0, width: layoutBounds.width, height: layoutBounds.height }}
       >
-        <motion.div
+        <div
           ref={panelRef}
-          className={`relative z-10 w-full ${maxWidthClass} color-bg rounded-2xl overflow-hidden flex flex-col max-h-full`}
+          className={`keyboard-modal-panel relative z-10 w-full ${maxWidthClass} color-bg rounded-2xl overflow-hidden flex flex-col max-h-full`}
           onClick={(e) => e.stopPropagation()}
           data-visual-viewport-modal="true"
           role="dialog"
           aria-modal="true"
           aria-label={title}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={PANEL_TRANSITION}
         >
           <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
             <h2 className="text-lg font-bold color-txt-main">{title}</h2>
@@ -122,14 +135,13 @@ export default function WhiteboardModal({
           </div>
 
           <div
-            ref={bodyRef}
-            className="px-5 pb-4 flex-1 min-h-0 overflow-y-auto overscroll-contain scrollbar-minimal [&_input]:text-base [&_textarea]:text-base"
+            className="keyboard-modal-scroll px-5 pb-4 flex-1 min-h-0 overflow-y-auto overscroll-contain scrollbar-minimal [&_input]:text-base [&_textarea]:text-base"
           >
             {children}
           </div>
 
           {footer && <div className="px-5 pb-5 pt-2 shrink-0">{footer}</div>}
-        </motion.div>
+        </div>
       </div>
     </motion.div>,
     getThemedPortalTarget()

@@ -21,6 +21,7 @@ import { aiResponseError, authenticatedAiFetch, METERED_CHAT_API_URL } from "../
 import { deleteObject, getDownloadURL, ref as storageRef } from "firebase/storage";
 import { db, storage } from "../../firebase";
 import { UserContext } from "../context/UserContext";
+import { useRequireSignIn } from "../hooks/useRequireSignIn";
 import { isAdminUid } from "../constants/adminUids";
 import NotificationBell from "../components/social/NotificationBell";
 import DiscoverFiltersModal, { type DiscoverFilterType, type DiscoverSortBy } from "../components/discover/DiscoverFiltersModal";
@@ -55,7 +56,7 @@ import {
     LuChevronDown,
     LuChevronLeft,
 } from "react-icons/lu";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import VideoEmbedModal from "../components/discover/VideoEmbedModal";
 import DiscoverMediaPreview from "../components/discover/DiscoverMediaPreview";
 import LinkedQuestionJump from "../components/discover/LinkedQuestionJump";
@@ -481,9 +482,12 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
 }
 
 export default function Discover() {
+    const requireSignIn = useRequireSignIn();
     const { user } = useContext(UserContext);
     const isAdmin = isAdminUid(user?.uid, user?.email);
     const navigate = useNavigate();
+    const location = useLocation();
+    const backState = { backTo: location.pathname + location.search };
     const [searchParams, setSearchParams] = useSearchParams();
     const linkedQuestion = useMemo(() => {
         const id = searchParams.get("questionId")?.trim();
@@ -591,12 +595,17 @@ export default function Discover() {
                 setSelectedSubjectId(linkedQuestion.subjectId);
             }
         }
-        if (searchParams.get("share") === "1") setShowForm(true);
-    }, [linkedQuestion, searchParams]);
+        if (searchParams.get("share") === "1") {
+            void requireSignIn("Share resource").then((allowed) => { if (allowed) setShowForm(true); });
+        }
+    }, [linkedQuestion, searchParams, requireSignIn]);
 
     useEffect(() => {
         const resourceId = searchParams.get("resource")?.trim();
-        if (!resourceId) return;
+        if (!resourceId) {
+            setSelectedResource(null);
+            return;
+        }
         const note = notes.find((entry) => entry.id === resourceId);
         if (note && note.moderationStatus === "approved") {
             setSelectedResource(noteToResource(note));
@@ -870,8 +879,12 @@ export default function Discover() {
         : null;
 
     const subjectChips = useMemo(
-        () => favouriteSubjects.filter((subject): subject is NonNullable<typeof subject> => Boolean(subject)),
-        [favouriteSubjects]
+        () => {
+            const chips = favouriteSubjects.filter((subject): subject is NonNullable<typeof subject> => Boolean(subject));
+            if (selectedSubject && !chips.some(subject => subject.id === selectedSubject.id)) chips.unshift(selectedSubject);
+            return chips;
+        },
+        [favouriteSubjects, selectedSubject]
     );
 
     const resources = useMemo(() => {
@@ -906,6 +919,7 @@ export default function Discover() {
     }, []);
 
     const handleAISearch = useCallback(async () => {
+        if (!await requireSignIn("AI Search")) return;
         const prompt = searchTerm.trim();
         if (!prompt) {
             setSearchLoading(false);
@@ -1009,15 +1023,16 @@ export default function Discover() {
         }, 320);
     }, [aiSearchEnabled, handleAISearch, searchTerm]);
 
-    const handleAiSearchToggle = useCallback((event?: { preventDefault: () => void; stopPropagation: () => void }) => {
+    const handleAiSearchToggle = useCallback(async (event?: { preventDefault: () => void; stopPropagation: () => void }) => {
         event?.preventDefault();
         event?.stopPropagation();
         if (aiSearchEnabled || aiSearching) {
             clearAiSearch();
             return;
         }
+        if (!await requireSignIn("AI Search")) return;
         setAiSearchEnabled(true);
-    }, [aiSearchEnabled, aiSearching, clearAiSearch]);
+    }, [aiSearchEnabled, aiSearching, clearAiSearch, requireSignIn]);
 
     const filteredResources = useMemo(() => {
         const aiOrder = aiResultIds ? new Map(aiResultIds.map((id, index) => [id, index])) : null;
@@ -1185,6 +1200,7 @@ export default function Discover() {
     };
 
     const handleSave = async (resource: DiscoverResource) => {
+        if (!await requireSignIn("Save resource")) return;
         if (!user?.uid || !resource.note || saveSubmitting) return;
         const likeRef = doc(db, "discover-notes", resource.id, "likes", user.uid);
         const savedRef = doc(db, "user-data", user.uid, "saved-discover", resource.id);
@@ -1250,6 +1266,7 @@ export default function Discover() {
     };
 
     const handleRate = async (value: number) => {
+        if (!await requireSignIn("Rate resource")) return;
         if (!user?.uid || !selectedResource?.note || ratingSubmitting) return;
         const previousRating = userRating;
         setUserRating(value);
@@ -1291,6 +1308,7 @@ export default function Discover() {
     };
 
     const handleAddComment = async () => {
+        if (!await requireSignIn("Commenting")) return;
         if (!user?.uid || !selectedResource?.note || commentSubmitting) return;
         const text = commentText.trim();
         if (!text) return;
@@ -1327,6 +1345,13 @@ export default function Discover() {
         setSelectedSubjectId((current) => (current === subjectId ? null : subjectId));
     };
 
+    const openResource = (resource: DiscoverResource) => {
+        setSelectedResource(resource);
+        const next = new URLSearchParams(searchParams);
+        next.set("resource", resource.id);
+        setSearchParams(next);
+    };
+
     const renderResourceCard = (resource: DiscoverResource) => {
         const rating = resource.ratingAverage && resource.ratingAverage > 0 ? resource.ratingAverage : null;
         const username = resource.username || "Unknown";
@@ -1335,11 +1360,11 @@ export default function Discover() {
             <article
                 key={resource.id}
                 className="group relative flex flex-col cursor-pointer p-2 hover:z-10"
-                onClick={() => setSelectedResource(resource)}
+                onClick={() => openResource(resource)}
                 onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        setSelectedResource(resource);
+                        openResource(resource);
                     }
                 }}
                 role="button"
@@ -1368,7 +1393,7 @@ export default function Discover() {
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    navigate(`/viewProfile/${resource.userId}`);
+                                    navigate(`/viewProfile/${resource.userId}`, { state: backState });
                                 }}
                                 className="shrink-0 cursor-pointer"
                             >
@@ -1543,7 +1568,7 @@ export default function Discover() {
                             {resource.userId ? (
                                 <button
                                     type="button"
-                                    onClick={() => navigate(`/viewProfile/${resource.userId}`)}
+                                    onClick={() => navigate(`/viewProfile/${resource.userId}`, { state: backState })}
                                     className="shrink-0 cursor-pointer"
                                 >
                                     {resource.userPicture ? (
@@ -1639,7 +1664,7 @@ export default function Discover() {
                                         <button
                                             type="button"
                                             key={related.id}
-                                            onClick={() => setSelectedResource(related)}
+                                            onClick={() => openResource(related)}
                                             className="shrink-0 w-52 text-left cursor-pointer"
                                         >
                                             <div className="aspect-[16/10] rounded-xl color-bg-grey-10 overflow-hidden mb-2">
@@ -1673,7 +1698,7 @@ export default function Discover() {
                                     ref={commentInputRef}
                                     type="text"
                                     value={commentText}
-                                    onFocus={() => setCommentComposerOpen(true)}
+                                    onFocus={async () => { if (await requireSignIn("Commenting")) setCommentComposerOpen(true); }}
                                     onChange={(e) => setCommentText(e.target.value.slice(0, MAX_COMMENT))}
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter") {
@@ -1683,7 +1708,8 @@ export default function Discover() {
                                         if (e.key === "Escape") cancelComment();
                                     }}
                                     placeholder={user?.uid ? "Add a comment..." : "Log in to comment"}
-                                    disabled={!user?.uid || !resource.note}
+                                    disabled={!resource.note}
+                                    readOnly={!user?.uid}
                                     maxLength={MAX_COMMENT}
                                     className="w-full bg-transparent color-txt-main text-sm outline-none border-0 border-b border-color-border pb-1.5 placeholder:color-txt-sub disabled:opacity-60"
                                 />
@@ -1723,7 +1749,7 @@ export default function Discover() {
                                         {comment.userId ? (
                                             <button
                                                 type="button"
-                                                onClick={() => navigate(`/viewProfile/${comment.userId}`)}
+                                                onClick={() => navigate(`/viewProfile/${comment.userId}`, { state: backState })}
                                                 className="shrink-0 cursor-pointer mt-0.5"
                                             >
                                                 {comment.userPicture ? (
@@ -1850,7 +1876,7 @@ export default function Discover() {
                                     className="inline-flex items-center gap-2 px-3 py-2 rounded-lg color-txt-sub hover:color-txt-main hover:color-bg-grey-5 text-sm font-semibold cursor-pointer"
                                     onClick={() => {
                                         setPageMenuOpen(false);
-                                        navigate("/social/social");
+                                        navigate("/social/social", { state: backState });
                                     }}
                                 >
                                     <LuUsers size={15} />
@@ -1963,14 +1989,14 @@ export default function Discover() {
                     <div className="relative z-10 flex items-center gap-3 pointer-events-none">
                         <button
                             type="button"
-                            onClick={() => setShowForm(true)}
+                            onClick={async () => { if (await requireSignIn("Share resource")) setShowForm(true); }}
                             className="pointer-events-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-xl color-bg-accent color-txt-accent font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer"
                         >
                             <LuPlus size={16} />
                             Share resource
                         </button>
                         <div className="pointer-events-auto">
-                            <NotificationBell />
+                            {user?.uid && <NotificationBell />}
                         </div>
                     </div>
                 </div>
@@ -2075,7 +2101,7 @@ export default function Discover() {
                             )}
                             <button
                                 type="button"
-                                onClick={() => setShowForm(true)}
+                                onClick={async () => { if (await requireSignIn("Share resource")) setShowForm(true); }}
                                 className="inline-flex items-center gap-2 rounded-xl color-bg-accent color-txt-accent px-4 py-2 text-sm font-bold cursor-pointer"
                             >
                                 <LuPlus size={15} /> Link a resource

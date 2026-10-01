@@ -51,6 +51,27 @@ let configurePromise: Promise<void> | null = null;
 let lastConfigureError: unknown = null;
 let lastConfiguredUid: string | null = null;
 
+async function ensureAppUserId(uid: string): Promise<void> {
+    const { appUserID } = await timed(
+        "ensureAppUserId:getAppUserID",
+        () => withTimeout("ensureAppUserId.getAppUserID", NATIVE_TIMEOUT_MS, () =>
+            Purchases.getAppUserID()
+        )
+    );
+    if (appUserID === uid) {
+        lastConfiguredUid = uid;
+        return;
+    }
+
+    iapDebug("ensureAppUserId:logIn", { from: appUserID ?? null, to: uid });
+    await timed("ensureAppUserId:Purchases.logIn", () =>
+        withTimeout("ensureAppUserId.logIn", NATIVE_TIMEOUT_MS, () =>
+            Purchases.logIn({ appUserID: uid })
+        )
+    );
+    lastConfiguredUid = uid;
+}
+
 /** Shared accessor used by the apple provider so every file goes through
  *  the same already-imported module. */
 export function getPurchases(): typeof Purchases {
@@ -104,6 +125,7 @@ export async function initPayments(uid?: string | null): Promise<void> {
         iapDebug("initPayments:awaiting existing configure");
         try {
             await configurePromise;
+            if (uid) await ensureAppUserId(uid);
             iapDebug("initPayments:existing configure resolved");
         } catch (err) {
             iapDebugError("initPayments:existing configure rejected", err);
@@ -190,6 +212,18 @@ async function runConfigure(uid: string | null): Promise<void> {
  *  isReady paths so the user can still pay even if boot config hung. */
 export async function ensureConfigured(uid?: string | null): Promise<boolean> {
     if (!isAppleIapAvailable() || !REVENUECAT_IOS_API_KEY) return false;
+    if (configurePromise) {
+        try {
+            await configurePromise;
+            if (uid) await ensureAppUserId(uid);
+            return true;
+        } catch (err) {
+            iapDebugWarn("ensureConfigured:existing configure failed (will retry)", {
+                message: (err as Error)?.message ?? String(err),
+            });
+            configurePromise = null;
+        }
+    }
     try {
         const probe = await timed("ensureConfigured:probe.isConfigured", () =>
             withTimeout("ensureConfigured.isConfigured", NATIVE_TIMEOUT_MS, () =>
@@ -197,6 +231,7 @@ export async function ensureConfigured(uid?: string | null): Promise<boolean> {
             )
         );
         if (probe.isConfigured) {
+            if (uid) await ensureAppUserId(uid);
             iapDebug("ensureConfigured:alreadyConfigured");
             return true;
         }
@@ -211,6 +246,7 @@ export async function ensureConfigured(uid?: string | null): Promise<boolean> {
         configurePromise = null;
         configurePromise = runConfigure(uid ?? null);
         await configurePromise;
+        if (uid) await ensureAppUserId(uid);
         return true;
     } catch (err) {
         iapDebugError("ensureConfigured:configure failed", err);

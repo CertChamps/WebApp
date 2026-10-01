@@ -239,12 +239,15 @@ export async function shareOrDownloadBlob(args: {
   return "downloaded";
 }
 
-/** Render the full styled document without Safari's SVG foreignObject restrictions. */
-export async function captureElementToPng(element: HTMLElement): Promise<ExportImage> {
+/** Render a styled document or a readable tile without Safari SVG restrictions. */
+export async function captureElementToPng(
+  element: HTMLElement,
+  region?: { x: number; y: number; width: number; height: number },
+): Promise<ExportImage> {
   const { default: html2canvas } = await import("html2canvas-pro");
   await document.fonts.ready;
-  const width = Math.max(1, element.offsetWidth);
-  const height = Math.max(1, element.scrollHeight);
+  const width = Math.max(1, region?.width ?? element.offsetWidth);
+  const height = Math.max(1, region?.height ?? element.scrollHeight);
   // Embed images before rendering so a missing/CORS-blocked attachment cannot
   // silently disappear from the file preview.
   const images = await Promise.all(Array.from(element.querySelectorAll("img")).map(async (image) => {
@@ -259,6 +262,8 @@ export async function captureElementToPng(element: HTMLElement): Promise<ExportI
     scale: Math.min(2, 4096 / Math.max(width, height), Math.sqrt(12_000_000 / (width * height))),
     width,
     height,
+    x: region?.x ?? 0,
+    y: region?.y ?? 0,
     onclone: (_document, clone) => {
       clone.style.background = "#ffffff";
       clone.style.color = "#111827";

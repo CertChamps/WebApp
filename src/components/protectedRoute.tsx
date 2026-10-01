@@ -5,6 +5,7 @@ import { auth } from "../../firebase";
 import { useUserProfileReady } from "../hooks/useUserProfileReady";
 import { needsOnboarding } from "../lib/onboarding";
 import ProfileLoadingScreen from "./onboarding/ProfileLoadingScreen";
+import { featureForPath, signInPath } from "../lib/signIn";
 
 type Props = {
   children: React.ReactElement;
@@ -20,14 +21,14 @@ export const ProtectedRoute: React.FC<Props> = ({
   const location = useLocation();
   const profile = useUserProfileReady();
 
-  if (!profile.isAuthenticated) {
-    return (
-      <Navigate to="/" state={{ prevRoute: location.pathname }} replace />
-    );
-  }
-
   if (!profile.ready) {
     return <ProfileLoadingScreen />;
+  }
+
+  if (!profile.isAuthenticated) {
+    return (
+      <Navigate to={signInPath(featureForPath(location.pathname), location.pathname + location.search, location.state?.backTo)} replace />
+    );
   }
 
   const firebaseUser = auth.currentUser;
@@ -36,11 +37,11 @@ export const ProtectedRoute: React.FC<Props> = ({
   );
 
   if (isEmailPasswordUser && !firebaseUser?.emailVerified) {
-    return <Navigate to="/verify-email" replace />;
+    return <Navigate to={`/verify-email?${new URLSearchParams({ returnTo: location.pathname + location.search })}`} replace />;
   }
 
   if (!allowOnboardingIncomplete && needsOnboarding(user)) {
-    return <Navigate to="/onboarding" replace />;
+    return <Navigate to={`/onboarding?${new URLSearchParams({ returnTo: location.pathname + location.search })}`} replace />;
   }
 
   return children;

@@ -16,6 +16,8 @@ import ProGate from "../ProGate";
 import { UserContext } from "../../context/UserContext";
 import { canUseAceFeature } from "../../lib/contentAccess";
 import { DISCOVER_RESOURCE_PARAM, DISCOVER_SIDEBAR_PARAM } from "../../lib/discoverLinks";
+import { auth } from "../../../firebase";
+import { useRequireSignIn } from "../../hooks/useRequireSignIn";
 
 const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const };
 
@@ -45,7 +47,7 @@ export type SidebarTileManagerProps = {
   /** Called when user requests to collapse the sidebar (e.g. collapse button). */
   onCollapse?: () => void;
   /** Optional: return current drawing as PNG data URL so AI can see handwriting/maths. */
-  getDrawingSnapshot?: (() => string | null) | null;
+  getDrawingSnapshot?: (() => string | string[] | null | Promise<string | string[] | null>) | null;
   /** Optional: return music stave analysis (detected note positions as text). */
   getStaveAnalysis?: (() => string | null) | null;
   /** Optional: return current exam paper (first page) as image data URL so AI can see the paper. */
@@ -94,9 +96,12 @@ export function SidebarTileManager({
   aiThinking = false,
   aiThinkingMessages,
 }: SidebarTileManagerProps) {
+  const { authReady, user } = useContext(UserContext);
+  const requireSignIn = useRequireSignIn();
   const [internalPanel, setInternalPanel] = useState<SidebarPanelId | null>("ai");
   const isControlled = controlledPanel !== undefined;
-  const openPanelId = isControlled ? controlledPanel : internalPanel;
+  const requestedPanel = isControlled ? controlledPanel : internalPanel;
+  const signedIn = authReady && !!auth.currentUser && user?.uid === auth.currentUser.uid;
 
   const showMarkingScheme =
     !!(markingSchemeBlob && markingSchemePageRange) ||
@@ -104,6 +109,9 @@ export function SidebarTileManager({
     !!markingSchemeLoading ||
     !!forceShowMarkingSchemeTab;
   const visiblePanels = PANELS.filter((p) => p.id !== "markingscheme" || showMarkingScheme);
+  const openPanelId = requestedPanel === "ai" && !signedIn
+    ? (showMarkingScheme ? "markingscheme" : "threads")
+    : requestedPanel;
 
   const setOpenPanel = useCallback(
     (next: SidebarPanelId | null) => {
@@ -114,10 +122,11 @@ export function SidebarTileManager({
   );
 
   const togglePanel = useCallback(
-    (id: SidebarPanelId) => {
+    async (id: SidebarPanelId) => {
+      if (id === "ai" && !await requireSignIn("AI tutor")) return;
       setOpenPanel(openPanelId === id ? null : id);
     },
-    [openPanelId, setOpenPanel]
+    [openPanelId, setOpenPanel, requireSignIn]
   )
 
   return (
@@ -233,7 +242,7 @@ function TileContent({
 }: {
   panelId: SidebarPanelId;
   question?: any;
-  getDrawingSnapshot?: (() => string | null) | null;
+  getDrawingSnapshot?: (() => string | string[] | null | Promise<string | string[] | null>) | null;
   getStaveAnalysis?: (() => string | null) | null;
   getPaperSnapshot?: (() => string | null) | null;
   getWorkspaceText?: (() => string | null) | null;
@@ -269,7 +278,7 @@ function TileContent({
       );
     case "threads": {
       const isPaperThread = !!question?._paperThread;
-      return <ThreadsPanel questionId={questionId} part={part} isPaperThread={isPaperThread} question={question} />;
+      return <ThreadsPanel questionId={questionId} part={part} isPaperThread={isPaperThread} question={question} onClosePanel={_onClosePanel} />;
     }
     case "timer":
       return (
@@ -351,7 +360,7 @@ function TileContent({
   }
 }
 
-function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionId: string; part: number; isPaperThread: boolean; question?: any }) {
+function ThreadsPanel({ questionId, part, isPaperThread, question, onClosePanel }: { questionId: string; part: number; isPaperThread: boolean; question?: any; onClosePanel?: () => void }) {
   const { user } = useContext(UserContext);
   const [searchParams] = useSearchParams();
   const [threadView, setThreadView] = useState<"discover" | "discussion">("discover");
@@ -414,7 +423,7 @@ function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionI
 
       <div className="min-h-0 flex-1 overflow-hidden">
         {threadView === "discover" ? (
-          <QuestionDiscover question={question} />
+          <QuestionDiscover question={question} onPopOut={onClosePanel} />
         ) : questionId ? (
           <QThread
             questionId={questionId}

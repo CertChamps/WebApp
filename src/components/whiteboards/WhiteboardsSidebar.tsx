@@ -246,9 +246,14 @@ function PageRow({ page }: { page: WhiteboardPage }) {
         {...attributes}
         {...listeners}
         className={`${rowBase} cursor-grab active:cursor-grabbing ${
-          isActive ? "color-bg-accent color-txt-accent font-bold" : "color-txt-main hover:color-bg-grey-5"
+          isActive ? "color-txt-accent font-bold" : "color-txt-main hover:color-bg-grey-5"
         }`}
-        style={{ WebkitTouchCallout: "none" }}
+        style={{
+          WebkitTouchCallout: "none",
+          backgroundColor: isActive
+            ? "color-mix(in srgb, var(--theme-txt-accent) 4%, transparent)"
+            : undefined,
+        }}
         onContextMenu={(e) => e.preventDefault()}
       >
         {showBefore && <DropLine position="before" />}
@@ -394,7 +399,7 @@ function FolderHeader({ path, parentId, onNavigate, onEdit, highlighted }: {
       </button>
       <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
         <FolderGlyph folder={folder} />
-        <span className="min-w-0 truncate text-[14px] font-normal" title={folder.name}>{folder.name}</span>
+        <span className="min-w-0 truncate text-[14px] font-bold color-txt-main" title={folder.name}>{folder.name}</span>
       </div>
       <button type="button" onClick={onEdit} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg cursor-pointer hover:color-bg-grey-10" aria-label={`Edit ${folder.name}`} title="Edit folder">
         <LuPencil size={14} />

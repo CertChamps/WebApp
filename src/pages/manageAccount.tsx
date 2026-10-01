@@ -1,3 +1,5 @@
+import type { SubscriptionPlan, PriceDetails, PaymentProviderName } from "../lib/payments";
+import { hasAceAccess } from "../lib/contentAccess";
 import { useContext, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -16,7 +18,6 @@ import {
     LuTrash2,
     LuUpload,
     LuX,
-    LuWandSparkles,
 } from "react-icons/lu";
 import { collection, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
@@ -60,8 +61,12 @@ interface PaymentsTabProps {
     /** Display price for the upgrade card. Null while loading. */
     priceFormatted: string | null;
     pricePeriod: "year" | "month";
+    prices: Record<SubscriptionPlan, PriceDetails | null>;
+    selectedPlan: SubscriptionPlan;
+    onSelectPlan: (plan: SubscriptionPlan) => void;
+    priceLoading: boolean;
     onUpgrade: () => void;
-    onManage: () => void;
+    onManage: (provider?: PaymentProviderName) => void;
     onRestore: () => void;
 }
 
@@ -77,6 +82,7 @@ const PaymentsTab = ({
     activeProvider,
     priceFormatted,
     pricePeriod,
+    prices, selectedPlan, onSelectPlan, priceLoading,
     onUpgrade,
     onManage,
     onRestore,
@@ -111,7 +117,7 @@ const PaymentsTab = ({
                         className="rounded-2xl p-4 mb-6 bg-green-500/10 border border-green-500/30 text-green-600 dark:text-green-400 flex items-center gap-3"
                     >
                         <LuCheck size={20} />
-                        <span className="font-medium">Welcome to ACE! Your account has been upgraded.</span>
+                        <span className="font-medium">{isPro ? "Welcome to ACE! Your account has been upgraded." : "Confirming your subscription… Access will update once payment is verified."}</span>
                     </motion.div>
                 )}
                 {paymentCancel && (
@@ -148,16 +154,17 @@ const PaymentsTab = ({
                                     <span className="ace-active-dot" />
                                     Active subscription
                                 </motion.div>
+                                <p className="color-txt-sub text-sm">{user?.subscriptionPlan === "monthly" ? "Monthly plan" : user?.subscriptionPlan === "annual" ? "Annual plan" : "ACE membership"}</p>
                                 {user?.subscriptionPeriodEnd && (
                                     <p className="color-txt-sub text-sm">
-                                        Renews on{" "}
+                                        {user?.subscriptionCancelAtPeriodEnd ? "Access ends on" : "Current period ends on"}{" "}
                                         {new Date(user.subscriptionPeriodEnd * 1000).toLocaleDateString(undefined, { dateStyle: "long" })}
                                     </p>
                                 )}
                                 <div className="pt-2 flex flex-wrap gap-3">
                                     <button
                                         type="button"
-                                        onClick={onManage}
+                                        onClick={() => onManage()}
                                         disabled={portalLoading}
                                         className="px-5 py-2.5 rounded-xl border border-color-border color-txt-main hover:color-bg-grey-10 disabled:opacity-60 disabled:cursor-not-allowed transition-all text-sm font-medium cursor-pointer"
                                     >
@@ -168,9 +175,19 @@ const PaymentsTab = ({
                             </div>
                         ) : (
                             <>
+                                <div className="grid grid-cols-2 gap-3 mt-5 mb-5" role="group" aria-label="Billing period">
+                                    {(["monthly", "annual"] as const).map(plan => (
+                                        <button key={plan} type="button" aria-pressed={selectedPlan === plan}
+                                            disabled={checkoutLoading} onClick={() => onSelectPlan(plan)}
+                                            className={`rounded-xl border p-4 text-left cursor-pointer ${selectedPlan === plan ? "border-current color-txt-accent color-bg-accent" : "border-color-border color-txt-sub"}`}>
+                                            <span className="block font-bold">{plan === "monthly" ? "Monthly" : "Annual"}</span>
+                                            <span className="block text-sm mt-1">{prices[plan] ? `${prices[plan]!.formatted}/${prices[plan]!.period}` : priceLoading ? "Loading…" : "Unavailable"}</span>
+                                        </button>
+                                    ))}
+                                </div>
                                 <div className="flex items-baseline gap-2 mt-4 mb-6">
                                     <span className="text-4xl font-extrabold color-txt-main">
-                                        {priceFormatted ?? "€30"}
+                                        {priceFormatted ?? (priceLoading ? "Loading…" : "Unavailable")}
                                     </span>
                                     <span className="color-txt-sub text-base font-medium">/ {pricePeriod}</span>
                                 </div>
@@ -194,7 +211,7 @@ const PaymentsTab = ({
                                 <motion.button
                                     type="button"
                                     onClick={onUpgrade}
-                                    disabled={checkoutLoading}
+                                    disabled={checkoutLoading || (activeProvider !== "apple" && (priceLoading || !priceFormatted))}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     className="ace-cta-btn w-full py-3.5 rounded-xl font-bold text-white text-base disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer relative overflow-hidden"
@@ -203,7 +220,11 @@ const PaymentsTab = ({
                                     <span className="relative z-[1] color-txt-main font-bold">
                                         {checkoutLoading
                                             ? (activeProvider === "apple" ? "Opening Apple…" : "Redirecting to checkout…")
-                                            : `Subscribe for ${priceFormatted ?? "€30"}/${pricePeriod}`}
+                                            : priceFormatted
+                                                ? `Subscribe for ${priceFormatted}/${pricePeriod}`
+                                                : activeProvider === "apple"
+                                                    ? "Continue with Apple"
+                                                    : priceLoading ? "Loading prices…" : "Subscription unavailable"}
                                     </span>
                                 </motion.button>
                                 <p className="mt-3 text-center text-[11px] leading-relaxed color-txt-sub">
@@ -244,6 +265,14 @@ const PaymentsTab = ({
                     </div>
                 </div>
             </motion.div>
+            {(user?.stripeCustomerId || user?.paymentProvider === "apple" || user?.appleOriginalTransactionId || user?.billingSubscriptions?.apple) && (
+                <div className="space-y-3 text-sm color-txt-sub">
+                    <p>Manage your plan, payment details or cancellation with your billing provider.</p>
+                    {user?.stripeCustomerId && <button type="button" disabled={portalLoading} onClick={() => onManage("stripe")} className="underline cursor-pointer mr-4">Manage or cancel website subscription</button>}
+                    {(user?.paymentProvider === "apple" || user?.appleOriginalTransactionId || user?.billingSubscriptions?.apple) && <button type="button" disabled={portalLoading} onClick={() => onManage("apple")} className="underline cursor-pointer">Manage or cancel Apple subscription</button>}
+                    {!isPro && portalError && <p className="text-red-500">{portalError}</p>}
+                </div>
+            )}
         </motion.div>
     );
 };
@@ -272,15 +301,11 @@ const usageItems: Array<{
         description: "AI-assisted searches across community resources.",
         icon: <LuSearch size={20} />,
     },
-    {
-        purpose: "whiteboard",
-        label: "Whiteboard matches",
-        description: "AI-created study pages matched to your request.",
-        icon: <LuWandSparkles size={20} />,
-    },
 ];
 
 function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
+    const { user } = useContext(UserContext);
+    const hasAce = hasAceAccess(user);
     const [summary, setSummary] = useState<AiUsageSummary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -320,7 +345,7 @@ function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
                 <div>
                     <h1 className="profile-heading text-3xl font-bold mb-2">Usage & limits</h1>
                     <p className="color-txt-sub text-base">
-                        Your AI activity for the current monthly allowance.
+                        Your monthly AI activity and study page limits per subject.
                     </p>
                 </div>
                 {summary && (
@@ -353,6 +378,8 @@ function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
                     </button>
                 </motion.div>
             )}
+
+
 
             {!loading && summary && (
                 <>
@@ -400,6 +427,17 @@ function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
                                 </motion.div>
                             );
                         })}
+                        <motion.div variants={fadeUp} className="rounded-2xl color-bg-grey-5 p-5 border border-[var(--color-grey)]/15">
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl color-bg color-txt-accent"><LuPencil size={20} /></span>
+                                <span className="text-sm font-bold color-txt-main">{hasAce ? "Unlimited" : "1 per subject"}</span>
+                            </div>
+                            <h2 className="mt-4 font-bold color-txt-main">Whiteboards & documents</h2>
+                            <p className="mt-1 text-xs leading-relaxed color-txt-sub">{hasAce
+                                ? "Create as many study pages as you need for each subject. AI question matching is included with ACE."
+                                : "Your free plan includes one study page per subject, as a whiteboard or document. Create it yourself or let AI match questions for it. Additional pages require ACE."}</p>
+                            {!hasAce && <button type="button" onClick={onViewPlans} className="mt-4 rounded-xl color-bg-accent color-txt-accent px-4 py-2 text-sm font-bold cursor-pointer">Upgrade to ACE</button>}
+                        </motion.div>
                     </div>
 
                     <motion.div variants={fadeUp} className="mt-6 rounded-2xl color-bg p-5 shadow-small">
@@ -407,7 +445,7 @@ function UsageTab({ onViewPlans }: { onViewPlans: () => void }) {
                             <div>
                                 <p className="font-semibold color-txt-main">Monthly reset</p>
                                 <p className="text-sm color-txt-sub mt-1">
-                                    Allowances reset on {resetLabel}. Community features and free study tools have no usage limit.
+                                    AI allowances reset on {resetLabel}. Study page limits do not reset monthly. Community features remain free.
                                 </p>
                             </div>
                             <button
@@ -829,13 +867,15 @@ const ManageAccount = () => {
         const success = searchParams.get("success");
         const cancel = searchParams.get("cancel");
         if (success === "pro") {
+            setActiveTab("payments");
             setPaymentSuccess(true);
-            setSearchParams({}, { replace: true });
+            setSearchParams({ tab: "payments" }, { replace: true });
             void refetchSubscriptionState(setUser);
         }
         if (cancel === "pro") {
+            setActiveTab("payments");
             setPaymentCancel(true);
-            setSearchParams({}, { replace: true });
+            setSearchParams({ tab: "payments" }, { replace: true });
         }
     }, [searchParams, setSearchParams, setUser]);
 
@@ -859,8 +899,8 @@ const ManageAccount = () => {
         }
     };
 
-    const handleManageSubscription = async () => {
-        await payments.openManagement();
+    const handleManageSubscription = async (provider?: PaymentProviderName) => {
+        await payments.openManagement(provider);
     };
 
     const handleRestore = async () => {
@@ -1025,7 +1065,11 @@ const ManageAccount = () => {
                         restoreLoading={payments.restoreLoading}
                         activeProvider={payments.activeProvider}
                         priceFormatted={payments.price?.formatted ?? null}
-                        pricePeriod={payments.price?.period ?? "year"}
+                        pricePeriod={payments.selectedPlan === "monthly" ? "month" : "year"}
+                        prices={payments.prices}
+                        selectedPlan={payments.selectedPlan}
+                        onSelectPlan={payments.selectPlan}
+                        priceLoading={payments.priceLoading}
                         onUpgrade={handleUpgradeToPro}
                         onManage={handleManageSubscription}
                         onRestore={handleRestore}
@@ -1070,7 +1114,7 @@ const ManageAccount = () => {
                             Delete account permanently?
                         </h2>
                         <p className="color-txt-sub text-sm leading-relaxed">
-                            This removes your profile, progress, posts, and subscription data. This cannot be undone.
+                            This removes your profile, progress, posts, and subscription data. This cannot be undone. Apple subscriptions must be cancelled separately in the App Store; deleting your account does not cancel Apple billing.
                         </p>
                         <p className="color-txt-main text-sm mt-4">
                             Type your username <strong>{user?.username}</strong> to confirm.

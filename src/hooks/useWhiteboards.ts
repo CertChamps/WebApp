@@ -1,6 +1,13 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import ContentProGate from "../components/ContentProGate";
+import { hasAceAccess } from "../lib/contentAccess";
+import { getThemedPortalTarget } from "../utils/themedPortal";
+import { createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   collection,
+  getDocs,
+  limit,
+  runTransaction,
   deleteDoc,
   doc,
   onSnapshot,
@@ -96,6 +103,9 @@ export type CreateFolderInput = {
 export function useWhiteboards(subject: string | null) {
   const { user } = useContext(UserContext);
   const uid: string | undefined = user?.uid;
+  const hasAce = hasAceAccess(user);
+  const [aceGate, setAceGate] = useState<"page" | "ai" | null>(null);
+  const showAceGate = useCallback((reason: "page" | "ai" = "page") => setAceGate(reason), []);
 
   const [folders, setFolders] = useState<WhiteboardFolder[]>([]);
   const [pages, setPages] = useState<WhiteboardPage[]>([]);
@@ -179,12 +189,31 @@ export function useWhiteboards(subject: string | null) {
 
   // ============================= PAGES ============================= //
 
+  const requestCreatePage = useCallback(() => {
+    if (!hasAce && pages.some((page) => page.subject === subject)) {
+      setAceGate("page");
+      return false;
+    }
+    return true;
+  }, [hasAce, pages, subject]);
+
   const createPage = useCallback(
-    async (input: CreatePageInput): Promise<WhiteboardPage> => {
+    async (input: CreatePageInput): Promise<WhiteboardPage | null> => {
       if (!uid) throw new Error("Not signed in");
+      if (!hasAce) {
+        const existing = await getDocs(query(
+          collection(db, "user-data", uid, PAGES_COLLECTION),
+          where("subject", "==", input.subject),
+          limit(1),
+        ));
+        if (!existing.empty) {
+          setAceGate("page");
+          return null;
+        }
+      }
       const now = Date.now();
       const page: WhiteboardPage = {
-        id: newDocId("page"),
+        id: hasAce ? newDocId("page") : `free_${encodeURIComponent(input.subject)}`,
         name:
           input.name.trim() ||
           (input.pageType === "document" ? "Untitled document" : "Untitled whiteboard"),
@@ -200,10 +229,24 @@ export function useWhiteboards(subject: string | null) {
         lastOpenedAt: now,
       };
       const { id, ...data } = page;
-      await setDoc(doc(db, "user-data", uid, PAGES_COLLECTION, id), data);
+      const pageRef = doc(db, "user-data", uid, PAGES_COLLECTION, id);
+      if (hasAce) {
+        await setDoc(pageRef, data);
+      } else {
+        // The same subject uses the same free slot, even across simultaneous tabs.
+        const created = await runTransaction(db, async (transaction) => {
+          if ((await transaction.get(pageRef)).exists()) return false;
+          transaction.set(pageRef, data);
+          return true;
+        });
+        if (!created) {
+          setAceGate("page");
+          return null;
+        }
+      }
       return page;
     },
-    [uid]
+    [uid, hasAce]
   );
 
   const updatePage = useCallback(
@@ -401,6 +444,18 @@ export function useWhiteboards(subject: string | null) {
     recentItems,
     loading,
     createPage,
+    requestCreatePage,
+    showAceGate,
+    aceGateModal: aceGate && typeof document !== "undefined" ? createPortal(
+      createElement("div", { className: "fixed inset-0 z-[200]" }, createElement(ContentProGate, {
+        asModal: true,
+        onClose: () => setAceGate(null),
+        description: aceGate === "ai"
+          ? "AI question matching is included with ACE. Upgrade to create study pages matched to your request."
+          : "Your free plan includes one study page per subject, as a whiteboard or document. Upgrade to ACE to create more pages for this subject.",
+      })),
+      getThemedPortalTarget() ?? document.body,
+    ) : null,
     movePageByOffset,
     updatePage,
     deletePage,

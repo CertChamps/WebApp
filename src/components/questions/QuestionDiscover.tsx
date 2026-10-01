@@ -1,3 +1,4 @@
+import { popOutDiscoverResource } from "../discover/FloatingDiscoverResource";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   addDoc,
@@ -16,7 +17,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { deleteObject, getDownloadURL, ref as storageRef } from "firebase/storage";
+import { deleteObject, ref as storageRef } from "firebase/storage";
 import {
   LuArrowLeft,
   LuBookmark,
@@ -25,9 +26,10 @@ import {
   LuStar,
   LuTrash,
 } from "react-icons/lu";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { db, storage } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
+import { useRequireSignIn } from "../../hooks/useRequireSignIn";
 import { isAdminUid } from "../../constants/adminUids";
 import DiscoverMediaPreview from "../discover/DiscoverMediaPreview";
 import DiscoverShareModal from "../discover/DiscoverShareModal";
@@ -42,7 +44,7 @@ import {
 
 type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
-type ResourceSource = "website" | "pdf";
+type ResourceSource = "website" | "pdf" | "image";
 
 const MAX_COMMENT = 500;
 const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
@@ -66,6 +68,7 @@ type DiscoverNote = {
   websiteUrl: string;
   resourceSource?: ResourceSource;
   pdfPath?: string | null;
+  imagePath?: string | null;
   thumbnailUrl: string;
   faviconUrl?: string | null;
   siteName?: string;
@@ -120,6 +123,7 @@ type DiscoverResource = {
   websiteUrl?: string;
   resourceSource?: ResourceSource;
   pdfPath?: string | null;
+  imagePath?: string | null;
   thumbnailUrl?: string;
   userId?: string;
   username?: string;
@@ -194,6 +198,7 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
     websiteUrl: note.websiteUrl,
     resourceSource: note.resourceSource ?? (note.pdfPath ? "pdf" : "website"),
     pdfPath: note.pdfPath,
+    imagePath: note.imagePath,
     thumbnailUrl: note.thumbnailUrl,
     userId: note.userId,
     username: note.username,
@@ -203,10 +208,13 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
   };
 }
 
-export default function QuestionDiscover({ question }: { question?: unknown }) {
+export default function QuestionDiscover({ question, onPopOut }: { question?: unknown; onPopOut?: () => void }) {
+  const requireSignIn = useRequireSignIn();
   const { user } = useContext(UserContext);
   const isAdmin = isAdminUid(user?.uid, user?.email);
   const navigate = useNavigate();
+  const location = useLocation();
+  const backState = { backTo: location.pathname + location.search };
   const [searchParams] = useSearchParams();
   const context = useMemo(() => getQuestionDiscoveryContext(question), [question]);
   const [notes, setNotes] = useState<DiscoverNote[]>([]);
@@ -248,8 +256,9 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
               title: data.title ?? "Untitled resource",
               description: data.description ?? "",
               websiteUrl: data.websiteUrl ?? "",
-              resourceSource: data.resourceSource === "pdf" ? "pdf" : "website",
+              resourceSource: data.resourceSource === "pdf" ? "pdf" : data.resourceSource === "image" ? "image" : "website",
               pdfPath: data.pdfPath ?? null,
+              imagePath: data.imagePath ?? null,
               thumbnailUrl: data.thumbnailUrl ?? "",
               faviconUrl: data.faviconUrl ?? null,
               siteName: data.siteName ?? "",
@@ -404,24 +413,6 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
     return approved.filter((resource) => resource.id !== selectedResource.id).slice(0, 6);
   }, [approved, selectedResource]);
 
-  const handleVisit = async (url: string | undefined, resource?: DiscoverResource) => {
-    let target = url?.trim() || "";
-    if (!target && resource?.pdfPath) {
-      try {
-        target = await getDownloadURL(storageRef(storage, resource.pdfPath));
-      } catch (err) {
-        console.error("Failed to open PDF:", err);
-        return;
-      }
-    }
-    if (!target) return;
-    try {
-      window.open(target, "_blank", "noopener,noreferrer");
-    } catch (err) {
-      console.error("Failed to open link:", err);
-    }
-  };
-
   const handleDelete = async (note: DiscoverNote) => {
     if (!user?.uid || deleting) return;
     const canDelete = isAdmin || note.userId === user.uid;
@@ -444,6 +435,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
   };
 
   const handleSave = async (resource: DiscoverResource) => {
+    if (!await requireSignIn("Save resource")) return;
     if (!user?.uid || !resource.note || saveSubmitting) return;
     const likeRef = doc(db, "discover-notes", resource.id, "likes", user.uid);
     const resourceRef = doc(db, "discover-notes", resource.id);
@@ -488,6 +480,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
   };
 
   const handleRate = async (value: number) => {
+    if (!await requireSignIn("Rate resource")) return;
     if (!user?.uid || !selectedResource?.note || ratingSubmitting) return;
     setRatingSubmitting(true);
     const ratingRef = doc(db, "discover-notes", selectedResource.id, "ratings", user.uid);
@@ -526,6 +519,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
   };
 
   const handleAddComment = async () => {
+    if (!await requireSignIn("Commenting")) return;
     if (!user?.uid || !selectedResource?.note || commentSubmitting) return;
     const text = commentText.trim();
     if (!text) return;
@@ -595,7 +589,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/viewProfile/${resource.userId}`);
+                  navigate(`/viewProfile/${resource.userId}`, { state: backState });
                 }}
                 className="shrink-0 cursor-pointer"
               >
@@ -655,7 +649,6 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
 
   const renderResourceDetail = (resource: DiscoverResource) => {
     const username = resource.username || "Unknown";
-    const canOpenResource = Boolean(resource.websiteUrl?.trim() || resource.pdfPath);
     const ownsResource = Boolean(user?.uid && resource.userId === user.uid);
     const canDelete = Boolean(user?.uid && (isAdmin || ownsResource));
     const linkedQuestions = resource.note?.linkedQuestions?.length
@@ -693,11 +686,11 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
               key={resource.id}
               resource={resource}
               variant="hero"
-              onOpenResource={
-                canOpenResource
-                  ? () => void handleVisit(resource.websiteUrl, resource)
-                  : undefined
-              }
+              resourceActionLabel="Pop out"
+              onOpenResource={() => {
+                popOutDiscoverResource(resource);
+                onPopOut?.();
+              }}
             />
           </div>
 
@@ -705,7 +698,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
             {resource.userId ? (
               <button
                 type="button"
-                onClick={() => navigate(`/viewProfile/${resource.userId}`)}
+                onClick={() => navigate(`/viewProfile/${resource.userId}`, { state: backState })}
                 className="shrink-0 cursor-pointer"
               >
                 {resource.userPicture ? (
@@ -768,12 +761,12 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
             <button
               type="button"
               onClick={() => void handleSave(resource)}
-              disabled={!resource.note || !user?.uid}
+              disabled={!resource.note}
               className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer hover:opacity-90 ${
                 userSaved
                   ? "color-bg-accent color-txt-accent"
                   : "color-bg-grey-5 color-txt-main"
-              } ${!resource.note || !user?.uid ? "opacity-50" : ""}`}
+              } ${!resource.note ? "opacity-50" : ""}`}
             >
               <LuBookmark size={13} fill={userSaved ? "currentColor" : "none"} />
               {userSaved ? "Saved" : "Save"} · {resource.saves}
@@ -848,7 +841,9 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
                     if (e.key === "Escape") cancelComment();
                   }}
                   placeholder={user?.uid ? "Add a comment..." : "Log in to comment"}
-                  disabled={!user?.uid || !resource.note}
+                  disabled={!resource.note}
+                  readOnly={!user?.uid}
+                  onClick={async () => { if (!user?.uid) await requireSignIn("Commenting"); }}
                   maxLength={MAX_COMMENT}
                   className="w-full bg-transparent color-txt-main text-xs outline-none border-0 border-b border-color-border pb-1.5 placeholder:color-txt-sub disabled:opacity-60"
                 />
@@ -888,7 +883,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
                     {comment.userId ? (
                       <button
                         type="button"
-                        onClick={() => navigate(`/viewProfile/${comment.userId}`)}
+                        onClick={() => navigate(`/viewProfile/${comment.userId}`, { state: backState })}
                         className="shrink-0 cursor-pointer mt-0.5"
                       >
                         {comment.userPicture ? (
@@ -976,7 +971,7 @@ export default function QuestionDiscover({ question }: { question?: unknown }) {
           <div className="shrink-0 px-3 pt-2 pb-1">
             <button
               type="button"
-              onClick={() => setShowShareForm(true)}
+              onClick={async () => { if (await requireSignIn("Share resource")) setShowShareForm(true); }}
               className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl color-bg-accent color-txt-accent px-3 py-2 text-xs font-bold hover:opacity-90 cursor-pointer"
             >
               <LuPlus size={14} /> Add resource

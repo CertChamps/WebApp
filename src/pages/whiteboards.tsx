@@ -8,7 +8,6 @@ import {
   LuFileText,
   LuFolder,
   LuLoaderCircle,
-  LuLock,
   LuPencil,
   LuPlus,
   LuSearch,
@@ -31,7 +30,6 @@ import {
 } from "../data/whiteboards";
 import { getFavouriteSubjectIds, getSubjectLabel, useSyncedFavouriteSubjectIds } from "../data/practiceHubSubjects";
 import { UserContext } from "../context/UserContext";
-import { hasAceAccess } from "../lib/contentAccess";
 import { storage } from "../../firebase";
 import {
   completeIncomingShare,
@@ -119,7 +117,6 @@ function PageRecentGlyph({ page, size = 16 }: { page: WhiteboardPage; size?: num
 export default function Whiteboards() {
   const navigate = useNavigate();
   const { user } = useContext(UserContext);
-  const hasAce = hasAceAccess(user);
   const firstName = (user?.username || "").trim().split(/\s+/)[0] || "there";
   const [subject, setSubject] = useState<string | null>(
     () => getLastWhiteboardsSubject() ?? getFavouriteSubjectIds()[0] ?? null
@@ -131,6 +128,9 @@ export default function Whiteboards() {
     pages,
     loading,
     createPage,
+    requestCreatePage,
+    showAceGate,
+    aceGateModal,
     updateFolder,
     deleteFolder,
   } = useWhiteboards(subject);
@@ -204,7 +204,7 @@ export default function Whiteboards() {
     phase: "in",
   });
   const aiTypeMenuRef = useRef<HTMLDivElement>(null);
-  const { state: aiState, search: aiSearch, dismiss: aiDismiss } = useWhiteboardAIMatch(subject);
+  const { state: aiState, search: aiSearch, dismiss: aiDismiss } = useWhiteboardAIMatch(subject, showAceGate);
   const aiBusy = aiState.status === "searching";
   const selectedAiPageType = AI_PAGE_TYPES.find((option) => option.id === aiPageType) ?? AI_PAGE_TYPES[0];
   const SelectedPageTypeIcon = selectedAiPageType.Icon;
@@ -329,24 +329,21 @@ export default function Whiteboards() {
         attachedQuestions: proposal.attachments,
         pageType,
       });
-      openPage(page.id);
+      if (page) openPage(page.id);
     },
     [subject, createPage, openPage, aiPageType]
   );
 
   const handleAISubmit = useCallback(async () => {
-    if (!hasAce) {
-      navigate("/user/manage-account?tab=payments");
-      return;
-    }
     if (!subject || aiBusy || !aiPrompt.trim()) return;
+    if (!requestCreatePage()) return;
     setAiTypeMenuOpen(false);
     const proposal = await aiSearch(aiPrompt, aiPageType);
     if (proposal) {
       setAiPrompt("");
       await createPageFromProposal(proposal, aiPageType);
     }
-  }, [hasAce, navigate, subject, aiBusy, aiPrompt, aiSearch, aiPageType, createPageFromProposal]);
+  }, [requestCreatePage, subject, aiBusy, aiPrompt, aiSearch, aiPageType, createPageFromProposal]);
 
   const handleFindQuestions = useCallback(() => {
     navigate(subject ? `/practice?subject=${encodeURIComponent(subject)}` : "/practice");
@@ -357,7 +354,7 @@ export default function Whiteboards() {
     [recentItems]
   );
 
-  const actionsDisabled = !subject;
+  const actionsDisabled = !subject || loading;
 
   return (
     <div className="flex h-full w-full flex-1 min-w-0 overflow-y-auto scrollbar-minimal color-bg">
@@ -384,7 +381,7 @@ export default function Whiteboards() {
           <motion.button
             type="button"
             className={actionCardClassName}
-            onClick={() => setShowCreatePage(true)}
+            onClick={() => { if (requestCreatePage()) setShowCreatePage(true); }}
             disabled={actionsDisabled}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -423,22 +420,6 @@ export default function Whiteboards() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
         >
-          {!hasAce && (
-            <button
-              type="button"
-              onClick={() => navigate("/user/manage-account?tab=payments")}
-              className="flex w-full items-center justify-between gap-3 rounded-2xl color-bg-accent px-4 py-3 text-left cursor-pointer"
-            >
-              <span className="flex items-center gap-3">
-                <LuLock size={17} className="color-txt-accent" />
-                <span>
-                  <span className="block text-sm font-bold color-txt-main">AI question matching is included with ACE</span>
-                  <span className="block text-xs color-txt-sub">Blank whiteboards remain free.</span>
-                </span>
-              </span>
-              <LuArrowRight size={17} className="color-txt-accent" />
-            </button>
-          )}
           <div className="flex w-full items-center gap-2 rounded-full border-2 color-shadow color-bg px-4 py-2">
             <LuSparkles size={18} className="shrink-0 color-txt-accent" aria-hidden />
             <div className="relative min-w-0 flex-1 overflow-hidden">
@@ -459,7 +440,7 @@ export default function Whiteboards() {
                     ? "text-transparent caret-transparent placeholder:text-transparent"
                     : "color-txt-main placeholder:color-txt-sub"
                 }`}
-                disabled={!hasAce || actionsDisabled || aiBusy}
+                disabled={actionsDisabled || aiBusy}
                 aria-label="Find questions with AI"
               />
               {aiBusy && (
@@ -493,7 +474,7 @@ export default function Whiteboards() {
                 type="button"
                 className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-bold color-txt-main hover:color-bg-grey-10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
                 onClick={() => setAiTypeMenuOpen((open) => !open)}
-                disabled={!hasAce || actionsDisabled || aiBusy}
+                disabled={actionsDisabled || aiBusy}
                 aria-expanded={aiTypeMenuOpen}
                 aria-haspopup="listbox"
                 aria-label={`Create as ${selectedAiPageType.label}`}
@@ -537,7 +518,7 @@ export default function Whiteboards() {
               type="button"
               className="shrink-0 rounded-lg p-2 color-txt-accent hover:color-bg-grey-10 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
               onClick={handleAISubmit}
-              disabled={!hasAce || actionsDisabled || aiBusy || !aiPrompt.trim()}
+              disabled={actionsDisabled || aiBusy || !aiPrompt.trim()}
               aria-label="Search questions"
             >
               {aiBusy ? (
@@ -556,9 +537,9 @@ export default function Whiteboards() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-                className={`flex items-start justify-between gap-3 ${surfacePanelClassName}`}
+                className="flex items-start justify-between gap-2 px-1"
               >
-                <p className="text-sm color-txt-main">{aiState.message}</p>
+                <p className="text-xs leading-snug color-txt-sub">{aiState.message.replace(/\s*[—–]\s*/g, ", ")}</p>
                 <button
                   type="button"
                   className="shrink-0 text-xs font-semibold color-txt-sub hover:color-txt-main transition-colors cursor-pointer"
@@ -578,7 +559,7 @@ export default function Whiteboards() {
                 transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 className={`flex flex-col gap-2 ${surfacePanelClassName}`}
               >
-                <p className="text-sm color-txt-main">{aiState.message}</p>
+                <p className="text-sm color-txt-main">{aiState.message.replace(/\s*[—–]\s*/g, ", ")}</p>
                 <div className="flex flex-col gap-1">
                   {aiState.proposal.attachments.slice(0, 6).map((attachment) => (
                     <span key={attachment.id} className="truncate text-xs color-txt-sub">
@@ -768,7 +749,7 @@ export default function Whiteboards() {
           subject={subject}
           onSave={async (result) => {
             const page = await createPage({ ...result, subject });
-            openPage(page.id);
+            if (page) openPage(page.id);
           }}
           onClose={() => setShowCreatePage(false)}
         />
@@ -782,6 +763,7 @@ export default function Whiteboards() {
           onClose={() => setEditingFolder(null)}
         />
       )}
+      {aceGateModal}
     </div>
   );
 }

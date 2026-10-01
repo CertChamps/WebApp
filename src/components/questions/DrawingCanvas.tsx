@@ -107,7 +107,6 @@ function getGridModeOption(mode: GridMode): GridModeOption {
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 10;
-const MAX_ATTACH_BYTES = 25 * 1024 * 1024;
 const GRID_STEP = 40;
 const GRID_DOT_RADIUS = 1.5;
 const ESSAY_LINE_GAP = 32;
@@ -3240,7 +3239,6 @@ export default function DrawingCanvas({
 			setIsAttaching(true);
 			const unsupported: string[] = [];
 			const failed: string[] = [];
-			const tooLarge: string[] = [];
 			try {
 				const created: CanvasObject[] = [];
 				const pendingUpgrades: { id: string; blob: Blob; localSrc: string }[] = [];
@@ -3275,10 +3273,6 @@ export default function DrawingCanvas({
 					/\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)$/i.test(file.name);
 
 				for (const file of Array.from(files)) {
-					if (file.size > MAX_ATTACH_BYTES) {
-						tooLarge.push(file.name);
-						continue;
-					}
 					if (isPdf(file)) {
 						let pageUrls: string[] = [];
 						try {
@@ -3334,15 +3328,8 @@ export default function DrawingCanvas({
 					setSelectedObjectIds([created[0].id]);
 				}
 
-				if (unsupported.length > 0 || failed.length > 0 || tooLarge.length > 0) {
+				if (unsupported.length > 0 || failed.length > 0) {
 					const parts: string[] = [];
-					if (tooLarge.length > 0) {
-						parts.push(
-							tooLarge.length === 1
-								? `"${tooLarge[0]}" is over 25 MB`
-								: `${tooLarge.length} files are over 25 MB`
-						);
-					}
 					if (unsupported.length > 0) {
 						parts.push(
 							unsupported.length === 1
@@ -3358,7 +3345,7 @@ export default function DrawingCanvas({
 						);
 					}
 					showAttachError(
-						`${parts.join(" · ")}. Only images and PDFs up to 25 MB can be added.`
+						`${parts.join(" · ")}. Only images and PDFs can be added.`
 					);
 				}
 
@@ -4537,12 +4524,12 @@ export default function DrawingCanvas({
 								if (!isAttaching) fileInputRef.current?.click();
 							}}
 							className="flex items-center gap-2 rounded-[var(--radius-in)] px-2.5 py-2 text-left transition-colors hover:color-bg-grey-10 color-txt-main"
-							title="Your files (max 25 MB)"
+							title="Your files"
 						>
 							<Upload size={16} strokeWidth={2} className="shrink-0" />
 							<span className="flex min-w-0 flex-col">
 								<span className="text-[11px] font-semibold leading-none">Your files</span>
-								<span className="mt-0.5 text-[9px] color-txt-sub leading-none">Image or PDF · 25 MB max</span>
+								<span className="mt-0.5 text-[9px] color-txt-sub leading-none">Images or PDFs</span>
 							</span>
 						</button>
 						{onAttachQuestions && (

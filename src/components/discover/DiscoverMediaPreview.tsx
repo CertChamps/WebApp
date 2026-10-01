@@ -21,6 +21,7 @@ type DiscoverMediaPreviewProps = {
   variant: "hero" | "thumb";
   className?: string;
   onOpenResource?: () => void;
+  resourceActionLabel?: string;
 };
 
 function PreviewFallback({
@@ -55,7 +56,7 @@ function PreviewSpinner({ compact }: { compact?: boolean }) {
   );
 }
 
-function CannotLoadFallback({ onOpenResource }: { onOpenResource?: () => void }) {
+function CannotLoadFallback({ onOpenResource, resourceActionLabel = "Open Resource" }: { onOpenResource?: () => void; resourceActionLabel?: string }) {
   return (
     <div className="w-full h-full min-h-[240px] flex flex-col items-center justify-center gap-4 color-bg-grey-10 px-6 text-center">
       <p className="text-base font-semibold color-txt-main">Cannot Load Resource... Sorry :(</p>
@@ -66,14 +67,14 @@ function CannotLoadFallback({ onOpenResource }: { onOpenResource?: () => void })
           className="inline-flex items-center gap-2 rounded-xl color-bg color-txt-accent px-4 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer"
         >
           <LuExternalLink size={15} />
-          Open Resource
+          {resourceActionLabel}
         </button>
       )}
     </div>
   );
 }
 
-function OpenResourceCorner({ onOpenResource }: { onOpenResource?: () => void }) {
+function OpenResourceCorner({ onOpenResource, resourceActionLabel = "Open Resource" }: { onOpenResource?: () => void; resourceActionLabel?: string }) {
   if (!onOpenResource) return null;
   return (
     <button
@@ -82,7 +83,7 @@ function OpenResourceCorner({ onOpenResource }: { onOpenResource?: () => void })
       className="absolute top-3 right-3 z-20 inline-flex items-center gap-2 rounded-xl color-bg color-txt-accent px-4 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer"
     >
       <LuExternalLink size={15} />
-      Open Resource
+      {resourceActionLabel}
     </button>
   );
 }
@@ -246,9 +247,11 @@ function PdfThumb({ resource }: { resource: DiscoverPreviewSource }) {
 function PdfHero({
   resource,
   onOpenResource,
+  resourceActionLabel,
 }: {
   resource: DiscoverPreviewSource;
   onOpenResource?: () => void;
+  resourceActionLabel?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [file, setFile] = useState<Blob | string | null>(null);
@@ -294,12 +297,12 @@ function PdfHero({
   }, [resource.pdfPath, resource.websiteUrl]);
 
   if (failed) {
-    return <CannotLoadFallback onOpenResource={onOpenResource} />;
+    return <CannotLoadFallback onOpenResource={onOpenResource} resourceActionLabel={resourceActionLabel} />;
   }
 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-y-auto scrollbar-minimal color-bg-grey-10">
-      <OpenResourceCorner onOpenResource={onOpenResource} />
+      <OpenResourceCorner onOpenResource={onOpenResource} resourceActionLabel={resourceActionLabel} />
       {loading && !file && (
         <div className="w-full h-full min-h-[240px] flex items-center justify-center color-txt-sub">
           <LuLoader size={22} className="animate-spin" />
@@ -344,6 +347,7 @@ export default function DiscoverMediaPreview({
   variant,
   className = "",
   onOpenResource,
+  resourceActionLabel,
 }: DiscoverMediaPreviewProps) {
   const kind = getDiscoverPreviewKind(resource);
   const videoEmbed = getDiscoverVideoEmbed(resource.websiteUrl);
@@ -380,7 +384,7 @@ export default function DiscoverMediaPreview({
             allow={DISCOVER_VIDEO_IFRAME_ALLOW}
           />
         )}
-        <OpenResourceCorner onOpenResource={onOpenResource} />
+        <OpenResourceCorner onOpenResource={onOpenResource} resourceActionLabel={resourceActionLabel} />
       </div>
     );
   }
@@ -388,7 +392,7 @@ export default function DiscoverMediaPreview({
   if (kind === "pdf") {
     return (
       <div className={`w-full h-full ${className}`}>
-        <PdfHero resource={resource} onOpenResource={onOpenResource} />
+        <PdfHero resource={resource} onOpenResource={onOpenResource} resourceActionLabel={resourceActionLabel} />
       </div>
     );
   }
@@ -396,14 +400,15 @@ export default function DiscoverMediaPreview({
   if (kind === "website") {
     return (
       <div className={`w-full h-full ${className}`}>
-        <CannotLoadFallback onOpenResource={onOpenResource} />
+        <CannotLoadFallback onOpenResource={onOpenResource} resourceActionLabel={resourceActionLabel} />
       </div>
     );
   }
 
   if (thumbSrc) {
     return (
-      <div className={`w-full h-full ${className}`}>
+      <div className={`relative w-full h-full ${className}`}>
+          <OpenResourceCorner onOpenResource={onOpenResource} resourceActionLabel={resourceActionLabel} />
           <CoverImage src={thumbSrc} fallback={<PreviewFallback resource={resource} />} />
       </div>
     );
@@ -411,7 +416,7 @@ export default function DiscoverMediaPreview({
 
   return (
     <div className={`w-full h-full ${className}`}>
-      <CannotLoadFallback onOpenResource={onOpenResource} />
+      <CannotLoadFallback onOpenResource={onOpenResource} resourceActionLabel={resourceActionLabel} />
     </div>
   );
 }

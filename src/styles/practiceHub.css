@@ -241,7 +241,6 @@
 .practice-hub__search-input:focus {
   outline: none;
   border-color: var(--color-blue, #27548a);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-blue) 25%, transparent);
 }
 
 .practice-hub__search-results {

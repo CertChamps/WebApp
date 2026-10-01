@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   LuArrowLeft,
@@ -48,6 +48,7 @@ import SaveQuestionToCanvasModal from "../components/whiteboards/SaveQuestionToC
 import { buildImageAttachment } from "../lib/whiteboardAttachments";
 import type { AttachedQuestion } from "../data/whiteboards";
 import "../styles/practiceBrowser.css";
+import { useRequireSignIn } from "../hooks/useRequireSignIn";
 
 const LEVEL_ORDER = ["higher", "ordinary", "foundation"];
 const EXAM_CYCLE_IDS = Object.keys(EXAM_CYCLES) as ExamCycleId[];
@@ -249,6 +250,7 @@ function QuestionCard({
 }
 
 function PracticeBrowserInner() {
+  const requireSignIn = useRequireSignIn();
   const { options } = useContext(OptionsContext);
   const [searchParams, setSearchParams] = useSearchParams();
   const cycle: ExamCycleId = parseExamCycle(searchParams.get("cycle"));
@@ -280,12 +282,15 @@ function PracticeBrowserInner() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const questionElements = useRef(new Map<string, HTMLElement>());
   const titleRowRef = useRef<HTMLDivElement>(null);
+  const activeQuestionIndexRef = useRef(0);
+  const sidebarOpenRef = useRef(sidebarOpen);
+  const handledTargetRef = useRef("");
+  const pinnedTargetKeyRef = useRef<string | null>(null);
+  const sidebarLayoutAnchorRef = useRef<{ key: string; offset: number } | null>(null);
+  const preservingSidebarLayoutRef = useRef(false);
 
-  useEffect(() => {
-    if (searchParams.get(DISCOVER_SIDEBAR_PARAM) !== "threads") return;
-    setSidebarOpen(true);
-    setSidebarPanel("threads");
-  }, [searchParams]);
+  activeQuestionIndexRef.current = activeQuestionIndex;
+  sidebarOpenRef.current = sidebarOpen;
 
   const { subjects: availableSubjects, loading: subjectsLoading, error: subjectsError } =
     useImageSubjectAvailability(cycle);
@@ -446,6 +451,9 @@ function PracticeBrowserInner() {
       ),
     [unsortedQuestions]
   );
+  const targetQuestionIndex = targetQuestionKey
+    ? grouped.findIndex((question) => question.key === targetQuestionKey)
+    : -1;
 
   const activeQuestion = grouped[activeQuestionIndex] ?? grouped[0];
   const activeMarkingFiles = useMemo(
@@ -461,35 +469,209 @@ function PracticeBrowserInner() {
   useEffect(() => {
     setSearch("");
     setActiveQuestionIndex(0);
+    activeQuestionIndexRef.current = 0;
     questionElements.current.clear();
   }, [subjectId, selectedLevel, selectedTopicName, selectedPaperYear, selectedPaperNum, browseMode, cycle]);
 
-  useEffect(() => {
-    if (!targetQuestionKey || grouped.length === 0) return;
-    const index = grouped.findIndex((question) => question.key === targetQuestionKey);
+  const activateQuestion = useCallback((index: number) => {
     if (index < 0) return;
-    setActiveQuestionIndex(index);
-    questionElements.current.get(targetQuestionKey)?.scrollIntoView({ block: "start" });
-  }, [grouped, targetQuestionKey]);
+    activeQuestionIndexRef.current = index;
+    setActiveQuestionIndex((current) => (current === index ? current : index));
+  }, []);
+
+  const scrollQuestionToTop = useCallback((key: string, behavior: ScrollBehavior = "auto") => {
+    const root = scrollRef.current;
+    const element = questionElements.current.get(key);
+    if (!root || !element) return false;
+    const rootRect = root.getBoundingClientRect();
+    const toolbar = root.querySelector<HTMLElement>(".practice-browser__feed-toolbar");
+    const topInset = (toolbar?.getBoundingClientRect().height ?? 56) + 16;
+    const nextTop = root.scrollTop + element.getBoundingClientRect().top - rootRect.top - topInset;
+    root.scrollTo({ top: Math.max(0, nextTop), behavior });
+    return true;
+  }, []);
+
+  useEffect(() => {
+    if (!targetQuestionKey || targetQuestionIndex < 0) return;
+    const requestId = [subjectId, selectedLevel, browseMode, selectedTopicName, selectedPaperYear, selectedPaperNum, targetQuestionKey].join("|");
+    if (handledTargetRef.current === requestId) return;
+    handledTargetRef.current = requestId;
+    pinnedTargetKeyRef.current = targetQuestionKey;
+    activateQuestion(targetQuestionIndex);
+
+    const root = scrollRef.current;
+    const target = questionElements.current.get(targetQuestionKey);
+    if (!root || !target) return;
+
+    let frame = 0;
+    let settleTimer = 0;
+    let stopped = false;
+    const imageCleanups: Array<() => void> = [];
+    const align = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        if (!stopped) scrollQuestionToTop(targetQuestionKey);
+      });
+    };
+    const stop = () => {
+      if (stopped) return;
+      stopped = true;
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(settleTimer);
+      resizeObserver.disconnect();
+      imageCleanups.forEach((cleanup) => cleanup());
+      root.removeEventListener("pointerdown", stop);
+      root.removeEventListener("wheel", stop);
+      if (pinnedTargetKeyRef.current === targetQuestionKey) pinnedTargetKeyRef.current = null;
+    };
+    const resizeObserver = new ResizeObserver(() => {
+      align();
+    });
+
+    const questionsContainer = target.closest(".practice-browser__questions") ?? target;
+    resizeObserver.observe(questionsContainer);
+    root.addEventListener("pointerdown", stop, { passive: true });
+    root.addEventListener("wheel", stop, { passive: true });
+    align();
+
+    const questionCards = Array.from(questionsContainer.children).slice(0, targetQuestionIndex + 1);
+    const images = questionCards.flatMap((card) => Array.from(card.querySelectorAll("img")));
+    const waitForImage = (image: HTMLImageElement) => {
+      if (image.complete) return image.decode?.().catch(() => undefined) ?? Promise.resolve();
+      return new Promise<void>((resolve) => {
+        const done = () => {
+          image.removeEventListener("load", done);
+          image.removeEventListener("error", done);
+          resolve();
+        };
+        image.addEventListener("load", done, { once: true });
+        image.addEventListener("error", done, { once: true });
+        imageCleanups.push(done);
+      });
+    };
+    void Promise.all(images.map(waitForImage)).then(() => {
+      if (stopped) return;
+      align();
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          if (stopped) return;
+          align();
+          settleTimer = window.setTimeout(stop, 300);
+        });
+      });
+    });
+    return stop;
+  }, [
+    activateQuestion,
+    browseMode,
+    scrollQuestionToTop,
+    selectedLevel,
+    selectedPaperNum,
+    selectedPaperYear,
+    selectedTopicName,
+    subjectId,
+    targetQuestionKey,
+    targetQuestionIndex,
+  ]);
 
   useEffect(() => {
     const root = scrollRef.current;
     if (!root || grouped.length === 0) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        const key = (visible?.target as HTMLElement | undefined)?.dataset.questionKey;
-        if (!key) return;
-        const index = grouped.findIndex((question) => question.key === key);
-        if (index >= 0) setActiveQuestionIndex(index);
-      },
-      { root, rootMargin: "-15% 0px -55% 0px", threshold: [0, 0.2, 0.5] }
-    );
-    questionElements.current.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
+    let frame = 0;
+    const syncActiveQuestion = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        if (preservingSidebarLayoutRef.current) return;
+        const pinnedTargetKey = pinnedTargetKeyRef.current;
+        if (pinnedTargetKey) {
+          const pinnedIndex = grouped.findIndex((question) => question.key === pinnedTargetKey);
+          if (pinnedIndex >= 0) activateQuestion(pinnedIndex);
+          return;
+        }
+        const rootRect = root.getBoundingClientRect();
+        const toolbar = root.querySelector<HTMLElement>(".practice-browser__feed-toolbar");
+        const toolbarHeight = toolbar?.getBoundingClientRect().height ?? 56;
+        const lockLine = rootRect.top + Math.min(
+          rootRect.height - 24,
+          Math.max(toolbarHeight + 24, rootRect.height * 0.55),
+        );
+        let nextIndex = grouped.length > 0 && root.scrollTop + root.clientHeight >= root.scrollHeight - 2
+          ? grouped.length - 1
+          : 0;
+        if (nextIndex === 0) {
+          for (let index = 0; index < grouped.length; index += 1) {
+            const element = questionElements.current.get(grouped[index].key);
+            if (!element) continue;
+            if (element.getBoundingClientRect().top <= lockLine) nextIndex = index;
+            else break;
+          }
+        }
+        activateQuestion(nextIndex);
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(syncActiveQuestion);
+    resizeObserver.observe(root);
+    questionElements.current.forEach((element) => resizeObserver.observe(element));
+    root.addEventListener("scroll", syncActiveQuestion, { passive: true });
+    syncActiveQuestion();
+    return () => {
+      window.cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      root.removeEventListener("scroll", syncActiveQuestion);
+    };
+  }, [activateQuestion, grouped]);
+
+  const setSidebarOpenPreservingScroll = useCallback((nextOpen: boolean) => {
+    if (sidebarOpenRef.current === nextOpen) return;
+    const root = scrollRef.current;
+    const question = grouped[activeQuestionIndexRef.current] ?? grouped[0];
+    const element = question ? questionElements.current.get(question.key) : null;
+    if (root && element && question) {
+      sidebarLayoutAnchorRef.current = {
+        key: question.key,
+        offset: element.getBoundingClientRect().top - root.getBoundingClientRect().top,
+      };
+      preservingSidebarLayoutRef.current = true;
+    }
+    sidebarOpenRef.current = nextOpen;
+    setSidebarOpen(nextOpen);
   }, [grouped]);
+
+  useEffect(() => {
+    if (searchParams.get(DISCOVER_SIDEBAR_PARAM) !== "threads") return;
+    setSidebarOpenPreservingScroll(true);
+    setSidebarPanel("threads");
+  }, [searchParams, setSidebarOpenPreservingScroll]);
+
+  useLayoutEffect(() => {
+    const anchor = sidebarLayoutAnchorRef.current;
+    const root = scrollRef.current;
+    if (!anchor || !root) return;
+    sidebarLayoutAnchorRef.current = null;
+    let frame = 0;
+    const startedAt = performance.now();
+    const preserve = () => {
+      const element = questionElements.current.get(anchor.key);
+      if (!element) {
+        preservingSidebarLayoutRef.current = false;
+        return;
+      }
+      const currentOffset = element.getBoundingClientRect().top - root.getBoundingClientRect().top;
+      const correction = currentOffset - anchor.offset;
+      if (Math.abs(correction) > 0.5) root.scrollTop += correction;
+      if (performance.now() - startedAt < 420) {
+        frame = window.requestAnimationFrame(preserve);
+      } else {
+        preservingSidebarLayoutRef.current = false;
+      }
+    };
+    preserve();
+    return () => {
+      window.cancelAnimationFrame(frame);
+      preservingSidebarLayoutRef.current = false;
+    };
+  }, [sidebarOpen]);
 
   const updateLocation = useCallback(
     (next: Record<string, string | null | undefined>) => {
@@ -520,8 +702,8 @@ function PracticeBrowserInner() {
   const selectQuestion = (index: number) => {
     const question = grouped[index];
     if (!question) return;
-    setActiveQuestionIndex(index);
-    questionElements.current.get(question.key)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    activateQuestion(index);
+    scrollQuestionToTop(question.key, "smooth");
   };
 
   const showFeed = inTopicFeed || inPaperFeed;
@@ -623,8 +805,9 @@ function PracticeBrowserInner() {
                       if (element) questionElements.current.set(question.key, element);
                       else questionElements.current.delete(question.key);
                     }}
-                    onActivate={() => setActiveQuestionIndex(index)}
-                    onAddToCanvas={() => {
+                    onActivate={() => activateQuestion(index)}
+                    onAddToCanvas={async () => {
+                      if (!await requireSignIn("Save to Whiteboards")) return;
                       if (!storageSubject || !selectedLevel) return;
                       const topicForAttach =
                         selectedTopic ??
@@ -638,7 +821,7 @@ function PracticeBrowserInner() {
                             }
                           : null);
                       if (!topicForAttach) return;
-                      setActiveQuestionIndex(index);
+                      activateQuestion(index);
                       setCanvasAttachment(
                         buildImageAttachment(
                           storageSubject,
@@ -697,7 +880,7 @@ function PracticeBrowserInner() {
                 : undefined
             }
             open={sidebarOpen}
-            onOpenChange={setSidebarOpen}
+            onOpenChange={setSidebarOpenPreservingScroll}
             openPanel={sidebarPanel ?? undefined}
             onOpenPanelChange={(panel) => setSidebarPanel(panel ?? null)}
             forceShowMarkingSchemeTab
@@ -713,11 +896,11 @@ function PracticeBrowserInner() {
           leftHandMode={options.leftHandMode}
           spotifyTabVisible={sidebarOpen && sidebarPanel === "spotify"}
           onOpenTimer={() => {
-            setSidebarOpen(true);
+            setSidebarOpenPreservingScroll(true);
             setSidebarPanel("timer");
           }}
           onOpenSpotify={() => {
-            setSidebarOpen(true);
+            setSidebarOpenPreservingScroll(true);
             setSidebarPanel("spotify");
           }}
         />
@@ -739,13 +922,6 @@ function PracticeBrowserInner() {
     : selectedSubject
       ? selectedSubject.label
       : "Practice Questions";
-  const pageDescription = viewingBrowse
-    ? browseMode === "paper"
-      ? `Browse ${selectedSubject?.label ?? "subject"} by exam paper.`
-      : `Browse ${selectedSubject?.label ?? "subject"} by topic.`
-    : selectedSubject
-      ? "Choose one of the available levels."
-      : "Choose a subject and level to browse question images.";
 
   return (
     <div className="practice-browser h-full w-full overflow-y-auto overflow-x-hidden color-bg scrollbar-minimal">
@@ -793,7 +969,6 @@ function PracticeBrowserInner() {
             </nav>
           )}
           <h1>{pageTitle}</h1>
-          <p>{pageDescription}</p>
 
           {!selectedSubject && (
             <div

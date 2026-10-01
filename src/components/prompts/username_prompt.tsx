@@ -149,6 +149,8 @@ export default function UsernamePrompt() {
   
     }
 
+    if (!user?.uid) return null;
+
     return (
         <>
         {/* Image Cropper Modal */}
@@ -230,4 +232,4 @@ export default function UsernamePrompt() {
         </>
     )
 
-} 
+}

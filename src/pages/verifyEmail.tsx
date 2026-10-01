@@ -1,15 +1,18 @@
 import { useState, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { auth, db } from "../../firebase";
 import { sendEmailVerification, signOut } from "firebase/auth";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { UserContext } from "../context/UserContext";
 import { getPostAuthPath } from "../lib/onboarding";
+import { safeAppPath } from "../lib/signIn";
 import crown from "../assets/logo.png";
 import { MdEmail, MdRefresh, MdLogout, MdCheckCircle } from "react-icons/md";
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = safeAppPath(searchParams.get("returnTo"));
   const { user, setUser } = useContext(UserContext);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [message, setMessage] = useState("");
@@ -48,7 +51,7 @@ export default function VerifyEmail() {
           setMessage("Email verified! Redirecting...");
 
           setTimeout(() => {
-            navigate(getPostAuthPath({ hasCompletedOnboarding }));
+            navigate(getPostAuthPath({ hasCompletedOnboarding }, returnTo));
           }, 1500);
         }
       } catch (err) {
@@ -63,7 +66,7 @@ export default function VerifyEmail() {
     const interval = setInterval(checkVerificationStatus, 3000);
 
     return () => clearInterval(interval);
-  }, [navigate, setUser]);
+  }, [navigate, setUser, returnTo]);
 
   // Handle resend cooldown timer
   useEffect(() => {
