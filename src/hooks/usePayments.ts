@@ -105,7 +105,10 @@ export function usePayments(): UsePaymentsResult {
     const purchase = useCallback(async (): Promise<boolean> => {
         setError(null);
         setSuccess(false);
-        if (!price || user?.isPro) return false;
+        // Apple reloads the live StoreKit offering inside purchase(). A
+        // transient localized-price failure must not leave iPad users with
+        // a permanently dead subscribe button.
+        if (user?.isPro) return false;
         setPurchaseLoading(true);
         iapDebug("usePayments.purchase:start", { activeProvider });
         try {
@@ -150,7 +153,7 @@ export function usePayments(): UsePaymentsResult {
         } finally {
             setPurchaseLoading(false);
         }
-    }, [activeProvider, selectedPlan, price, user?.isPro]);
+    }, [activeProvider, selectedPlan, user?.isPro]);
 
     const openManagement = useCallback(async (requestedProvider?: PaymentProviderName): Promise<void> => {
         setError(null);

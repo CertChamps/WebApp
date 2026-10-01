@@ -25,7 +25,11 @@
 import { Browser } from "@capacitor/browser";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
-import type { PurchasesPackage } from "@revenuecat/purchases-capacitor";
+import type {
+    PurchasesOffering,
+    PurchasesOfferings,
+    PurchasesPackage,
+} from "@revenuecat/purchases-capacitor";
 import { auth } from "../../../firebase";
 import { ensureConfigured } from "./initPayments";
 import {
@@ -53,6 +57,10 @@ const ACE_OFFERING_IDENTIFIER = "CertChamps_ACE";
 
 /** RevenueCat package identifiers for the two billing periods. */
 const ACE_PACKAGE_IDENTIFIERS = { monthly: "$rc_monthly", annual: "$rc_annual" };
+const ACE_PRODUCT_IDENTIFIERS = {
+    monthly: "CertChamps_ACE_Monthly",
+    annual: ACE_PRODUCT_IDENTIFIER,
+} as const;
 
 /** Generic timeout for native bridge calls. purchasePackage is excluded —
  *  it intentionally blocks until the user interacts with the StoreKit
@@ -63,15 +71,43 @@ const NATIVE_TIMEOUT_MS = 15_000;
 const OFFERINGS_TIMEOUT_MS = 20_000;
 
 function resolveAcePackage(
-    offering: { availablePackages: PurchasesPackage[] } | null | undefined,
+    offering: PurchasesOffering | null | undefined,
     plan: SubscriptionPlan,
 ): PurchasesPackage | null {
-    const productId = plan === "monthly" ? "CertChamps_ACE_Monthly" : ACE_PRODUCT_IDENTIFIER;
-    const period = plan === "monthly" ? "P1M" : "P1Y";
-    return offering?.availablePackages.find(p =>
-        p.identifier === ACE_PACKAGE_IDENTIFIERS[plan] &&
-        p.product.identifier === productId && p.product.subscriptionPeriod === period
-    ) ?? null;
+    if (!offering) return null;
+
+    const productId = ACE_PRODUCT_IDENTIFIERS[plan];
+    const typedPackage = plan === "monthly" ? offering.monthly : offering.annual;
+    const candidates = [
+        typedPackage,
+        offering.availablePackages.find(p => p.identifier === ACE_PACKAGE_IDENTIFIERS[plan]),
+        offering.availablePackages.find(p => p.product.identifier === productId),
+    ];
+
+    // The App Store product ID is the source of truth for which plan the
+    // customer is buying. Do not reject a valid product just because the
+    // RevenueCat package name or StoreKit period metadata changed.
+    return candidates.find(p => p?.product.identifier === productId) ?? null;
+}
+
+function resolveAcePurchase(
+    offerings: PurchasesOfferings,
+    plan: SubscriptionPlan,
+): { offering: PurchasesOffering; pkg: PurchasesPackage } | null {
+    const candidates = [
+        offerings.all[ACE_OFFERING_IDENTIFIER],
+        offerings.current,
+        ...Object.values(offerings.all),
+    ].filter((offering): offering is PurchasesOffering => !!offering);
+    const seen = new Set<string>();
+
+    for (const offering of candidates) {
+        if (seen.has(offering.identifier)) continue;
+        seen.add(offering.identifier);
+        const pkg = resolveAcePackage(offering, plan);
+        if (pkg) return { offering, pkg };
+    }
+    return null;
 }
 
 /** Firebase Function that hits the RevenueCat REST API server-side and
@@ -168,15 +204,19 @@ export const appleProvider: PaymentProvider = {
                 allOfferingIds: Object.keys(offerings.all ?? {}),
                 targetOfferingId: ACE_OFFERING_IDENTIFIER,
             });
-            const offering =
-                offerings.all[ACE_OFFERING_IDENTIFIER];
-            const pkg = resolveAcePackage(offering, plan);
-            if (!pkg) {
+            const resolved = resolveAcePurchase(offerings, plan);
+            if (!resolved) {
                 iapDebugWarn("appleProvider.getPrice:noPackage", {
                     offeringId: ACE_OFFERING_IDENTIFIER,
                     packageId: ACE_PACKAGE_IDENTIFIERS[plan],
-                    resolvedOfferingId: offering?.identifier ?? null,
-                    availablePackageIds: offering?.availablePackages?.map((p) => p.identifier) ?? [],
+                    productId: ACE_PRODUCT_IDENTIFIERS[plan],
+                    availablePackages: Object.values(offerings.all ?? {}).flatMap(
+                        offering => offering.availablePackages.map(pkg => ({
+                            offeringId: offering.identifier,
+                            packageId: pkg.identifier,
+                            productId: pkg.product.identifier,
+                        }))
+                    ),
                 });
                 console.warn("[applePayment] no ACE package available in offering", {
                     offeringId: ACE_OFFERING_IDENTIFIER,
@@ -185,7 +225,9 @@ export const appleProvider: PaymentProvider = {
                 });
                 return null;
             }
+            const { offering, pkg } = resolved;
             iapDebug("appleProvider.getPrice:resolved", {
+                offeringId: offering.identifier,
                 packageId: pkg.identifier,
                 productId: pkg.product.identifier,
                 priceString: pkg.product.priceString,
@@ -237,6 +279,12 @@ export const appleProvider: PaymentProvider = {
                         Purchases.getAppUserID()
                     )
             );
+            if (!isConfigured) {
+                return {
+                    success: false,
+                    error: "Apple payments are still starting. Please try again.",
+                };
+            }
             if (appUserID !== auth.currentUser.uid) throw new Error("Please sign in again before subscribing.");
             iapDebug("appleProvider.purchase:pre-flight", {
                 isConfigured,
@@ -256,22 +304,27 @@ export const appleProvider: PaymentProvider = {
                 allOfferingIds: Object.keys(offerings.all ?? {}),
                 targetOfferingId: ACE_OFFERING_IDENTIFIER,
             });
-            const offering =
-                offerings.all[ACE_OFFERING_IDENTIFIER];
-            const pkg = resolveAcePackage(offering, plan);
-            if (!pkg) {
+            const resolved = resolveAcePurchase(offerings, plan);
+            if (!resolved) {
                 iapDebugWarn("appleProvider.purchase:noPackage", {
-                    resolvedOfferingId: offering?.identifier ?? null,
-                    availablePackageIds: offering?.availablePackages?.map((p) => p.identifier) ?? [],
+                    productId: ACE_PRODUCT_IDENTIFIERS[plan],
+                    availablePackages: Object.values(offerings.all ?? {}).flatMap(
+                        offering => offering.availablePackages.map(pkg => ({
+                            offeringId: offering.identifier,
+                            packageId: pkg.identifier,
+                            productId: pkg.product.identifier,
+                        }))
+                    ),
                 });
                 return {
                     success: false,
                     error: "Subscription is not available right now. Please try again later.",
                 };
             }
+            const { offering, pkg } = resolved;
 
             iapDebug("appleProvider.purchase:calling purchasePackage", {
-                offeringId: ACE_OFFERING_IDENTIFIER,
+                offeringId: offering.identifier,
                 packageId: pkg.identifier,
                 productId: pkg.product.identifier,
                 entitlementId: ACE_ENTITLEMENT_ID,

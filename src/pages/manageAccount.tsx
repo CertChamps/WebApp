@@ -211,7 +211,7 @@ const PaymentsTab = ({
                                 <motion.button
                                     type="button"
                                     onClick={onUpgrade}
-                                    disabled={checkoutLoading || priceLoading || !priceFormatted}
+                                    disabled={checkoutLoading || (activeProvider !== "apple" && (priceLoading || !priceFormatted))}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     className="ace-cta-btn w-full py-3.5 rounded-xl font-bold text-white text-base disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer relative overflow-hidden"
@@ -220,7 +220,11 @@ const PaymentsTab = ({
                                     <span className="relative z-[1] color-txt-main font-bold">
                                         {checkoutLoading
                                             ? (activeProvider === "apple" ? "Opening Apple…" : "Redirecting to checkout…")
-                                            : priceFormatted ? `Subscribe for ${priceFormatted}/${pricePeriod}` : priceLoading ? "Loading prices…" : "Subscription unavailable"}
+                                            : priceFormatted
+                                                ? `Subscribe for ${priceFormatted}/${pricePeriod}`
+                                                : activeProvider === "apple"
+                                                    ? "Continue with Apple"
+                                                    : priceLoading ? "Loading prices…" : "Subscription unavailable"}
                                     </span>
                                 </motion.button>
                                 <p className="mt-3 text-center text-[11px] leading-relaxed color-txt-sub">
