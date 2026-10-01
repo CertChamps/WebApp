@@ -23,7 +23,7 @@ import { db, storage } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { isAdminUid } from "../constants/adminUids";
 import NotificationBell from "../components/social/NotificationBell";
-import DiscoverFiltersModal, { type DiscoverSortBy } from "../components/discover/DiscoverFiltersModal";
+import DiscoverFiltersModal, { type DiscoverFilterType, type DiscoverSortBy } from "../components/discover/DiscoverFiltersModal";
 import DiscoverShareModal from "../components/discover/DiscoverShareModal";
 import {
     completeIncomingShare,
@@ -173,8 +173,15 @@ function resourceMatchesSelectedSubject(resource: DiscoverResource, selectedLabe
     );
 }
 
+function resourceMatchesTypes(resource: DiscoverResource, selectedTypes: DiscoverFilterType[], savedIds: Set<string>) {
+    if (selectedTypes.includes("Saved") && !savedIds.has(resource.id)) return false;
+    const types = selectedTypes.filter((type) => type !== "Saved");
+    return types.length === 0 || (resource.types ?? [resource.type]).some((type) => types.includes(type));
+}
+
 const MAX_COMMENT = 500;
 const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
+const FILTER_TYPES: DiscoverFilterType[] = [...RESOURCE_TYPES, "Saved"];
 const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
 
 function timeAgo(seconds: number | null): string {
@@ -514,7 +521,8 @@ export default function Discover() {
     const searchInputRef = useRef<HTMLInputElement | null>(null);
     const searchDelayRef = useRef<number | null>(null);
     const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
-    const [selectedTypes, setSelectedTypes] = useState<ResourceType[]>([]);
+    const [selectedTypes, setSelectedTypes] = useState<DiscoverFilterType[]>([]);
+    const [savedResourceIds, setSavedResourceIds] = useState<Set<string>>(new Set());
     const [sortBy, setSortBy] = useState<DiscoverSortBy>("date");
     const [showFilters, setShowFilters] = useState(false);
     const filtersButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -789,6 +797,16 @@ export default function Discover() {
     }, []);
 
     useEffect(() => {
+        if (!user?.uid) {
+            setSavedResourceIds(new Set());
+            return;
+        }
+        return onSnapshot(collection(db, "user-data", user.uid, "saved-discover"), (snapshot) => {
+            setSavedResourceIds(new Set(snapshot.docs.map((item) => item.id)));
+        });
+    }, [user?.uid]);
+
+    useEffect(() => {
         setCommentText("");
         setCommentComposerOpen(false);
         setShowDeleteConfirm(false);
@@ -828,7 +846,7 @@ export default function Discover() {
                     setUserRating(typeof value === "number" ? value : null);
                 }
             });
-            getDoc(doc(db, "discover-notes", selectedResource.id, "likes", user.uid)).then((snap) => {
+            getDoc(doc(db, "user-data", user.uid, "saved-discover", selectedResource.id)).then((snap) => {
                 if (!cancelled) setUserSaved(snap.exists());
             });
         } else {
@@ -897,9 +915,7 @@ export default function Discover() {
 
         const candidateResources = resources.filter((resource) => {
             const matchesSubject = resourceMatchesSelectedSubject(resource, selectedSubject?.label);
-            const matchesType =
-                selectedTypes.length === 0 ||
-                (resource.types ?? [resource.type]).some((type) => selectedTypes.includes(type));
+            const matchesType = resourceMatchesTypes(resource, selectedTypes, savedResourceIds);
             return matchesSubject && matchesType;
         });
 
@@ -962,7 +978,7 @@ export default function Discover() {
                 setSearchLoading(false);
             }
         }
-    }, [commentsByNoteId, resources, searchTerm, selectedSubject, selectedTypes]);
+    }, [commentsByNoteId, resources, savedResourceIds, searchTerm, selectedSubject, selectedTypes]);
 
     const handleSearchSubmit = useCallback(() => {
         const query = searchTerm.trim();
@@ -1010,9 +1026,7 @@ export default function Discover() {
 
         const scored = resources.flatMap((resource) => {
             const matchesSubject = resourceMatchesSelectedSubject(resource, selectedSubject?.label);
-            const matchesType =
-                selectedTypes.length === 0 ||
-                (resource.types ?? [resource.type]).some((type) => selectedTypes.includes(type));
+            const matchesType = resourceMatchesTypes(resource, selectedTypes, savedResourceIds);
             if (!matchesSubject || !matchesType) return [];
 
             if (aiOrder) {
@@ -1044,7 +1058,7 @@ export default function Discover() {
                 return (b.resource.timestamp ?? 0) - (a.resource.timestamp ?? 0);
             })
             .map((entry) => entry.resource);
-    }, [aiResultIds, commentsByNoteId, resources, submittedQuery, selectedSubject, selectedTypes, sortBy]);
+    }, [aiResultIds, commentsByNoteId, resources, savedResourceIds, submittedQuery, selectedSubject, selectedTypes, sortBy]);
 
     const favouriteSubjectLabels = useMemo(
         () => new Set(favouriteSubjects.map((subject) => subject?.label.toLowerCase()).filter(Boolean)),
@@ -1181,6 +1195,12 @@ export default function Discover() {
 
         setSaveSubmitting(true);
         setUserSaved(nextSaved);
+        setSavedResourceIds((current) => {
+            const next = new Set(current);
+            if (nextSaved) next.add(resource.id);
+            else next.delete(resource.id);
+            return next;
+        });
         setSelectedResource((current) =>
             current && current.id === resource.id ? { ...current, saves: nextSaves } : current
         );
@@ -1215,6 +1235,12 @@ export default function Discover() {
         } catch (error) {
             console.error("Failed to save resource:", error);
             setUserSaved(currentlySaved);
+            setSavedResourceIds((current) => {
+                const next = new Set(current);
+                if (currentlySaved) next.add(resource.id);
+                else next.delete(resource.id);
+                return next;
+            });
             setSelectedResource((current) =>
                 current && current.id === resource.id ? { ...current, saves: resource.saves } : current
             );
@@ -2126,7 +2152,7 @@ export default function Discover() {
                                     selectedSubject ? `${selectedSubject.label} resources` : "Recommended for you",
                                     recommendedResources
                                 )}
-                                {renderResourceSection(
+                                {!selectedSubject && selectedTypes.length === 0 && renderResourceSection(
                                     "Recently added free resources",
                                     recentResources
                                 )}
@@ -2146,7 +2172,7 @@ export default function Discover() {
                 onSelectedTypesChange={setSelectedTypes}
                 sortBy={sortBy}
                 onSortByChange={setSortBy}
-                resourceTypes={RESOURCE_TYPES}
+                resourceTypes={FILTER_TYPES}
             />
 
             {unsupportedShare && (

@@ -61,6 +61,24 @@ const AI_LIMITS: Record<"free" | "ace", Record<AiPurpose, number>> = {
         whiteboard: 100,
     },
 };
+const AI_PURPOSES: AiPurpose[] = ["tutor", "grading", "discover", "whiteboard"];
+const AI_LIMITS_DOC = "app_config/ai_limits";
+const ADMIN_UIDS = new Set([
+    "NkN9UBqoPEYpE21MC89fipLn0SP2",
+    "gJIqKYlc1OdXUQGZQkR4IzfCIoL2",
+    "AN3cIuQxmXfXb5kEmXuHcM5vWyH3",
+]);
+
+async function configuredAiLimits(): Promise<typeof AI_LIMITS> {
+    const data = (await admin.firestore().doc(AI_LIMITS_DOC).get()).data() ?? {};
+    return Object.fromEntries((["free", "ace"] as const).map((plan) => [
+        plan,
+        Object.fromEntries(AI_PURPOSES.map((purpose) => {
+            const value = data[plan]?.[purpose];
+            return [purpose, Number.isSafeInteger(value) && value >= 0 ? value : AI_LIMITS[plan][purpose]];
+        })),
+    ])) as typeof AI_LIMITS;
+}
 
 class AiQuotaError extends Error {
     constructor(
@@ -92,7 +110,7 @@ async function authenticatedUser(req: any): Promise<{
     return {
         uid: decoded.uid,
         isPro: userData.isPro === true,
-        isAdmin: decoded.admin === true || userData.isAdmin === true,
+        isAdmin: decoded.admin === true || userData.isAdmin === true || ADMIN_UIDS.has(decoded.uid) || decoded.email?.toLowerCase() === "cian.brady@certchamps.ie",
     };
 }
 
@@ -122,7 +140,7 @@ async function consumeAiAllowance(args: {
     usageId: unknown;
 }): Promise<{ used: number; limit: number }> {
     const { uid, isPro, isAdmin, purpose } = args;
-    const planLimit = AI_LIMITS[isPro ? "ace" : "free"][purpose];
+    const planLimit = (await configuredAiLimits())[isPro ? "ace" : "free"][purpose];
     const limit = isAdmin ? Number.MAX_SAFE_INTEGER : planLimit;
 
     const suppliedUsageId = typeof args.usageId === "string" ? args.usageId.trim().slice(0, 120) : "";
@@ -548,7 +566,7 @@ export const aiUsage = functions.https.onRequest({
 
     const snapshot = await aiUsageDocument(access.uid).get();
     const data = snapshot.data() ?? {};
-    const limits = AI_LIMITS[access.isPro ? "ace" : "free"];
+    const limits = (await configuredAiLimits())[access.isPro ? "ace" : "free"];
     const usage = Object.fromEntries(
         (Object.keys(limits) as AiPurpose[]).map((purpose) => {
             const value = data[`${purpose}Count`];
@@ -565,6 +583,46 @@ export const aiUsage = functions.https.onRequest({
         usage,
         limits,
     });
+});
+
+/** Admin-only settings endpoint. The Cloud Function remains the authority for every allowance. */
+export const aiLimits = functions.https.onRequest({ cors: true }, async (req, res) => {
+    if (req.method !== "GET" && req.method !== "PUT") {
+        res.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    let access: Awaited<ReturnType<typeof authenticatedUser>>;
+    try {
+        access = await authenticatedUser(req);
+    } catch {
+        res.status(401).json({ error: "Sign in again to manage AI limits." });
+        return;
+    }
+    if (!access.isAdmin) {
+        res.status(403).json({ error: "Admin access required." });
+        return;
+    }
+    if (req.method === "PUT") {
+        const value = req.body;
+        const valid = value && typeof value === "object" &&
+            (["free", "ace"] as const).every((plan) =>
+                value[plan] && typeof value[plan] === "object" &&
+                AI_PURPOSES.every((purpose) =>
+                    Number.isSafeInteger(value[plan][purpose]) &&
+                    value[plan][purpose] >= 0 && value[plan][purpose] <= 100000));
+        if (!valid) {
+            res.status(400).json({ error: "Enter a whole number from 0 to 100,000 for each allowance." });
+            return;
+        }
+        await admin.firestore().doc(AI_LIMITS_DOC).set({
+            free: Object.fromEntries(AI_PURPOSES.map((purpose) => [purpose, value.free[purpose]])),
+            ace: Object.fromEntries(AI_PURPOSES.map((purpose) => [purpose, value.ace[purpose]])),
+            updatedBy: access.uid,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    }
+    res.setHeader("Cache-Control", "private, no-store");
+    res.status(200).json(await configuredAiLimits());
 });
 
 // ======================== EXTRACT QUESTIONS ======================== //

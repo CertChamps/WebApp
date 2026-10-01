@@ -251,7 +251,10 @@ function QuestionCard({
 function PracticeBrowserInner() {
   const { options } = useContext(OptionsContext);
   const [searchParams, setSearchParams] = useSearchParams();
-  const subjectId = searchParams.get("subject");
+  const cycle: ExamCycleId = parseExamCycle(searchParams.get("cycle"));
+  const requestedSubjectId = searchParams.get("subject");
+  const subjectId = cycle === "junior" && (requestedSubjectId === "applied-mathematics" || requestedSubjectId === "applied-maths")
+    ? null : requestedSubjectId;
   const selectedLevel = searchParams.get("level");
   const selectedTopicName = searchParams.get("topic");
   const browseMode = (searchParams.get("browse") === "topic" ? "topic" : "paper") as BrowseMode;
@@ -261,7 +264,6 @@ function PracticeBrowserInner() {
   const selectedPaperYear = paperYearParam ? Number(paperYearParam) : null;
   const selectedPaperNum =
     paperNumParam === "1" || paperNumParam === "2" ? Number(paperNumParam) : null;
-  const cycle: ExamCycleId = parseExamCycle(searchParams.get("cycle"));
   const storageSubject = subjectId ? getStorageFolderName(subjectId) : null;
 
   const [search, setSearch] = useState("");
@@ -381,11 +383,13 @@ function PracticeBrowserInner() {
       }
       return [];
     };
-    return PRACTICE_HUB_SUBJECTS.map((subject) => ({
+    return PRACTICE_HUB_SUBJECTS.filter((subject) =>
+      cycle !== "junior" || subject.id !== "applied-mathematics"
+    ).map((subject) => ({
       ...subject,
       levels: resolveLevels(subject),
     })).filter((subject) => subject.levels.length > 0);
-  }, [availableSubjects]);
+  }, [availableSubjects, cycle]);
 
   const selectedSubject = useMemo<SubjectOption | null>(
     () => PRACTICE_HUB_SUBJECTS.find((subject) => subject.id === subjectId) ?? null,
