@@ -11,7 +11,7 @@ export default function Login() {
     // ====================================== REACT HOOKS =================================== //
     const navigate = useNavigate()
     const location = useLocation()
-    const { feature, returnTo, back } = signInDetails(location.search, location.state)
+    const { feature, returnTo, back, showBack } = signInDetails(location.search, location.state)
     
 
     const {signInWithEmail, loginWithGoogle, loginWithApple, error } = useAuthentication({ prevRoute: returnTo })
@@ -22,10 +22,10 @@ export default function Login() {
 
     return (
         <div className='relative h-full flex flex-col items-center w-full color-bg-grey-5 overflow-y-auto px-4 py-16' >
-            <button type="button" onClick={() => navigate(back.path, { replace: true })}
+            {showBack && <button type="button" onClick={() => navigate(back.path, { replace: true })}
                 className="absolute top-4 left-4 inline-flex items-center gap-2 text-sm font-semibold color-txt-sub hover:color-txt-main">
                 <LuArrowLeft size={18} /> Back to {back.label}
-            </button>
+            </button>}
             <div className='my-auto shrink-0 py-8 w-72 color-shadow border-2 rounded-out color-bg' >
                 <img src={crown}  className='w-32 m-auto object-cover h-24'/>
                 <h1 className="txt-heading-colour text-center text-2xl mb-4" >Login</h1>

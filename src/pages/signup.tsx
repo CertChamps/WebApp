@@ -10,7 +10,7 @@ import { signInDetails } from "../lib/signIn";
 export default function SignUp() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { feature, returnTo: prevRoute, back } = signInDetails(location.search, location.state);
+  const { feature, returnTo: prevRoute, back, showBack } = signInDetails(location.search, location.state);
 
   const { signUpWithEmail, loginWithGoogle, loginWithApple, error, setError } = useAuthentication({ prevRoute });
 
@@ -82,10 +82,10 @@ export default function SignUp() {
 
   return (
     <div className="relative h-full flex flex-col items-center w-full color-bg-grey-5 overflow-y-auto px-4 py-16">
-      <button type="button" onClick={() => navigate(back.path, { replace: true })}
+      {showBack && <button type="button" onClick={() => navigate(back.path, { replace: true })}
         className="absolute top-4 left-4 inline-flex items-center gap-2 text-sm font-semibold color-txt-sub hover:color-txt-main">
         <LuArrowLeft size={18} /> Back to {back.label}
-      </button>
+      </button>}
       <div className="my-auto shrink-0 w-[410px] py-5 color-shadow border-2 rounded-out color-bg">
         <img src={crown} className="w-28 m-auto object-contain h-20 mb-4" />
         <h1 className="txt-heading-colour text-center text-2xl mb-4">Sign Up</h1>

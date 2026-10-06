@@ -96,7 +96,7 @@ export const createProCheckout = functions.https.onRequest(
             if (user.stripeCheckoutSessionId) {
                 const previous = await stripe.checkout.sessions.retrieve(user.stripeCheckoutSessionId);
                 if (previous.status === "open") {
-                    if (previous.metadata?.plan === plan && previous.metadata?.priceId === priceId) {
+                    if (previous.metadata?.plan === plan && previous.metadata?.priceId === priceId && previous.allow_promotion_codes === true) {
                         res.json({ url: previous.url }); return;
                     }
                     await stripe.checkout.sessions.expire(previous.id);
@@ -104,6 +104,7 @@ export const createProCheckout = functions.https.onRequest(
             }
             const session = await stripe.checkout.sessions.create({
                 customer, mode: "subscription", payment_method_types: ["card"],
+                allow_promotion_codes: true,
                 line_items: [{ price: priceId, quantity: 1 }],
                 client_reference_id: uid,
                 metadata: { firebaseUid: uid, plan, priceId },

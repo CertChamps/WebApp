@@ -24,7 +24,8 @@ export function signInDetails(search: string, state?: { prevRoute?: string } | n
   const params = new URLSearchParams(search);
   const returnTo = safeAppPath(params.get("returnTo") ?? state?.prevRoute);
   const back = publicPage(params.get("backTo") ?? returnTo);
-  return { feature: params.get("feature"), returnTo, back };
+  const showBack = safeAppPath(params.get("backTo") ?? params.get("returnTo") ?? state?.prevRoute, "") !== "";
+  return { feature: params.get("feature"), returnTo, back, showBack };
 }
 
 export function featureForPath(path: string): string {

@@ -26,7 +26,7 @@ function fixture() {
     const calls = { checkout: [], expired: [], portal: [] };
     let subscriptions = [];
     let currentEvent;
-    const session = { id: 'cs_1', url: 'https://checkout.stripe.test/session', status: 'open', metadata: { plan: 'monthly', priceId: 'price_month' } };
+    const session = { id: 'cs_1', url: 'https://checkout.stripe.test/session', status: 'open', allow_promotion_codes: true, metadata: { plan: 'monthly', priceId: 'price_month' } };
     const client = {
         prices: { retrieve: async id => ({ active: true, currency: 'eur', unit_amount: id === 'price_month' ? 400 : 4000,
             recurring: { interval: id === 'price_month' ? 'month' : 'year', interval_count: 1, usage_type: 'licensed' } }) },
@@ -67,6 +67,7 @@ test('checkout selects each trusted Stripe price and ignores client-controlled a
         const f = fixture();
         assert.equal((await f.request('createProCheckout', { plan, amount: 1, successUrl: 'https://attacker.test' })).statusCode, 200);
         assert.equal(f.calls.checkout[0].line_items[0].price, price);
+        assert.equal(f.calls.checkout[0].allow_promotion_codes, true);
         assert.match(f.calls.checkout[0].success_url, /^https:\/\/app\.certchamps\.ie\//);
         assert.equal(f.calls.checkout[0].subscription_data.metadata.firebaseUid, 'user1');
     }
@@ -88,6 +89,16 @@ test('same-plan retries reuse open checkout; switching plans expires it', async 
     assert.deepEqual(f.calls.expired, ['cs_1']);
     assert.equal(f.calls.checkout[0].line_items[0].price, 'price_year');
 });
+test('checkout replaces a legacy session without promotion-code entry', async () => {
+    const f = fixture();
+    f.docs.set('user-data/user1', { isPro: false, stripeCustomerId: 'cus_1', stripeCheckoutSessionId: 'cs_1' });
+    const retrieve = f.client.checkout.sessions.retrieve;
+    f.client.checkout.sessions.retrieve = async () => ({ ...await retrieve(), allow_promotion_codes: null });
+    assert.equal((await f.request('createProCheckout', { plan: 'monthly' })).statusCode, 200);
+    assert.deepEqual(f.calls.expired, ['cs_1']);
+    assert.equal(f.calls.checkout[0].allow_promotion_codes, true);
+});
+
 test('concurrent checkout attempt is rejected while the first holds its lease', async () => {
     const f = fixture();
     const retrieve = f.client.prices.retrieve;

@@ -265,14 +265,6 @@ const PaymentsTab = ({
                     </div>
                 </div>
             </motion.div>
-            {(user?.stripeCustomerId || user?.paymentProvider === "apple" || user?.appleOriginalTransactionId || user?.billingSubscriptions?.apple) && (
-                <div className="space-y-3 text-sm color-txt-sub">
-                    <p>Manage your plan, payment details or cancellation with your billing provider.</p>
-                    {user?.stripeCustomerId && <button type="button" disabled={portalLoading} onClick={() => onManage("stripe")} className="underline cursor-pointer mr-4">Manage or cancel website subscription</button>}
-                    {(user?.paymentProvider === "apple" || user?.appleOriginalTransactionId || user?.billingSubscriptions?.apple) && <button type="button" disabled={portalLoading} onClick={() => onManage("apple")} className="underline cursor-pointer">Manage or cancel Apple subscription</button>}
-                    {!isPro && portalError && <p className="text-red-500">{portalError}</p>}
-                </div>
-            )}
         </motion.div>
     );
 };
@@ -916,7 +908,7 @@ const ManageAccount = () => {
         try {
             await signOutSession();
             setUser(null);
-            navigate("/");
+            navigate("/login", { replace: true, state: null });
         } catch (err) {
             console.error("Log out failed:", err);
         } finally {
