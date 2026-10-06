@@ -14,7 +14,7 @@ export default function PhoneRedirect() {
         (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
 
     const publicOrAuthPage = ["/", "/login", "/forgot-password", "/verify-email", "/onboarding", "/practice", "/discover", "/mobileRedirect"].includes(location.pathname);
-    if (touch && width <= 600 && !publicOrAuthPage) {
+    if (touch && width <= 600 && !nativeIPad && !publicOrAuthPage) {
       navigate("/mobileRedirect");
     }
   }, [navigate, location]);
