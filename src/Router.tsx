@@ -1,3 +1,4 @@
+import FloatingDiscoverResource from "./components/discover/FloatingDiscoverResource";
 // src/AppRouter.tsx
 import { createHashRouter, RouterProvider, Outlet, Navigate, useParams } from "react-router-dom";
 import { useEffect } from "react";
@@ -38,6 +39,8 @@ import NotFound from "./pages/notFound";
 import ForgotPassword from "./pages/forgotPassword";
 import LegalTermsPrompt from "./components/prompts/legal_terms_prompt";
 import GoogleAnalytics from "./components/GoogleAnalytics";
+import useAuthentication from "./hooks/useAuthentication";
+import AuthEntryRoute from "./components/AuthEntryRoute";
 
 /** Redirects /practice/:id (deck links from social) to /decks/:id */
 function PracticeToDeckRedirect() {
@@ -66,6 +69,8 @@ function SpotifyOAuthPathBridge() {
 }
 
 function RootLayout() {
+  useAuthentication({ observeSession: true });
+
   // Phone browsers never mount sign-up. That route used to bounce through a
   // protected /mobileRedirect page and reload the form in a loop.
   if (isPhoneBrowser()) {
@@ -84,6 +89,7 @@ function RootLayout() {
       <ReleaseNotesPrompt />
       <LegalTermsPrompt />
       <GoogleAnalytics />
+      <FloatingDiscoverResource />
     </SpotifyProvider>
   );
 }
@@ -93,8 +99,8 @@ const router = createHashRouter([
   {
     element: <RootLayout />,
     children: [
-      { path: "/", element: <SignUp /> },
-      { path: "/login", element: <Login /> },
+      { path: "/", element: <AuthEntryRoute><SignUp /></AuthEntryRoute> },
+      { path: "/login", element: <AuthEntryRoute><Login /></AuthEntryRoute> },
       { path: "/forgot-password", element: <ForgotPassword /> },
       { path: "/verify-email", element: <VerifyEmail /> },
       { path: "/spotify/callback", element: <SpotifyCallback /> },
@@ -107,16 +113,14 @@ const router = createHashRouter([
         ),
       },
 
-      // Protected routes
+      // Public practice browser
       {
         path: "/practice",
         element: (
-          <ProtectedRoute>
-            <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
-              <Navbar />
-              <PracticeHub />
-            </div>
-          </ProtectedRoute>
+          <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+            <Navbar />
+            <PracticeHub />
+          </div>
         ),
       },
       {
@@ -223,12 +227,10 @@ const router = createHashRouter([
   {
     path: "/discover",
     element: (
-      <ProtectedRoute>
         <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <Discover />
         </div>
-      </ProtectedRoute>
     ),
   },
   {

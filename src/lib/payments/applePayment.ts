@@ -22,9 +22,14 @@
  * avoid a WKWebView dynamic-import hang that was observed at boot.
  */
 
-import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Purchases } from "@revenuecat/purchases-capacitor";
-import type { PurchasesPackage } from "@revenuecat/purchases-capacitor";
+import type {
+    PurchasesOffering,
+    PurchasesOfferings,
+    PurchasesPackage,
+} from "@revenuecat/purchases-capacitor";
 import { auth } from "../../../firebase";
 import { ensureConfigured } from "./initPayments";
 import {
@@ -38,6 +43,7 @@ import type {
     PaymentProvider,
     PriceDetails,
     PurchaseResult,
+    SubscriptionPlan,
 } from "./types";
 
 /** RevenueCat entitlement identifier that gates ACE. */
@@ -49,24 +55,59 @@ export const ACE_PRODUCT_IDENTIFIER = "CertChamps_ACE";
 /** RevenueCat offering identifier. */
 const ACE_OFFERING_IDENTIFIER = "CertChamps_ACE";
 
-/** RevenueCat package identifier (annual). */
-const ACE_PACKAGE_IDENTIFIER = "$rc_annual";
+/** RevenueCat package identifiers for the two billing periods. */
+const ACE_PACKAGE_IDENTIFIERS = { monthly: "$rc_monthly", annual: "$rc_annual" };
+const ACE_PRODUCT_IDENTIFIERS = {
+    monthly: "CertChamps_ACE_Monthly",
+    annual: ACE_PRODUCT_IDENTIFIER,
+} as const;
 
 /** Generic timeout for native bridge calls. purchasePackage is excluded —
  *  it intentionally blocks until the user interacts with the StoreKit
  *  sheet, which can take arbitrarily long. */
+const SubscriptionManagement = registerPlugin<{ open(): Promise<void> }>("SubscriptionManagement");
+
 const NATIVE_TIMEOUT_MS = 15_000;
 const OFFERINGS_TIMEOUT_MS = 20_000;
 
 function resolveAcePackage(
-    offering: { annual?: PurchasesPackage | null; availablePackages?: PurchasesPackage[] } | null | undefined
-): PurchasesPackage | null | undefined {
+    offering: PurchasesOffering | null | undefined,
+    plan: SubscriptionPlan,
+): PurchasesPackage | null {
     if (!offering) return null;
-    return (
-        offering.annual ??
-        offering.availablePackages?.find((p) => p.identifier === ACE_PACKAGE_IDENTIFIER) ??
-        offering.availablePackages?.[0]
-    );
+
+    const productId = ACE_PRODUCT_IDENTIFIERS[plan];
+    const typedPackage = plan === "monthly" ? offering.monthly : offering.annual;
+    const candidates = [
+        typedPackage,
+        offering.availablePackages.find(p => p.identifier === ACE_PACKAGE_IDENTIFIERS[plan]),
+        offering.availablePackages.find(p => p.product.identifier === productId),
+    ];
+
+    // The App Store product ID is the source of truth for which plan the
+    // customer is buying. Do not reject a valid product just because the
+    // RevenueCat package name or StoreKit period metadata changed.
+    return candidates.find(p => p?.product.identifier === productId) ?? null;
+}
+
+function resolveAcePurchase(
+    offerings: PurchasesOfferings,
+    plan: SubscriptionPlan,
+): { offering: PurchasesOffering; pkg: PurchasesPackage } | null {
+    const candidates = [
+        offerings.all[ACE_OFFERING_IDENTIFIER],
+        offerings.current,
+        ...Object.values(offerings.all),
+    ].filter((offering): offering is PurchasesOffering => !!offering);
+    const seen = new Set<string>();
+
+    for (const offering of candidates) {
+        if (seen.has(offering.identifier)) continue;
+        seen.add(offering.identifier);
+        const pkg = resolveAcePackage(offering, plan);
+        if (pkg) return { offering, pkg };
+    }
+    return null;
 }
 
 /** Firebase Function that hits the RevenueCat REST API server-side and
@@ -107,6 +148,7 @@ async function notifyBackendOfPurchase(): Promise<void> {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ idToken }),
+            signal: AbortSignal.timeout(15_000),
         });
         iapDebug("notifyBackendOfPurchase:response", {
             status: res.status,
@@ -141,7 +183,7 @@ export const appleProvider: PaymentProvider = {
         }
     },
 
-    async getPrice(): Promise<PriceDetails | null> {
+    async getPrice(plan): Promise<PriceDetails | null> {
         iapDebug("appleProvider.getPrice:start");
         if (!isAppleIapAvailable()) return null;
         try {
@@ -162,31 +204,37 @@ export const appleProvider: PaymentProvider = {
                 allOfferingIds: Object.keys(offerings.all ?? {}),
                 targetOfferingId: ACE_OFFERING_IDENTIFIER,
             });
-            const offering =
-                offerings.all[ACE_OFFERING_IDENTIFIER] ?? offerings.current;
-            const pkg = resolveAcePackage(offering);
-            if (!pkg) {
+            const resolved = resolveAcePurchase(offerings, plan);
+            if (!resolved) {
                 iapDebugWarn("appleProvider.getPrice:noPackage", {
                     offeringId: ACE_OFFERING_IDENTIFIER,
-                    packageId: ACE_PACKAGE_IDENTIFIER,
-                    resolvedOfferingId: offering?.identifier ?? null,
-                    availablePackageIds: offering?.availablePackages?.map((p) => p.identifier) ?? [],
+                    packageId: ACE_PACKAGE_IDENTIFIERS[plan],
+                    productId: ACE_PRODUCT_IDENTIFIERS[plan],
+                    availablePackages: Object.values(offerings.all ?? {}).flatMap(
+                        offering => offering.availablePackages.map(pkg => ({
+                            offeringId: offering.identifier,
+                            packageId: pkg.identifier,
+                            productId: pkg.product.identifier,
+                        }))
+                    ),
                 });
                 console.warn("[applePayment] no ACE package available in offering", {
                     offeringId: ACE_OFFERING_IDENTIFIER,
-                    packageId: ACE_PACKAGE_IDENTIFIER,
+                    packageId: ACE_PACKAGE_IDENTIFIERS[plan],
                     offerings: Object.keys(offerings.all ?? {}),
                 });
                 return null;
             }
+            const { offering, pkg } = resolved;
             iapDebug("appleProvider.getPrice:resolved", {
+                offeringId: offering.identifier,
                 packageId: pkg.identifier,
                 productId: pkg.product.identifier,
                 priceString: pkg.product.priceString,
             });
             return {
                 formatted: pkg.product.priceString,
-                period: "year",
+                period: plan === "monthly" ? "month" : "year",
                 currencyCode: pkg.product.currencyCode ?? null,
             };
         } catch (err) {
@@ -196,12 +244,13 @@ export const appleProvider: PaymentProvider = {
         }
     },
 
-    async purchase(): Promise<PurchaseResult> {
+    async purchase(plan): Promise<PurchaseResult> {
         iapDebug("appleProvider.purchase:start");
         if (!isAppleIapAvailable()) {
             iapDebugWarn("appleProvider.purchase:unavailable");
             return { success: false, error: "Apple IAP is unavailable on this device." };
         }
+        if (!auth.currentUser) return { success: false, error: "Sign in before subscribing." };
         try {
             // Self-init: don't rely on the boot configure having
             // completed — kick it off here if needed.
@@ -230,6 +279,13 @@ export const appleProvider: PaymentProvider = {
                         Purchases.getAppUserID()
                     )
             );
+            if (!isConfigured) {
+                return {
+                    success: false,
+                    error: "Apple payments are still starting. Please try again.",
+                };
+            }
+            if (appUserID !== auth.currentUser.uid) throw new Error("Please sign in again before subscribing.");
             iapDebug("appleProvider.purchase:pre-flight", {
                 isConfigured,
                 appUserID: appUserID ?? null,
@@ -248,22 +304,27 @@ export const appleProvider: PaymentProvider = {
                 allOfferingIds: Object.keys(offerings.all ?? {}),
                 targetOfferingId: ACE_OFFERING_IDENTIFIER,
             });
-            const offering =
-                offerings.all[ACE_OFFERING_IDENTIFIER] ?? offerings.current;
-            const pkg = resolveAcePackage(offering);
-            if (!pkg) {
+            const resolved = resolveAcePurchase(offerings, plan);
+            if (!resolved) {
                 iapDebugWarn("appleProvider.purchase:noPackage", {
-                    resolvedOfferingId: offering?.identifier ?? null,
-                    availablePackageIds: offering?.availablePackages?.map((p) => p.identifier) ?? [],
+                    productId: ACE_PRODUCT_IDENTIFIERS[plan],
+                    availablePackages: Object.values(offerings.all ?? {}).flatMap(
+                        offering => offering.availablePackages.map(pkg => ({
+                            offeringId: offering.identifier,
+                            packageId: pkg.identifier,
+                            productId: pkg.product.identifier,
+                        }))
+                    ),
                 });
                 return {
                     success: false,
                     error: "Subscription is not available right now. Please try again later.",
                 };
             }
+            const { offering, pkg } = resolved;
 
             iapDebug("appleProvider.purchase:calling purchasePackage", {
-                offeringId: ACE_OFFERING_IDENTIFIER,
+                offeringId: offering.identifier,
                 packageId: pkg.identifier,
                 productId: pkg.product.identifier,
                 entitlementId: ACE_ENTITLEMENT_ID,
@@ -290,9 +351,7 @@ export const appleProvider: PaymentProvider = {
 
             if (active) {
                 iapDebug("appleProvider.purchase:success");
-                // Don't await — the user gets immediate UI feedback; the
-                // backend sync runs in the background.
-                void notifyBackendOfPurchase();
+                await notifyBackendOfPurchase();
                 return { success: true };
             }
             iapDebugWarn("appleProvider.purchase:entitlementInactive");
@@ -315,20 +374,12 @@ export const appleProvider: PaymentProvider = {
     },
 
     async openManagement() {
-        // RevenueCat's customerInfo carries a deep link to the App Store
-        // subscription management page when an active sub exists. Fall
-        // back to the generic Apple subscriptions URL otherwise.
-        let url = "https://apps.apple.com/account/subscriptions";
-        try {
-            await ensureConfigured(auth.currentUser?.uid ?? null);
-            const { customerInfo } = await Purchases.getCustomerInfo();
-            if (customerInfo.managementURL) {
-                url = customerInfo.managementURL;
-            }
-        } catch (err) {
-            console.warn("[applePayment] managementURL lookup failed", err);
-        }
-        window.open(url, "_blank");
+        const url = "https://apps.apple.com/account/subscriptions";
+        if (isAppleIapAvailable() && Capacitor.isPluginAvailable("SubscriptionManagement")) {
+            await SubscriptionManagement.open();
+            await notifyBackendOfPurchase();
+        } else if (Capacitor.isNativePlatform()) await Browser.open({ url });
+        else window.location.assign(url);
     },
 
     async restore(): Promise<PurchaseResult> {
@@ -337,7 +388,10 @@ export const appleProvider: PaymentProvider = {
             return { success: false, error: "Apple IAP is unavailable on this device." };
         }
         try {
-            await ensureConfigured(auth.currentUser?.uid ?? null);
+            if (!auth.currentUser) throw new Error("Sign in before restoring purchases.");
+            if (!await ensureConfigured(auth.currentUser.uid)) throw new Error("Payments are unavailable. Try again.");
+            const { appUserID } = await Purchases.getAppUserID();
+            if (appUserID !== auth.currentUser.uid) throw new Error("Please sign in again before restoring.");
             iapDebug("appleProvider.restore:calling restorePurchases");
             const { customerInfo } = await timed(
                 "appleProvider.restore:Purchases.restorePurchases",
@@ -349,7 +403,7 @@ export const appleProvider: PaymentProvider = {
             const entitlement = customerInfo.entitlements.active[ACE_ENTITLEMENT_ID];
             if (entitlement?.isActive) {
                 iapDebug("appleProvider.restore:success");
-                void notifyBackendOfPurchase();
+                await notifyBackendOfPurchase();
                 return { success: true };
             }
             iapDebugWarn("appleProvider.restore:noActiveEntitlement", {

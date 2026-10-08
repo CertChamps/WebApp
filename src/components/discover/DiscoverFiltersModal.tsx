@@ -4,17 +4,18 @@ import { LuX } from "react-icons/lu";
 import { getThemedPortalTarget } from "../../utils/themedPortal";
 
 export type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
+export type DiscoverFilterType = ResourceType | "Saved";
 export type DiscoverSortBy = "rating" | "date";
 
 type Props = {
     open: boolean;
     onClose: () => void;
     anchorRef: RefObject<HTMLElement | null>;
-    selectedTypes: ResourceType[];
-    onSelectedTypesChange: (types: ResourceType[]) => void;
+    selectedTypes: DiscoverFilterType[];
+    onSelectedTypesChange: (types: DiscoverFilterType[]) => void;
     sortBy: DiscoverSortBy;
     onSortByChange: (sort: DiscoverSortBy) => void;
-    resourceTypes: ResourceType[];
+    resourceTypes: DiscoverFilterType[];
 };
 
 const SORT_OPTIONS: Array<{ id: DiscoverSortBy; label: string }> = [
@@ -32,7 +33,7 @@ export default function DiscoverFiltersModal({
     onSortByChange,
     resourceTypes,
 }: Props) {
-    const [draftTypes, setDraftTypes] = useState<ResourceType[]>(selectedTypes);
+    const [draftTypes, setDraftTypes] = useState<DiscoverFilterType[]>(selectedTypes);
     const [draftSort, setDraftSort] = useState<DiscoverSortBy>(sortBy);
     const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
     const panelRef = useRef<HTMLDivElement | null>(null);
@@ -91,7 +92,7 @@ export default function DiscoverFiltersModal({
 
     if (!open || !pos) return null;
 
-    const toggleType = (type: ResourceType) => {
+    const toggleType = (type: DiscoverFilterType) => {
         setDraftTypes((current) =>
             current.includes(type) ? current.filter((item) => item !== type) : [...current, type]
         );

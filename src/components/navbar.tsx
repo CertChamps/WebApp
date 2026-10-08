@@ -8,6 +8,9 @@ import { isIPad } from '../utils/isIPad'
 // ======================= ICON IMPORTS ======================== // 
 import { LuPencil, LuPenTool, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText, LuSearch } from "react-icons/lu";
 import type { IconType } from 'react-icons';
+import { LuLogIn } from 'react-icons/lu';
+import { auth } from '../../firebase';
+import { signInPath } from '../lib/signIn';
 
 const showNavTooltips = !isIPad();
 
@@ -18,7 +21,8 @@ export default function Navbar () {
     const strokewidth = 2
 
     // Context and State and Hooks
-    const { user } = useContext(UserContext)
+    const { user, authReady } = useContext(UserContext)
+    const signedIn = authReady && !!auth.currentUser && user?.uid === auth.currentUser.uid
     const isAdmin = isAdminUid(user?.uid, user?.email)
     const navigate = useNavigate()
     const location = useLocation()
@@ -59,7 +63,7 @@ export default function Navbar () {
             navigate("/discover");
             return;
         }
-        navigate(`/${page}`) 
+        navigate(`/${page}`, { state: { backTo: location.pathname + location.search } })
         
     } 
 
@@ -106,12 +110,16 @@ export default function Navbar () {
 
             {/* ============================= USER CARD ================================ */}
             <div className='user-container'>
-                <img src={user.picture} className='user-img' onClick={()=>{
-                    navigate(`/viewProfile/${user.uid}`)
-                }}/>
+                {signedIn ? <img src={user.picture} className='user-img' onClick={()=>{
+                    navigate(`/viewProfile/${user.uid}`, { state: { backTo: location.pathname + location.search } })
+                }}/> : <button type="button" className="nav-item" aria-label="Sign in"
+                    onClick={() => navigate(signInPath("your account", location.pathname + location.search))}>
+                    <LuLogIn size={iconSize} className="nav-icon" />
+                    <span className="nav-tooltip" role="tooltip"><span className="nav-tooltip-txt">Sign in</span></span>
+                </button>}
 
                 <div className='user-info '>
-                    <p className='nav-txt !txt-heading-colour !color-txt-accent' >{user.username}</p>
+                    <p className='nav-txt !txt-heading-colour !color-txt-accent' >{signedIn ? user.username : "Guest"}</p>
                     {/* <p className='nav-txt !txt-sub !color-txt-sub text-nowrap' >Rank: {user.rank}</p>  */}
                 </div>
             </div>

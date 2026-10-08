@@ -17,13 +17,13 @@ export default function OnboardingRoute() {
   }
 
   if (!needsOnboarding(user) && !isReplay) {
-    return <Navigate to="/practice" replace />;
+    return <Navigate to={sanitizeReturnPath(searchParams.get("returnTo"), "/practice")} replace />;
   }
 
   return (
     <OnboardingFlow
       isReplay={isReplay}
-      returnTo={sanitizeReturnPath(searchParams.get("returnTo"), "/user/settings")}
+      returnTo={sanitizeReturnPath(searchParams.get("returnTo"), isReplay ? "/user/settings" : "/practice")}
     />
   );
 }

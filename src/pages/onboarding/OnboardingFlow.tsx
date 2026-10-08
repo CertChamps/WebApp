@@ -47,7 +47,7 @@ export default function OnboardingFlow({
   }, [croppedPreviewUrl]);
 
   const exitFlow = () => {
-    navigate(isReplay ? returnTo : "/practice", { replace: !isReplay });
+    navigate(returnTo, { replace: !isReplay });
   };
 
   const handleCroppedBlobChange = (blob: Blob | null, previewUrl: string | null) => {
@@ -146,7 +146,7 @@ export default function OnboardingFlow({
         ...prev,
         hasCompletedOnboarding: true,
       }));
-      navigate("/practice", { replace: true });
+      navigate(returnTo, { replace: true });
     } catch (err) {
       console.error("Failed to complete onboarding:", err);
       setError("Something went wrong. Please try again.");

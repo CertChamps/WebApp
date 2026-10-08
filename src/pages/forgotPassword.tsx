@@ -3,12 +3,13 @@ import type { FormEvent } from "react";
 import { FirebaseError } from "firebase/app";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { LuArrowLeft, LuCheck, LuMail } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { auth } from "../../firebase";
 import crown from "../assets/logo.png";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [generalError, setGeneralError] = useState("");
@@ -72,7 +73,7 @@ export default function ForgotPassword() {
             </p>
             <button
               type="button"
-              onClick={() => navigate("/login", { replace: true })}
+              onClick={() => navigate(`/login${location.search}`, { replace: true })}
               className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold color-bg-accent color-txt-accent transition-opacity hover:opacity-85"
             >
               <LuArrowLeft size={17} aria-hidden />
@@ -130,7 +131,7 @@ export default function ForgotPassword() {
 
             <button
               type="button"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate(`/login${location.search}`)}
               className="mx-auto mt-5 flex items-center gap-1.5 text-sm font-semibold color-txt-sub transition-colors hover:color-txt-accent"
             >
               <LuArrowLeft size={15} aria-hidden />

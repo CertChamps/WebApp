@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AiRequestError, aiResponseError, authenticatedAiFetch, METERED_CHAT_API_URL } from "../../lib/aiApi";
-import { dataUrlByteSize, stackImagesVertically } from "../../lib/stackImages";
 
 export type Message = { role: "user" | "assistant"; content: string; source?: "chat" | "injected" };
 export type AIChatError = {
@@ -19,7 +18,7 @@ export type InjectedExchange = {
 };
 
 /** Optional: return current drawing as PNG data URL (e.g. from canvas) so the AI can see it. */
-export type GetDrawingSnapshot = () => string | null;
+export type GetDrawingSnapshot = () => string | string[] | null | Promise<string | string[] | null>;
 /** Optional: return music stave analysis (detected note positions as text). */
 export type GetStaveAnalysis = () => string | null;
 /** Optional: return current exam paper (first page) as image data URL so the AI can see the paper. */
@@ -77,79 +76,35 @@ function parsePartIndexFromName(name: string | undefined): number | null {
   return null;
 }
 
-/**
- * Attachment budgets. Chained question / marking-scheme pages are stacked into
- * single images so the model sees the full paper without burning image slots.
- * Total payload is capped by bytes, not a hard per-page image count.
- */
-const MAX_ATTACHMENT_SLOTS = 8;
-/** Max encoded bytes per individual attachment (~1.6M base64 chars on the wire). */
-const MAX_ATTACHMENT_BYTES = 1_400_000;
-/** Max combined attachment bytes for one chat turn. */
-const MAX_TURN_ATTACHMENT_BYTES = 5_000_000;
 const MAX_HISTORY_MESSAGES = 16;
 const MAX_MESSAGE_CHARACTERS = 8_000;
 
 type AttachmentKind = "question" | "work" | "markingScheme" | "paper";
 
 const ATTACHMENT_LABELS: Record<AttachmentKind, string> = {
-  question: "the full question (all parts/pages stacked top-to-bottom in reading order)",
-  work: "the student's live whiteboard / canvas (handwriting, diagrams, and drawings — read this carefully)",
-  markingScheme: "the full marking scheme (all pages stacked top-to-bottom in reading order)",
+  question: "a question page/part (in reading order)",
+  work: "the student's current workspace (document text, imported images, handwriting, diagrams and workings)",
+  markingScheme: "a marking scheme page (in reading order)",
   paper: "the exam paper the student has open",
 };
 
-async function prepareAttachments(sources: {
+function prepareAttachments(sources: {
   questionImageUrls: string[];
   markingSchemeImageUrls: string[];
-  drawingDataUrl: string | null;
+  drawingDataUrl: string | string[] | null;
   paperDataUrl: string | null;
-}): Promise<{ url: string; kind: AttachmentKind }[]> {
+}): { url: string; kind: AttachmentKind }[] {
   const selected: { url: string; kind: AttachmentKind }[] = [];
-  let bytesUsed = 0;
-
-  const tryAdd = (url: string | null | undefined, kind: AttachmentKind) => {
-    if (!url || selected.length >= MAX_ATTACHMENT_SLOTS) return;
-    const size = dataUrlByteSize(url);
-    if (size <= 0 || size > MAX_ATTACHMENT_BYTES) return;
-    if (bytesUsed + size > MAX_TURN_ATTACHMENT_BYTES) return;
-    bytesUsed += size;
-    selected.push({ url, kind });
+  const add = (urls: string[], kind: AttachmentKind) => {
+    for (const url of urls) {
+      if (url.trim()) selected.push({ url, kind });
+    }
   };
-
-  // Student whiteboard work is the top priority — never drop it for question PDFs.
-  tryAdd(sources.drawingDataUrl, "work");
-
-  if (sources.questionImageUrls.length > 0) {
-    let questionImage = sources.questionImageUrls[0];
-    if (sources.questionImageUrls.length > 1) {
-      try {
-        questionImage = (await stackImagesVertically(sources.questionImageUrls, {
-          maxBytes: MAX_ATTACHMENT_BYTES,
-        })) ?? questionImage;
-      } catch {
-        // CORS / load failure — fall back to first page rather than sending nothing.
-      }
-    }
-    tryAdd(questionImage, "question");
-  }
-
-  if (sources.markingSchemeImageUrls.length > 0) {
-    let markingImage = sources.markingSchemeImageUrls[0];
-    if (sources.markingSchemeImageUrls.length > 1) {
-      try {
-        markingImage = (await stackImagesVertically(sources.markingSchemeImageUrls, {
-          maxBytes: MAX_ATTACHMENT_BYTES,
-        })) ?? markingImage;
-      } catch {
-        // fall back to first page
-      }
-    }
-    tryAdd(markingImage, "markingScheme");
-  }
-
-  tryAdd(sources.paperDataUrl, "paper");
-
+  // Keep all pages separately so long documents remain legible.
+  add(Array.isArray(sources.drawingDataUrl) ? sources.drawingDataUrl : sources.drawingDataUrl ? [sources.drawingDataUrl] : [], "work");
+  add(sources.questionImageUrls, "question");
+  add(sources.markingSchemeImageUrls, "markingScheme");
+  add(sources.paperDataUrl ? [sources.paperDataUrl] : [], "paper");
   return selected;
 }
 
@@ -159,7 +114,7 @@ function describeAttachments(attachments: { kind: AttachmentKind }[]): string | 
   const parts = [`Attached images, in order:\n${lines.join("\n")}`];
   if (attachments.some((a) => a.kind === "work")) {
     parts.push(
-      "IMPORTANT: One attached image is the student's current whiteboard/canvas. It shows their live handwriting, workings, diagrams, and annotations. You MUST examine this image and refer to what they actually wrote or drew when answering.",
+      "IMPORTANT: One attached image is the student's current workspace. It shows their document, imported images, live handwriting, workings, diagrams, and annotations. You MUST examine this image and refer to what they actually wrote or drew when answering.",
     );
   }
   return parts.join("\n\n");
@@ -222,7 +177,7 @@ function buildQuestionContext(
   if (trimmedWorkspace) {
     parts.push(
       "The student's current document / written work is included below. Use it when answering.",
-      `<student_work>\n${trimmedWorkspace.slice(0, 30_000)}\n</student_work>`,
+      `<student_work>\n${trimmedWorkspace}\n</student_work>`,
     );
   }
   return parts.length ? parts.join("\n") : undefined;
@@ -263,13 +218,6 @@ export function useAI(
   useEffect(() => scrollToBottom(), [messages, streamingContent]);
 
   const lastInjectedNonceRef = useRef<string | null>(null);
-  const questionId = question?.id;
-  useEffect(() => {
-    setMessages([]);
-    setStreamingContent("");
-    setError(null);
-    lastInjectedNonceRef.current = null;
-  }, [questionId]);
 
   useEffect(() => {
     // Dismissing grading controls must keep the discussion and grading context.
@@ -300,7 +248,7 @@ export function useAI(
     setLoading(true);
 
     try {
-      const drawingDataUrl = getDrawingSnapshot?.() ?? null;
+      const drawingDataUrl = await getDrawingSnapshot?.() ?? null;
       const staveAnalysis = getStaveAnalysis?.() ?? null;
       const paperDataUrl = getPaperSnapshot?.() ?? null;
       const workspaceText = getWorkspaceText?.() ?? null;

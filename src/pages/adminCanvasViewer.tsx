@@ -26,6 +26,7 @@ import {
 import { UserContext } from "../context/UserContext";
 import { isAdminUid } from "../constants/adminUids";
 import { db, storage } from "../../firebase";
+import AiLimitsEditor from "../components/admin/AiLimitsEditor";
 
 type Point = {
   x: number;
@@ -612,6 +613,7 @@ export default function AdminCanvasViewer() {
           {pageError}
         </div>
       )}
+      <AiLimitsEditor />
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden w-full mx-auto px-6 pb-6 max-w-[1800px]">

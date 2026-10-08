@@ -313,10 +313,8 @@ function usePinchPanZoom({
         ) {
           movedRef.current = true;
         }
-        const scroller = getScroller();
-        if (scroller) {
-          scroller.scrollTop = start.scrollTop - dy;
-        }
+        // Native scrolling preserves momentum and avoids resetting scrollTop
+        // on every touch move. Only pinch gestures suppress browser handling.
       }
     };
 

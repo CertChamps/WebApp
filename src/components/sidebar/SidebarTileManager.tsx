@@ -1,5 +1,5 @@
 import { useState, useCallback, useContext, useEffect, type ReactNode } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose, LuClipboardList, LuSearch } from "react-icons/lu";
 import { AIChat } from "../ai";
@@ -16,6 +16,9 @@ import ProGate from "../ProGate";
 import { UserContext } from "../../context/UserContext";
 import { canUseAceFeature } from "../../lib/contentAccess";
 import { DISCOVER_RESOURCE_PARAM, DISCOVER_SIDEBAR_PARAM } from "../../lib/discoverLinks";
+import { auth } from "../../../firebase";
+import crownImg from "../../assets/images/Ranks/Rank6.png";
+import { signInPath } from "../../lib/signIn";
 
 const TILE_TRANSITION = { type: "tween" as const, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const };
 
@@ -45,7 +48,7 @@ export type SidebarTileManagerProps = {
   /** Called when user requests to collapse the sidebar (e.g. collapse button). */
   onCollapse?: () => void;
   /** Optional: return current drawing as PNG data URL so AI can see handwriting/maths. */
-  getDrawingSnapshot?: (() => string | null) | null;
+  getDrawingSnapshot?: (() => string | string[] | null | Promise<string | string[] | null>) | null;
   /** Optional: return music stave analysis (detected note positions as text). */
   getStaveAnalysis?: (() => string | null) | null;
   /** Optional: return current exam paper (first page) as image data URL so AI can see the paper. */
@@ -96,7 +99,7 @@ export function SidebarTileManager({
 }: SidebarTileManagerProps) {
   const [internalPanel, setInternalPanel] = useState<SidebarPanelId | null>("ai");
   const isControlled = controlledPanel !== undefined;
-  const openPanelId = isControlled ? controlledPanel : internalPanel;
+  const requestedPanel = isControlled ? controlledPanel : internalPanel;
 
   const showMarkingScheme =
     !!(markingSchemeBlob && markingSchemePageRange) ||
@@ -104,6 +107,7 @@ export function SidebarTileManager({
     !!markingSchemeLoading ||
     !!forceShowMarkingSchemeTab;
   const visiblePanels = PANELS.filter((p) => p.id !== "markingscheme" || showMarkingScheme);
+  const openPanelId = requestedPanel;
 
   const setOpenPanel = useCallback(
     (next: SidebarPanelId | null) => {
@@ -211,6 +215,28 @@ export function SidebarTileManager({
   );
 }
 
+function SignInRequiredOverlay() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  return (
+    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center overflow-y-auto backdrop-blur-sm bg-black/5 rounded-xl" role="status">
+      <div className="flex flex-col items-center gap-4 p-8 max-w-xs text-center">
+        <img src={crownImg} alt="" className="w-40 h-40 object-contain" />
+        <h2 className="text-xl font-bold color-txt-main">Sign in required</h2>
+        <p className="color-txt-sub text-sm leading-relaxed">Please sign in to use the AI tutor.</p>
+        <button
+          type="button"
+          onClick={() => navigate(signInPath("AI tutor", location.pathname + location.search))}
+          className="px-6 py-2.5 rounded-xl font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer text-sm"
+        >
+          Sign in
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Catches render errors (e.g. from react-pdf) and shows a fallback. */
 function TileContent({
   panelId,
@@ -233,7 +259,7 @@ function TileContent({
 }: {
   panelId: SidebarPanelId;
   question?: any;
-  getDrawingSnapshot?: (() => string | null) | null;
+  getDrawingSnapshot?: (() => string | string[] | null | Promise<string | string[] | null>) | null;
   getStaveAnalysis?: (() => string | null) | null;
   getPaperSnapshot?: (() => string | null) | null;
   getWorkspaceText?: (() => string | null) | null;
@@ -249,27 +275,38 @@ function TileContent({
   aiThinkingMessages?: string[];
   onClosePanel?: () => void;
 }) {
+  const { authReady, user } = useContext(UserContext);
+  const signedIn = authReady && !!auth.currentUser && user?.uid === auth.currentUser.uid;
   const part = 0;
   const questionId = question?.id ?? "";
 
   switch (panelId) {
     case "ai":
       return (
-        <AIChat
-          question={question}
-          getDrawingSnapshot={getDrawingSnapshot}
-          getStaveAnalysis={getStaveAnalysis}
-          getPaperSnapshot={getPaperSnapshot}
-          getWorkspaceText={getWorkspaceText}
-          injectedExchange={aiInjectedExchange}
-          onMarkCompleteFromGrading={onMarkCompleteFromGrading}
-          aiThinking={aiThinking}
-          aiThinkingMessages={aiThinkingMessages}
-        />
+        <div className="relative h-full min-h-0 overflow-hidden">
+          <div
+            className={`h-full min-h-0 ${signedIn ? "" : "blur-[2px] pointer-events-none select-none opacity-85"}`}
+            inert={!signedIn}
+            aria-hidden={!signedIn}
+          >
+            <AIChat
+              question={question}
+              getDrawingSnapshot={getDrawingSnapshot}
+              getStaveAnalysis={getStaveAnalysis}
+              getPaperSnapshot={getPaperSnapshot}
+              getWorkspaceText={getWorkspaceText}
+              injectedExchange={aiInjectedExchange}
+              onMarkCompleteFromGrading={onMarkCompleteFromGrading}
+              aiThinking={aiThinking}
+              aiThinkingMessages={aiThinkingMessages}
+            />
+          </div>
+          {!signedIn && <SignInRequiredOverlay />}
+        </div>
       );
     case "threads": {
       const isPaperThread = !!question?._paperThread;
-      return <ThreadsPanel questionId={questionId} part={part} isPaperThread={isPaperThread} question={question} />;
+      return <ThreadsPanel questionId={questionId} part={part} isPaperThread={isPaperThread} question={question} onClosePanel={_onClosePanel} />;
     }
     case "timer":
       return (
@@ -351,7 +388,7 @@ function TileContent({
   }
 }
 
-function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionId: string; part: number; isPaperThread: boolean; question?: any }) {
+function ThreadsPanel({ questionId, part, isPaperThread, question, onClosePanel }: { questionId: string; part: number; isPaperThread: boolean; question?: any; onClosePanel?: () => void }) {
   const { user } = useContext(UserContext);
   const [searchParams] = useSearchParams();
   const [threadView, setThreadView] = useState<"discover" | "discussion">("discover");
@@ -414,7 +451,7 @@ function ThreadsPanel({ questionId, part, isPaperThread, question }: { questionI
 
       <div className="min-h-0 flex-1 overflow-hidden">
         {threadView === "discover" ? (
-          <QuestionDiscover question={question} />
+          <QuestionDiscover question={question} onPopOut={onClosePanel} />
         ) : questionId ? (
           <QThread
             questionId={questionId}

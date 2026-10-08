@@ -732,7 +732,7 @@ export default function AddQuestions() {
             value={firestoreUploadPath}
             onChange={(e) => setFirestoreUploadPath(e.target.value.trim() || e.target.value)}
             placeholder="e.g. questions/leavingcert/subjects/maths/levels/higher/papers"
-            className="w-full px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50 placeholder:color-txt-sub"
+            className="w-full px-4 py-2 rounded-xl border border-transparent color-bg-grey-5 color-txt-main text-sm font-mono focus:outline-none placeholder:color-txt-sub"
           />
         </div>
         <div>

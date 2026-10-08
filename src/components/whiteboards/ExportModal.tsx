@@ -179,7 +179,7 @@ export default function ExportModal({
             type="text"
             value={fileName}
             onChange={(event) => setFileName(event.target.value)}
-            className="rounded-xl border color-shadow px-3 py-2 text-sm color-bg color-txt-main outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
+            className="rounded-xl border color-shadow px-3 py-2 text-sm color-bg color-txt-main outline-none"
             maxLength={80}
             autoComplete="off"
             spellCheck={false}

@@ -9,6 +9,7 @@ export type ContentProGateProps = {
   asModal?: boolean;
   onClose?: () => void;
   sideContent?: React.ReactNode;
+  description?: string;
 };
 
 /** @deprecated Use ContentProGate */
@@ -20,6 +21,7 @@ export default function ContentProGate({
   asModal,
   onClose,
   sideContent,
+  description,
 }: ContentProGateProps) {
   const navigate = useNavigate();
 
@@ -48,14 +50,13 @@ export default function ContentProGate({
 
   const card = (
     <div
-      className="flex flex-col items-center gap-5 p-8 max-w-xs text-center color-bg rounded-2xl shadow-lg shrink-0"
+      className="flex flex-col items-center gap-5 p-8 max-w-xs text-center color-bg rounded-2xl shrink-0"
       onClick={(e) => e.stopPropagation()}
     >
       <img src={crownImg} alt="" className="w-24 h-24 object-contain" />
       <h2 className="text-xl font-bold color-txt-main">CertChamps ACE</h2>
       <p className="color-txt-sub text-sm leading-relaxed">
-        Unlock every subject, paper, and topic, plus full AI tutoring and instant answer marking. Your free samples
-        and community access are always available.
+        {description ?? "Unlock every subject, paper, and topic, plus full AI tutoring and instant answer marking. Your free samples and community access are always available."}
       </p>
       <div className="flex flex-col gap-3 w-full">
         {sampleLabel && (freePaper || freeImageSample) && (
@@ -70,10 +71,13 @@ export default function ContentProGate({
         <button
           type="button"
           onClick={goToPayments}
-          className="w-full px-6 py-2.5 rounded-xl border border-color-border color-txt-main hover:color-bg-grey-10 transition-all cursor-pointer text-sm font-medium"
+          className="w-full px-6 py-2.5 rounded-xl color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer text-sm font-semibold"
         >
           Upgrade to ACE
         </button>
+        {asModal && onClose && (
+          <button type="button" onClick={onClose} className="text-sm color-txt-sub hover:color-txt-main cursor-pointer">Maybe later</button>
+        )}
       </div>
     </div>
   );

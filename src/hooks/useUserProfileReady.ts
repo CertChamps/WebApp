@@ -3,8 +3,10 @@ import { auth } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 
 export function useUserProfileReady() {
-  const { user } = useContext(UserContext);
+  const { user, authReady } = useContext(UserContext);
   const firebaseUser = auth.currentUser;
+
+  if (!authReady) return { ready: false, isAuthenticated: !!firebaseUser };
 
   if (!firebaseUser) {
     return { ready: true, isAuthenticated: false };

@@ -2,7 +2,7 @@ import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import cors from "cors";
 import fetch from "node-fetch";
-import Stripe from "stripe";
+export { createProCheckout, createBillingPortalSession, stripeWebhook } from "./payments/stripe";
 
 admin.initializeApp();
 
@@ -61,6 +61,24 @@ const AI_LIMITS: Record<"free" | "ace", Record<AiPurpose, number>> = {
         whiteboard: 100,
     },
 };
+const AI_PURPOSES: AiPurpose[] = ["tutor", "grading", "discover", "whiteboard"];
+const AI_LIMITS_DOC = "app_config/ai_limits";
+const ADMIN_UIDS = new Set([
+    "NkN9UBqoPEYpE21MC89fipLn0SP2",
+    "gJIqKYlc1OdXUQGZQkR4IzfCIoL2",
+    "AN3cIuQxmXfXb5kEmXuHcM5vWyH3",
+]);
+
+async function configuredAiLimits(): Promise<typeof AI_LIMITS> {
+    const data = (await admin.firestore().doc(AI_LIMITS_DOC).get()).data() ?? {};
+    return Object.fromEntries((["free", "ace"] as const).map((plan) => [
+        plan,
+        Object.fromEntries(AI_PURPOSES.map((purpose) => {
+            const value = data[plan]?.[purpose];
+            return [purpose, Number.isSafeInteger(value) && value >= 0 ? value : AI_LIMITS[plan][purpose]];
+        })),
+    ])) as typeof AI_LIMITS;
+}
 
 class AiQuotaError extends Error {
     constructor(
@@ -92,7 +110,7 @@ async function authenticatedUser(req: any): Promise<{
     return {
         uid: decoded.uid,
         isPro: userData.isPro === true,
-        isAdmin: decoded.admin === true || userData.isAdmin === true,
+        isAdmin: decoded.admin === true || userData.isAdmin === true || ADMIN_UIDS.has(decoded.uid) || decoded.email?.toLowerCase() === "cian.brady@certchamps.ie",
     };
 }
 
@@ -122,7 +140,7 @@ async function consumeAiAllowance(args: {
     usageId: unknown;
 }): Promise<{ used: number; limit: number }> {
     const { uid, isPro, isAdmin, purpose } = args;
-    const planLimit = AI_LIMITS[isPro ? "ace" : "free"][purpose];
+    const planLimit = (await configuredAiLimits())[isPro ? "ace" : "free"][purpose];
     const limit = isAdmin ? Number.MAX_SAFE_INTEGER : planLimit;
 
     const suppliedUsageId = typeof args.usageId === "string" ? args.usageId.trim().slice(0, 120) : "";
@@ -171,23 +189,16 @@ async function consumeAiAllowance(args: {
 }
 
 const MAX_CHAT_MESSAGES = 40;
-/** Slot budget per request — individual images are byte-capped separately. */
-const MAX_CHAT_IMAGES = 12;
 const MAX_CHAT_CHARACTERS = 6_000_000;
-/** Reject a single base64 image larger than this (~2 MB encoded). */
-const MAX_SINGLE_IMAGE_CHARACTERS = 2_800_000;
-const MAX_CONTEXT_CHARACTERS = 60_000;
 
 type ChatContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 type ChatMessage = { role: string; content: string | ChatContentPart[] };
 
 /**
- * Fits a conversation inside the model budget instead of rejecting it. Walks
- * newest-first so the current turn keeps its question and marking scheme images
- * and older history is what gets dropped.
+ * Trim older conversation text while preserving every supplied image. Never
+ * silently omit workings; upstream request limits must surface as errors.
  */
 function sanitizeChatMessages(messages: unknown[]): ChatMessage[] {
-    let imageBudget = MAX_CHAT_IMAGES;
     let characterBudget = MAX_CHAT_CHARACTERS;
 
     const takeText = (value: string): string | null => {
@@ -221,10 +232,6 @@ function sanitizeChatMessages(messages: unknown[]): ChatMessage[] {
             }
             if (part?.type === "image_url" && typeof part.image_url?.url === "string") {
                 const url = part.image_url.url as string;
-                if (imageBudget <= 0 || url.length > characterBudget) continue;
-                if (url.length > MAX_SINGLE_IMAGE_CHARACTERS) continue;
-                characterBudget -= url.length;
-                imageBudget -= 1;
                 parts.push({ type: "image_url", image_url: { url } });
             }
         }
@@ -439,12 +446,31 @@ function createMeteredChatFunction() {
         res.status(400).json({ error: "messages array is required" });
         return;
     }
-    const trimmedContext = typeof context === "string" ? context.slice(0, MAX_CONTEXT_CHARACTERS) : "";
+    const trimmedContext = typeof context === "string" ? context : "";
 
     const purpose = parseAiPurpose(purposeValue);
     let allowance: { used: number; limit: number };
     try {
-        allowance = await consumeAiAllowance({ ...access, purpose, usageId });
+        if (purpose === "whiteboard" && !access.isPro && !access.isAdmin) {
+            const subject = typeof req.body.subject === "string" ? req.body.subject.trim() : "";
+            if (!subject) {
+                res.status(400).json({ error: "Choose a subject before matching questions." });
+                return;
+            }
+            const pages = await admin.firestore().collection(`user-data/${access.uid}/whiteboards-pages`)
+                .where("subject", "==", subject).limit(1).get();
+            if (!pages.empty) {
+                res.status(403).json({
+                    error: "Your free plan includes one study page per subject. Upgrade to ACE to create another.",
+                    code: "WHITEBOARD_LIMIT", upgradeRequired: true,
+                });
+                return;
+            }
+            // Matching previews do not use the free slot; creating a page does.
+            allowance = { used: 0, limit: 1 };
+        } else {
+            allowance = await consumeAiAllowance({ ...access, purpose, usageId });
+        }
     } catch (error) {
         if (error instanceof AiQuotaError) {
             res.status(429).json({
@@ -548,7 +574,7 @@ export const aiUsage = functions.https.onRequest({
 
     const snapshot = await aiUsageDocument(access.uid).get();
     const data = snapshot.data() ?? {};
-    const limits = AI_LIMITS[access.isPro ? "ace" : "free"];
+    const limits = (await configuredAiLimits())[access.isPro ? "ace" : "free"];
     const usage = Object.fromEntries(
         (Object.keys(limits) as AiPurpose[]).map((purpose) => {
             const value = data[`${purpose}Count`];
@@ -565,6 +591,46 @@ export const aiUsage = functions.https.onRequest({
         usage,
         limits,
     });
+});
+
+/** Admin-only settings endpoint. The Cloud Function remains the authority for every allowance. */
+export const aiLimits = functions.https.onRequest({ cors: true }, async (req, res) => {
+    if (req.method !== "GET" && req.method !== "PUT") {
+        res.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    let access: Awaited<ReturnType<typeof authenticatedUser>>;
+    try {
+        access = await authenticatedUser(req);
+    } catch {
+        res.status(401).json({ error: "Sign in again to manage AI limits." });
+        return;
+    }
+    if (!access.isAdmin) {
+        res.status(403).json({ error: "Admin access required." });
+        return;
+    }
+    if (req.method === "PUT") {
+        const value = req.body;
+        const valid = value && typeof value === "object" &&
+            (["free", "ace"] as const).every((plan) =>
+                value[plan] && typeof value[plan] === "object" &&
+                AI_PURPOSES.every((purpose) =>
+                    Number.isSafeInteger(value[plan][purpose]) &&
+                    value[plan][purpose] >= 0 && value[plan][purpose] <= 100000));
+        if (!valid) {
+            res.status(400).json({ error: "Enter a whole number from 0 to 100,000 for each allowance." });
+            return;
+        }
+        await admin.firestore().doc(AI_LIMITS_DOC).set({
+            free: Object.fromEntries(AI_PURPOSES.map((purpose) => [purpose, value.free[purpose]])),
+            ace: Object.fromEntries(AI_PURPOSES.map((purpose) => [purpose, value.ace[purpose]])),
+            updatedBy: access.uid,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    }
+    res.setHeader("Cache-Control", "private, no-store");
+    res.status(200).json(await configuredAiLimits());
 });
 
 // ======================== EXTRACT QUESTIONS ======================== //
@@ -981,242 +1047,3 @@ export const extractQuestions = functions.https.onRequest({
         res.status(500).json({ error: "Failed to extract questions", details });
     }
 });
-
-// ======================== STRIPE PRO CHECKOUT ======================== //
-
-/** Pro subscription: €30/year. First year €20 when customer enters a promotion code at checkout (create a coupon in Stripe Dashboard, e.g. €10 off first invoice, and a promotion code like FIRSTYEAR20). */
-const PRO_YEARLY_PRICE_EUR_CENTS = 3000; // €30.00 per year
-
-/** Create a Stripe Checkout Session for yearly Pro subscription (€30/year; first year €20 with promo code). Expects POST with JSON body: { idToken, successUrl?, cancelUrl? } */
-export const createProCheckout = functions.https.onRequest(
-    {
-        cors: true,
-        secrets: ["STRIPE_SECRET_KEY"],
-    },
-    (req, res) => {
-        corsMiddleware(req, res, async () => {
-            if (req.method !== "POST") {
-                res.status(405).json({ error: "Method not allowed" });
-                return;
-            }
-            try {
-                const stripeKey = process.env.STRIPE_SECRET_KEY;
-                if (!stripeKey) {
-                    console.error("Missing STRIPE_SECRET_KEY");
-                    res.status(500).json({ error: "Server configuration error" });
-                    return;
-                }
-                const { idToken, successUrl, cancelUrl } = req.body || {};
-                if (!idToken) {
-                    res.status(400).json({ error: "idToken is required" });
-                    return;
-                }
-                let uid: string;
-                try {
-                    const decoded = await admin.auth().verifyIdToken(idToken);
-                    uid = decoded.uid;
-                } catch (e) {
-                    console.error("Invalid idToken:", e);
-                    res.status(401).json({ error: "Invalid or expired token" });
-                    return;
-                }
-                const origin = req.headers.origin || "https://certchamps-a7527.web.app";
-                const base = origin.replace(/\/$/, "");
-                const success = successUrl || `${base}/#/user/manage-account?success=pro`;
-                const cancel = cancelUrl || `${base}/#/user/manage-account?cancel=pro`;
-
-                const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
-                const session = await stripe.checkout.sessions.create({
-                    mode: "subscription",
-                    payment_method_types: ["card"],
-                    line_items: [
-                        {
-                            quantity: 1,
-                            price_data: {
-                                currency: "eur",
-                                unit_amount: PRO_YEARLY_PRICE_EUR_CENTS,
-                                product_data: {
-                                    name: "CertChamps ACE",
-                                    description: "Yearly subscription — full access to ACE features",
-                                },
-                                recurring: { interval: "year" },
-                            },
-                        },
-                    ],
-                    client_reference_id: uid,
-                    success_url: success,
-                    cancel_url: cancel,
-                    allow_promotion_codes: true,
-                });
-
-                res.status(200).json({ url: session.url });
-            } catch (err) {
-                console.error("createProCheckout error:", err);
-                res.status(500).json({ error: "Failed to create checkout session" });
-            }
-        });
-    }
-);
-
-/** Create a Stripe Billing Portal session so the customer can manage or cancel their subscription. Expects POST with JSON body: { idToken, returnUrl? }. User must have stripeCustomerId in user-data (set when they subscribed). */
-export const createBillingPortalSession = functions.https.onRequest(
-    {
-        cors: true,
-        secrets: ["STRIPE_SECRET_KEY"],
-    },
-    (req, res) => {
-        corsMiddleware(req, res, async () => {
-            if (req.method !== "POST") {
-                res.status(405).json({ error: "Method not allowed" });
-                return;
-            }
-            try {
-                const stripeKey = process.env.STRIPE_SECRET_KEY;
-                if (!stripeKey) {
-                    console.error("Missing STRIPE_SECRET_KEY");
-                    res.status(500).json({ error: "Server configuration error" });
-                    return;
-                }
-                const { idToken, returnUrl } = req.body || {};
-                if (!idToken) {
-                    res.status(400).json({ error: "idToken is required" });
-                    return;
-                }
-                let uid: string;
-                try {
-                    const decoded = await admin.auth().verifyIdToken(idToken);
-                    uid = decoded.uid;
-                } catch (e) {
-                    console.error("Invalid idToken:", e);
-                    res.status(401).json({ error: "Invalid or expired token" });
-                    return;
-                }
-                const userDoc = await admin.firestore().doc(`user-data/${uid}`).get();
-                const stripeCustomerId = userDoc.exists ? (userDoc.data()?.stripeCustomerId as string | undefined) : undefined;
-                if (!stripeCustomerId) {
-                    res.status(400).json({ error: "No subscription to manage. Cancel is only available for Pro subscriptions started from this account." });
-                    return;
-                }
-                const origin = req.headers.origin || "https://certchamps-a7527.web.app";
-                const base = origin.replace(/\/$/, "");
-                const returnUrlFinal = returnUrl || `${base}/#/user/manage-account`;
-
-                const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
-                const portalSession = await stripe.billingPortal.sessions.create({
-                    customer: stripeCustomerId,
-                    return_url: returnUrlFinal,
-                });
-
-                res.status(200).json({ url: portalSession.url });
-            } catch (err) {
-                console.error("createBillingPortalSession error:", err);
-                res.status(500).json({ error: "Failed to open billing portal" });
-            }
-        });
-    }
-);
-
-const SUBSCRIPTION_MAP_COLLECTION = "stripe_subscriptions";
-
-/** Stripe webhook: checkout.session.completed sets isPro and stores subscription id; customer.subscription.deleted clears isPro. Requires rawBody for signature verification. */
-export const stripeWebhook = functions.https.onRequest(
-    {
-        cors: false,
-        secrets: ["STRIPE_WEBHOOK_SECRET", "STRIPE_SECRET_KEY"],
-    },
-    async (req, res) => {
-        const stripeKey = process.env.STRIPE_SECRET_KEY;
-        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-        if (!webhookSecret || !stripeKey) {
-            console.error("Missing STRIPE_WEBHOOK_SECRET or STRIPE_SECRET_KEY");
-            res.status(500).end();
-            return;
-        }
-        const sig = req.headers["stripe-signature"];
-        if (!sig) {
-            res.status(400).send("Missing stripe-signature");
-            return;
-        }
-        const rawBody = (req as { rawBody?: Buffer }).rawBody ?? (typeof req.body === "string" ? Buffer.from(req.body) : Buffer.from(JSON.stringify(req.body || {})));
-        let event: Stripe.Event;
-        try {
-            event = Stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-        } catch (e) {
-            console.error("Stripe webhook signature verification failed:", e);
-            res.status(400).send("Invalid signature");
-            return;
-        }
-
-        const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
-
-        if (event.type === "checkout.session.completed") {
-            const session = event.data.object as Stripe.Checkout.Session;
-            const uid = session.client_reference_id;
-            const subscriptionId = session.subscription as string | null;
-            const customerId = typeof session.customer === "string" ? session.customer : null;
-            if (!uid) {
-                console.error("checkout.session.completed missing client_reference_id");
-                res.status(200).send("OK");
-                return;
-            }
-            try {
-                const userUpdate: { isPro: boolean; stripeCustomerId?: string; subscriptionPeriodEnd?: number } = { isPro: true };
-                if (customerId) userUpdate.stripeCustomerId = customerId;
-                if (subscriptionId) {
-                    const sub = await stripe.subscriptions.retrieve(subscriptionId);
-                    if (sub.current_period_end) userUpdate.subscriptionPeriodEnd = sub.current_period_end;
-                    await admin.firestore().doc(`${SUBSCRIPTION_MAP_COLLECTION}/${subscriptionId}`).set({ uid });
-                }
-                await admin.firestore().doc(`user-data/${uid}`).set(userUpdate, { merge: true });
-            } catch (e) {
-                console.error("Failed to update user isPro / subscription map:", e);
-                res.status(500).end();
-                return;
-            }
-            res.status(200).send("OK");
-            return;
-        }
-
-        if (event.type === "customer.subscription.updated") {
-            const subscription = event.data.object as Stripe.Subscription;
-            const subId = subscription.id;
-            const periodEnd = subscription.current_period_end;
-            try {
-                const mapDoc = await admin.firestore().doc(`${SUBSCRIPTION_MAP_COLLECTION}/${subId}`).get();
-                if (mapDoc.exists && periodEnd) {
-                    const uid = mapDoc.data()?.uid;
-                    if (uid) {
-                        await admin.firestore().doc(`user-data/${uid}`).set({ subscriptionPeriodEnd: periodEnd }, { merge: true });
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to update subscription period end:", e);
-            }
-            res.status(200).send("OK");
-            return;
-        }
-
-        if (event.type === "customer.subscription.deleted") {
-            const subscription = event.data.object as Stripe.Subscription;
-            const subId = subscription.id;
-            try {
-                const mapDoc = await admin.firestore().doc(`${SUBSCRIPTION_MAP_COLLECTION}/${subId}`).get();
-                if (mapDoc.exists) {
-                    const uid = mapDoc.data()?.uid;
-                    if (uid) {
-                        await admin.firestore().doc(`user-data/${uid}`).set({ isPro: false, subscriptionPeriodEnd: null }, { merge: true });
-                    }
-                    await admin.firestore().doc(`${SUBSCRIPTION_MAP_COLLECTION}/${subId}`).delete();
-                }
-            } catch (e) {
-                console.error("Failed to clear isPro on subscription deleted:", e);
-                res.status(500).end();
-                return;
-            }
-            res.status(200).send("OK");
-            return;
-        }
-
-        res.status(200).send("OK");
-    }
-);

@@ -858,8 +858,8 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   position: relative;
   width: 100%;
   cursor: zoom-in;
-  /* Manual 1-finger scroll + 2-finger pinch; must be none so iOS delivers multi-touch */
-  touch-action: none;
+  /* Let single-finger vertical scrolling retain native momentum. */
+  touch-action: pan-y;
   -webkit-user-select: none;
   user-select: none;
 }
@@ -954,7 +954,7 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   pointer-events: none;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  touch-action: none;
+  touch-action: pan-y;
   -webkit-user-select: none;
   user-select: none;
 }

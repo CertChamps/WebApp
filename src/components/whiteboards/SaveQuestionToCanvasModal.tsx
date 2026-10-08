@@ -47,7 +47,7 @@ export default function SaveQuestionToCanvasModal({
   onSaved,
 }: Props) {
   const navigate = useNavigate();
-  const { pages, loading, createPage, updatePage } = useWhiteboards(subject);
+  const { pages, loading, createPage, updatePage, requestCreatePage, aceGateModal } = useWhiteboards(subject);
   const [mode, setMode] = useState<DestinationMode>("new");
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [newPageName, setNewPageName] = useState(attachment.label);
@@ -99,6 +99,7 @@ export default function SaveQuestionToCanvasModal({
         attachedQuestions: [attachment],
         pageType: newPageType,
       });
+      if (!created) return;
       onSaved?.();
       onClose();
       navigate(`/whiteboards/page/${created.id}?q=${encodeURIComponent(attachment.id)}`);
@@ -111,10 +112,11 @@ export default function SaveQuestionToCanvasModal({
   };
 
   const canSave =
-    !saving &&
+    !saving && !loading &&
     (mode === "existing" ? selectedPageId != null : newPageName.trim().length > 0);
 
   return (
+    <>
     <WhiteboardModal
       title="Add question to page"
       onClose={onClose}
@@ -158,6 +160,7 @@ export default function SaveQuestionToCanvasModal({
               mode === "new" ? "color-bg color-txt-main" : "color-txt-sub hover:color-txt-main"
             }`}
             onClick={() => {
+              if (!requestCreatePage()) return;
               setMode("new");
               setError(null);
             }}
@@ -208,7 +211,7 @@ export default function SaveQuestionToCanvasModal({
                   <button
                     type="button"
                     className="mt-2 text-sm font-semibold color-txt-accent"
-                    onClick={() => setMode("new")}
+                    onClick={() => { if (requestCreatePage()) setMode("new"); }}
                   >
                     Create a new page
                   </button>
@@ -296,5 +299,7 @@ export default function SaveQuestionToCanvasModal({
         )}
       </div>
     </WhiteboardModal>
+    {aceGateModal}
+    </>
   );
 }
