@@ -14,8 +14,11 @@ import {
     runTransaction,
     serverTimestamp,
     setDoc,
+    startAfter,
     updateDoc,
     where,
+    type DocumentData,
+    type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { aiResponseError, authenticatedAiFetch, METERED_CHAT_API_URL } from "../lib/aiApi";
 import { deleteObject, getDownloadURL, ref as storageRef } from "firebase/storage";
@@ -445,8 +448,12 @@ function firestoreToDiscoverNote(id: string, data: Record<string, any>): Discove
         linkedQuestionLevel: data.linkedQuestionLevel ?? undefined,
         linkedQuestionTopic: data.linkedQuestionTopic ?? undefined,
         linkedQuestionSource: data.linkedQuestionSource ?? undefined,
+        linkedQuestions: parseLinkedQuestions(data as Record<string, unknown>),
     };
 }
+
+const DISCOVER_NOTES_PAGE_SIZE = 100;
+const DISCOVER_FEED_BATCH_SIZE = 20;
 
 function noteToResource(note: DiscoverNote): DiscoverResource {
     const types = normalizeResourceTypes(note.resourceTypes, note.resourceType);
@@ -563,6 +570,14 @@ export default function Discover() {
     const commentInputRef = useRef<HTMLInputElement | null>(null);
     const pageMenuRef = useRef<HTMLDivElement | null>(null);
     const pageScrollRef = useRef<HTMLElement | null>(null);
+    const liveCursorRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+    const olderCursorRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+    const pagingStartedRef = useRef(false);
+    const hasMoreNotesRef = useRef(true);
+    const loadingMoreNotesRef = useRef(false);
+    const [hasMoreNotes, setHasMoreNotes] = useState(true);
+    const [loadingMoreNotes, setLoadingMoreNotes] = useState(false);
+    const [feedVisibleCount, setFeedVisibleCount] = useState(DISCOVER_FEED_BATCH_SIZE);
     const [pageMenuOpen, setPageMenuOpen] = useState(false);
 
     useEffect(() => {
@@ -631,56 +646,23 @@ export default function Discover() {
             collection(db, "discover-notes"),
             where("moderationStatus", "==", "approved"),
             orderBy("timestamp", "desc"),
-            limit(100)
+            limit(DISCOVER_NOTES_PAGE_SIZE)
         );
         const unsub = onSnapshot(
             q,
             (snap) => {
-                const rows: DiscoverNote[] = snap.docs.map((d) => {
-                    const data = d.data();
-                    return {
-                        id: d.id,
-                        userId: data.userId ?? "",
-                        username: data.username ?? "Unknown",
-                        userPicture: data.userPicture ?? null,
-                        title: data.title ?? "",
-                        description: data.description ?? "",
-                        websiteUrl: data.websiteUrl ?? "",
-                        resourceSource: data.resourceSource === "pdf" ? "pdf" : "website",
-                        pdfPath: data.pdfPath ?? null,
-                        pdfFileName: data.pdfFileName ?? null,
-                        thumbnailUrl: data.thumbnailUrl ?? "",
-                        thumbnailPath: data.thumbnailPath ?? null,
-                        uploadedThumbnailUrl: data.uploadedThumbnailUrl ?? null,
-                        uploadedThumbnailPath: data.uploadedThumbnailPath ?? null,
-                        thumbnailStatus: data.thumbnailStatus ?? "none",
-                        moderationStatus: data.moderationStatus ?? "approved",
-                        faviconUrl: data.faviconUrl ?? null,
-                        siteName: data.siteName ?? "",
-                        subjectId: data.subjectId ?? undefined,
-                        subjectLabel: data.subjectLabel ?? undefined,
-                        level: data.level ?? undefined,
-                        levels: Array.isArray(data.levels) ? data.levels : [],
-                        resourceType: data.resourceType ?? undefined,
-                        resourceTypes: Array.isArray(data.resourceTypes) ? data.resourceTypes : [],
-                        topics: Array.isArray(data.topics) ? data.topics : [],
-                        likeCount: typeof data.likeCount === "number" ? data.likeCount : 0,
-                        commentCount: typeof data.commentCount === "number" ? data.commentCount : 0,
-                        ratingAverage: typeof data.ratingAverage === "number" ? data.ratingAverage : 0,
-                        ratingCount: typeof data.ratingCount === "number" ? data.ratingCount : 0,
-                        timestamp: data.timestamp?.seconds ?? null,
-                        linkedQuestionId: data.linkedQuestionId ?? undefined,
-                        linkedQuestionName: data.linkedQuestionName ?? undefined,
-                        linkedQuestionPracticeUrl: data.linkedQuestionPracticeUrl ?? undefined,
-                        linkedQuestionSubjectId: data.linkedQuestionSubjectId ?? undefined,
-                        linkedQuestionSubjectLabel: data.linkedQuestionSubjectLabel ?? undefined,
-                        linkedQuestionLevel: data.linkedQuestionLevel ?? undefined,
-                        linkedQuestionTopic: data.linkedQuestionTopic ?? undefined,
-                        linkedQuestionSource: data.linkedQuestionSource ?? undefined,
-                        linkedQuestions: parseLinkedQuestions(data as Record<string, unknown>),
-                    };
+                const rows = snap.docs.map((d) => firestoreToDiscoverNote(d.id, d.data()));
+                setNotes((prev) => {
+                    if (!pagingStartedRef.current) return rows;
+                    const liveIds = new Set(rows.map((note) => note.id));
+                    return [...rows, ...prev.filter((note) => !liveIds.has(note.id))];
                 });
-                setNotes(rows);
+                if (!pagingStartedRef.current) {
+                    liveCursorRef.current = snap.docs.at(-1) ?? null;
+                    const more = snap.docs.length === DISCOVER_NOTES_PAGE_SIZE;
+                    hasMoreNotesRef.current = more;
+                    setHasMoreNotes(more);
+                }
                 setLoading(false);
             },
             (err) => {
@@ -689,6 +671,41 @@ export default function Discover() {
             }
         );
         return () => unsub();
+    }, []);
+
+    const loadMoreNotes = useCallback(async () => {
+        const cursor = olderCursorRef.current ?? liveCursorRef.current;
+        if (!cursor || !hasMoreNotesRef.current || loadingMoreNotesRef.current) return;
+        loadingMoreNotesRef.current = true;
+        setLoadingMoreNotes(true);
+        try {
+            const snap = await getDocs(query(
+                collection(db, "discover-notes"),
+                where("moderationStatus", "==", "approved"),
+                orderBy("timestamp", "desc"),
+                startAfter(cursor),
+                limit(DISCOVER_NOTES_PAGE_SIZE)
+            ));
+            pagingStartedRef.current = true;
+            const last = snap.docs.at(-1);
+            if (last) olderCursorRef.current = last;
+            const more = snap.docs.length === DISCOVER_NOTES_PAGE_SIZE;
+            hasMoreNotesRef.current = more;
+            setHasMoreNotes(more);
+            if (snap.empty) return;
+            setNotes((prev) => {
+                const ids = new Set(prev.map((note) => note.id));
+                const extra = snap.docs
+                    .map((d) => firestoreToDiscoverNote(d.id, d.data()))
+                    .filter((note) => !ids.has(note.id));
+                return extra.length > 0 ? [...prev, ...extra] : prev;
+            });
+        } catch (err) {
+            console.error("Discover page load error:", err);
+        } finally {
+            loadingMoreNotesRef.current = false;
+            setLoadingMoreNotes(false);
+        }
     }, []);
 
     useEffect(() => {
@@ -1096,6 +1113,63 @@ export default function Discover() {
                 .slice(0, 5),
         [filteredResources]
     );
+
+    const showHomeCatalog =
+        !linkedQuestion &&
+        !selectedSubject &&
+        selectedTypes.length === 0 &&
+        !submittedQuery &&
+        aiResultIds === null;
+
+    const catalogResources = useMemo(() => {
+        if (!showHomeCatalog) return [];
+        const shown = new Set([
+            ...recommendedResources.map((resource) => resource.id),
+            ...recentResources.map((resource) => resource.id),
+        ]);
+        const rest = filteredResources.filter((resource) => !shown.has(resource.id));
+        // A short remainder looks like a single extra row. Fall back to the full
+        // library so the feed can keep scrolling through every resource.
+        return rest.length >= DISCOVER_FEED_BATCH_SIZE ? rest : filteredResources;
+    }, [filteredResources, recentResources, recommendedResources, showHomeCatalog]);
+
+    const visibleCatalog = catalogResources.slice(0, feedVisibleCount);
+    const feedVisibleCountRef = useRef(feedVisibleCount);
+    feedVisibleCountRef.current = feedVisibleCount;
+    const catalogCountRef = useRef(0);
+    catalogCountRef.current = catalogResources.length;
+    const showHomeCatalogRef = useRef(showHomeCatalog);
+    showHomeCatalogRef.current = showHomeCatalog;
+
+    const revealFeed = useCallback(() => {
+        const root = pageScrollRef.current;
+        if (!root || !showHomeCatalogRef.current) return;
+        const distanceFromBottom = root.scrollHeight - root.scrollTop - root.clientHeight;
+        if (distanceFromBottom > 1400) return;
+        const loaded = catalogCountRef.current;
+        if (feedVisibleCountRef.current < loaded) {
+            const next = Math.min(loaded, feedVisibleCountRef.current + DISCOVER_FEED_BATCH_SIZE);
+            feedVisibleCountRef.current = next;
+            setFeedVisibleCount(next);
+            return;
+        }
+        if (hasMoreNotesRef.current) void loadMoreNotes();
+    }, [loadMoreNotes]);
+
+    useEffect(() => {
+        setFeedVisibleCount(DISCOVER_FEED_BATCH_SIZE);
+        feedVisibleCountRef.current = DISCOVER_FEED_BATCH_SIZE;
+    }, [aiResultIds, linkedQuestion, selectedSubjectId, selectedTypes, sortBy, submittedQuery]);
+
+    useEffect(() => {
+        if (!showHomeCatalog || loading) return;
+        const root = pageScrollRef.current;
+        if (!root) return;
+        const onScroll = () => revealFeed();
+        root.addEventListener("scroll", onScroll, { passive: true });
+        revealFeed();
+        return () => root.removeEventListener("scroll", onScroll);
+    }, [catalogResources.length, feedVisibleCount, loading, revealFeed, showHomeCatalog]);
 
     const linkedQuestionResources = useMemo(() => {
         if (!linkedQuestion) return { exact: [] as DiscoverResource[], fallback: [] as DiscoverResource[] };
@@ -2181,6 +2255,21 @@ export default function Discover() {
                                 {!selectedSubject && selectedTypes.length === 0 && renderResourceSection(
                                     "Recently added free resources",
                                     recentResources
+                                )}
+                                {showHomeCatalog && (catalogResources.length > 0 || hasMoreNotes || loadingMoreNotes) && (
+                                    <>
+                                        <div className="h-px w-full color-bg-grey-10" role="separator" />
+                                        {visibleCatalog.length > 0 && (
+                                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+                                                {visibleCatalog.map(renderResourceCard)}
+                                            </div>
+                                        )}
+                                        {loadingMoreNotes && (
+                                            <div className="flex justify-center py-2">
+                                                <LuLoader size={18} className="animate-spin color-txt-sub" />
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </>
                         )}
