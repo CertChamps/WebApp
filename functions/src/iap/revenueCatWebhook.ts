@@ -54,6 +54,9 @@ const REVENUECAT_ACE_PRODUCT_IDS = new Set([
   "CertChamps_TEST",
   "CertChamps_ACE",
   "CertChamps_ACE_iphone",
+  "CertChamps_ACE_yearly",
+  "CertChamps_ACE_monthly",
+  "CertChamps_ACE_month",
 ]);
 
 /** Firestore mirror of the App Store originalTransactionId → Firebase

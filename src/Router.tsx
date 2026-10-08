@@ -27,7 +27,7 @@ import Progress from "./pages/progress/progress_main";
 import SubjectProgressPage from "./pages/progress/SubjectProgressPage";
 import Feedback from "./pages/feedback";
 import MobileRedirect from "./pages/mobileRedirect";
-import PhoneRedirect from "./components/PhoneRedirect";
+import { isPhoneBrowser } from "./utils/isPhoneBrowser";
 import SessionTracker from "./components/SessionTracker";
 import UsernamePrompt from "./components/prompts/username_prompt";
 import ReleaseNotesPrompt from "./components/prompts/release_notes_prompt";
@@ -66,6 +66,12 @@ function SpotifyOAuthPathBridge() {
 }
 
 function RootLayout() {
+  // Phone browsers never mount sign-up. That route used to bounce through a
+  // protected /mobileRedirect page and reload the form in a loop.
+  if (isPhoneBrowser()) {
+    return <MobileRedirect />;
+  }
+
   // SpotifyProvider is mounted app-wide so playback and auth persist across
   // navigation (music keeps playing when switching pages) and both the sidebar
   // tab and the floating mini-player share one session.
@@ -73,7 +79,6 @@ function RootLayout() {
     <SpotifyProvider>
       <SpotifyOAuthPathBridge />
       <SessionTracker />
-      <PhoneRedirect />
       <Outlet />
       <UsernamePrompt />
       <ReleaseNotesPrompt />
@@ -381,13 +386,7 @@ const router = createHashRouter([
   },
   {
     path: "/mobileRedirect",
-    element: (
-      <ProtectedRoute>
-        <>
-          <MobileRedirect/>
-        </>
-      </ProtectedRoute>
-    ),
+    element: <MobileRedirect />,
   },
   {
     path: "*",
