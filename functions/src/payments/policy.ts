@@ -45,6 +45,14 @@ export interface RcSubscriber {
     entitlements?: Record<string, { expires_date?: string | null; product_identifier?: string; grace_period_expires_date?: string | null }>;
     subscriptions?: Record<string, RcSubscription>;
 }
+const APPLE_PLAN_BY_PRODUCT: Record<string, Plan> = {
+    CertChamps_ACE: "annual",
+    CertChamps_ACE_yearly: "annual",
+    CertChamps_ACE_Monthly: "monthly",
+    CertChamps_ACE_monthly: "monthly",
+    CertChamps_ACE_month: "monthly",
+};
+
 export function appleBillingState(subscriber: RcSubscriber, now = Date.now()): BillingState {
     const ent = subscriber.entitlements?.["CertChamps ACE"];
     const productId = ent?.product_identifier ?? null;
@@ -57,7 +65,7 @@ export function appleBillingState(subscriber: RcSubscriber, now = Date.now()): B
         !sub.refunded_at && end > now;
     return {
         active,
-        plan: productId === "CertChamps_ACE_Monthly" ? "monthly" : productId === "CertChamps_ACE" ? "annual" : null,
+        plan: productId ? APPLE_PLAN_BY_PRODUCT[productId] ?? null : null,
         productId,
         periodEnd: end ? Math.floor(end / 1000) : null,
         cancelAtPeriodEnd: !!sub?.unsubscribe_detected_at,
