@@ -1,3 +1,5 @@
+import { safeAppPath } from "./signIn";
+
 type OnboardingUser = {
   hasCompletedOnboarding?: boolean;
 };
@@ -38,8 +40,7 @@ export function getFullTutorialReplayPath(): string {
 }
 
 export function sanitizeReturnPath(path: string | null | undefined, fallback = "/user/settings"): string {
-  if (!path || !path.startsWith("/") || path.startsWith("//")) return fallback;
-  return path;
+  return safeAppPath(path, fallback);
 }
 
 export function getPostAuthPath(
@@ -47,6 +48,5 @@ export function getPostAuthPath(
   prevRoute?: string
 ): string {
   if (needsOnboarding(user)) return `/onboarding?${new URLSearchParams({ returnTo: sanitizeReturnPath(prevRoute, "/practice") })}`;
-  if (prevRoute) return prevRoute;
-  return "/practice";
+  return sanitizeReturnPath(prevRoute, "/practice");
 }

@@ -1,7 +1,5 @@
-import { createPortal } from "react-dom";
 import ContentProGate from "../components/ContentProGate";
 import { hasAceAccess } from "../lib/contentAccess";
-import { getThemedPortalTarget } from "../utils/themedPortal";
 import { createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
   collection,
@@ -446,16 +444,13 @@ export function useWhiteboards(subject: string | null) {
     createPage,
     requestCreatePage,
     showAceGate,
-    aceGateModal: aceGate && typeof document !== "undefined" ? createPortal(
-      createElement("div", { className: "fixed inset-0 z-[200]" }, createElement(ContentProGate, {
+    aceGateModal: aceGate ? createElement(ContentProGate, {
         asModal: true,
         onClose: () => setAceGate(null),
         description: aceGate === "ai"
           ? "AI question matching is included with ACE. Upgrade to create study pages matched to your request."
           : "Your free plan includes one study page per subject, as a whiteboard or document. Upgrade to ACE to create more pages for this subject.",
-      })),
-      getThemedPortalTarget() ?? document.body,
-    ) : null,
+      }) : null,
     movePageByOffset,
     updatePage,
     deletePage,

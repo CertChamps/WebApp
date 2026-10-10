@@ -8,6 +8,7 @@ import { iapDebug } from "./lib/payments/paymentsDebug";
 import { registerPushNotifications } from "./lib/registerPushNotifications";
 import { startNativeShareIntake } from "./lib/nativeShareIntake";
 import { getVisualViewportBounds, isKeyboardOpen, subscribeVisualViewport } from "./utils/visualViewport";
+import { isModalOpen } from "./utils/modalViewport";
 //import CustomCursor from "./components/CustomCursor"
 
 export default function App() {
@@ -110,6 +111,7 @@ export default function App() {
   useLayoutEffect(() => {
     const root = document.documentElement;
     const sync = () => {
+      if (isModalOpen()) return;
       const bounds = getVisualViewportBounds();
       root.style.setProperty("--vv-offset-top", `${bounds.offsetTop}px`);
       root.style.setProperty("--vv-offset-left", `${bounds.left}px`);

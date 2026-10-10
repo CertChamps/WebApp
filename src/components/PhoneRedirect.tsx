@@ -10,7 +10,7 @@ export default function PhoneRedirect() {
     const touch = navigator.maxTouchPoints > 0;
 
     const publicOrAuthPage = ["/", "/login", "/forgot-password", "/verify-email", "/onboarding", "/practice", "/discover", "/mobileRedirect"].includes(location.pathname);
-    if (touch && width <= 600 && !nativeIPad && !publicOrAuthPage) {
+    if (touch && width <= 600 && !publicOrAuthPage) {
       navigate("/mobileRedirect");
     }
   }, [navigate, location]);

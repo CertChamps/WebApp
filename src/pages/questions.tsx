@@ -2262,14 +2262,14 @@ export default function Questions() {
                                 {currentWhiteboardAttachment && whiteboardSubject && (
                                     <button
                                         type="button"
-                                        aria-label="Add question to canvas"
-                                        title="Add question to canvas"
+                                        aria-label="Add question to page"
+                                        title="Add to page"
                                         className={`question-selector-button pointer-events-auto ${showSaveToCanvas ? "question-selector-button-active" : ""}`}
                                         onClick={() => setShowSaveToCanvas(true)}
                                         aria-pressed={showSaveToCanvas}
                                     >
                                         <LuPencil size={18} strokeWidth={2} />
-                                        <span>canvas</span>
+                                        <span>Add to page</span>
                                     </button>
                                 )}
                                 {!options.laptopMode && (

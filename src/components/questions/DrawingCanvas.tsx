@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2, FileText, Ban, Paperclip, LoaderCircle, Type, Bold, Italic, List, Pin, Upload, BookOpen, Move } from "lucide-react";
+import { Pencil, Eraser, Grid3X3, Trash2, X, CircleDot, Undo2, Redo2, MessageCircle, Music, MousePointer2, FileText, Ban, Paperclip, LoaderCircle, Type, Bold, Italic, List, Pin, Upload, BookOpen, Move, Maximize2 } from "lucide-react";
 import type { CanvasAnnotation, CanvasCapturePayload } from "../../lib/grading/GradingTypes";
 import { buildCapturePayload, drawCaptureTextBoxes } from "../../lib/grading/canvasCapture";
 import { renderPdfPages } from "../../utils/pdfPagesToImages";
@@ -418,6 +418,42 @@ function unionRect(bounds: SelectionBounds | null, x: number, y: number, width: 
 		minY: Math.min(bounds.minY, y),
 		maxX: Math.max(bounds.maxX, maxX),
 		maxY: Math.max(bounds.maxY, maxY),
+	};
+}
+
+function getGroupSelectionBounds(
+	strokes: Stroke[],
+	strokeIndexes: number[],
+	objects: CanvasObject[],
+	objectIds: string[],
+	textBoxes: CanvasTextBox[],
+	textIds: string[],
+): SelectionBounds | null {
+	let bounds = getSelectionBounds(strokes, strokeIndexes);
+	const objectIdSet = new Set(objectIds);
+	const textIdSet = new Set(textIds);
+	for (const object of objects) {
+		if (object.pinnedToSide || !objectIdSet.has(object.id)) continue;
+		bounds = unionRect(bounds, object.x, object.y, object.width, object.height);
+	}
+	for (const box of textBoxes) {
+		if (!box.id || !textIdSet.has(box.id)) continue;
+		bounds = unionRect(bounds, box.x, box.y, box.width, box.height);
+	}
+	return bounds;
+}
+
+function scaleRectFromOrigin<T extends { x: number; y: number; width: number; height: number }>(
+	item: T,
+	origin: { x: number; y: number },
+	factor: number,
+): T {
+	return {
+		...item,
+		x: origin.x + (item.x - origin.x) * factor,
+		y: origin.y + (item.y - origin.y) * factor,
+		width: item.width * factor,
+		height: item.height * factor,
 	};
 }
 
@@ -3569,6 +3605,116 @@ export default function DrawingCanvas({
 		[onTextBoxesChange]
 	);
 
+	const beginGroupScale = useCallback(
+		(e: React.PointerEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const canvas = canvasRef.current;
+			if (!canvas) return;
+
+			const startStrokes = strokesRef.current;
+			const startObjects = objectsRef.current;
+			const startTextBoxes = captureTextBoxesRef.current;
+			const strokeIndexes = [...selectedStrokeIndexesRef.current];
+			const objectIds = [...selectedObjectIdsRef.current];
+			const textIds = [...selectedTextBoxIdsRef.current];
+			const bounds = getGroupSelectionBounds(
+				startStrokes,
+				strokeIndexes,
+				startObjects,
+				objectIds,
+				startTextBoxes,
+				textIds,
+			);
+			if (!bounds) return;
+
+			onEditInteraction?.();
+			// The resize handle lives at the bottom-right, so keep the opposite
+			// top-left corner fixed just like a conventional selection box.
+			const origin = { x: bounds.minX, y: bounds.minY };
+			const canvasRect = canvas.getBoundingClientRect();
+			const viewportScale = Math.max(0.01, scaleRef.current || 1);
+			const viewportPan = panRef.current;
+			const pointerWorld = (clientX: number, clientY: number) => ({
+				x: (clientX - canvasRect.left - viewportPan.x) / viewportScale,
+				y: (clientY - canvasRect.top - viewportPan.y) / viewportScale,
+			});
+			const startPointer = pointerWorld(e.clientX, e.clientY);
+			const startDistance = Math.max(
+				1,
+				Math.hypot(startPointer.x - origin.x, startPointer.y - origin.y),
+			);
+			const objectIdSet = new Set(objectIds);
+			const textIdSet = new Set(textIds);
+			let minimumFactor = MIN_SELECTION_SCALE;
+			for (const object of startObjects) {
+				if (!objectIdSet.has(object.id) || object.pinnedToSide) continue;
+				minimumFactor = Math.max(
+					minimumFactor,
+					24 / Math.max(1, object.width),
+					24 / Math.max(1, object.height),
+				);
+			}
+			for (const box of startTextBoxes) {
+				if (!textIdSet.has(box.id)) continue;
+				minimumFactor = Math.max(
+					minimumFactor,
+					6 / Math.max(1, box.fontSize),
+				);
+			}
+
+			let latestStrokes = startStrokes;
+			const onMove = (event: PointerEvent) => {
+				const pointer = pointerWorld(event.clientX, event.clientY);
+				const distance = Math.hypot(pointer.x - origin.x, pointer.y - origin.y);
+				const factor = Math.max(minimumFactor, Math.min(20, distance / startDistance));
+
+				if (strokeIndexes.length > 0) {
+					latestStrokes = transformSelectedStrokes(startStrokes, strokeIndexes, origin, {
+						scaleFactor: factor,
+					});
+					setStrokes(latestStrokes);
+				}
+				if (objectIds.length > 0) {
+					setObjects(
+						startObjects.map((object) =>
+							objectIdSet.has(object.id) && !object.pinnedToSide
+								? scaleRectFromOrigin(object, origin, factor)
+								: object
+						),
+					);
+				}
+				if (textIds.length > 0) {
+					onTextBoxesChange?.(
+						startTextBoxes.map((box) => {
+							if (!textIdSet.has(box.id)) return box;
+							const scaled = scaleRectFromOrigin(box, origin, factor);
+							return {
+								...scaled,
+								width: Math.max(40, scaled.width),
+								height: Math.max(20, scaled.height),
+								fontSize: Math.max(6, Math.min(256, box.fontSize * factor)),
+							};
+						}),
+					);
+				}
+			};
+			const onUp = () => {
+				if (strokeIndexes.length > 0 && latestStrokes !== startStrokes) {
+					setUndoStack((history) => [...history, startStrokes]);
+					setRedoStack([]);
+				}
+				window.removeEventListener("pointermove", onMove);
+				window.removeEventListener("pointerup", onUp);
+				window.removeEventListener("pointercancel", onUp);
+			};
+			window.addEventListener("pointermove", onMove);
+			window.addEventListener("pointerup", onUp);
+			window.addEventListener("pointercancel", onUp);
+		},
+		[onEditInteraction, onTextBoxesChange],
+	);
+
 	const undo = useCallback(() => {
 		if (undoStackRef.current.length === 0) return;
 		onEditInteraction?.();
@@ -3712,16 +3858,14 @@ export default function DrawingCanvas({
 	const showAttachPopover = enableAttachments && !onAttachRequest;
 	const groupSelectionBounds = (() => {
 		if (tool !== "lasso") return null;
-		let bounds = getSelectionBounds(strokes, selectedStrokeIndexes);
-		for (const object of objects) {
-			if (object.pinnedToSide || !selectedObjectIds.includes(object.id)) continue;
-			bounds = unionRect(bounds, object.x, object.y, object.width, object.height);
-		}
-		for (const box of captureTextBoxes) {
-			if (!box.id || !selectedTextBoxIds.includes(box.id)) continue;
-			bounds = unionRect(bounds, box.x, box.y, box.width, box.height);
-		}
-		return bounds;
+		return getGroupSelectionBounds(
+			strokes,
+			selectedStrokeIndexes,
+			objects,
+			selectedObjectIds,
+			captureTextBoxes,
+			selectedTextBoxIds,
+		);
 	})();
 	const groupSelectionScreen = (() => {
 		if (!groupSelectionBounds) return null;
@@ -3739,6 +3883,8 @@ export default function DrawingCanvas({
 			height,
 			centerX: left + width / 2,
 			centerY: top + height / 2,
+			right: left + width,
+			bottom: top + height,
 		};
 	})();
 	const canDeleteSelection =
@@ -3924,6 +4070,23 @@ export default function DrawingCanvas({
 							aria-label="Move selection"
 						>
 							<Move size={14} strokeWidth={2} />
+						</button>
+						<button
+							type="button"
+							onPointerDown={beginGroupScale}
+							className="fixed z-[2100] flex h-7 w-7 items-center justify-center rounded-full color-bg color-shadow border color-txt-main hover:color-bg-grey-10"
+							style={{
+								left: groupSelectionScreen.right,
+								top: groupSelectionScreen.bottom,
+								transform: "translate(-50%, -50%)",
+								cursor: "nwse-resize",
+								touchAction: "none",
+								borderColor: "color-mix(in srgb, currentColor 18%, transparent)",
+							}}
+							title="Scale selection"
+							aria-label="Scale selection"
+						>
+							<Maximize2 size={14} strokeWidth={2} />
 						</button>
 					</>,
 					getThemedPortalTarget()

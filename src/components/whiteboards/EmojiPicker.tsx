@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { LuFileText, LuX } from "react-icons/lu";
 import { WHITEBOARD_EMOJIS } from "../../data/whiteboards";
 import { getThemedPortalTarget } from "../../utils/themedPortal";
+import { ModalPortalContext } from "../modals/ModalPortalContext";
 
 type Props = {
   value: string | null;
@@ -17,6 +18,7 @@ const PANEL_MARGIN = 8;
 
 /** Small preset emoji picker used for whiteboard pages and folders. */
 export default function EmojiPicker({ value, onChange, fallbackIcon, "aria-label": ariaLabel }: Props) {
+  const modalPortal = useContext(ModalPortalContext);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -129,7 +131,7 @@ export default function EmojiPicker({ value, onChange, fallbackIcon, "aria-label
               ))}
             </div>
           </div>,
-          getThemedPortalTarget()
+          modalPortal?.current ?? getThemedPortalTarget()
         )}
     </>
   );

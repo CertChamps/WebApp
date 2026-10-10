@@ -1,0 +1,13 @@
+.auth-card {
+  width: 400px;
+  max-width: 100%;
+}
+
+.auth-card--login {
+  width: 370px;
+}
+
+.auth-form-width {
+  width: 304px;
+  max-width: calc(100% - 2rem);
+}

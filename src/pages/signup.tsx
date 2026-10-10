@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { PRIVACY_URL, TERMS_URL } from "../lib/legal";
 import { LuArrowLeft } from "react-icons/lu";
 import { signInDetails } from "../lib/signIn";
+import "../styles/auth.css";
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export default function SignUp() {
   const [password, setPassword] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
 
-  const heading_style = "txt-sub text-xs font-bold w-9/12 mx-auto mb-1";
+  const heading_style = "txt-sub text-xs font-bold auth-form-width mx-auto mb-1";
 
 
   const [captchaReady, setCaptchaReady] = useState(false);
@@ -86,7 +87,7 @@ export default function SignUp() {
         className="absolute top-4 left-4 inline-flex items-center gap-2 text-sm font-semibold color-txt-sub hover:color-txt-main">
         <LuArrowLeft size={18} /> Back to {back.label}
       </button>}
-      <div className="my-auto shrink-0 w-[410px] py-5 color-shadow border-2 rounded-out color-bg">
+      <div className="auth-card my-auto shrink-0 py-5 color-shadow border-2 rounded-out color-bg">
         <img src={crown} className="w-28 m-auto object-contain h-20 mb-4" />
         <h1 className="txt-heading-colour text-center text-2xl mb-4">Sign Up</h1>
         {feature && <p className="px-6 mb-4 text-sm text-center color-txt-sub">Sign-in required for {feature}.</p>}
@@ -100,7 +101,7 @@ export default function SignUp() {
         <input
           type="text"
           placeholder="username"
-          className="txtbox mx-auto mb-2 w-9/12"
+          className="txtbox mx-auto mb-2 auth-form-width"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
@@ -112,7 +113,7 @@ export default function SignUp() {
         <input
           type="email"
           placeholder="email"
-          className="txtbox mx-auto mb-2 w-9/12"
+          className="txtbox mx-auto mb-2 auth-form-width"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -124,12 +125,12 @@ export default function SignUp() {
         <input
           type="password"
           placeholder="password"
-          className="txtbox mx-auto mb-4 w-9/12"
+          className="txtbox mx-auto mb-4 auth-form-width"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <label className="mx-auto mb-2 flex w-9/12 cursor-pointer items-start gap-2.5 text-xs leading-relaxed color-txt-sub">
+        <label className="mx-auto mb-2 flex auth-form-width cursor-pointer items-start gap-2.5 text-xs leading-relaxed color-txt-sub">
           <input
             type="checkbox"
             checked={legalAccepted}
@@ -166,7 +167,7 @@ export default function SignUp() {
           </span>
         </label>
         {error?.legal && (
-          <p className="mx-auto mb-2 w-9/12 text-xs text-red" role="alert">
+          <p className="mx-auto mb-2 auth-form-width text-xs text-red" role="alert">
             {error.legal}
           </p>
         )}
@@ -178,7 +179,7 @@ export default function SignUp() {
         ></div>
 
         <p
-          className="blue-btn mx-auto my-2 w-9/12 text-center cursor-pointer"
+          className="blue-btn mx-auto my-2 auth-form-width text-center cursor-pointer"
           onClick={() => handleSubmit(username, email, password)}
         >
           Sign Up
@@ -190,7 +191,7 @@ export default function SignUp() {
           aria-label="Sign up with Apple"
           onClick={() => handleProviderSignup("apple")}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProviderSignup("apple"); } }}
-          className="red-btn mx-auto my-2 w-9/12 text-center bg-black text-white flex justify-center items-center cursor-pointer select-none"
+          className="red-btn mx-auto my-2 auth-form-width text-center bg-black text-white flex justify-center items-center cursor-pointer select-none"
         >
           <FaApple className="mr-2 text-white" size={19} />
           <p>Sign Up With Apple</p>
@@ -201,7 +202,7 @@ export default function SignUp() {
           tabIndex={0}
           onClick={() => handleProviderSignup("google")}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProviderSignup("google"); } }}
-          className="red-btn mx-auto my-2 w-9/12 text-center bg-[#4C8BF5] flex justify-center items-center cursor-pointer select-none"
+          className="red-btn mx-auto my-2 auth-form-width text-center bg-[#4C8BF5] flex justify-center items-center cursor-pointer select-none"
         >
           <FaGoogle className="mr-2 text-white" size={17} />
           <p>Sign Up With Google</p>

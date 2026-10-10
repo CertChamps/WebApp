@@ -213,11 +213,11 @@ function QuestionCard({
               event.stopPropagation();
               onAddToCanvas();
             }}
-            aria-label={`Add ${question.displayName} to whiteboard`}
-            title="Add to whiteboard"
+            aria-label={`Add ${question.displayName} to page`}
+            title="Add to page"
           >
             <LuPencil size={18} strokeWidth={2.4} />
-            <span>Add to whiteboard</span>
+            <span>Add to page</span>
           </button>
         </div>
       </header>
@@ -807,7 +807,7 @@ function PracticeBrowserInner() {
                     }}
                     onActivate={() => activateQuestion(index)}
                     onAddToCanvas={async () => {
-                      if (!await requireSignIn("Save to Whiteboards")) return;
+                      if (!await requireSignIn("Add to page")) return;
                       if (!storageSubject || !selectedLevel) return;
                       const topicForAttach =
                         selectedTopic ??

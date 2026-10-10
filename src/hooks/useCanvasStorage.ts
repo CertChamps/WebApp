@@ -60,9 +60,9 @@ function validTextBoxes(value: unknown): CanvasTextBox[] {
       text: box.text.slice(0, 100_000),
       x: Math.max(-1_000_000, Math.min(1_000_000, x)),
       y: Math.max(-1_000_000, Math.min(1_000_000, y)),
-      width: Math.max(120, Math.min(10_000, width)),
-      height: Math.max(48, Math.min(10_000, height)),
-      fontSize: Math.max(8, Math.min(256, fontSize)),
+      width: Math.max(40, Math.min(10_000, width)),
+      height: Math.max(20, Math.min(10_000, height)),
+      fontSize: Math.max(6, Math.min(256, fontSize)),
       colorIndex:
         typeof (box as { colorIndex?: unknown }).colorIndex === "number" &&
         Number.isFinite((box as { colorIndex: number }).colorIndex)

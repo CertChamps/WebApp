@@ -1,6 +1,7 @@
 export function safeAppPath(value: unknown, fallback = "/practice"): string {
   if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//") || /[\\\r\n]/.test(value)) return fallback;
-  if (["/", "/login", "/signup", "/forgot-password", "/verify-email"].includes(value.split(/[?#]/)[0])) return fallback;
+  const pathname = value.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
+  if (["/", "/login", "/signup", "/forgot-password", "/verify-email", "/onboarding"].includes(pathname.toLowerCase())) return fallback;
   return value;
 }
 
@@ -24,7 +25,7 @@ export function signInDetails(search: string, state?: { prevRoute?: string } | n
   const params = new URLSearchParams(search);
   const returnTo = safeAppPath(params.get("returnTo") ?? state?.prevRoute);
   const back = publicPage(params.get("backTo") ?? returnTo);
-  const showBack = safeAppPath(params.get("backTo") ?? params.get("returnTo") ?? state?.prevRoute, "") !== "";
+  const showBack = safeAppPath(params.get("backTo"), "") !== "";
   return { feature: params.get("feature"), returnTo, back, showBack };
 }
 

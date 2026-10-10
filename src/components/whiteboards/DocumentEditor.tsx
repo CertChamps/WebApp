@@ -388,6 +388,12 @@ const DOCUMENT_FONT_SIZE_OPTIONS = [
   { value: "4", label: "Large" },
   { value: "5", label: "Heading" },
 ];
+const DOCUMENT_FONT_SIZE_PX: Record<string, number> = {
+  "2": 14,
+  "3": 16,
+  "4": 20,
+  "5": 28,
+};
 
 const FEEDBACK_POPOVER_WIDTH = 280;
 
@@ -727,6 +733,36 @@ export default function DocumentEditor({
     syncFormatState();
     handleUserMutation();
   }, [handleUserMutation, rememberSelection, restoreSelection, syncFormatState]);
+
+  const applyFontSize = useCallback((value: number | string) => {
+    const editor = editorRef.current;
+    const sizeValue = String(value);
+    const sizePx = DOCUMENT_FONT_SIZE_PX[sizeValue];
+    if (!editor || !sizePx) return;
+
+    restoreSelection();
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    if (!selection || !range || !editor.contains(range.commonAncestorContainer)) return;
+
+    // execCommand's numbered font sizes are inconsistently rendered and can be
+    // ignored by inherited editor CSS. Use it only to split complex selections,
+    // then immediately replace its FONT wrappers with an explicit safe px size.
+    const existingLargestFonts = new Set(editor.querySelectorAll('font[size="7"]'));
+    document.execCommand("styleWithCSS", false, "false");
+    document.execCommand("fontSize", false, "7");
+    editor.querySelectorAll('font[size="7"]').forEach((font) => {
+      if (existingLargestFonts.has(font)) return;
+      const span = document.createElement("span");
+      span.style.fontSize = `${sizePx}px`;
+      while (font.firstChild) span.appendChild(font.firstChild);
+      font.replaceWith(span);
+    });
+
+    rememberSelection();
+    setFormatState((current) => ({ ...current, fontSize: sizeValue }));
+    handleUserMutation();
+  }, [handleUserMutation, rememberSelection, restoreSelection]);
 
   const insertNode = useCallback((node: Node) => {
     restoreSelection();
@@ -1191,7 +1227,7 @@ export default function DocumentEditor({
                 onToggleBold: () => runCommand("bold"),
                 onToggleItalic: () => runCommand("italic"),
                 onToggleBullet: () => runCommand("insertUnorderedList"),
-                onFontSizeChange: (value) => runCommand("fontSize", String(value)),
+                onFontSizeChange: applyFontSize,
                 onColorChange: (colorIndex) => {
                   restoreSelection();
                   applyThemeTextColor(colorIndex);

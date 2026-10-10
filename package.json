@@ -9,6 +9,7 @@
     "iPad": "node scripts/ipad-live.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test:modal": "node scripts/test-modal-keyboard.mjs",
     "preview": "vite preview",
     "deploy": "gh-pages -d dist"
   },
@@ -43,6 +44,7 @@
     "pdfjs-dist": "^5.3.93",
     "prism-react-renderer": "^2.4.1",
     "react": "^19.1.0",
+    "react-aria": "^3.52.1",
     "react-canvas-draw": "^1.2.1",
     "react-color": "^2.19.3",
     "react-dom": "^19.1.0",
@@ -54,6 +56,7 @@
     "react-pdf": "^10.1.0",
     "react-router-dom": "^7.7.1",
     "react-simple-code-editor": "^0.14.1",
+    "react-stately": "^3.50.0",
     "rehype-katex": "^7.0.1",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",

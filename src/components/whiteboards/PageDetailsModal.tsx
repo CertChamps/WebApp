@@ -169,7 +169,6 @@ export default function PageDetailsModal({
                 onChange={(e) => setName(e.target.value)}
                 placeholder={untitledPageName(pageType)}
                 className="w-full px-3 py-2 rounded-lg text-sm color-bg-grey-5 color-txt-main placeholder:color-txt-sub outline-none"
-                autoFocus={!isEdit}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleSave();
                 }}

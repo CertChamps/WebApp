@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import type { ExamPaper } from "../hooks/useExamPapers";
 import type { FreeImageSample } from "../lib/contentAccess";
 import crownImg from "../assets/images/Ranks/Rank6.png";
+import Modal from "./modals/Modal";
 
 export type ContentProGateProps = {
   freePaper?: ExamPaper | null;
@@ -54,7 +55,7 @@ export default function ContentProGate({
       onClick={(e) => e.stopPropagation()}
     >
       <img src={crownImg} alt="" className="w-24 h-24 object-contain" />
-      <h2 className="text-xl font-bold color-txt-main">CertChamps ACE</h2>
+      {!asModal && <h2 className="text-xl font-bold color-txt-main">CertChamps ACE</h2>}
       <p className="color-txt-sub text-sm leading-relaxed">
         {description ?? "Unlock every subject, paper, and topic, plus full AI tutoring and instant answer marking. Your free samples and community access are always available."}
       </p>
@@ -82,7 +83,18 @@ export default function ContentProGate({
     </div>
   );
 
-  const outerClass = `${asModal ? "fixed inset-0" : "absolute inset-0"} z-50 flex backdrop-blur-sm ${asModal ? "bg-black/30" : "bg-black/5 rounded-xl"} ${sideContent ? "items-center justify-center p-6" : "flex-col items-center justify-center"}`;
+  if (asModal) {
+    return (
+      <Modal title="CertChamps ACE" onClose={onClose ?? (() => undefined)} maxWidthClass={sideContent ? "max-w-5xl" : "max-w-sm"} layer={200}>
+        <div className="flex flex-wrap justify-center gap-6">
+          {card}
+          {sideContent && <div className="min-w-0 flex-1">{sideContent}</div>}
+        </div>
+      </Modal>
+    );
+  }
+
+  const outerClass = `absolute inset-0 z-50 flex backdrop-blur-sm bg-black/5 rounded-xl ${sideContent ? "items-center justify-center p-6" : "flex-col items-center justify-center"}`;
 
   return (
     <div

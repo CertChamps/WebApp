@@ -1,11 +1,14 @@
-import { useState, useEffect, useContext } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useContext, useRef } from "react";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { auth, db } from "../../firebase";
-import { sendEmailVerification, signOut } from "firebase/auth";
+import { sendEmailVerification } from "firebase/auth";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { UserContext } from "../context/UserContext";
 import { getPostAuthPath } from "../lib/onboarding";
 import { safeAppPath } from "../lib/signIn";
+import { signOutSession } from "../lib/authSession";
+import { useUserProfileReady } from "../hooks/useUserProfileReady";
+import ProfileLoadingScreen from "../components/onboarding/ProfileLoadingScreen";
 import crown from "../assets/logo.png";
 import { MdEmail, MdRefresh, MdLogout, MdCheckCircle } from "react-icons/md";
 
@@ -14,21 +17,31 @@ export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const returnTo = safeAppPath(searchParams.get("returnTo"));
   const { user, setUser } = useContext(UserContext);
+  const profile = useUserProfileReady();
+  const signingOut = useRef(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   // Auto-check verification status every 3 seconds
   useEffect(() => {
+    let cancelled = false;
+    let checking = false;
+    let redirectTimer: ReturnType<typeof setTimeout> | undefined;
     const checkVerificationStatus = async () => {
-      if (!auth.currentUser) return;
+      const currentUser = auth.currentUser;
+      if (!currentUser || checking || redirectTimer || signingOut.current) return;
+      checking = true;
+      const isCurrent = () => !cancelled && !signingOut.current && auth.currentUser === currentUser;
 
       try {
         // Reload the user to get the latest emailVerified status from Firebase Auth
-        await auth.currentUser.reload();
+        await currentUser.reload();
+        if (!isCurrent()) return;
 
-        if (auth.currentUser.emailVerified) {
-          const userDoc = await getDoc(doc(db, "user-data", auth.currentUser.uid));
+        if (currentUser.emailVerified) {
+          const userDoc = await getDoc(doc(db, "user-data", currentUser.uid));
+          if (!isCurrent()) return;
           const hasCompletedOnboarding =
             userDoc.data()?.hasCompletedOnboarding === true
               ? true
@@ -37,9 +50,10 @@ export default function VerifyEmail() {
                 : undefined;
 
           // Update Firestore with verified status
-          await updateDoc(doc(db, "user-data", auth.currentUser.uid), {
+          await updateDoc(doc(db, "user-data", currentUser.uid), {
             emailVerified: true,
           });
+          if (!isCurrent()) return;
 
           // Update local user context
           setUser((prev: any) => ({
@@ -50,12 +64,14 @@ export default function VerifyEmail() {
 
           setMessage("Email verified! Redirecting...");
 
-          setTimeout(() => {
-            navigate(getPostAuthPath({ hasCompletedOnboarding }, returnTo));
+          redirectTimer = setTimeout(() => {
+            if (isCurrent()) navigate(getPostAuthPath({ hasCompletedOnboarding }, returnTo), { replace: true });
           }, 1500);
         }
       } catch (err) {
         console.error("Error checking verification status:", err);
+      } finally {
+        checking = false;
       }
     };
 
@@ -65,7 +81,11 @@ export default function VerifyEmail() {
     // Set up interval to check every 3 seconds
     const interval = setInterval(checkVerificationStatus, 3000);
 
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      clearTimeout(redirectTimer);
+    };
   }, [navigate, setUser, returnTo]);
 
   // Handle resend cooldown timer
@@ -102,17 +122,22 @@ export default function VerifyEmail() {
   };
 
   const handleSignOut = async () => {
+    signingOut.current = true;
     try {
-      await signOut(auth);
+      await signOutSession();
       setUser(null);
-      navigate("/");
+      navigate("/login", { replace: true, state: null });
     } catch (err) {
+      signingOut.current = false;
       console.error("Error signing out:", err);
       setError("Failed to sign out. Please try again.");
     }
   };
 
   const userEmail = auth.currentUser?.email || user?.email || "your email";
+
+  if (!profile.ready) return <ProfileLoadingScreen />;
+  if (!profile.isAuthenticated) return <Navigate to="/login" replace state={null} />;
 
   return (
     <div className="h-full flex justify-center items-center w-full color-bg-grey-5 overflow-hidden">

@@ -76,8 +76,8 @@ type BoxInteraction = {
 	captureTarget: HTMLElement;
 };
 
-const MIN_BOX_WIDTH = 120;
-const MIN_BOX_HEIGHT = 48;
+const MIN_BOX_WIDTH = 40;
+const MIN_BOX_HEIGHT = 20;
 const NEW_BOX_WIDTH = 280;
 const NEW_BOX_HEIGHT = 88;
 const DEFAULT_FONT_SIZE = 18;
@@ -242,6 +242,14 @@ const TEXT_PAD_X = 8;
 const TEXT_PAD_Y = 6;
 let textMeasureCtx: CanvasRenderingContext2D | null | undefined;
 
+function textGeometryScale(fontSize: number): number {
+	return Math.max(1 / 3, fontSize / DEFAULT_FONT_SIZE);
+}
+
+function textLineHeight(fontSize: number): number {
+	return Math.max(8, TEXT_LINE_GAP * textGeometryScale(fontSize));
+}
+
 function getTextMeasureContext(): CanvasRenderingContext2D | null {
 	if (textMeasureCtx !== undefined) return textMeasureCtx;
 	if (typeof document === "undefined") {
@@ -266,11 +274,14 @@ export function getTextContentBounds(box: {
 }): { x: number; y: number; width: number; height: number } | null {
 	if (isEmptyTextBox(box)) return null;
 	const fontSize = finiteOr(box.fontSize, DEFAULT_FONT_SIZE);
+	const geometryScale = textGeometryScale(fontSize);
+	const padX = TEXT_PAD_X * geometryScale;
+	const padY = TEXT_PAD_Y * geometryScale;
 	const lines = htmlToPlainText(box.text).replace(/\s+$/g, "").split(/\n/);
 	const ctx = getTextMeasureContext();
 	if (ctx) ctx.font = `${fontSize}px ui-sans-serif, system-ui, sans-serif`;
-	const innerWidth = Math.max(8, finiteOr(box.width, MIN_BOX_WIDTH) - TEXT_PAD_X * 2);
-	const innerHeight = Math.max(fontSize, finiteOr(box.height, MIN_BOX_HEIGHT) - TEXT_PAD_Y * 2);
+	const innerWidth = Math.max(8, finiteOr(box.width, MIN_BOX_WIDTH) - padX * 2);
+	const innerHeight = Math.max(fontSize, finiteOr(box.height, MIN_BOX_HEIGHT) - padY * 2);
 	let wrappedLineCount = 0;
 	let longest = 0;
 	for (const line of lines) {
@@ -279,10 +290,10 @@ export function getTextContentBounds(box: {
 		wrappedLineCount += Math.max(1, Math.ceil(lineWidth / innerWidth));
 	}
 	const contentWidth = Math.min(innerWidth, Math.max(8, longest));
-	const contentHeight = Math.min(innerHeight, Math.max(fontSize, wrappedLineCount * TEXT_LINE_GAP));
+	const contentHeight = Math.min(innerHeight, Math.max(fontSize, wrappedLineCount * textLineHeight(fontSize)));
 	return {
-		x: finiteOr(box.x, 0) + TEXT_PAD_X,
-		y: finiteOr(box.y, 0) + TEXT_PAD_Y,
+		x: finiteOr(box.x, 0) + padX,
+		y: finiteOr(box.y, 0) + padY,
 		width: contentWidth,
 		height: contentHeight,
 	};
@@ -598,6 +609,8 @@ export default function CanvasTextBoxLayer({
 				const showChrome = selected && editing;
 				const boxWidth = Math.max(MIN_BOX_WIDTH, finiteOr(box.width, MIN_BOX_WIDTH));
 				const boxHeight = Math.max(MIN_BOX_HEIGHT, finiteOr(box.height, MIN_BOX_HEIGHT));
+				const fontSize = Math.max(1, finiteOr(box.fontSize, DEFAULT_FONT_SIZE));
+				const geometryScale = textGeometryScale(fontSize);
 				return (
 					<div
 						key={box.id}
@@ -650,9 +663,9 @@ export default function CanvasTextBoxLayer({
 							}`}
 							style={{
 								minHeight: "100%",
-								padding: `${6 * viewScale}px ${8 * viewScale}px`,
-								fontSize: Math.max(1, finiteOr(box.fontSize, DEFAULT_FONT_SIZE) * viewScale),
-								lineHeight: `${TEXT_LINE_GAP * viewScale}px`,
+								padding: `${TEXT_PAD_Y * geometryScale * viewScale}px ${TEXT_PAD_X * geometryScale * viewScale}px`,
+								fontSize: fontSize * viewScale,
+								lineHeight: `${textLineHeight(fontSize) * viewScale}px`,
 								WebkitUserSelect: editing ? "text" : "none",
 								userSelect: editing ? "text" : "none",
 								touchAction: editing ? "manipulation" : "auto",

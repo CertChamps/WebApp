@@ -134,9 +134,9 @@ export default function Feedback() {
             setMessage("");
             setSent(true);
             setTimeout(() => setSent(false), 3000);
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error("Failed to send feedback:", e);
-            setError(e?.message ?? "Failed to send. Check Firestore rules.");
+            setError(e instanceof Error ? e.message : "Failed to send. Check Firestore rules.");
         }
         setSending(false);
     };
@@ -175,7 +175,7 @@ export default function Feedback() {
     const getTagInfo = (tag: AdminTag) => TAG_OPTIONS.find((t) => t.id === tag) ?? null;
 
     return (
-        <div className="flex flex-col w-full h-full color-bg overflow-y-auto scrollbar-minimal">
+        <div className="flex-1 min-w-0 min-h-0 w-full h-full color-bg overflow-y-auto overscroll-contain touch-pan-y scrollbar-minimal">
             <div className="w-full max-w-5xl mx-auto px-8 py-10 space-y-10 flex flex-col items-center">
                 {/* Header + form */}
                 <div className="w-full space-y-5">
@@ -245,7 +245,7 @@ export default function Feedback() {
                         ))}
                     </div>
                 ) : items.length > 0 ? (
-                    <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 space-y-4">
+                    <div className="w-full columns-2 sm:columns-3 lg:columns-4 gap-4 space-y-4">
                         {items.map((item, i) => {
                             const Icon = TYPE_ICON[item.type];
                             const rotation = STICKY_ROTATIONS[i % STICKY_ROTATIONS.length];

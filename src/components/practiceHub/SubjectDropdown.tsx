@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { LuChevronDown, LuSearch, LuStar } from "react-icons/lu";
@@ -12,6 +12,7 @@ import {
 } from "../../data/practiceHubSubjects";
 import { DEFAULT_EXAM_CYCLE, type ExamCycleId } from "../../lib/examCycle";
 import { getThemedPortalTarget } from "../../utils/themedPortal";
+import { ModalPortalContext } from "../modals/ModalPortalContext";
 import { SubjectGlyph } from "./subjectIcons";
 import "../../styles/practiceHub.css";
 
@@ -170,6 +171,7 @@ function SubjectContextMenu({
   onClose: () => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const modalPortal = useContext(ModalPortalContext);
   const [pos, setPos] = useState({ left: menu.x, top: menu.y });
 
   useLayoutEffect(() => {
@@ -221,7 +223,7 @@ function SubjectContextMenu({
         {label}
       </button>
     </div>,
-    getThemedPortalTarget()
+    modalPortal?.current ?? getThemedPortalTarget()
   );
 }
 

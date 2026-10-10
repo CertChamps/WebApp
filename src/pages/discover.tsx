@@ -1452,8 +1452,8 @@ export default function Discover() {
     };
 
     const renderSearchSkeleton = () => (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-            {[...Array(5)].map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+            {[...Array(6)].map((_, i) => (
                 <div key={i} className="rounded-xl color-bg-grey-5 overflow-hidden animate-pulse">
                     <div className="aspect-[16/10] w-full color-bg-grey-10" />
                     <div className="px-2.5 py-2 space-y-1.5">
@@ -1497,7 +1497,7 @@ export default function Discover() {
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
                     {sectionResources.map(renderResourceCard)}
                 </div>
             )}

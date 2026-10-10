@@ -121,6 +121,8 @@ export default function SaveQuestionToCanvasModal({
       title="Add question to page"
       onClose={onClose}
       maxWidthClass="max-w-lg"
+      initialPlacement="center"
+      keyboardLiftPx={48}
       footer={
         <div className="flex flex-col gap-2">
           {error && <p className="text-center text-sm color-txt-sub">{error}</p>}
@@ -189,6 +191,7 @@ export default function SaveQuestionToCanvasModal({
               <LuSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 color-txt-sub" />
               <input
                 type="search"
+                aria-label="Search your pages"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search your pages…"
@@ -269,7 +272,6 @@ export default function SaveQuestionToCanvasModal({
                 }}
                 placeholder="Untitled page"
                 className="w-full rounded-xl color-bg-grey-5 px-3 py-2.5 text-sm color-txt-main outline-none placeholder:color-txt-sub"
-                autoFocus
               />
             </label>
 

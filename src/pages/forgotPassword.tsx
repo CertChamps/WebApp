@@ -73,7 +73,7 @@ export default function ForgotPassword() {
             </p>
             <button
               type="button"
-              onClick={() => navigate(`/login${location.search}`, { replace: true })}
+              onClick={() => navigate(`/login${location.search}`, { replace: true, state: location.state })}
               className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold color-bg-accent color-txt-accent transition-opacity hover:opacity-85"
             >
               <LuArrowLeft size={17} aria-hidden />
@@ -131,7 +131,7 @@ export default function ForgotPassword() {
 
             <button
               type="button"
-              onClick={() => navigate(`/login${location.search}`)}
+              onClick={() => navigate(`/login${location.search}`, { replace: true, state: location.state })}
               className="mx-auto mt-5 flex items-center gap-1.5 text-sm font-semibold color-txt-sub transition-colors hover:color-txt-accent"
             >
               <LuArrowLeft size={15} aria-hidden />

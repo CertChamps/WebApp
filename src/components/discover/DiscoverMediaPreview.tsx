@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Document, Page } from "react-pdf";
 import "../../lib/pdfWorker";
-import { LuBookOpen, LuExternalLink, LuFileText, LuLoader } from "react-icons/lu";
+import { LuBookOpen, LuExternalLink, LuFileText, LuLoader, LuRotateCcw } from "react-icons/lu";
 import {
   DISCOVER_VIDEO_IFRAME_ALLOW,
   getDiscoverVideoEmbed,
@@ -56,19 +56,41 @@ function PreviewSpinner({ compact }: { compact?: boolean }) {
   );
 }
 
-function CannotLoadFallback({ onOpenResource, resourceActionLabel = "Open Resource" }: { onOpenResource?: () => void; resourceActionLabel?: string }) {
+function CannotLoadFallback({
+  onOpenResource,
+  onRetry,
+  resourceActionLabel = "Open Resource",
+}: {
+  onOpenResource?: () => void;
+  onRetry?: () => void;
+  resourceActionLabel?: string;
+}) {
   return (
     <div className="w-full h-full min-h-[240px] flex flex-col items-center justify-center gap-4 color-bg-grey-10 px-6 text-center">
       <p className="text-base font-semibold color-txt-main">Cannot Load Resource... Sorry :(</p>
-      {onOpenResource && (
-        <button
-          type="button"
-          onClick={onOpenResource}
-          className="inline-flex items-center gap-2 rounded-xl color-bg color-txt-accent px-4 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer"
-        >
-          <LuExternalLink size={15} />
-          {resourceActionLabel}
-        </button>
+      {(onRetry || onOpenResource) && (
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="inline-flex items-center gap-2 rounded-xl color-bg px-4 py-2 text-sm font-semibold color-txt-main hover:opacity-90 cursor-pointer"
+            >
+              <LuRotateCcw size={15} />
+              Try again
+            </button>
+          )}
+          {onOpenResource && (
+            <button
+              type="button"
+              onClick={onOpenResource}
+              className="inline-flex items-center gap-2 rounded-xl color-bg color-txt-accent px-4 py-2 text-sm font-semibold hover:opacity-90 cursor-pointer"
+            >
+              <LuExternalLink size={15} />
+              {resourceActionLabel}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -186,6 +208,162 @@ function DirectVideoPreview({ src, className = "" }: { src: string; className?: 
         playsInline
         className="w-full h-full object-contain"
         onLoadedData={() => setLoaded(true)}
+      />
+    </div>
+  );
+}
+
+const WEBSITE_PREVIEW_TIMEOUT_MS = 15_000;
+const WEBSITE_IFRAME_SANDBOX =
+  "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-presentation allow-downloads";
+
+function websitePreviewUrl(raw: string | undefined | null): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function WebsiteHero({
+  resource,
+  onOpenResource,
+  resourceActionLabel,
+}: {
+  resource: DiscoverPreviewSource;
+  onOpenResource?: () => void;
+  resourceActionLabel?: string;
+}) {
+  const url = websitePreviewUrl(resource.websiteUrl);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const verifyTimerRef = useRef<number | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [status, setStatus] = useState<"loading" | "loaded" | "failed">(
+    url ? "loading" : "failed"
+  );
+  const thumbnail = getStoredOrRemoteThumbnail(resource);
+
+  useEffect(() => {
+    setAttempt(0);
+    setStatus(url ? "loading" : "failed");
+  }, [url]);
+
+  useEffect(() => {
+    if (!url || status !== "loading") return;
+    const timeout = window.setTimeout(() => setStatus("failed"), WEBSITE_PREVIEW_TIMEOUT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [attempt, status, url]);
+
+  useEffect(() => () => {
+    if (verifyTimerRef.current != null) window.clearTimeout(verifyTimerRef.current);
+  }, []);
+
+  const markLoadedAfterVerification = () => {
+    if (verifyTimerRef.current != null) window.clearTimeout(verifyTimerRef.current);
+    verifyTimerRef.current = window.setTimeout(() => {
+      const frame = iframeRef.current;
+      if (!frame) return;
+
+      try {
+        // A blocked navigation commonly leaves the frame on its initial blank
+        // document. Cross-origin access throwing is expected and means the
+        // browser did navigate to the remote site.
+        const href = frame.contentWindow?.location.href ?? "";
+        const documentUrl = frame.contentDocument?.URL ?? "";
+        if (href === "about:blank" || documentUrl === "about:blank") {
+          setStatus("failed");
+          return;
+        }
+
+        const text = frame.contentDocument?.body?.innerText?.toLowerCase() ?? "";
+        if (text.includes("refused to connect") || text.includes("refused to display")) {
+          setStatus("failed");
+          return;
+        }
+      } catch {
+        // Expected for a successfully loaded cross-origin website.
+      }
+
+      setStatus("loaded");
+    }, 120);
+  };
+
+  const retry = () => {
+    setAttempt((value) => value + 1);
+    setStatus("loading");
+  };
+
+  if (!url) {
+    return (
+      <CannotLoadFallback
+        onOpenResource={onOpenResource}
+        resourceActionLabel={resourceActionLabel}
+      />
+    );
+  }
+
+  if (status === "failed") {
+    if (thumbnail) {
+      return (
+        <div className="relative w-full h-full">
+          <CoverImage
+            src={thumbnail}
+            objectTop
+            fallback={(
+              <CannotLoadFallback
+                onOpenResource={onOpenResource}
+                onRetry={retry}
+                resourceActionLabel={resourceActionLabel}
+              />
+            )}
+          />
+          <button
+            type="button"
+            onClick={retry}
+            className="absolute bottom-3 left-3 z-20 inline-flex items-center gap-2 rounded-xl color-bg px-3 py-2 text-xs font-semibold color-txt-main hover:opacity-90 cursor-pointer"
+          >
+            <LuRotateCcw size={14} />
+            Retry live preview
+          </button>
+          <OpenResourceCorner
+            onOpenResource={onOpenResource}
+            resourceActionLabel={resourceActionLabel}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <CannotLoadFallback
+        onOpenResource={onOpenResource}
+        onRetry={retry}
+        resourceActionLabel={resourceActionLabel}
+      />
+    );
+  }
+
+  return (
+    <div className="relative w-full h-full color-bg-grey-10">
+      {status === "loading" && <PreviewSpinner />}
+      <iframe
+        key={`${url}-${attempt}`}
+        ref={iframeRef}
+        src={url}
+        title={resource.title || "Website preview"}
+        className={`w-full h-full border-0 bg-white ${status === "loaded" ? "opacity-100" : "opacity-0"}`}
+        sandbox={WEBSITE_IFRAME_SANDBOX}
+        allow="clipboard-read; clipboard-write; fullscreen"
+        allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
+        onLoad={markLoadedAfterVerification}
+        onError={() => setStatus("failed")}
+      />
+      <OpenResourceCorner
+        onOpenResource={onOpenResource}
+        resourceActionLabel={resourceActionLabel}
       />
     </div>
   );
@@ -400,7 +578,11 @@ export default function DiscoverMediaPreview({
   if (kind === "website") {
     return (
       <div className={`w-full h-full ${className}`}>
-        <CannotLoadFallback onOpenResource={onOpenResource} resourceActionLabel={resourceActionLabel} />
+        <WebsiteHero
+          resource={resource}
+          onOpenResource={onOpenResource}
+          resourceActionLabel={resourceActionLabel}
+        />
       </div>
     );
   }

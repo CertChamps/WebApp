@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useRef } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { UserContext } from "../context/UserContext";
 import { auth } from "../../firebase";
@@ -20,12 +20,19 @@ export const ProtectedRoute: React.FC<Props> = ({
   const { user } = useContext(UserContext);
   const location = useLocation();
   const profile = useUserProfileReady();
+  const wasAuthenticated = useRef(profile.isAuthenticated);
+  if (profile.isAuthenticated) wasAuthenticated.current = true;
 
   if (!profile.ready) {
     return <ProfileLoadingScreen />;
   }
 
   if (!profile.isAuthenticated) {
+    // Session loss on an already-open protected page (including logout) must
+    // agree with the logout handler, rather than racing it with a feature URL.
+    if (wasAuthenticated.current) {
+      return <Navigate to="/login" replace state={null} />;
+    }
     return (
       <Navigate to={signInPath(featureForPath(location.pathname), location.pathname + location.search, location.state?.backTo)} replace />
     );

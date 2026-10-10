@@ -5,6 +5,7 @@ import useAuthentication from '../hooks/useAuthentication'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { LuArrowLeft } from 'react-icons/lu'
 import { signInDetails } from '../lib/signIn'
+import '../styles/auth.css'
 
 export default function Login() {
 
@@ -18,7 +19,7 @@ export default function Login() {
     const [email, setEmail] = useState<string>()
     const [password, setPassword] = useState<string>()
 
-    const heading_style = "txt-sub text-xs font-bold w-9/12 mx-auto mb-1"
+    const heading_style = "txt-sub text-xs font-bold auth-form-width mx-auto mb-1"
 
     return (
         <div className='relative h-full flex flex-col items-center w-full color-bg-grey-5 overflow-y-auto px-4 py-16' >
@@ -26,8 +27,8 @@ export default function Login() {
                 className="absolute top-4 left-4 inline-flex items-center gap-2 text-sm font-semibold color-txt-sub hover:color-txt-main">
                 <LuArrowLeft size={18} /> Back to {back.label}
             </button>}
-            <div className='my-auto shrink-0 py-8 w-72 color-shadow border-2 rounded-out color-bg' >
-                <img src={crown}  className='w-32 m-auto object-cover h-24'/>
+            <div className='auth-card auth-card--login my-auto shrink-0 py-5 color-shadow border-2 rounded-out color-bg' >
+                <img src={crown} className='w-28 m-auto object-contain h-20 mb-4'/>
                 <h1 className="txt-heading-colour text-center text-2xl mb-4" >Login</h1>
                 {feature && <p className="px-6 mb-4 text-sm text-center color-txt-sub" role="status">Sign-in required for {feature}.</p>}
 
@@ -36,24 +37,24 @@ export default function Login() {
                 <p className={heading_style}>email
                     <span className='font-light text-red ml-1'>{error?.email ? error.email : ""}</span>
                 </p>
-                <input type="text" placeholder="email" className="txtbox mx-auto mb-2 w-9/12" 
+                <input type="text" placeholder="email" className="txtbox mx-auto mb-2 auth-form-width"
                     onChange={(txt: React.ChangeEvent<HTMLInputElement>) => {setEmail(txt.target.value)}}/>
 
                 <p className={heading_style}>password
                     <span className='font-light text-red ml-1'>{error?.password ? error.password : ""}</span>
                 </p>
-                <input type="password" placeholder="password" className="txtbox mx-auto mb-4 w-9/12" 
+                <input type="password" placeholder="password" className="txtbox mx-auto mb-4 auth-form-width"
                     onChange={(txt: React.ChangeEvent<HTMLInputElement>) => {setPassword(txt.target.value)}}/>
 
                 <button
                     type="button"
-                    className="block w-9/12 mx-auto -mt-2 mb-3 text-right text-xs font-semibold color-txt-sub hover:color-txt-accent transition-colors"
-                    onClick={() => navigate(`/forgot-password${location.search}`)}
+                    className="block auth-form-width mx-auto -mt-2 mb-3 text-right text-xs font-semibold color-txt-sub hover:color-txt-accent transition-colors"
+                    onClick={() => navigate(`/forgot-password${location.search}`, { state: location.state })}
                 >
                     Forgot password?
                 </button>
 
-                <p className="blue-btn mx-auto my-2 w-9/12 text-center"
+                <p className="blue-btn mx-auto my-2 auth-form-width text-center"
                      onClick={() => {signInWithEmail(email ?? '', password ?? '')}}>Login</p>
 
                 <div
@@ -62,7 +63,7 @@ export default function Login() {
                     aria-label="Sign in with Apple"
                     onClick={() => { loginWithApple() }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loginWithApple(); } }}
-                    className="red-btn mx-auto my-2 w-9/12 text-center bg-black text-white flex justify-center items-center cursor-pointer select-none"
+                    className="red-btn mx-auto my-2 auth-form-width text-center bg-black text-white flex justify-center items-center cursor-pointer select-none"
                 >
                     <FaApple className='mr-2 text-white' size={19}/>
                     <p>Sign in with Apple</p>
@@ -73,7 +74,7 @@ export default function Login() {
                     tabIndex={0}
                     onClick={() => { loginWithGoogle() }}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); loginWithGoogle(); } }}
-                    className="red-btn mx-auto my-2 w-9/12 text-center bg-[#4C8BF5] flex justify-center items-center cursor-pointer select-none"
+                    className="red-btn mx-auto my-2 auth-form-width text-center bg-[#4C8BF5] flex justify-center items-center cursor-pointer select-none"
                 >
                     <FaGoogle className='mr-2 text-white' size={17}/>
                     <p>Login With Google</p>
