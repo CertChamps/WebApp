@@ -1714,6 +1714,21 @@ function WhiteboardPageViewInner() {
 
         {/* ---- Canvas (full bleed, same as practice) ---- */}
         <div ref={canvasAreaRef} data-wb-canvas-area className="relative min-h-0 flex-1 overflow-hidden">
+        {/* The drawing toolbar occupies the top 44px; keep audio immediately below it. */}
+        {page && page.id === pageId && page.pageType === "whiteboard" && currentAttachment?.bank?.audioPath?.trim() && (
+          <div className="pointer-events-none absolute inset-x-0 top-12 z-30 px-3 py-2" role="region" aria-label="Question audio">
+            <div className="pointer-events-auto mx-auto w-full max-w-lg">
+              <QuestionAudioPlayer
+                key={`${page.id}:${currentAttachment.id}:${currentAttachment.bank.audioPath}`}
+                audioPath={currentAttachment.bank.audioPath}
+                startSec={currentAttachment.bank.audioStartSec}
+                startLabel={currentAttachment.bank.audioStartLabel}
+                className="w-full"
+                autoLoad={false}
+              />
+            </div>
+          </div>
+        )}
           {page && page.id === pageId && page.pageType === "document" && !canvasLoading && !canvasLoadError ? (
             <DocumentEditor
               key={`${page.id}:${currentAttachment?.id ?? "page"}`}
@@ -1980,21 +1995,6 @@ function WhiteboardPageViewInner() {
                         <span className="text-xs font-semibold leading-none">Unpin</span>
                       </button>
                       <div className="flex flex-col overflow-y-auto overflow-x-hidden scrollbar-hide min-h-0 flex-1 py-2 pb-8 items-center pointer-events-auto">
-                        {currentAttachment &&
-                          pinnedSideObject?.id === questionAttachmentObjectId(currentAttachment.id) &&
-                          !media.loading &&
-                          !media.error &&
-                          media.audioPath && (
-                          <div className="w-full mb-3" style={{ maxWidth: snippetWidth }}>
-                            <QuestionAudioPlayer
-                              audioPath={media.audioPath}
-                              startSec={media.audioStartSec}
-                              startLabel={media.audioStartLabel ?? undefined}
-                              className="w-full"
-                              autoLoad={false}
-                            />
-                          </div>
-                        )}
                         <div
                           className="flex flex-col items-center w-full gap-2"
                           style={{ maxWidth: snippetWidth }}
