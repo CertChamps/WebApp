@@ -2,7 +2,7 @@
 
 .discover-page {
   --discover-action-bg: var(--theme-txt-accent, #f1a324);
-  --discover-action-text: var(--theme-txt-main, #172033);
+  --discover-action-text: var(--theme-accent-contrast, var(--theme-txt-main, #172033));
 }
 
 .discover-action--primary,
@@ -35,14 +35,14 @@
 .discover-modal-choice.is-active {
   border-color: transparent;
   background: var(--theme-txt-accent, #f1a324);
-  color: var(--theme-txt-main, #172033);
+  color: var(--theme-accent-contrast, var(--theme-txt-main, #172033));
   box-shadow: none;
 }
 
 .discover-modal-action--primary:hover:not(:disabled),
 .discover-modal-choice.is-active:hover:not(:disabled) {
   background: var(--theme-txt-accent, #f1a324);
-  color: var(--theme-txt-main, #172033);
+  color: var(--theme-accent-contrast, var(--theme-txt-main, #172033));
   opacity: 0.88;
 }
 

@@ -1678,7 +1678,17 @@ function WhiteboardPageViewInner() {
               </button>
             </div>
           ) : (
-            <div className="min-w-0" />
+            <div className="flex min-w-0 flex-1 basis-[240px] items-center justify-center">
+              {page && !pageLoading && (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold color-bg-grey-5 color-txt-main hover:color-bg-grey-10 cursor-pointer"
+                  onClick={() => setQuestionModalMode("add")}
+                >
+                  <LuPlus size={16} aria-hidden /> Add question
+                </button>
+              )}
+            </div>
           )}
 
           <div className="flex min-w-0 flex-nowrap items-center justify-end gap-1">
@@ -1688,7 +1698,7 @@ function WhiteboardPageViewInner() {
               onToggleCalculator={() => setShowCalculator((v) => !v)}
               onToggleLogTables={() => setShowLogTables((v) => !v)}
             />
-            <button
+            {attachments.length > 0 && <button
               type="button"
               className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold color-txt-main color-bg-grey-5 hover:color-bg-grey-10 transition-colors cursor-pointer"
               aria-label="Add question"
@@ -1697,7 +1707,7 @@ function WhiteboardPageViewInner() {
             >
               <LuPlus size={13} strokeWidth={2.5} />
               <span className="hidden whitespace-nowrap @[700px]:inline">Add question</span>
-            </button>
+            </button>}
             <button
               type="button"
               onClick={() => setShowExportModal(true)}

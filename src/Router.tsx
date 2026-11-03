@@ -340,7 +340,40 @@ const router = createHashRouter([
       <ProtectedRoute>
         <>
           <Navbar />
+          <ManageAccount />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/user/themes",
+    element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
           <Settings />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/user/usage",
+    element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <ManageAccount />
+        </>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/user/help",
+    element: (
+      <ProtectedRoute>
+        <>
+          <Navbar />
+          <ManageAccount />
         </>
       </ProtectedRoute>
     ),

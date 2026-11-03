@@ -114,6 +114,9 @@ export default function AddModuleModal({ onAdd, onClose }: Props) {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" aria-hidden />
       <div
         className="relative z-10 w-full max-w-xl color-bg rounded-2xl shadow-lg overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-label={step === "type" ? "Add Module" : step === "size" ? "Pick a Size" : "Pick a Subject"}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 pt-5 pb-3 flex flex-col gap-3">

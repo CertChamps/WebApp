@@ -12,7 +12,7 @@ import {
   PiStar as LuStar,
   PiStarFill,
 } from "react-icons/pi";
-import { LuPlus } from "react-icons/lu";
+import { LuDownload, LuFileText, LuPlus } from "react-icons/lu";
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
 import type { SidebarPanelId } from "../components/sidebar/SidebarTileManager";
 import { DISCOVER_SIDEBAR_PARAM } from "../lib/discoverLinks";
@@ -49,11 +49,10 @@ import SaveQuestionToCanvasModal from "../components/whiteboards/SaveQuestionToC
 import { buildImageAttachment } from "../lib/whiteboardAttachments";
 import type { AttachedQuestion } from "../data/whiteboards";
 import { PRACTICE_PAPER_COVERS } from "../data/generatedPracticePaperCovers";
+import { OFFICIAL_PRACTICE_PAPER_LINKS } from "../data/generatedOfficialPracticePaperLinks";
 import "../styles/practiceBrowser.css";
 import { useRequireSignIn } from "../hooks/useRequireSignIn";
-import { UserContext } from "../context/UserContext";
 import PageDetailsModal from "../components/whiteboards/PageDetailsModal";
-import PageThumbnail from "../components/whiteboards/PageThumbnail";
 import { useWhiteboards } from "../hooks/useWhiteboards";
 import { setLastWhiteboardsSubject } from "../data/whiteboards";
 
@@ -107,6 +106,12 @@ function paperCoverPath(
     paper.paperType ?? "",
   ].join("|");
   return PRACTICE_PAPER_COVERS[key] ?? null;
+}
+
+function paperPdfLinks(cycle: ExamCycleId, subject: string | null, level: string | null, paper: ImagePaperGroup): { label: string; url: string }[] {
+  if (!subject || !level) return [];
+  const key = [cycle, getStorageFolderName(subject), level, paper.year, paper.paper ?? 0, paper.paperType ?? ""].join("|");
+  return OFFICIAL_PRACTICE_PAPER_LINKS[key] ?? [];
 }
 
 function InlineMarkingScheme({ files }: { files: MarkingSchemeFile[] }) {
@@ -313,7 +318,6 @@ function QuestionCard({
 function PracticeBrowserInner() {
   const requireSignIn = useRequireSignIn();
   const navigate = useNavigate();
-  const { user } = useContext(UserContext);
   const { options } = useContext(OptionsContext);
   const [searchParams, setSearchParams] = useSearchParams();
   const cycle: ExamCycleId = parseExamCycle(searchParams.get("cycle"));
@@ -322,7 +326,7 @@ function PracticeBrowserInner() {
     ? null : requestedSubjectId;
   const selectedLevel = searchParams.get("level");
   const selectedTopicName = searchParams.get("topic");
-  const browseMode = (searchParams.get("browse") === "topic" ? "topic" : "paper") as BrowseMode;
+  const browseMode = (searchParams.get("browse") === "paper" ? "paper" : "topic") as BrowseMode;
   const paperYearParam = searchParams.get("year");
   const paperNumParam = searchParams.get("paper");
   const targetQuestionKey = searchParams.get("question");
@@ -330,14 +334,16 @@ function PracticeBrowserInner() {
   const selectedPaperNum =
     paperNumParam === "1" || paperNumParam === "2" ? Number(paperNumParam) : null;
   const storageSubject = subjectId ? getStorageFolderName(subjectId) : null;
-  const firstName = (user?.username || "").trim().split(/\s+/)[0] || "there";
   const { pages, loading: pagesLoading, createPage, requestCreatePage, aceGateModal } = useWhiteboards(subjectId);
   const [showCreatePage, setShowCreatePage] = useState(false);
+  const [whiteboardOpening, setWhiteboardOpening] = useState(false);
+  const [whiteboardOpenError, setWhiteboardOpenError] = useState("");
   const recentPages = useMemo(() => [...pages].sort((a, b) =>
     Math.max(b.lastOpenedAt, b.updatedAt, b.createdAt) - Math.max(a.lastOpenedAt, a.updatedAt, a.createdAt)
   ), [pages]);
 
   const [search, setSearch] = useState("");
+  const [openPaperPdfKey, setOpenPaperPdfKey] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarPanel, setSidebarPanel] = useState<SidebarPanelId | null>(
     () => (searchParams.get(DISCOVER_SIDEBAR_PARAM) === "threads" ? "threads" : "ai")
@@ -756,7 +762,7 @@ function PracticeBrowserInner() {
   );
 
   const openLevel = (subject: string, level: string) => {
-    setSearchParams({ subject, level, cycle, browse: browseMode });
+    setSearchParams({ subject, level, cycle, browse: "topic" });
   };
 
   const setBrowseMode = (mode: BrowseMode) => {
@@ -988,30 +994,70 @@ function PracticeBrowserInner() {
   }
 
   const viewingBrowse = Boolean(storageSubject && selectedLevel);
+  const createPageButton = (
+    <button
+      type="button"
+      className="practice-browser__create-page"
+      disabled={!selectedSubject || pagesLoading}
+      onClick={async () => {
+        if (!await requireSignIn("Create Page")) return;
+        if (requestCreatePage()) setShowCreatePage(true);
+      }}
+    >
+      <LuPlus size={17} aria-hidden /> Create Page
+    </button>
+  );
   const pageTitle = selectedSubject?.label ?? "Practice Questions";
+  const openSubjectWhiteboard = async () => {
+    if (!subjectId || pagesLoading || whiteboardOpening) return;
+    setWhiteboardOpenError("");
+    if (!await requireSignIn("Open whiteboard")) return;
+
+    const existingWhiteboard = recentPages.find((page) => page.pageType === "whiteboard");
+    if (existingWhiteboard) {
+      setLastWhiteboardsSubject(subjectId);
+      navigate(`/whiteboards/page/${existingWhiteboard.id}`);
+      return;
+    }
+    if (!requestCreatePage()) return;
+
+    setWhiteboardOpening(true);
+    try {
+      const page = await createPage({
+        name: `${selectedSubject?.label ?? "Subject"} Practice`,
+        subject: subjectId,
+        pageType: "whiteboard",
+      });
+      if (page) {
+        setLastWhiteboardsSubject(subjectId);
+        navigate(`/whiteboards/page/${page.id}`);
+      }
+    } catch (error) {
+      console.error("[PracticeBrowser] Could not open practice whiteboard:", error);
+      setWhiteboardOpenError("Couldn’t open the whiteboard. Please try again.");
+    } finally {
+      setWhiteboardOpening(false);
+    }
+  };
 
   return (
-    <div className="practice-browser h-full w-full overflow-y-auto overflow-x-hidden color-bg scrollbar-minimal">
+    <div className={`practice-browser min-h-0 flex-1 w-full overflow-x-hidden color-bg scrollbar-minimal ${viewingBrowse ? "practice-browser--browse-list" : "overflow-y-auto"}`}>
       <div className={`practice-browser__browse ${viewingBrowse ? "practice-browser__browse--split" : ""}`}>
         {!selectedSubject && <div className="practice-browser__welcome">
-          <h1>Hey {firstName}, ready to <span>lock in?</span></h1>
-          <p>Select a subject</p>
+          <h1>Select a subject</h1>
         </div>}
         {selectedSubject && <header className="practice-browser__hero">
           <button
             type="button"
             className="practice-browser__back"
-            onClick={() => updateLocation(viewingBrowse
-              ? { level: null, topic: null, year: null, paper: null }
-              : { subject: null, level: null, topic: null, year: null, paper: null })}
-            aria-label={viewingBrowse ? "Back to levels" : "Back to subjects"}
+            onClick={() => updateLocation({ subject: null, level: null, topic: null, year: null, paper: null })}
           >
-            <LuArrowLeft size={18} aria-hidden />
+            <LuChevronLeft size={18} aria-hidden /> Back to subjects
           </button>
           <h1>{pageTitle}</h1>
         </header>}
         <div className={viewingBrowse ? "practice-browser__workspace" : ""}>
-        <div className="practice-browser__library">
+        <div className={`practice-browser__library ${viewingBrowse ? "practice-browser__library--browse-list" : ""}`}>
 
         {!selectedSubject ? (
           <div className="practice-browser__search practice-browser__search--with-toggle">
@@ -1133,17 +1179,15 @@ function PracticeBrowserInner() {
                         className="practice-browser__topic-card"
                         onClick={() => updateLocation({ topic: topic.name, year: null, paper: null })}
                       >
-                        <div className="practice-browser__topic-card-heading">
+                        <div className="practice-browser__topic-details">
                           <h3>{topic.displayName}</h3>
-                        </div>
-                        <div className="practice-browser__topic-count">
-                          <span>
+                          <span className="practice-browser__topic-count">
                             {topic.questionCount > 0
                               ? `${topic.questionCount} questions`
                               : "Open topic"}
                           </span>
-                          <LuChevronRight size={17} />
                         </div>
+                        <LuChevronRight className="practice-browser__topic-chevron" size={17} aria-hidden />
                       </button>
                     ))}
                   </div>
@@ -1159,74 +1203,104 @@ function PracticeBrowserInner() {
             ) : (
               <section>
                 <div className="practice-browser__card-grid">
-                  {filteredPapers.map((paper) => (
-                    <button
+                  {filteredPapers.map((paper) => {
+                    const pdfLinks = paperPdfLinks(cycle, subjectId, selectedLevel, paper);
+                    return (
+                    <div
                       key={paper.key}
-                      type="button"
                       className="practice-browser__paper-row"
-                      onClick={() =>
-                        updateLocation({
+                    >
+                      <button
+                        type="button"
+                        className="practice-browser__paper-open"
+                        onClick={() => updateLocation({
                           topic: null,
                           year: String(paper.year),
                           paper: paper.paper != null ? String(paper.paper) : null,
-                        })
-                      }
-                    >
-                      <div className="practice-browser__paper-heading">
-                        <PaperPreview
-                          year={paper.year}
-                          subject={selectedSubject?.label ?? "Exam paper"}
-                          detail={paper.paper != null ? `Paper ${paper.paper}` : paper.paperType ?? "Paper"}
-                          coverSrc={paperCoverPath(cycle, storageSubject, selectedLevel, paper)}
-                        />
-                        <div className="practice-browser__paper-details">
-                          <h3>{paper.label}</h3>
-                          <span>{paper.questionCount} questions · {paper.topics.length} topics</span>
+                        })}
+                      >
+                        <div className="practice-browser__paper-heading">
+                          <PaperPreview
+                            year={paper.year}
+                            subject={selectedSubject?.label ?? "Exam paper"}
+                            detail={paper.paper != null ? `Paper ${paper.paper}` : paper.paperType ?? "Paper"}
+                            coverSrc={paperCoverPath(cycle, storageSubject, selectedLevel, paper)}
+                          />
+                          <div className="practice-browser__paper-details">
+                            <h3>{paper.label}</h3>
+                            <span>{paper.questionCount} questions · {paper.topics.length} topics</span>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                      {pdfLinks.length > 1 ? (
+                        <>
+                          <button type="button" className="practice-browser__paper-download" aria-label={`Official PDFs for ${paper.label}`} aria-expanded={openPaperPdfKey === paper.key} onClick={() => setOpenPaperPdfKey(openPaperPdfKey === paper.key ? null : paper.key)}>
+                            <LuDownload size={17} aria-hidden />
+                          </button>
+                          {openPaperPdfKey === paper.key && (
+                          <div className="practice-browser__paper-download-options">
+                            {pdfLinks.map((link) => (
+                              <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>
+                            ))}
+                          </div>
+                          )}
+                        </>
+                      ) : pdfLinks.length === 1 ? (
+                        <a
+                          className="practice-browser__paper-download"
+                          href={pdfLinks[0].url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Open official PDF for ${paper.label}`}
+                          title="Open official paper PDF"
+                        >
+                          <LuDownload size={17} aria-hidden />
+                        </a>
+                      ) : null}
+                    </div>
+                    );
+                  })}
                 </div>
               </section>
             )}
           </>
         )}
         </div>
-        {viewingBrowse && <aside className="practice-browser__pages" aria-label="Your pages">
+        {viewingBrowse && <aside className="practice-browser__pages" aria-label={`Your ${selectedSubject?.label ?? "subject"} pages`}>
           <div className="practice-browser__pages-heading">
             <div>
-              <h2>Your pages</h2>
+              <h2>Your {selectedSubject?.label} pages</h2>
             </div>
-            <button
-              type="button"
-              className="practice-browser__create-page"
-              disabled={!selectedSubject || pagesLoading}
-              onClick={async () => {
-                if (!await requireSignIn("Create Page")) return;
-                if (requestCreatePage()) setShowCreatePage(true);
-              }}
-            >
-              <LuPlus size={17} aria-hidden /> Create Page
-            </button>
+            {(pagesLoading || recentPages.length > 0) && createPageButton}
           </div>
           {selectedSubject && (pagesLoading ? (
             <div className="practice-browser__pages-empty">Loading pages…</div>
           ) : recentPages.length === 0 ? (
-            <div className="practice-browser__pages-empty">No pages for this subject yet.</div>
+            <div className="practice-browser__pages-empty">
+              <span>You have no pages for this subject</span>
+              {createPageButton}
+            </div>
           ) : (
             <div className="practice-browser__pages-list">
-              {recentPages.map((page) => (
+              {recentPages.slice(0, 7).map((page) => (
                 <button key={page.id} type="button" className="practice-browser__page-row" onClick={() => { setLastWhiteboardsSubject(subjectId); navigate(`/whiteboards/page/${page.id}`); }}>
-                  <PageThumbnail page={page} />
+                  <span className="practice-browser__page-icon" aria-hidden>
+                    {page.emoji || (page.pageType === "document" ? <LuFileText /> : <LuPencil />)}
+                  </span>
                   <span className="practice-browser__page-copy">
                     <strong>{page.name}</strong>
                     <small>{page.pageType === "document" ? "Document" : "Whiteboard"}</small>
                   </span>
-                  <LuChevronRight size={18} className="practice-browser__page-chevron" aria-hidden />
                 </button>
               ))}
             </div>
           ))}
+          <div className="practice-browser__pages-footer">
+            {whiteboardOpenError && <p className="practice-browser__pages-error" role="alert">{whiteboardOpenError}</p>}
+            <button type="button" className="practice-browser__view-pages" disabled={pagesLoading || whiteboardOpening} onClick={() => void openSubjectWhiteboard()}>
+              {whiteboardOpening ? "Opening…" : "Open whiteboard"} <LuChevronRight size={17} aria-hidden />
+            </button>
+          </div>
         </aside>}
         </div>
       </div>

@@ -147,8 +147,9 @@ html.capacitor-ios-edge-to-edge #app-navbar {
   --color-button: #f3f4f6; /* Add this for light mode button bg */
 
   /* Dark Mode */ 
-  --color-blue-light: #74a1d8;
-  --color-button-dark: #374151; /* Add this for dark mode button bg */
+  --color-dark-bg: #11151d;
+  --color-blue-light: #f3ca59;
+  --color-button-dark: #222936;
 
   /* Markoblank colour theme */
   --color-markoteal: #2a273f;
@@ -433,7 +434,7 @@ math-field::part(virtual-keyboard-toggle) {
 
 /* Paper card overlay gradient: set on themed wrapper (data-theme is on #themed-root, not html) */
 :root                         { --paper-card-fade: var(--color-white);            --theme-txt-main: var(--color-black);                 --theme-txt-accent: var(--color-blue);                   --theme-txt-sub: var(--color-grey); }
-[data-theme="dark"]           { --paper-card-fade: var(--color-black);            --theme-txt-main: #ffffff;                            --theme-txt-accent: var(--color-blue-light);             --theme-txt-sub: var(--color-light-grey); }
+[data-theme="dark"]           { --paper-card-fade: var(--color-dark-bg);          --theme-txt-main: #f5f6f8;                            --theme-txt-accent: var(--color-blue-light);             --theme-txt-sub: #aeb6c3; --theme-accent-contrast: var(--color-dark-bg); }
 [data-theme="markoblank"]     { --paper-card-fade: var(--color-markoteal);        --theme-txt-main: var(--color-markobrown);            --theme-txt-accent: var(--color-markored);               --theme-txt-sub: var(--color-markogrey); }
 [data-theme="tangerine"]      { --paper-card-fade: var(--color-tangerineBG);      --theme-txt-main: var(--color-tangerinePrimary);      --theme-txt-accent: var(--color-tangerineAccent);        --theme-txt-sub: var(--color-tangerineSub); }
 [data-theme="icebergLight"]   { --paper-card-fade: var(--color-icebergLightBG);   --theme-txt-main: var(--color-icebergLightPrimary);   --theme-txt-accent: var(--color-icebergLightAccent);     --theme-txt-sub: var(--color-icebergLightSub); }
@@ -544,7 +545,7 @@ math-field::part(virtual-keyboard-toggle) {
 @utility color-bg {
   @apply 
     bg-white
-    dark:bg-black
+    dark:bg-dark-bg
     markoblank:bg-markoteal
     tangerine:bg-tangerineBG
     icebergLight:bg-icebergLightBG
@@ -572,7 +573,7 @@ math-field::part(virtual-keyboard-toggle) {
 @utility border-color-bg {
   @apply
     border-white
-    dark:border-black
+    dark:border-dark-bg
     markoblank:border-markoteal
     tangerine:border-tangerineBG
     icebergLight:border-icebergLightBG
@@ -600,7 +601,7 @@ math-field::part(virtual-keyboard-toggle) {
 @utility color-txt-invert {
   @apply 
     text-white
-    dark:text-black
+    dark:text-dark-bg
     markoblank:text-markoteal
     tangerine:text-tangerineBG
     icebergLight:text-icebergLightBG
@@ -884,8 +885,8 @@ math-field::part(virtual-keyboard-toggle) {
     from-white from-[0%]
     via-white via-[20%]
     to-transparent to-[150%]
-    dark:from-black/100
-    dark:via-black/100
+    dark:from-dark-bg/100
+    dark:via-dark-bg/100
     markoblank:from-markoteal/100
     markoblank:via-markoteal/100
     tangerine:from-tangerineBG/100
@@ -941,8 +942,8 @@ math-field::part(virtual-keyboard-toggle) {
     from-white from-[0%]
     via-white via-[15%]
     to-transparent to-[100%]
-    dark:from-black/100
-    dark:via-black/100
+    dark:from-dark-bg/100
+    dark:via-dark-bg/100
     markoblank:from-markoteal/100
     markoblank:via-markoteal/100
     tangerine:from-tangerineBG/100
@@ -1247,6 +1248,30 @@ html .themed-standalone-field:focus {
 
 .app-modal-panel :is(input, textarea, select) {
   font-size: max(16px, 1rem);
+}
+
+/* Shared flat button treatment for modal actions and choices. */
+:is(.app-modal-panel, [role="dialog"]) button:not([class*="rounded-full"]):not([data-crop-action]) {
+  border-radius: var(--radius-out, 10px);
+  box-shadow: none;
+  transition: background-color 150ms, border-color 150ms, opacity 150ms;
+}
+:is(.app-modal-panel, [role="dialog"]) button:is(.color-bg-accent, .blue-btn) {
+  border: 1px solid transparent;
+  background: var(--theme-txt-accent, #f1a324);
+  color: var(--theme-accent-contrast, var(--theme-txt-main, #172033));
+}
+:is(.app-modal-panel, [role="dialog"]) button:is(.color-bg-grey-5, .color-bg-grey-10) {
+  border: 1px solid color-mix(in srgb, var(--theme-txt-sub) 22%, transparent);
+  background: transparent;
+  color: var(--theme-txt-main);
+}
+:is(.app-modal-panel, [role="dialog"]) button:is(.color-bg-grey-5, .color-bg-grey-10):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--theme-txt-accent) 6%, transparent);
+}
+:is(.app-modal-panel, [role="dialog"]) button:focus-visible {
+  outline: 2px solid var(--theme-txt-accent);
+  outline-offset: 2px;
 }
 
 /* React Aria makes background content inert and prevents scroll chaining.

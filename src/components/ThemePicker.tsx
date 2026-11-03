@@ -1,36 +1,7 @@
 import { useContext, useState, useRef, useEffect, useMemo } from 'react'
 import { OptionsContext } from '../context/OptionsContext'
 import { LuPalette, LuCheck, LuSearch } from 'react-icons/lu'
-
-// Theme definitions with their Tailwind classes
-// (Keeping your original themes list mostly intact, mapped to the visual style)
-const THEMES = [
-  { id: 'light', name: 'Light', bg: 'bg-white', accent: 'bg-blue', primary: 'bg-black', sub: 'bg-grey' },
-  { id: 'dark', name: 'Dark', bg: 'bg-black', accent: 'bg-blue-light', primary: 'bg-white', sub: 'bg-light-grey' },
-  { id: 'icebergLight', name: 'Iceberg Light', bg: 'bg-icebergLightBG', accent: 'bg-icebergLightAccent', primary: 'bg-icebergLightPrimary', sub: 'bg-icebergLightSub' },
-  { id: 'icebergDark', name: 'Iceberg Dark', bg: 'bg-icebergDarkBG', accent: 'bg-icebergDarkAccent', primary: 'bg-icebergDarkPrimary', sub: 'bg-icebergDarkSub' },
-  { id: 'nordLight', name: 'Nord Light', bg: 'bg-nordLightBG', accent: 'bg-nordLightAccent', primary: 'bg-nordLightPrimary', sub: 'bg-nordLightSub' },
-  { id: 'nordDark', name: 'Nord Dark', bg: 'bg-nordDarkBG', accent: 'bg-nordDarkAccent', primary: 'bg-nordDarkPrimary', sub: 'bg-nordDarkSub' },
-  { id: 'modernInk', name: 'Modern Ink', bg: 'bg-modernInkBG', accent: 'bg-modernInkAccent', primary: 'bg-modernInkPrimary', sub: 'bg-modernInkSub' },
-  { id: 'magicGirl', name: 'Magic Girl', bg: 'bg-magicGirlBG', accent: 'bg-magicGirlAccent', primary: 'bg-magicGirlPrimary', sub: 'bg-magicGirlSub' },
-  { id: 'lavendar', name: 'Lavender', bg: 'bg-lavendarBG', accent: 'bg-lavendarAccent', primary: 'bg-lavendarPrimary', sub: 'bg-lavendarSub' },
-  { id: 'airplane', name: 'Airplane', bg: 'bg-airplaneBG', accent: 'bg-airplaneAccent', primary: 'bg-airplanePrimary', sub: 'bg-airplaneSub' },
-  { id: 'sewingTinLight', name: 'Sewing Tin', bg: 'bg-sewingTinLightBG', accent: 'bg-sewingTinLightAccent', primary: 'bg-sewingTinLightPrimary', sub: 'bg-sewingTinLightSub' },
-  { id: 'camping', name: 'Camping', bg: 'bg-campingBG', accent: 'bg-campingAccent', primary: 'bg-campingPrimary', sub: 'bg-campingSub' },
-  { id: 'paper', name: 'Paper', bg: 'bg-paperBG', accent: 'bg-paperAccent', primary: 'bg-paperPrimary', sub: 'bg-paperSub' },
-  { id: 'tangerine', name: 'Tangerine', bg: 'bg-tangerineBG', accent: 'bg-tangerineAccent', primary: 'bg-tangerinePrimary', sub: 'bg-tangerineSub' },
-  { id: 'menthol', name: 'Menthol', bg: 'bg-mentholBG', accent: 'bg-mentholAccent', primary: 'bg-mentholPrimary', sub: 'bg-mentholSub' },
-  { id: 'markoblank', name: 'Markoblank', bg: 'bg-markoteal', accent: 'bg-markored', primary: 'bg-markobrown', sub: 'bg-markogrey' },
-  { id: 'aurora', name: 'Aurora', bg: 'bg-auroraBG', accent: 'bg-auroraAccent1', primary: 'bg-auroraPrimary', sub: 'bg-auroraSub1' },
-  { id: 'gruvbox', name: 'Gruvbox', bg: 'bg-gruvboxBG', accent: 'bg-gruvboxAccent', primary: 'bg-gruvboxPrimary', sub: 'bg-gruvboxSub' },
-  { id: 'husqy', name: 'Husqy', bg: 'bg-husqyBG', accent: 'bg-husqyAccent', primary: 'bg-husqyPrimary', sub: 'bg-husqySub' },
-  { id: 'shadow', name: 'Shadow', bg: 'bg-shadowBG', accent: 'bg-shadowAccent', primary: 'bg-shadowPrimary', sub: 'bg-shadowSub' },
-  { id: 'blueberryLight', name: 'Blueberry Light', bg: 'bg-blueberryLightBG', accent: 'bg-blueberryLightAccent', primary: 'bg-blueberryLightPrimary', sub: 'bg-blueberryLightSub' },
-  { id: 'blueberryDark', name: 'Blueberry Dark', bg: 'bg-blueberryDarkBG', accent: 'bg-blueberryDarkAccent', primary: 'bg-blueberryDarkPrimary', sub: 'bg-blueberryDarkSub' },
-  { id: 'darkFuchsia', name: 'Dark Fuchsia', bg: 'bg-darkFuchsiaBG', accent: 'bg-darkFuchsiaAccent', primary: 'bg-darkFuchsiaPrimary', sub: 'bg-darkFuchsiaSub' },
-  { id: 'pastelPink', name: 'Pastel Pink', bg: 'bg-pastelPinkBG', accent: 'bg-pastelPinkAccent', primary: 'bg-pastelPinkPrimary', sub: 'bg-pastelPinkSub' },
-
-]
+import { THEMES } from './themeOptions'
 
 type ThemePickerProps = {
   show: boolean

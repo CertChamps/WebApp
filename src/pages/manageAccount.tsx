@@ -1,14 +1,16 @@
 import type { SubscriptionPlan, PriceDetails, PaymentProviderName } from "../lib/payments";
 import { hasAceAccess } from "../lib/contentAccess";
 import { useContext, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
     LuArrowLeft,
     LuCheck,
     LuCircleAlert,
+    LuChevronRight,
     LuClipboardCheck,
     LuGauge,
     LuLogOut,
+    LuMail,
     LuMessageSquare,
     LuPaperclip,
     LuPencil,
@@ -17,6 +19,7 @@ import {
     LuSparkles,
     LuTrash2,
     LuUpload,
+    LuUserRound,
     LuX,
 } from "react-icons/lu";
 import { collection, doc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
@@ -25,6 +28,7 @@ import Cropper from "react-easy-crop";
 import { motion, AnimatePresence } from "framer-motion";
 import { db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
+import { OptionsContext } from "../context/OptionsContext";
 import { usePayments, refetchSubscriptionState } from "../hooks/usePayments";
 import { iapDebug } from "../lib/payments/paymentsDebug";
 import { signOutSession } from "../lib/authSession";
@@ -135,9 +139,6 @@ const PaymentsTab = ({
             {/* Main card with animated gradient border */}
             <motion.div variants={fadeUp} className="ace-card-wrapper rounded-2xl p-[2px] mb-6">
                 <div className="rounded-2xl color-bg p-6 relative overflow-hidden">
-                    {/* Subtle animated glow in the background */}
-                    <div className="ace-glow" />
-
                     <div className="relative z-[1]">
                         <div className="flex items-center gap-3 mb-1">
                             <LuSparkles className="w-6 h-6 color-txt-accent" />
@@ -738,10 +739,18 @@ function HelpTab({ user }: { user: any }) {
 
 const ManageAccount = () => {
     const { user, setUser } = useContext(UserContext);
+    const { options, setOptions } = useContext(OptionsContext);
     const navigate = useNavigate();
+    const location = useLocation();
+    const isSettingsPage = location.pathname === "/user/settings";
+    const isUsagePage = location.pathname === "/user/usage";
+    const isHelpPage = location.pathname === "/user/help";
     const [searchParams, setSearchParams] = useSearchParams();
-    const [activeTab, setActiveTab] = useState<TabId>("home");
+    const [activeTab, setActiveTab] = useState<TabId>(isUsagePage ? "usage" : isHelpPage ? "help" : "home");
+    const displayedTab: TabId = isSettingsPage ? "home" : isUsagePage ? "usage" : isHelpPage ? "help" : activeTab;
+    const isStandalonePage = isSettingsPage || displayedTab === "usage" || displayedTab === "help";
     const [newUsername, setNewUsername] = useState<string>("");
+    const [editingUsername, setEditingUsername] = useState(false);
     const [userNameError, setUserNameError] = useState<string>("");
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -763,8 +772,11 @@ const ManageAccount = () => {
 
     useEffect(() => {
         const requestedTab = searchParams.get("tab");
-        if (requestedTab === "payments" || requestedTab === "usage") setActiveTab(requestedTab);
-    }, [searchParams]);
+        if (isSettingsPage) setActiveTab("home");
+        else if (isUsagePage) setActiveTab("usage");
+        else if (isHelpPage) setActiveTab("help");
+        else setActiveTab(requestedTab === "payments" || requestedTab === "usage" || requestedTab === "help" ? requestedTab : "home");
+    }, [searchParams, isSettingsPage, isUsagePage, isHelpPage]);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -829,28 +841,28 @@ const ManageAccount = () => {
         const username = value.trim();
         if (username.length < 1) {
             setUserNameError("username cannot be empty");
-            return;
+            return false;
         }
         if (username.length > 20) {
             setUserNameError("username must be less than 20 characters");
-            return;
+            return false;
         }
         try {
-            setUser({ ...user, username });
             await setDoc(doc(db, "user-data", user.uid), { username }, { merge: true });
+            setUser({ ...user, username });
             setNewUsername("");
             setUserNameError("");
+            return true;
         } catch (error) {
             console.error("Error updating username: ", error);
             setUserNameError("failed to update username, please try again");
+            return false;
         }
     };
 
     const navItems: { id: TabId; label: string }[] = [
-        { id: "home", label: "Profile" },
+        { id: "home", label: "Settings" },
         { id: "payments", label: "Payments" },
-        { id: "usage", label: "Usage & limits" },
-        { id: "help", label: "Help" },
     ];
 
     // Read success/cancel from URL and refetch user when returning from
@@ -937,115 +949,90 @@ const ManageAccount = () => {
     return (
         <div className="relative flex flex-1 min-w-0 w-full h-full overflow-auto color-bg justify-center items-start pt-4 px-8 pb-8">
             {/* Back to Settings - top left */}
-            <button
+            {!isStandalonePage && <button
                 type="button"
                 onClick={() => navigate("/user/settings")}
                 className="absolute top-4 left-4 flex items-center gap-3 py-2 text-base font-medium color-txt-sub hover:color-txt-accent transition-colors cursor-pointer z-10"
             >
                 <LuArrowLeft size={22} />
                 Back to Settings
-            </button>
+            </button>}
             {/* Floating card: one border + shadow, centered */}
-            <div className="flex flex-row w-full max-w-4xl min-h-[36rem] rounded-out overflow-hidden">
+            <div className={`flex flex-row w-full min-h-[36rem] rounded-out overflow-hidden ${isStandalonePage ? "max-w-3xl" : "max-w-4xl"}`}>
                 {/* Left: main content */}
                 <div className="flex-1 min-w-0 overflow-y-auto p-8">
-                {activeTab === "home" && (
-                    <>
-                        <h1 className="profile-heading text-3xl font-bold mb-8">Profile</h1>
-                        <div className="max-w-xl space-y-8">
-                            {/* Avatar */}
-                            <div>
-                                <p className="font-semibold color-txt-sub text-lg mb-2">Avatar</p>
-                                <div className="flex items-center gap-6">
-                                    <div className="relative shrink-0">
-                                        <img
-                                            src={user?.picture ?? ""}
-                                            alt="Profile"
-                                            className="w-20 h-20 rounded-full object-cover"
-                                        />
-                                        <button
-                                            type="button"
-                                            className="absolute bottom-0 right-0 w-8 h-8 rounded-full color-cursor border-2 border-color-bg flex items-center justify-center cursor-pointer"
-                                            onClick={() => document.getElementById("manageAccountFileInput")?.click()}
-                                            title="Edit avatar"
-                                        >
-                                            <LuPencil size={20} className="color-txt-invert" />
-                                        </button>
+                {displayedTab === "home" && (
+                    <div className="account-settings">
+                        <h1>Settings</h1>
+
+                        <section className="account-settings__section">
+                            <h2>Account status</h2>
+                            <div className="ace-card-wrapper account-settings__ace-border">
+                                <div className="account-settings__ace-card color-bg">
+                                    <div className="account-settings__ace-content">
+                                        <div className="account-settings__ace-icon"><LuSparkles size={25} aria-hidden /></div>
+                                        <div className="account-settings__ace-copy">
+                                            <strong>CertChamps ACE</strong>
+                                            <span className="account-settings__ace-badge">{hasAceAccess(user) ? "Active subscription" : "Unlock everything"}</span>
+                                            <small>{hasAceAccess(user) ? `${user?.subscriptionPlan === "monthly" ? "Monthly" : user?.subscriptionPlan === "annual" ? "Annual" : "ACE"} plan` : "Every paper, every topic, and more ways to study."}</small>
+                                            {hasAceAccess(user) && user?.subscriptionPeriodEnd && <small>{user.subscriptionCancelAtPeriodEnd ? "Access ends" : "Current period ends"} {new Date(user.subscriptionPeriodEnd * 1000).toLocaleDateString(undefined, { dateStyle: "medium" })}</small>}
+                                        </div>
+                                        <button type="button" className="account-settings__ace-button" onClick={() => navigate("/user/manage-account?tab=payments")}>{hasAceAccess(user) ? "Manage plan" : "View plans"}<LuChevronRight size={17} aria-hidden /></button>
                                     </div>
                                 </div>
-                                <input
-                                    id="manageAccountFileInput"
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={handleFileChange}
-                                />
-                                {avatarError && (
-                                    <p className="text-red-500 text-sm mt-2">{avatarError}</p>
-                                )}
                             </div>
+                        </section>
 
-                            {/* Username */}
-                            <div className="manage-account-username">
-                                <p className="font-semibold color-txt-sub text-lg mb-2">Username</p>
-                                <div className="flex items-center flex-wrap gap-3 mt-2">
-                                    <input
-                                        type="text"
-                                        className="shadow-small rounded-xl color-bg color-txt-main flex-1 min-w-0 max-w-sm text-base py-2.5 px-4 outline-none"
-                                        value={newUsername}
-                                        onChange={(e) => setNewUsername(e.target.value)}
-                                        placeholder={user?.username ?? ""}
-                                    />
-                                    <span
-                                        className="update-btn cursor-pointer shrink-0 text-base"
-                                        onClick={() => changeUsername(newUsername)}
-                                    >
-                                        Update
-                                    </span>
+                        <section className="account-settings__section account-settings__profile-section">
+                            <h2>Edit profile</h2>
+                            <div className="account-settings__profile-avatar">
+                                {user?.picture ? <img src={user.picture} alt="" /> : <span><LuUserRound size={42} aria-hidden /></span>}
+                                <button type="button" onClick={() => document.getElementById("manageAccountFileInput")?.click()} aria-label="Change profile photo"><LuPencil size={19} aria-hidden /></button>
+                            </div>
+                            <input id="manageAccountFileInput" type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                            {avatarError && <p className="account-settings__error" role="alert">{avatarError}</p>}
+                            <div className="account-settings__group account-settings__profile-group">
+                                <div className="account-settings__profile-row">
+                                    <span className="account-settings__profile-row-icon"><LuUserRound size={20} aria-hidden /></span>
+                                    <div><strong>Name</strong><span>{user?.username ?? "—"}</span></div>
+                                    <button type="button" onClick={() => { setNewUsername(user?.username ?? ""); setUserNameError(""); setEditingUsername((current) => !current); }} aria-label="Edit name" aria-expanded={editingUsername}><LuChevronRight size={21} aria-hidden /></button>
                                 </div>
-                                {userNameError && (
-                                    <span className="text-red-500 text-base mt-2 block">{userNameError}</span>
-                                )}
-                            </div>
-
-                            {/* Email */}
-                            <div>
-                                <p className="font-semibold color-txt-sub text-lg mb-2">Email</p>
-                                <p className="color-txt-main font-medium mt-2 text-lg">{user?.email ?? "—"}</p>
-                            </div>
-
-                            <div className="manage-account-actions">
-                                <p className="manage-account-actions__title">Account actions</p>
-                                <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={handleLogOut}
-                                        disabled={logoutLoading || deleteLoading}
-                                        className="manage-account-actions__btn manage-account-actions__btn--logout"
-                                    >
-                                        <LuLogOut size={18} aria-hidden />
-                                        {logoutLoading ? "Signing out…" : "Log out"}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setDeleteConfirmUsername("");
-                                            setDeleteError("");
-                                            setShowDeleteModal(true);
-                                        }}
-                                        disabled={logoutLoading || deleteLoading}
-                                        className="manage-account-actions__btn manage-account-actions__btn--delete"
-                                    >
-                                        <LuTrash2 size={18} aria-hidden />
-                                        Delete account
-                                    </button>
+                                {editingUsername && <div className="account-settings__edit-name">
+                                    <label htmlFor="account-username">Name</label>
+                                    <div><input id="account-username" type="text" maxLength={20} value={newUsername} onChange={(event) => setNewUsername(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void changeUsername(newUsername).then((saved) => { if (saved) setEditingUsername(false); }); } }} />
+                                        <button type="button" onClick={() => void changeUsername(newUsername).then((saved) => { if (saved) setEditingUsername(false); })}>Save</button>
+                                        <button type="button" onClick={() => { setEditingUsername(false); setUserNameError(""); }}>Cancel</button>
+                                    </div>
+                                    {userNameError && <p className="account-settings__error" role="alert">{userNameError}</p>}
+                                </div>}
+                                <div className="account-settings__profile-row">
+                                    <span className="account-settings__profile-row-icon"><LuMail size={20} aria-hidden /></span>
+                                    <div><strong>Email</strong><span>{user?.email ?? "—"}</span></div>
                                 </div>
                             </div>
-                        </div>
-                    </>
+                        </section>
+
+                        <section className="account-settings__section">
+                            <h2>Practice</h2>
+                            <div className="account-settings__group">
+                                <div className="account-settings__row">
+                                    <div><strong>Left-hand layout</strong><small>Show the sidebar and question list on the left</small></div>
+                                    <button type="button" className={`account-settings__switch ${options.leftHandMode ? "is-on" : ""}`} role="switch" aria-checked={!!options.leftHandMode} aria-label="Left-hand layout" onClick={() => setOptions((current: typeof options) => ({ ...current, leftHandMode: !current.leftHandMode }))}><span /></button>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="account-settings__section">
+                            <h2>Account actions</h2>
+                            <div className="account-settings__group">
+                                <button type="button" className="account-settings__action" disabled={logoutLoading || deleteLoading} onClick={() => void handleLogOut()}><LuLogOut size={18} aria-hidden />{logoutLoading ? "Signing out…" : "Log out"}</button>
+                                <button type="button" className="account-settings__action account-settings__action--danger" disabled={logoutLoading || deleteLoading} onClick={() => { setDeleteConfirmUsername(""); setDeleteError(""); setShowDeleteModal(true); }}><LuTrash2 size={18} aria-hidden />Delete account</button>
+                            </div>
+                        </section>
+                    </div>
                 )}
 
-                {activeTab === "payments" && (
+                {displayedTab === "payments" && (
                     <PaymentsTab
                         user={user}
                         paymentSuccess={paymentSuccess || payments.success}
@@ -1068,24 +1055,24 @@ const ManageAccount = () => {
                     />
                 )}
 
-                {activeTab === "usage" && (
-                    <UsageTab onViewPlans={() => setActiveTab("payments")} />
+                {displayedTab === "usage" && (
+                    <UsageTab onViewPlans={() => navigate("/user/manage-account?tab=payments")} />
                 )}
 
-                {activeTab === "help" && (
+                {displayedTab === "help" && (
                     <HelpTab user={user} />
                 )}
             </div>
 
                 {/* Right: sidebar */}
-                <aside className="w-72 min-w-[18rem] shrink-0 flex flex-col gap-5 p-8">
+                {!isStandalonePage && <aside className="w-72 min-w-[18rem] shrink-0 flex flex-col gap-5 p-8">
                 <div className="rounded-xl p-5 color-bg shadow-small">
                     <p className="text-lg font-bold uppercase tracking-wider color-txt-sub mb-4">Account</p>
                     {navItems.map(({ id, label }) => (
                         <button
                             key={id}
                             type="button"
-                            onClick={() => setActiveTab(id)}
+                            onClick={() => id === "home" ? navigate("/user/settings") : setActiveTab(id)}
                             className={`block w-full text-left py-2 text-base font-semibold transition-colors cursor-pointer ${
                                 activeTab === id
                                     ? "color-txt-accent font-semibold"
@@ -1096,7 +1083,7 @@ const ManageAccount = () => {
                         </button>
                     ))}
                 </div>
-            </aside>
+            </aside>}
             </div>
 
             {showDeleteModal && (

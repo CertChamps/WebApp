@@ -2,24 +2,24 @@
 
 .practice-hub {
   --practice-action-bg: var(--theme-txt-accent, #f1a324);
-  --practice-action-text: var(--theme-txt-main, #172033);
+  --practice-action-text: var(--theme-accent-contrast, var(--theme-txt-main, #172033));
 }
 
 .whiteboards__action-card--primary {
   background: var(--theme-txt-accent, #f1a324);
-  color: var(--theme-txt-main, #172033);
+  color: var(--theme-accent-contrast, var(--theme-txt-main, #172033));
 }
 
 .whiteboards__action-card--primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--theme-txt-accent, #f1a324) 88%, var(--theme-txt-main, #172033));
+  background: color-mix(in srgb, var(--theme-txt-accent, #f1a324) 88%, var(--theme-accent-contrast, var(--theme-txt-main, #172033)));
 }
 
 .whiteboards__action-card--primary :is(.color-txt-main, .color-txt-accent) {
-  color: var(--theme-txt-main, #172033);
+  color: var(--theme-accent-contrast, var(--theme-txt-main, #172033));
 }
 
 .whiteboards__action-card--primary .color-txt-sub {
-  color: color-mix(in srgb, var(--theme-txt-main, #172033) 72%, transparent);
+  color: color-mix(in srgb, var(--theme-accent-contrast, var(--theme-txt-main, #172033)) 72%, transparent);
 }
 
 .whiteboards__action-card--secondary {

@@ -8,6 +8,7 @@ import { LuClock, LuMessageCircle, LuSearch, LuSettings, LuUsers, LuX, LuStar } 
 import { db } from '../../firebase'
 import { UserContext } from '../context/UserContext'
 import ActivityHeatmap from '../components/profile/ActivityHeatmap'
+import { isIPad } from '../utils/isIPad'
 
 type ProfileDiscoverPost = {
     id: string
@@ -220,7 +221,7 @@ export default function ProfileViewer() {
     return (
         <div className="flex w-full h-full color-bg overflow-hidden">
             <main className="flex-1 min-w-0 h-full overflow-y-auto scrollbar-minimal">
-                <div className="w-full px-6 pt-4 pb-8 space-y-6">
+                <div className={`w-full px-6 pt-4 pb-8 space-y-6 ${isIPad() ? '' : 'max-w-6xl mx-auto'}`}>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-5">
                         {user.picture ? (
                             <img

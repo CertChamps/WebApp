@@ -91,6 +91,7 @@ export default function PageDetailsModal({
       <WhiteboardModal
         title={isEdit ? "Page details" : "Create page"}
         onClose={onClose}
+        initialPlacement="center"
         footer={
           confirmingDelete && initial ? (
             <div className="flex flex-col gap-2 rounded-lg color-bg-grey-5 p-3">
@@ -130,14 +131,6 @@ export default function PageDetailsModal({
                   <LuTrash2 size={18} />
                 </button>
               )}
-              <button
-                type="button"
-                className="flex-1 py-2.5 rounded-lg text-sm font-semibold color-bg-grey-5 color-txt-main hover:color-bg-grey-10 transition-colors cursor-pointer"
-                onClick={onClose}
-                disabled={saving}
-              >
-                Cancel
-              </button>
               <button
                 type="button"
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-default"
@@ -206,20 +199,27 @@ export default function PageDetailsModal({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold color-txt-sub">Attached questions</span>
-              <button
+              {attachedQuestions.length > 0 && <button
                 type="button"
                 className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold color-txt-accent hover:color-bg-grey-5 transition-colors cursor-pointer"
                 onClick={() => setShowAddQuestion(true)}
               >
                 <LuPlus size={13} strokeWidth={2.5} />
                 Add question
-              </button>
+              </button>}
             </div>
 
             {attachedQuestions.length === 0 ? (
-              <p className="rounded-lg color-bg-grey-5 px-3 py-3 text-sm color-txt-sub">
-                No questions attached.
-              </p>
+              <div className="flex flex-col items-center gap-3 rounded-lg color-bg-grey-5 px-3 py-5 text-center">
+                <p className="text-sm color-txt-sub">No questions attached.</p>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold color-bg-grey-5 color-txt-main cursor-pointer"
+                  onClick={() => setShowAddQuestion(true)}
+                >
+                  <LuPlus size={16} aria-hidden /> Add question
+                </button>
+              </div>
             ) : (
               <div className="flex flex-col gap-1">
                 {attachedQuestions.map((attachment) => (

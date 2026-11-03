@@ -267,7 +267,7 @@ useEffect(() => {
           <p>No replies yet.</p>
         )}
 
-              <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-black p-3 z-10">
+              <div className="sticky bottom-0 left-0 border-t border-light-grey dark:border-grey bg-white dark:bg-dark-bg p-3 z-10">
         <textarea
           value={newReply}
           onChange={(e) => setNewReply(e.target.value)}
@@ -289,7 +289,7 @@ useEffect(() => {
             type="button"
             onClick={handleSendReply}
             disabled={!newReply.trim()}
-            className="px-4 py-2 rounded-xl bg-blue text-white disabled:opacity-50 hover:bg-blue-light"
+            className="px-4 py-2 rounded-xl bg-blue text-white dark:bg-blue-light dark:text-dark-bg disabled:opacity-50 hover:bg-blue-light"
           >
             Send
           </button>

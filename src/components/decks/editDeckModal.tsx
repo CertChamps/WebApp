@@ -304,6 +304,9 @@ export default function EditDeckModal(props: EditDeckModalProps) {
       >
       <div
         ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit Deck"
         className={`w-[50%] h-[80%] color-bg border-2 color-shadow rounded-out p-6
           transition-transform duration-300 flex flex-col
           ${props.isVisible ? 'scale-100' : 'scale-95'}`}
@@ -311,12 +314,9 @@ export default function EditDeckModal(props: EditDeckModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="txt-heading-colour text-xl font-bold">Edit Deck</h2>
-          <LuX
-            className="color-txt-sub cursor-pointer hover:color-txt-main"
-            strokeWidth={2}
-            size={24}
-            onClick={handleClose}
-          />
+          <button type="button" onClick={handleClose} aria-label="Close" className="p-1.5 color-txt-sub hover:color-txt-main cursor-pointer">
+            <LuX strokeWidth={2} size={24} />
+          </button>
         </div>
         <div className="overflow-y-auto scrollbar-minimal flex-1 pr-2">
         
