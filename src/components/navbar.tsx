@@ -1,164 +1,45 @@
-import { useContext, useEffect, useState } from 'react'
-import { UserContext } from '../context/UserContext'
-import { isAdminUid } from '../constants/adminUids'
-import { useNavigate, useLocation } from "react-router-dom";
-import '../styles/navbar.css'
-import { isIPad } from '../utils/isIPad'
+import { useContext } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { LuLogIn, LuSearch, LuPencil, LuCrown } from "react-icons/lu";
+import { auth } from "../../firebase";
+import { UserContext } from "../context/UserContext";
+import { signInPath } from "../lib/signIn";
+import { hasAceAccess } from "../lib/contentAccess";
+import NotificationBell from "./social/NotificationBell";
+import "../styles/navbar.css";
 
-// ======================= ICON IMPORTS ======================== // 
-import { LuPencil, LuPenTool, LuSettings, LuUsers, LuChartSpline, LuFilePlus, LuMessageSquareText, LuSearch } from "react-icons/lu";
-import type { IconType } from 'react-icons';
-import { LuLogIn } from 'react-icons/lu';
-import { auth } from '../../firebase';
-import { signInPath } from '../lib/signIn';
+export default function Navbar() {
+  const { user, authReady } = useContext(UserContext);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const signedIn = authReady && !!auth.currentUser && user?.uid === auth.currentUser.uid;
+  const backTo = location.pathname + location.search;
+  const profilePath = signedIn ? `/viewProfile/${user.uid}` : signInPath("your account", backTo);
 
-const showNavTooltips = !isIPad();
+  return (
+    <header id="app-navbar" className="app-topnav color-bg">
+      <div className="app-topnav__spacer" aria-hidden />
 
-export default function Navbar () {
+      <nav className="app-topnav__links" aria-label="Main navigation">
+        <button type="button" className={location.pathname.startsWith("/practice") || location.pathname.startsWith("/whiteboards") ? "is-active" : ""} onClick={() => navigate("/practice")}>
+          <LuPencil size={17} aria-hidden /> Practice
+        </button>
+        <button type="button" className={location.pathname.startsWith("/discover") ? "is-active" : ""} onClick={() => navigate("/discover")}>
+          <LuSearch size={17} aria-hidden /> Discover
+        </button>
+      </nav>
 
-    // Icon Properties
-    const iconSize = 18
-    const strokewidth = 2
-
-    // Context and State and Hooks
-    const { user, authReady } = useContext(UserContext)
-    const signedIn = authReady && !!auth.currentUser && user?.uid === auth.currentUser.uid
-    const isAdmin = isAdminUid(user?.uid, user?.email)
-    const navigate = useNavigate()
-    const location = useLocation()
-
-    const derivePageFromPath = (path: string) => {
-        if (path.startsWith('/decks')) return 'decks'
-        if (path.startsWith('/social')) return 'community'
-        if (path.startsWith('/progress')) return 'progress'
-        if (path.startsWith('/discover')) return 'community'
-        if (path.startsWith('/feedback')) return 'feedback'
-        if (path.startsWith('/user/settings')) return 'user/settings'
-        if (path.startsWith('/admin/add-questions')) return 'admin/add-questions'
-        if (path.startsWith('/admin/canvas-viewer')) return 'admin/canvas-viewer'
-        if (path.startsWith('/admin/help')) return 'admin/canvas-viewer'
-        if (path.startsWith('/admin/discover-moderation')) return 'admin/canvas-viewer'
-        if (path.startsWith('/games')) return 'games'
-        if (path.startsWith('/whiteboards')) return 'whiteboards'
-        if (path.startsWith('/practice')) return 'practice'
-        if (path.startsWith('/post')) return 'community'
-        if (path.startsWith('/viewProfile')) return 'viewProfile'
-        return 'practice'
-    }
-
-    const [page, setPage ]= useState<string>(() => derivePageFromPath(location.pathname))
-
-    // ============================ NAVIGATING BETWEEN PAGES ===================================== //
-    const pageNaviagte = (page: string) => {
-
-        // set page state
-        setPage(page)
-
-        // navigate to that page
-        if (page === "practice") {
-            navigate("/practice");
-            return;
-        }
-        if (page === "community") {
-            navigate("/discover");
-            return;
-        }
-        navigate(`/${page}`, { state: { backTo: location.pathname + location.search } })
-        
-    } 
-
-    useEffect(() => {
-        setPage(derivePageFromPath(location.pathname))
-    }, [location.pathname])
-
-    const renderNavItem = (
-        key: string,
-        label: string,
-        Icon: IconType,
-        targetPage: string,
-        isBottom = false,
-    ) => {
-        const isSelected = page === targetPage
-        const baseClass = isBottom ? 'nav-bottom' : 'nav-item'
-        const selectedClass = isBottom ? 'nav-bottom-selected' : 'nav-item-selected'
-
-        return (
-            <button
-                key={key}
-                type="button"
-                className={isSelected ? selectedClass : baseClass}
-                onClick={() => {pageNaviagte(targetPage)}}
-                aria-label={label}
-            >
-                <Icon
-                    strokeWidth={isSelected ? 2.35 : strokewidth}
-                    size={iconSize}
-                    className={isSelected ? 'nav-icon-selected' : 'nav-icon'}
-                    fill="none"
-                />
-                {showNavTooltips && (
-                    <span className="nav-tooltip" role="tooltip">
-                        <span className="nav-tooltip-txt">{label}</span>
-                    </span>
-                )}
-            </button>
-        )
-    }
-
-    return (
-        <div id="app-navbar" className="container" >
-
-            {/* ============================= USER CARD ================================ */}
-            <div className='user-container'>
-                {signedIn ? <img src={user.picture} className='user-img' onClick={()=>{
-                    navigate(`/viewProfile/${user.uid}`, { state: { backTo: location.pathname + location.search } })
-                }}/> : <button type="button" className="nav-item" aria-label="Sign in"
-                    onClick={() => navigate(signInPath("your account", location.pathname + location.search))}>
-                    <LuLogIn size={iconSize} className="nav-icon" />
-                    <span className="nav-tooltip" role="tooltip"><span className="nav-tooltip-txt">Sign in</span></span>
-                </button>}
-
-                <div className='user-info '>
-                    <p className='nav-txt !txt-heading-colour !color-txt-accent' >{signedIn ? user.username : "Guest"}</p>
-                    {/* <p className='nav-txt !txt-sub !color-txt-sub text-nowrap' >Rank: {user.rank}</p>  */}
-                </div>
-            </div>
-
-            {/* ============================= PRACTICE ICON ================================ */}
-            {renderNavItem('nav-practice', 'Practice', LuPencil, 'practice')}
-
-            {renderNavItem('nav-whiteboards', 'Whiteboards', LuPenTool, 'whiteboards')}
-        
-            {/* ============================= COMMUNITY ICON ================================ */}
-            {renderNavItem('nav-community', 'Community', LuSearch, 'community')}
-
-            {renderNavItem('nav-progress', 'Progress', LuChartSpline, 'progress')}
-
-            {/* Decks nav temporarily hidden while decks are rebuilt */}
-
-            {/* ============================= GAMES ICON ================================ */}
-            {/* <div className={page == 'games' ? 'nav-item-selected' : 'nav-item'} onClick={() => {pageNaviagte('games')}}> 
-                <LuGamepad2 strokeWidth={strokewidth} size={iconSize} 
-                    className={page == 'games' ? 'nav-icon-selected' : 'nav-icon'}
-                    fill={page == 'games' ? 'currentColor' : 'none'} />  
-                <p className={page == 'games' ? 'nav-txt-selected' : 'nav-txt'} >Games</p>
-            </div> */}
-
-            {/* ============================= FEEDBACK ICON ================================ */}
-            {renderNavItem('nav-feedback', 'Feedback', LuMessageSquareText, 'feedback')}
-
-            <div className="mt-auto w-full flex flex-col items-center">
-                {/* ============================= ADD QUESTIONS (ADMIN ONLY) ================================ */}
-                {isAdmin && (
-                    renderNavItem('nav-add-questions', "Add Q's", LuFilePlus, 'admin/add-questions', true)
-                )}
-
-                {isAdmin && (
-                    renderNavItem('nav-canvas-viewer', 'Users', LuUsers, 'admin/canvas-viewer', true)
-                )}
-                
-                {renderNavItem('nav-settings', 'Settings', LuSettings, 'user/settings', true)}
-            </div>
-        </div>
-    )
+      <div className="app-topnav__actions">
+        {!hasAceAccess(user) && (
+          <button type="button" className="app-topnav__upgrade" onClick={() => navigate("/user/manage-account?tab=payments", { state: { backTo } })}>
+            <LuCrown size={16} aria-hidden /> Upgrade to ACE
+          </button>
+        )}
+        {signedIn && <NotificationBell />}
+        <button type="button" className="app-topnav__profile" onClick={() => navigate(profilePath, { state: { backTo } })} aria-label={signedIn ? "Profile" : "Sign in"}>
+          {signedIn && user.picture ? <img src={user.picture} alt="" /> : <LuLogIn size={20} aria-hidden />}
+        </button>
+      </div>
+    </header>
+  );
 }

@@ -183,7 +183,7 @@ export default function App() {
       <UserContext.Provider value={{ user: authReady ? user : {}, setUser, authReady, setAuthReady }}>
           {/* // ================ DIV THEME WRAPPER ===================== // */}
           <div id="themed-root" data-theme={options.theme}>
-            <div className="app-viewport color-bg flex flex-row overflow-hidden">
+            <div className="app-viewport color-bg flex flex-col overflow-hidden">
               {/* <CustomCursor /> */}
               <AppRouter />
             </div>

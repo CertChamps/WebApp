@@ -734,7 +734,7 @@ export default function DiscoverShareModal({
             type="button"
             onClick={closeForm}
             disabled={submitting}
-            className="px-4 py-2 rounded-xl text-sm color-txt-sub hover:color-txt-main transition-colors cursor-pointer disabled:opacity-50"
+            className="discover-modal-action--secondary px-4 py-2 rounded-xl text-sm transition-colors cursor-pointer disabled:opacity-50"
           >
             Cancel
           </button>
@@ -742,7 +742,7 @@ export default function DiscoverShareModal({
             type="button"
             onClick={() => void handleSubmit()}
             disabled={submitting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl color-bg-accent color-txt-accent font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="discover-modal-action--primary inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? (
               <>
@@ -829,7 +829,7 @@ export default function DiscoverShareModal({
                       onClick={() => chooseResourceSource("website")}
                       className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
                         resourceSource === "website"
-                          ? "color-bg color-txt-main shadow-sm"
+                          ? "discover-modal-action--primary"
                           : "color-txt-sub hover:color-txt-main"
                       }`}
                     >
@@ -841,7 +841,7 @@ export default function DiscoverShareModal({
                       onClick={() => chooseResourceSource("pdf")}
                       className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
                         resourceSource === "pdf"
-                          ? "color-bg color-txt-main shadow-sm"
+                          ? "discover-modal-action--primary"
                           : "color-txt-sub hover:color-txt-main"
                       }`}
                     >
@@ -972,7 +972,7 @@ export default function DiscoverShareModal({
                       onClick={() => toggleShareType(type)}
                       className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
                         shareTypes.includes(type)
-                          ? "color-bg-accent color-txt-accent"
+                          ? "discover-modal-action--primary"
                           : "color-bg-grey-5 color-txt-main hover:opacity-90"
                       }`}
                     >
@@ -991,7 +991,7 @@ export default function DiscoverShareModal({
                     onClick={() => setShareLevels([])}
                     className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
                       shareLevels.length === 0
-                        ? "color-bg-accent color-txt-accent"
+                        ? "discover-modal-action--primary"
                         : "color-bg-grey-5 color-txt-main hover:opacity-90"
                     }`}
                   >
@@ -1004,7 +1004,7 @@ export default function DiscoverShareModal({
                       onClick={() => toggleShareLevel(level)}
                       className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
                         shareLevels.includes(level)
-                          ? "color-bg-accent color-txt-accent"
+                          ? "discover-modal-action--primary"
                           : "color-bg-grey-5 color-txt-main hover:opacity-90"
                       }`}
                     >
@@ -1076,7 +1076,7 @@ export default function DiscoverShareModal({
                     type="button"
                     onClick={() => void resolvePostAsAuthor()}
                     disabled={lookingUpAuthor || !postAsHandle.trim()}
-                    className="px-4 py-2.5 rounded-xl color-bg-grey-5 color-txt-main text-sm font-semibold cursor-pointer disabled:opacity-50"
+                    className="discover-modal-action--secondary px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer disabled:opacity-50"
                   >
                     {lookingUpAuthor ? "Looking up…" : "Look up"}
                   </button>

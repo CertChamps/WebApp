@@ -1,0 +1,228 @@
+@reference '../index.css';
+
+.discover-page {
+  --discover-action-bg: var(--theme-txt-accent, #f1a324);
+  --discover-action-text: var(--theme-txt-main, #172033);
+}
+
+.discover-action--primary,
+.discover-page button.color-bg-accent {
+  border-color: transparent;
+  background: var(--discover-action-bg);
+  color: var(--discover-action-text);
+  box-shadow: none;
+}
+
+.discover-action--primary:hover:not(:disabled),
+.discover-page button.color-bg-accent:hover:not(:disabled) {
+  background: var(--discover-action-bg);
+  color: var(--discover-action-text);
+  opacity: 0.88;
+}
+
+.discover-action--secondary {
+  border: 0;
+  background: color-mix(in srgb, var(--discover-action-bg) 10%, transparent);
+  color: var(--theme-txt-main);
+  box-shadow: none;
+}
+
+.discover-action--secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--discover-action-bg) 16%, transparent);
+}
+
+.discover-modal-action--primary,
+.discover-modal-choice.is-active {
+  border-color: transparent;
+  background: var(--theme-txt-accent, #f1a324);
+  color: var(--theme-txt-main, #172033);
+  box-shadow: none;
+}
+
+.discover-modal-action--primary:hover:not(:disabled),
+.discover-modal-choice.is-active:hover:not(:disabled) {
+  background: var(--theme-txt-accent, #f1a324);
+  color: var(--theme-txt-main, #172033);
+  opacity: 0.88;
+}
+
+.discover-modal-action--secondary {
+  border: 0;
+  background: color-mix(in srgb, var(--theme-txt-accent, #f1a324) 10%, transparent);
+  color: var(--theme-txt-main);
+  box-shadow: none;
+}
+
+.discover-modal-action--secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--theme-txt-accent, #f1a324) 16%, transparent);
+}
+
+.discover-modal-choice {
+  border: 0;
+  border-radius: var(--radius-in, 5px);
+  padding-inline: 0.45rem;
+}
+
+.discover-resource-carousel {
+  display: flex;
+  width: 100%;
+  gap: 0.75rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--theme-txt-sub) 35%, transparent) transparent;
+}
+
+.discover-resource-carousel-shell {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 4rem;
+}
+
+.discover-resource-carousel::-webkit-scrollbar {
+  height: 5px;
+}
+.discover-resource-carousel::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--theme-txt-sub) 35%, transparent);
+}
+
+.discover-resource-carousel__card {
+  width: calc((100% - 3.75rem) / 6);
+  min-width: 11rem;
+  flex: 0 0 calc((100% - 3.75rem) / 6);
+  scroll-snap-align: start;
+}
+
+.discover-resource-tags {
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.discover-resource-tags > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discover-active-filters {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.discover-active-filter {
+  display: inline-flex;
+  max-width: 12rem;
+  align-items: center;
+  gap: 0.3rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.3rem 0.55rem;
+  background: color-mix(in srgb, var(--discover-action-bg) 11%, transparent);
+  color: var(--theme-txt-main);
+  font-size: 0.72rem;
+  font-weight: 650;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.discover-active-filter:hover {
+  background: color-mix(in srgb, var(--discover-action-bg) 18%, transparent);
+}
+
+.discover-resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.discover-resource-list-item {
+  display: flex;
+  min-width: 0;
+  gap: 1rem;
+  padding: 0.65rem;
+  border-radius: var(--radius-out, 10px);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.discover-resource-list-item:hover {
+  background: color-mix(in srgb, var(--theme-txt-sub) 5%, transparent);
+}
+
+.discover-resource-list-item__preview {
+  position: relative;
+  width: clamp(10rem, 23vw, 16rem);
+  flex: 0 0 clamp(10rem, 23vw, 16rem);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-in, 5px);
+  @apply color-bg-grey-10;
+}
+
+.discover-resource-list-item__type {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  @apply color-bg color-txt-main;
+}
+
+.discover-resource-list-item__body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0;
+}
+
+@media (max-width: 1100px) {
+  .discover-resource-carousel__card {
+    width: calc((100% - 2.25rem) / 4);
+    flex-basis: calc((100% - 2.25rem) / 4);
+  }
+}
+
+@media (max-width: 760px) {
+  .discover-resource-carousel__card {
+    width: min(72vw, 17rem);
+    flex-basis: min(72vw, 17rem);
+  }
+
+  .discover-resource-list-item {
+    gap: 0.75rem;
+  }
+
+  .discover-resource-list-item__preview {
+    width: 9rem;
+    flex-basis: 9rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .discover-resource-list-item {
+    flex-direction: column;
+  }
+
+  .discover-resource-list-item__preview {
+    width: 100%;
+    flex-basis: auto;
+  }
+}

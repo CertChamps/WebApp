@@ -107,7 +107,7 @@ export default function DiscoverFiltersModal({
     return createPortal(
         <div
             ref={panelRef}
-            className="fixed z-[200] w-[min(90vw,28rem)] overflow-hidden rounded-2xl border-2 color-shadow color-bg shadow-none"
+            className="discover-filters-modal fixed z-[200] w-[min(90vw,28rem)] overflow-hidden rounded-2xl border-2 color-shadow color-bg shadow-none"
             style={{ top: pos.top, right: pos.right }}
             role="dialog"
             aria-label="Filters"
@@ -126,8 +126,8 @@ export default function DiscoverFiltersModal({
                                         <button
                                             type="button"
                                             onClick={() => toggleType(type)}
-                                            className={`text-sm font-medium text-left cursor-pointer ${
-                                                active ? "color-txt-accent" : "color-txt-sub hover:color-txt-main"
+                                            className={`discover-modal-choice text-sm font-medium text-left cursor-pointer ${
+                                                active ? "is-active" : "color-txt-sub hover:color-txt-main"
                                             }`}
                                         >
                                             {type}
@@ -160,8 +160,8 @@ export default function DiscoverFiltersModal({
                                         key={option.id}
                                         type="button"
                                         onClick={() => setDraftSort(option.id)}
-                                        className={`text-sm font-medium text-left cursor-pointer py-1.5 ${
-                                            active ? "color-txt-accent" : "color-txt-sub hover:color-txt-main"
+                                        className={`discover-modal-choice text-sm font-medium text-left cursor-pointer py-1.5 ${
+                                            active ? "is-active" : "color-txt-sub hover:color-txt-main"
                                         }`}
                                     >
                                         {option.label}
@@ -176,7 +176,7 @@ export default function DiscoverFiltersModal({
                     <button
                         type="button"
                         onClick={handleApply}
-                        className="inline-flex items-center justify-center px-4 py-1.5 rounded-xl color-bg-accent color-txt-accent font-semibold text-sm cursor-pointer hover:opacity-90"
+                        className="discover-modal-action--primary inline-flex items-center justify-center px-4 py-1.5 rounded-xl font-semibold text-sm cursor-pointer"
                     >
                         Apply
                     </button>

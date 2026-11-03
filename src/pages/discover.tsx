@@ -43,8 +43,6 @@ import {
 } from "../data/practiceHubSubjects";
 import { SubjectDropdown } from "../components/practiceHub";
 import {
-    LuArrowLeft,
-    LuArrowRight,
     LuBookOpen,
     LuBookmark,
     LuExternalLink,
@@ -57,12 +55,12 @@ import {
     LuUsers,
     LuX,
     LuChevronDown,
-    LuChevronLeft,
 } from "react-icons/lu";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import VideoEmbedModal from "../components/discover/VideoEmbedModal";
 import DiscoverMediaPreview from "../components/discover/DiscoverMediaPreview";
 import LinkedQuestionJump from "../components/discover/LinkedQuestionJump";
+import "../styles/discover.css";
 import {
     noteLinksQuestion,
     parseLinkedQuestions,
@@ -1103,14 +1101,14 @@ export default function Discover() {
             if (favouriteSubjectLabels.size === 0) return true;
             return favouriteSubjectLabels.has(resource.subject.toLowerCase());
         });
-        return (base.length > 0 ? base : filteredResources).slice(0, 5);
+        return (base.length > 0 ? base : filteredResources).slice(0, 18);
     }, [filteredResources, favouriteSubjectLabels, selectedSubject]);
 
     const recentResources = useMemo(
         () =>
             [...filteredResources]
                 .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
-                .slice(0, 5),
+                .slice(0, 18),
         [filteredResources]
     );
 
@@ -1426,14 +1424,14 @@ export default function Discover() {
         setSearchParams(next);
     };
 
-    const renderResourceCard = (resource: DiscoverResource) => {
+    const renderResourceCard = (resource: DiscoverResource, className = "") => {
         const rating = resource.ratingAverage && resource.ratingAverage > 0 ? resource.ratingAverage : null;
         const username = resource.username || "Unknown";
 
         return (
             <article
                 key={resource.id}
-                className="group relative flex flex-col cursor-pointer p-2 hover:z-10"
+                className={`group relative flex flex-col cursor-pointer p-2 hover:z-10 ${className}`}
                 onClick={() => openResource(resource)}
                 onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -1509,7 +1507,7 @@ export default function Discover() {
                     </div>
 
                     {resource.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 px-0.5 pt-1.5">
+                        <div className="discover-resource-tags flex gap-1 px-0.5 pt-1.5">
                             {resource.tags.slice(0, 3).map((tag) => (
                                 <span
                                     key={`${resource.id}-${tag}`}
@@ -1520,6 +1518,60 @@ export default function Discover() {
                             ))}
                         </div>
                     )}
+                </div>
+            </article>
+        );
+    };
+
+    const renderResourceListItem = (resource: DiscoverResource) => {
+        const rating = resource.ratingAverage && resource.ratingAverage > 0 ? resource.ratingAverage : null;
+        const username = resource.username || resource.sourceName || "Unknown";
+
+        return (
+            <article
+                key={resource.id}
+                className="discover-resource-list-item group"
+                onClick={() => openResource(resource)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openResource(resource);
+                    }
+                }}
+                role="button"
+                tabIndex={0}
+            >
+                <div className="discover-resource-list-item__preview">
+                    <DiscoverMediaPreview resource={resource} variant="thumb" />
+                    <span className="discover-resource-list-item__type">
+                        {resource.resourceSource === "pdf"
+                            ? "PDF"
+                            : resource.resourceSource === "image"
+                                ? "Image"
+                                : resource.type}
+                    </span>
+                </div>
+                <div className="discover-resource-list-item__body">
+                    <h3 className="text-base font-bold color-txt-main line-clamp-2">{resource.title}</h3>
+                    <p className="text-xs color-txt-sub">
+                        {username}{resource.timestamp ? ` · ${timeAgo(resource.timestamp)}` : ""}
+                    </p>
+                    {resource.description && (
+                        <p className="text-sm color-txt-sub line-clamp-2">{resource.description}</p>
+                    )}
+                    <div className="discover-resource-tags flex items-center gap-1.5 pt-0.5">
+                        {resource.tags.slice(0, 4).map((tag) => (
+                            <span key={`${resource.id}-${tag}`} className="px-2 py-0.5 rounded-full color-bg-grey-5 text-[11px] font-semibold color-txt-sub">
+                                {tag}
+                            </span>
+                        ))}
+                        {rating && (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold color-txt-sub">
+                                <LuStar size={12} fill="currentColor" className="color-txt-accent" />
+                                {rating.toFixed(1)}
+                            </span>
+                        )}
+                    </div>
                 </div>
             </article>
         );
@@ -1543,21 +1595,52 @@ export default function Discover() {
     const renderResourceSection = (
         title: string,
         sectionResources: DiscoverResource[],
-        options?: { showBack?: boolean }
+        options?: { showBack?: boolean; layout?: "carousel" | "list" }
     ) => (
         <section className="space-y-3">
-            <div className="flex items-center gap-2">
-                {options?.showBack && (
-                    <button
-                        type="button"
-                        onClick={clearSearchResults}
-                        className="inline-flex items-center justify-center rounded-md p-1 color-txt-sub hover:color-txt-main hover:color-bg-grey-5 cursor-pointer"
-                        aria-label="Back to Discover"
-                    >
-                        <LuChevronLeft size={22} strokeWidth={2.25} />
-                    </button>
-                )}
-                <h2 className="text-lg font-bold color-txt-main">{title}</h2>
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    {options?.showBack && (
+                        <button
+                            type="button"
+                            onClick={clearSearchResults}
+                            className="inline-flex items-center justify-center rounded-md p-1 color-txt-sub hover:color-txt-main hover:color-bg-grey-5 cursor-pointer"
+                            aria-label="Back to Discover"
+                        >
+                            Back
+                        </button>
+                    )}
+                    <h2 className="text-lg font-bold color-txt-main truncate">{title}</h2>
+                    {options?.layout === "list" && (
+                        <div className="discover-active-filters">
+                            {submittedQuery && (
+                                <button type="button" onClick={clearSearchResults} className="discover-active-filter">
+                                    “{submittedQuery}” <LuX size={13} />
+                                </button>
+                            )}
+                            {selectedSubject && (
+                                <button type="button" onClick={() => setSelectedSubjectId(null)} className="discover-active-filter">
+                                    {selectedSubject.label} <LuX size={13} />
+                                </button>
+                            )}
+                            {selectedTypes.map((type) => (
+                                <button
+                                    type="button"
+                                    key={type}
+                                    onClick={() => setSelectedTypes((current) => current.filter((item) => item !== type))}
+                                    className="discover-active-filter"
+                                >
+                                    {type} <LuX size={13} />
+                                </button>
+                            ))}
+                            {sortBy === "rating" && (
+                                <button type="button" onClick={() => setSortBy("date")} className="discover-active-filter">
+                                    Top rated <LuX size={13} />
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {sectionResources.length === 0 ? (
@@ -1570,9 +1653,19 @@ export default function Discover() {
                         Shared resources appear here after they are approved.
                     </p>
                 </div>
+            ) : options?.layout === "list" ? (
+                <div className="discover-resource-list">
+                    {sectionResources.map(renderResourceListItem)}
+                </div>
+            ) : options?.layout === "carousel" ? (
+                <div className="discover-resource-carousel-shell">
+                    <div className="discover-resource-carousel" data-discover-carousel tabIndex={0} aria-label={`${title} resources, scroll horizontally`}>
+                        {sectionResources.map((resource) => renderResourceCard(resource, "discover-resource-carousel__card"))}
+                    </div>
+                </div>
             ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-                    {sectionResources.map(renderResourceCard)}
+                    {sectionResources.map((resource) => renderResourceCard(resource))}
                 </div>
             )}
         </section>
@@ -1608,8 +1701,7 @@ export default function Discover() {
                         }}
                         className="inline-flex items-center gap-2 text-sm font-semibold color-txt-sub hover:color-txt-main cursor-pointer"
                     >
-                        <LuArrowLeft size={16} />
-                        Discover
+                        Back to Discover
                     </button>
                     {canDelete && (
                         <button
@@ -1905,7 +1997,7 @@ export default function Discover() {
     };
 
     return (
-        <div className="flex w-full h-full color-bg overflow-hidden">
+        <div className="discover-page flex w-full h-full color-bg overflow-hidden">
             <main ref={pageScrollRef} className="flex-1 min-w-0 h-full overflow-y-auto scrollbar-minimal">
             {selectedResource ? renderResourceDetailPage(selectedResource) : (
             <div className="w-full px-6 pt-4 pb-6 space-y-4">
@@ -1937,7 +2029,7 @@ export default function Discover() {
                                     type="button"
                                     role="option"
                                     aria-selected
-                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg color-bg-accent color-txt-accent text-sm font-semibold cursor-pointer"
+                                    className="discover-action--primary inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer"
                                     onClick={() => setPageMenuOpen(false)}
                                 >
                                     <LuSearch size={15} />
@@ -2040,7 +2132,7 @@ export default function Discover() {
                             }`}
                             style={
                                 aiSearchEnabled || aiSearching
-                                    ? { backgroundColor: "var(--theme-txt-accent)", color: "var(--paper-card-fade)" }
+                                    ? { backgroundColor: "var(--theme-txt-accent)", color: "var(--theme-txt-main)" }
                                     : undefined
                             }
                         >
@@ -2064,7 +2156,7 @@ export default function Discover() {
                         <button
                             type="button"
                             onClick={async () => { if (await requireSignIn("Share resource")) setShowForm(true); }}
-                            className="pointer-events-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-xl color-bg-accent color-txt-accent font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer"
+                            className="discover-action--primary pointer-events-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-opacity cursor-pointer"
                         >
                             <LuPlus size={16} />
                             Share resource
@@ -2090,7 +2182,7 @@ export default function Discover() {
                                         onClick={() => chooseSubject(subject.id)}
                                         className={`shrink-0 px-3 py-1.5 rounded-md text-sm font-semibold cursor-pointer ${
                                             selectedSubjectId === subject.id
-                                                ? "color-bg-accent color-txt-accent"
+                                                ? "discover-action--primary"
                                                 : "color-bg-grey-5 color-txt-main hover:opacity-90"
                                         }`}
                                     >
@@ -2115,7 +2207,6 @@ export default function Discover() {
                                     className="shrink-0 inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-sm font-semibold color-txt-sub hover:color-txt-main hover:color-bg-grey-5 transition-colors cursor-pointer whitespace-nowrap"
                                 >
                                     View all
-                                    <LuArrowRight size={14} />
                                 </button>
                             )}
                         />
@@ -2124,7 +2215,7 @@ export default function Discover() {
                         ref={filtersButtonRef}
                         type="button"
                         onClick={() => setShowFilters((open) => !open)}
-                        className="shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold color-bg-grey-5 color-txt-main cursor-pointer hover:opacity-90"
+                        className="discover-action--secondary shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold cursor-pointer"
                     >
                         <svg
                             width="18"
@@ -2168,7 +2259,7 @@ export default function Discover() {
                                 <button
                                     type="button"
                                     onClick={() => navigate(linkedQuestion.practiceUrl!)}
-                                    className="inline-flex items-center gap-2 rounded-xl color-bg px-4 py-2 text-sm font-bold color-txt-main cursor-pointer"
+                                    className="discover-action--secondary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold cursor-pointer"
                                 >
                                     <LuBookOpen size={15} /> Open question
                                 </button>
@@ -2176,7 +2267,7 @@ export default function Discover() {
                             <button
                                 type="button"
                                 onClick={async () => { if (await requireSignIn("Share resource")) setShowForm(true); }}
-                                className="inline-flex items-center gap-2 rounded-xl color-bg-accent color-txt-accent px-4 py-2 text-sm font-bold cursor-pointer"
+                                className="discover-action--primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold cursor-pointer"
                             >
                                 <LuPlus size={15} /> Link a resource
                             </button>
@@ -2206,7 +2297,6 @@ export default function Discover() {
                                         <span className="inline-flex items-center gap-1.5 rounded-full color-bg-accent color-txt-accent px-2.5 py-1 text-[11px] font-bold">
                                             <LuBookOpen size={12} /> {post.sourceContext === "whiteboard" ? "From Whiteboard" : "From Practice"}
                                         </span>
-                                        <LuArrowRight size={16} className="color-txt-sub transition-transform group-hover:translate-x-0.5" />
                                     </div>
                                     <h3 className="mt-3 line-clamp-2 text-base font-bold color-txt-main">{post.questionName}</h3>
                                     <p className="mt-1 text-xs color-txt-sub">
@@ -2230,13 +2320,13 @@ export default function Discover() {
                             renderResourceSection(
                                 "AI search results",
                                 filteredResources,
-                                { showBack: true }
+                                { showBack: true, layout: "list" }
                             )
                         ) : submittedQuery ? (
                             renderResourceSection(
                                 "Search results",
                                 filteredResources,
-                                { showBack: true }
+                                { showBack: true, layout: "list" }
                             )
                         ) : (
                             <>
@@ -2246,22 +2336,29 @@ export default function Discover() {
                                         : `More ${linkedQuestion.subjectLabel ?? "subject"} content`,
                                     linkedQuestionResources.exact.length
                                         ? linkedQuestionResources.exact
-                                        : linkedQuestionResources.fallback
+                                        : linkedQuestionResources.fallback,
+                                    { layout: "carousel" }
                                 )}
                                 {!linkedQuestion && renderResourceSection(
-                                    selectedSubject ? `${selectedSubject.label} resources` : "Recommended for you",
-                                    recommendedResources
+                                    selectedSubject
+                                        ? `${selectedSubject.label} resources`
+                                        : selectedTypes.length > 0
+                                            ? "Filtered resources"
+                                            : "Recommended for you",
+                                    selectedSubject || selectedTypes.length > 0 ? filteredResources : recommendedResources,
+                                    { layout: selectedSubject || selectedTypes.length > 0 ? "list" : "carousel" }
                                 )}
                                 {!selectedSubject && selectedTypes.length === 0 && renderResourceSection(
                                     "Recently added free resources",
-                                    recentResources
+                                    recentResources,
+                                    { layout: "carousel" }
                                 )}
                                 {showHomeCatalog && (catalogResources.length > 0 || hasMoreNotes || loadingMoreNotes) && (
                                     <>
                                         <div className="h-px w-full color-bg-grey-10" role="separator" />
                                         {visibleCatalog.length > 0 && (
                                             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-                                                {visibleCatalog.map(renderResourceCard)}
+                                                {visibleCatalog.map((resource) => renderResourceCard(resource))}
                                             </div>
                                         )}
                                         {loadingMoreNotes && (

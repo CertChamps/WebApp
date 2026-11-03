@@ -15,6 +15,7 @@
     opacity 200ms ease;
   overflow: hidden;
 }
+
 body.wb-focus-mode #app-navbar {
   width: 0 !important;
   min-width: 0 !important;
@@ -143,3 +144,97 @@ body.wb-focus-mode #app-navbar {
   @apply flex;
 }
 /* ===================================================================================== */ 
+
+.page-with-sidebar {
+  flex-direction: column;
+}
+
+#app-navbar.app-topnav {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 68px;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 0 clamp(1rem, 3vw, 2.5rem);
+  overflow: visible;
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-txt-sub) 17%, transparent);
+  transition: height 300ms ease, min-height 300ms ease, opacity 200ms ease;
+  z-index: 100;
+}
+
+body.wb-focus-mode #app-navbar.app-topnav {
+  width: 100% !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border: 0;
+}
+
+.app-topnav__links,
+.app-topnav__actions {
+  display: flex;
+  align-items: center;
+}
+
+.app-topnav__spacer {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.app-topnav__links { gap: 0.35rem; }
+.app-topnav__links button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  color: var(--theme-txt-sub);
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition: background 150ms, color 150ms;
+}
+.app-topnav__links button:hover,
+.app-topnav__links button.is-active {
+  color: var(--theme-txt-main);
+  background: color-mix(in srgb, var(--theme-txt-accent) 14%, transparent);
+}
+.app-topnav__actions { justify-content: flex-end; gap: 0.8rem; flex: 1 1 0; }
+.app-topnav__upgrade {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+  background: var(--theme-txt-accent);
+  color: var(--theme-txt-main);
+  font-size: 0.82rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.app-topnav__profile {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 2.25rem;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--theme-txt-sub) 25%, transparent);
+  border-radius: 50%;
+  color: var(--theme-txt-main);
+}
+.app-topnav__profile img { width: 100%; height: 100%; object-fit: cover; }
+.app-topnav button { cursor: pointer; }
+.app-topnav button:focus-visible { outline: 1px solid var(--theme-txt-accent); outline-offset: 2px; }
+
+@media (max-width: 650px) {
+  #app-navbar.app-topnav { gap: 0.5rem; padding-inline: 0.75rem; height: 60px; min-height: 60px; }
+  .app-topnav__links button { padding: 0.5rem 0.6rem; font-size: 0.78rem; }
+  .app-topnav__links button svg { display: none; }
+  .app-topnav__actions { gap: 0.3rem; }
+  .app-topnav__upgrade { font-size: 0; padding: 0.55rem; }
+  .app-topnav__upgrade svg { width: 18px; height: 18px; }
+}

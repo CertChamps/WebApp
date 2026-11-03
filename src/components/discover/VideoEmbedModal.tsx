@@ -163,7 +163,7 @@ export default function VideoEmbedModal({ url, title, onClose, className }: Vide
           setPoppedOut((value) => !value);
         }}
         className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold cursor-pointer ${
-          poppedOut ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-txt-main"
+          poppedOut ? "discover-modal-action--primary" : "discover-modal-action--secondary"
         }`}
         title={poppedOut ? "Return to full player" : "Pop out video over your work"}
       >
@@ -184,7 +184,7 @@ export default function VideoEmbedModal({ url, title, onClose, className }: Vide
   const panel = poppedOut ? (
     <div data-theme={options.theme}>
       <div
-        className="fixed flex flex-col overflow-hidden rounded-xl border-2 color-shadow color-bg"
+        className="discover-video-modal fixed flex flex-col overflow-hidden rounded-xl border-2 color-shadow color-bg"
         style={{
           left: pos.left,
           top: pos.top,
@@ -231,7 +231,7 @@ export default function VideoEmbedModal({ url, title, onClose, className }: Vide
     </div>
   ) : (
     <div
-      className={`fixed inset-0 ${className ?? "z-[80]"} flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm`}
+      className={`discover-video-modal fixed inset-0 ${className ?? "z-[80]"} flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"

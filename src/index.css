@@ -138,7 +138,9 @@ html.capacitor-ios-edge-to-edge #app-navbar {
   /* Main Colour Set */
   --color-white: #ffffff;
   --color-black: #353535;
-  --color-blue: #27548a;
+  --color-brand-accent: #f1a324;
+  /* Legacy blue utilities are the main theme's accent throughout the app. */
+  --color-blue: var(--color-brand-accent);
   --color-grey: #9ca3af;
   --color-light-grey: #bdbdbd; /* #e0e0e0 og*/ 
   --color-red: #f03131;

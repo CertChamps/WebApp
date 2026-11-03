@@ -380,7 +380,7 @@ export default function Whiteboards() {
         <div className="grid w-full grid-cols-2 gap-3">
           <motion.button
             type="button"
-            className={actionCardClassName}
+            className={`${actionCardClassName} whiteboards__action-card--primary`}
             onClick={() => { if (requestCreatePage()) setShowCreatePage(true); }}
             disabled={actionsDisabled}
             initial={{ opacity: 0, y: 12 }}
@@ -397,7 +397,7 @@ export default function Whiteboards() {
 
           <motion.button
             type="button"
-            className={actionCardClassName}
+            className={`${actionCardClassName} whiteboards__action-card--secondary`}
             onClick={handleFindQuestions}
             disabled={actionsDisabled}
             initial={{ opacity: 0, y: 12 }}

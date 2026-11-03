@@ -1,5 +1,35 @@
 @reference '../index.css';
 
+.practice-hub {
+  --practice-action-bg: var(--theme-txt-accent, #f1a324);
+  --practice-action-text: var(--theme-txt-main, #172033);
+}
+
+.whiteboards__action-card--primary {
+  background: var(--theme-txt-accent, #f1a324);
+  color: var(--theme-txt-main, #172033);
+}
+
+.whiteboards__action-card--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--theme-txt-accent, #f1a324) 88%, var(--theme-txt-main, #172033));
+}
+
+.whiteboards__action-card--primary :is(.color-txt-main, .color-txt-accent) {
+  color: var(--theme-txt-main, #172033);
+}
+
+.whiteboards__action-card--primary .color-txt-sub {
+  color: color-mix(in srgb, var(--theme-txt-main, #172033) 72%, transparent);
+}
+
+.whiteboards__action-card--secondary {
+  background: color-mix(in srgb, var(--theme-txt-accent, #f1a324) 10%, transparent);
+}
+
+.whiteboards__action-card--secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--theme-txt-accent, #f1a324) 16%, transparent);
+}
+
 /* Practice Hub – Papers browser */
 
 /* Full length of page: use full width and full height */
@@ -1806,4 +1836,36 @@
 .year-clock-picker__all--selected:hover {
   @apply color-bg-accent color-txt-accent;
   opacity: 0.95;
+}
+
+/* Shared filled action treatment for Practice Hub controls. */
+.practice-hub .blue-btn:not(.practice-hub__paper-card-tag-pill),
+.practice-hub .practice-hub__subject-option[aria-selected="true"],
+.practice-hub .practice-hub__level-option[aria-selected="true"],
+.practice-hub button[aria-pressed="true"],
+.practice-hub .practice-hub__pill--active,
+.practice-hub .year-clock-picker__all--selected {
+  border-color: transparent;
+  background: var(--practice-action-bg);
+  color: var(--practice-action-text);
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.practice-hub .blue-btn:not(.practice-hub__paper-card-tag-pill):hover,
+.practice-hub .practice-hub__subject-option[aria-selected="true"]:hover,
+.practice-hub .practice-hub__level-option[aria-selected="true"]:hover,
+.practice-hub button[aria-pressed="true"]:hover,
+.practice-hub .practice-hub__pill--active:hover,
+.practice-hub .year-clock-picker__all--selected:hover {
+  background: var(--practice-action-bg);
+  color: var(--practice-action-text);
+  opacity: 0.88;
+}
+
+.practice-hub .year-clock-picker__label--selected {
+  background: var(--practice-action-bg);
+  color: var(--practice-action-text);
+  font-weight: 700;
+  box-shadow: none;
 }
