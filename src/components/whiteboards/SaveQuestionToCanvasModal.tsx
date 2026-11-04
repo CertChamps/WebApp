@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   LuCheck,
   LuFileText,
@@ -46,7 +46,11 @@ export default function SaveQuestionToCanvasModal({
   onClose,
   onSaved,
 }: Props) {
+  const location = useLocation();
   const navigate = useNavigate();
+  const navigationState = location.pathname === "/practice"
+    ? { practiceReturnTo: `${location.pathname}${location.search}` }
+    : undefined;
   const { pages, loading, createPage, updatePage, requestCreatePage, aceGateModal } = useWhiteboards(subject);
   const [mode, setMode] = useState<DestinationMode>("new");
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
@@ -89,7 +93,7 @@ export default function SaveQuestionToCanvasModal({
         }
         onSaved?.();
         onClose();
-        navigate(`/whiteboards/page/${target.id}?q=${encodeURIComponent(attachmentId)}`);
+        navigate(`/whiteboards/page/${target.id}?q=${encodeURIComponent(attachmentId)}`, { state: navigationState });
         return;
       }
 
@@ -102,7 +106,7 @@ export default function SaveQuestionToCanvasModal({
       if (!created) return;
       onSaved?.();
       onClose();
-      navigate(`/whiteboards/page/${created.id}?q=${encodeURIComponent(attachment.id)}`);
+      navigate(`/whiteboards/page/${created.id}?q=${encodeURIComponent(attachment.id)}`, { state: navigationState });
     } catch (saveError) {
       console.error("[SaveQuestionToCanvasModal] save failed:", saveError);
       setError("Couldn’t add this question. Please try again.");

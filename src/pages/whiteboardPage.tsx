@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   LuBookOpen,
@@ -92,6 +92,11 @@ import { useQuestionSessionLog, type QuestionMeta } from "../hooks/useQuestionSe
 import { UserContext } from "../context/UserContext";
 import "../styles/questions.css";
 import "../styles/practiceHub.css";
+
+const DARK_PAPER_THEMES = new Set([
+  "dark", "markoblank", "icebergDark", "husqy", "shadow", "gruvbox",
+  "magicGirl", "nordDark", "aurora", "blueberryDark", "darkFuchsia",
+]);
 
 /** Matches the stroke shape used by DrawingCanvas + useCanvasStorage. */
 type CanvasStroke = {
@@ -362,6 +367,7 @@ export default function WhiteboardPageView() {
 }
 
 function WhiteboardPageViewInner() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { pageId } = useParams<{ pageId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -377,6 +383,18 @@ function WhiteboardPageViewInner() {
   useEffect(() => {
     if (sidebarSubject) setLastWhiteboardsSubject(sidebarSubject);
   }, [sidebarSubject]);
+
+  const pageSubject = page?.subject ? getPracticeSubjectId(page.subject) : sidebarSubject;
+  const requestedReturnTo = (location.state as { practiceReturnTo?: unknown } | null)?.practiceReturnTo;
+  const practiceReturnTo = typeof requestedReturnTo === "string" &&
+    (requestedReturnTo === "/practice" || requestedReturnTo.startsWith("/practice?")) &&
+    new URLSearchParams(requestedReturnTo.split("?")[1] ?? "").get("subject") === pageSubject
+      ? requestedReturnTo
+      : null;
+  const practiceHome = practiceReturnTo ?? (pageSubject
+    ? `/practice?subject=${encodeURIComponent(pageSubject)}`
+    : "/practice");
+  const whiteboardNavigationState = practiceReturnTo ? { practiceReturnTo } : undefined;
 
   const {
     folders,
@@ -421,6 +439,11 @@ function WhiteboardPageViewInner() {
   const { saveCanvas, loadCanvas, uploadCanvasAsset } = useCanvasStorage();
 
   const attachments = useMemo(() => page?.attachedQuestions ?? [], [page]);
+  const bankQuestionObjectIds = useMemo(() => new Set(
+    attachments.filter((attachment) => attachment.source === "bank")
+      .map((attachment) => questionAttachmentObjectId(attachment.id))
+  ), [attachments]);
+  const darkPaperObjectIds = DARK_PAPER_THEMES.has(options.theme) ? bankQuestionObjectIds : undefined;
   const [attachmentIndex, setAttachmentIndex] = useState(0);
   const [pinnedSideObject, setPinnedSideObject] = useState<CanvasObject | null>(null);
   const [sessionSidebarOpen, setSessionSidebarOpen] = useState(true);
@@ -1299,9 +1322,9 @@ function WhiteboardPageViewInner() {
 
   const openPage = useCallback(
     (target: WhiteboardPage) => {
-      if (target.id !== pageId) navigate(`/whiteboards/page/${target.id}`);
+      if (target.id !== pageId) navigate(`/whiteboards/page/${target.id}`, { state: whiteboardNavigationState });
     },
-    [navigate, pageId]
+    [navigate, pageId, whiteboardNavigationState]
   );
 
   const openQuestion = useCallback(
@@ -1314,9 +1337,9 @@ function WhiteboardPageViewInner() {
         }
         return;
       }
-      navigate(`/whiteboards/page/${target.id}?q=${encodeURIComponent(attachmentId)}`);
+      navigate(`/whiteboards/page/${target.id}?q=${encodeURIComponent(attachmentId)}`, { state: whiteboardNavigationState });
     },
-    [pageId, attachments, navigate]
+    [pageId, attachments, navigate, whiteboardNavigationState]
   );
 
   const sidebarQuestion = useMemo(() => {
@@ -1478,9 +1501,9 @@ function WhiteboardPageViewInner() {
         <button
           type="button"
           className="rounded-xl px-4 py-2 text-sm font-semibold color-bg-accent color-txt-accent hover:opacity-90 transition-opacity cursor-pointer"
-          onClick={() => navigate("/whiteboards")}
+          onClick={() => navigate(practiceHome)}
         >
-          Back to Whiteboards
+          Back to Practice
         </button>
       </div>
     );
@@ -1597,7 +1620,7 @@ function WhiteboardPageViewInner() {
             setCreateInFolderId(parentId);
             setCreatingFolder(true);
           }}
-          onHome={() => navigate("/whiteboards")}
+          onHome={() => navigate(practiceHome)}
           onMove={(drag, move) => void moveItem(drag, move)}
           openFolderId={searchParams.get("folder")}
         />
@@ -1644,11 +1667,11 @@ function WhiteboardPageViewInner() {
           {attachments.length > 0 ? (
             <div
               ref={centerTitleRowRef}
-              className="flex min-w-0 flex-1 basis-[240px] items-center justify-center gap-0.5"
+              className="flex min-w-0 w-full max-w-[340px] items-center justify-center gap-0.5"
             >
               <button
                 type="button"
-                className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg color-txt-sub transition-colors hover:color-bg-grey-5 hover:color-txt-main cursor-pointer disabled:opacity-30 disabled:cursor-default"
                 onClick={() => setAttachmentIndex((i) => Math.max(0, i - 1))}
                 disabled={attachmentIndex <= 0}
                 aria-label="Previous question"
@@ -1656,6 +1679,7 @@ function WhiteboardPageViewInner() {
                 <LuChevronLeft size={16} />
               </button>
               <QuestionTitlePicker
+                subtle
                 anchorRef={centerTitleRowRef}
                 title={currentAttachment?.label ?? ""}
                 titleKey={currentAttachment?.id}
@@ -1669,7 +1693,7 @@ function WhiteboardPageViewInner() {
               />
               <button
                 type="button"
-                className="shrink-0 rounded-lg p-1.5 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer disabled:opacity-30"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg color-txt-sub transition-colors hover:color-bg-grey-5 hover:color-txt-main cursor-pointer disabled:opacity-30 disabled:cursor-default"
                 onClick={() => setAttachmentIndex((i) => Math.min(attachments.length - 1, i + 1))}
                 disabled={attachmentIndex >= attachments.length - 1}
                 aria-label="Next question"
@@ -1797,6 +1821,7 @@ function WhiteboardPageViewInner() {
                 showGradingOverlay={false}
                 enableAttachments
                 registerAttachQuestionImages={registerAttachQuestionImages}
+                darkPaperObjectIds={darkPaperObjectIds}
                 registerRestoreCanvasObject={registerRestoreCanvasObject}
                 onPinObjectToSide={handlePinObjectToSide}
                 onAttachQuestions={() => setQuestionModalMode("attach")}
@@ -2014,6 +2039,7 @@ function WhiteboardPageViewInner() {
                               images={sidePanelImages}
                               className="w-full h-auto"
                               roundStack
+                              darkPaper={bankQuestionObjectIds.has(pinnedSideObject?.id ?? "")}
                             />
                           )}
                         </div>
@@ -2084,7 +2110,7 @@ function WhiteboardPageViewInner() {
           onSave={(result) => updatePage(editingPage.id, result)}
           onDelete={async (target) => {
             await deletePage(target);
-            if (target.id === pageId) navigate("/whiteboards");
+            if (target.id === pageId) navigate(practiceHome);
           }}
           onClose={() => setEditingPage(null)}
         />
@@ -2099,7 +2125,7 @@ function WhiteboardPageViewInner() {
               subject: sidebarSubject,
               folderId: createInFolderId,
             });
-            if (created) navigate(`/whiteboards/page/${created.id}`);
+            if (created) navigate(`/whiteboards/page/${created.id}`, { state: whiteboardNavigationState });
           }}
           onClose={() => setCreatingPage(false)}
         />

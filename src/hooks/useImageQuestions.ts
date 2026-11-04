@@ -7,10 +7,10 @@ import {
 } from "../lib/examCycle";
 import {
   listCatalogueLevels,
-  listCataloguePapers,
   listCatalogueQuestions,
   listCatalogueSubjectAvailability,
   listCatalogueTopics,
+  buildCataloguePapers,
   resolveImageDownloadUrl,
   dedupeCatalogueByFileStem,
   type CataloguePaper,
@@ -78,7 +78,8 @@ const CACHE_TTL = 5 * 60 * 1000;
 const levelCache = new Map<string, CacheEntry<string[]>>();
 const topicCache = new Map<string, CacheEntry<ImageTopic[]>>();
 const questionCache = new Map<string, CacheEntry<ImageQuestion[]>>();
-const paperCache = new Map<string, CacheEntry<ImagePaperGroup[]>>();
+type PaperBrowseData = { papers: ImagePaperGroup[]; topicCounts: Record<string, number> };
+const paperCache = new Map<string, CacheEntry<PaperBrowseData>>();
 let subjectAvailabilityCache: CacheEntry<ImageSubjectAvailability[]> | null = null;
 
 function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
@@ -639,18 +640,34 @@ export async function listQuestionsForPaper(
   return questions;
 }
 
+async function loadPaperBrowseDataForSubjectLevel(
+  subject: string,
+  level: string,
+  cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
+): Promise<PaperBrowseData> {
+  const key = `${cycle}:${subject}/${level}:papers`;
+  const cached = getCached(paperCache, key);
+  if (cached) return cached;
+
+  const questions = await listCatalogueQuestions(subject, level, { cycle });
+  const counts = new Map<string, number>();
+  for (const question of questions) {
+    counts.set(question.topic, (counts.get(question.topic) ?? 0) + 1);
+  }
+  const data = {
+    papers: buildCataloguePapers(questions),
+    topicCounts: Object.fromEntries(counts),
+  };
+  paperCache.set(key, { data, ts: Date.now() });
+  return data;
+}
+
 export async function listPaperGroupsForSubjectLevel(
   subject: string,
   level: string,
   cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
 ): Promise<ImagePaperGroup[]> {
-  const key = `${cycle}:${subject}/${level}:papers`;
-  const cached = getCached(paperCache, key);
-  if (cached) return cached;
-
-  const papers = await listCataloguePapers(subject, level, cycle);
-  paperCache.set(key, { data: papers, ts: Date.now() });
-  return papers;
+  return (await loadPaperBrowseDataForSubjectLevel(subject, level, cycle)).papers;
 }
 
 export type UseImageTopicsResult = {
@@ -717,38 +734,44 @@ export function useImagePapers(
   subject: string | null,
   level: string | null,
   cycle: ExamCycleId = DEFAULT_EXAM_CYCLE
-): { papers: ImagePaperGroup[]; loading: boolean; error: string | null } {
+): { papers: ImagePaperGroup[]; topicCounts: Record<string, number> | null; loading: boolean; error: string | null } {
   const [papers, setPapers] = useState<ImagePaperGroup[]>([]);
+  const [topicCounts, setTopicCounts] = useState<Record<string, number> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef(0);
 
   useEffect(() => {
+    const id = ++abortRef.current;
     if (!subject || !level) {
       setPapers([]);
+      setTopicCounts(null);
       setLoading(false);
       setError(null);
       return;
     }
-    const id = ++abortRef.current;
+    setPapers([]);
+    setTopicCounts(null);
     setLoading(true);
     setError(null);
-    listPaperGroupsForSubjectLevel(subject, level, cycle)
-      .then((rows) => {
+    loadPaperBrowseDataForSubjectLevel(subject, level, cycle)
+      .then((data) => {
         if (id !== abortRef.current) return;
-        setPapers(rows);
+        setPapers(data.papers);
+        setTopicCounts(data.topicCounts);
       })
       .catch((err: unknown) => {
         if (id !== abortRef.current) return;
         setError(err instanceof Error ? err.message : "Failed to load papers");
         setPapers([]);
+        setTopicCounts(null);
       })
       .finally(() => {
         if (id === abortRef.current) setLoading(false);
       });
   }, [subject, level, cycle]);
 
-  return { papers, loading, error };
+  return { papers, topicCounts, loading, error };
 }
 
 export type UseImageQuestionsResult = {

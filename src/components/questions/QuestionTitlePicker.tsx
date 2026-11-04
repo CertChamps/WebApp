@@ -18,6 +18,7 @@ type QuestionTitlePickerProps = {
   isCompleted?: (id: string) => boolean;
   showCompletion?: boolean;
   disabled?: boolean;
+  subtle?: boolean;
   /** When set, dropdown aligns to this element (e.g. the full prev/title/next row). */
   anchorRef?: RefObject<HTMLElement | null>;
 };
@@ -43,6 +44,7 @@ export default function QuestionTitlePicker({
   isCompleted,
   showCompletion = false,
   disabled = false,
+  subtle = false,
   anchorRef,
 }: QuestionTitlePickerProps) {
   const [open, setOpen] = useState(false);
@@ -130,7 +132,7 @@ export default function QuestionTitlePicker({
               />
               <motion.div
                 key="question-title-picker-panel"
-                className="question-title-picker__panel pointer-events-auto fixed z-[60] overflow-hidden rounded-lg color-bg border-2 color-shadow"
+                className={`question-title-picker__panel pointer-events-auto fixed z-[60] overflow-hidden rounded-lg color-bg ${subtle ? "border border-grey/20 shadow-sm" : "border-2 color-shadow"}`}
                 style={{
                   top: panelPosition.top,
                   left: panelPosition.left,
@@ -159,7 +161,9 @@ export default function QuestionTitlePicker({
                         data-active={isActive ? "true" : undefined}
                         className={`question-title-picker__item flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors duration-150 ${
                           isActive
-                            ? "color-bg-accent color-txt-accent font-bold"
+                            ? subtle
+                              ? "color-bg-grey-5 color-txt-main font-semibold"
+                              : "color-bg-accent color-txt-accent font-bold"
                             : "bg-transparent color-txt-main hover:color-bg-grey-10"
                         }`}
                         onClick={() => handleSelect(index)}
@@ -192,11 +196,11 @@ export default function QuestionTitlePicker({
 
   return (
     <>
-      <div ref={containerRef} className="question-title-picker relative flex min-w-0 flex-col items-center px-2">
+      <div ref={containerRef} className={`question-title-picker relative flex min-w-0 flex-col items-center ${subtle ? "flex-1" : "px-2"}`}>
         {canOpen ? (
           <button
             type="button"
-            className="question-title-picker__trigger pointer-events-auto flex min-w-0 w-full max-w-[280px] flex-col items-center rounded-md px-1 py-0.5 text-center transition-colors duration-150 hover:color-bg-grey-5"
+            className={`question-title-picker__trigger pointer-events-auto flex min-w-0 w-full flex-col items-center text-center transition-colors duration-150 hover:color-bg-grey-5 ${subtle ? "rounded-lg px-2 py-1" : "max-w-[280px] rounded-md px-1 py-0.5"}`}
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
             aria-haspopup="listbox"
@@ -211,7 +215,7 @@ export default function QuestionTitlePicker({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -8 }}
                     transition={{ duration: 0.15, ease: [0.25, 0.4, 0.25, 1] }}
-                    className="block truncate color-txt-accent text-sm font-bold leading-tight"
+                    className={`block truncate text-sm leading-tight ${subtle ? "color-txt-main font-semibold" : "color-txt-accent font-bold"}`}
                     title={title}
                   >
                     {title}

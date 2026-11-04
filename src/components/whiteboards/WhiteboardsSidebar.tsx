@@ -75,8 +75,8 @@ type Props = {
   className?: string;
 };
 
-/** Highlight lives on this shell — no radius, no horizontal padding — so it
- *  paints edge-to-edge. Inner buttons carry the text inset. */
+/** Selection styling lives on this shell so the row stays aligned edge-to-edge.
+ *  Inner buttons carry the text inset. */
 const rowBase =
   "group relative flex w-full items-center gap-1 py-1.5 text-left text-[15px] leading-snug transition-colors select-none rounded-none";
 
@@ -246,12 +246,14 @@ function PageRow({ page }: { page: WhiteboardPage }) {
         {...attributes}
         {...listeners}
         className={`${rowBase} cursor-grab active:cursor-grabbing ${
-          isActive ? "color-txt-accent font-bold" : "color-txt-main hover:color-bg-grey-5"
+          isActive
+            ? "color-txt-main font-semibold before:absolute before:inset-y-1 before:left-0 before:w-[2px] before:rounded-r-full before:bg-current before:opacity-70"
+            : "color-txt-main hover:color-bg-grey-5"
         }`}
         style={{
           WebkitTouchCallout: "none",
           backgroundColor: isActive
-            ? "color-mix(in srgb, var(--theme-txt-accent) 4%, transparent)"
+            ? "color-mix(in srgb, var(--theme-txt-main) 7%, transparent)"
             : undefined,
         }}
         onContextMenu={(e) => e.preventDefault()}
@@ -266,6 +268,7 @@ function PageRow({ page }: { page: WhiteboardPage }) {
             ctx.onOpenPage(page);
             if (hasQuestions) ctx.togglePage(page.id);
           }}
+          aria-current={isActive ? "page" : undefined}
           aria-expanded={hasQuestions ? isExpanded : undefined}
         >
           <PageGlyph page={page} muted={!isActive} />
@@ -631,8 +634,8 @@ export default function WhiteboardsSidebar({
           type="button"
           className="shrink-0 rounded-lg p-2 color-txt-sub hover:color-bg-grey-5 transition-colors cursor-pointer"
           onClick={onHome}
-          aria-label="Whiteboards home"
-          title="Whiteboards home"
+          aria-label="Practice home"
+          title="Practice home"
         >
           <LuHouse size={HEADER_ICON} />
         </button>

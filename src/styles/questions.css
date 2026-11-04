@@ -902,6 +902,24 @@ html.capacitor-ios-edge-to-edge .questions-top-bar {
   pointer-events: none;
 }
 
+/* Paper scans are light images, even when the surrounding question UI is dark. */
+:is(
+  [data-theme="dark"],
+  [data-theme="markoblank"],
+  [data-theme="icebergDark"],
+  [data-theme="husqy"],
+  [data-theme="shadow"],
+  [data-theme="gruvbox"],
+  [data-theme="magicGirl"],
+  [data-theme="nordDark"],
+  [data-theme="aurora"],
+  [data-theme="blueberryDark"],
+  [data-theme="darkFuchsia"]
+) .zoomable-question-page__img--dark-paper {
+  background: #fff;
+  filter: invert(0.9) hue-rotate(180deg);
+}
+
 .zoomable-question-page__inline-portal {
   position: fixed;
   z-index: 500;

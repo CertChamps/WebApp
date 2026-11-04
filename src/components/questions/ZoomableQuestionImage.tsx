@@ -26,6 +26,8 @@ type Props = {
   className?: string;
   /** Round top of first image + bottom of last (all corners when only one). */
   roundStack?: boolean;
+  /** Leave arbitrary uploads unchanged; question papers use a dark surface in dark themes. */
+  darkPaper?: boolean;
 };
 
 function stackedImageRoundClass(index: number, total: number): string {
@@ -455,10 +457,12 @@ function PageImages({
   images,
   className = "",
   roundStack = false,
+  darkPaper = true,
 }: {
   images: ZoomablePageImage[];
   className?: string;
   roundStack?: boolean;
+  darkPaper?: boolean;
 }) {
   return (
     <>
@@ -467,7 +471,7 @@ function PageImages({
           key={img.key ?? `${img.src}-${idx}`}
           src={img.src}
           alt={img.alt}
-          className={`zoomable-question-page__img ${roundStack ? stackedImageRoundClass(idx, images.length) : ""} ${className}`.trim()}
+          className={`zoomable-question-page__img${darkPaper ? " zoomable-question-page__img--dark-paper" : ""} ${roundStack ? stackedImageRoundClass(idx, images.length) : ""} ${className}`.trim()}
           draggable={false}
         />
       ))}
@@ -475,7 +479,7 @@ function PageImages({
   );
 }
 
-export default function ZoomableQuestionImage({ images, className = "", roundStack = false }: Props) {
+export default function ZoomableQuestionImage({ images, className = "", roundStack = false, darkPaper = true }: Props) {
   const [phase, setPhase] = useState<FullscreenPhase>("closed");
   const [overlayVisible, setOverlayVisible] = useState(false);
   const [flightStyle, setFlightStyle] = useState<CSSProperties | undefined>(undefined);
@@ -673,7 +677,7 @@ export default function ZoomableQuestionImage({ images, className = "", roundSta
           onTransitionEnd={inline.onTransitionEnd}
           aria-hidden={hideInline || undefined}
         >
-          <PageImages images={images} className={className} roundStack={roundStack} />
+          <PageImages images={images} className={className} roundStack={roundStack} darkPaper={darkPaper} />
         </div>
       </div>
 
@@ -695,7 +699,7 @@ export default function ZoomableQuestionImage({ images, className = "", roundSta
                 style={transformStyle}
                 onTransitionEnd={inline.onTransitionEnd}
               >
-                <PageImages images={images} className={className} roundStack={roundStack} />
+                <PageImages images={images} className={className} roundStack={roundStack} darkPaper={darkPaper} />
               </div>
             </div>,
             portalTarget
@@ -755,7 +759,7 @@ export default function ZoomableQuestionImage({ images, className = "", roundSta
                     overlay.onTransitionEnd(e);
                   }}
                 >
-                  <PageImages images={images} className={className} roundStack={roundStack} />
+                  <PageImages images={images} className={className} roundStack={roundStack} darkPaper={darkPaper} />
                 </div>
               </div>
             </div>,

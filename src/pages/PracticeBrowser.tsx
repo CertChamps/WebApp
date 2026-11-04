@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   PiArrowLeft as LuArrowLeft,
   PiBookOpen as LuBookOpen,
@@ -12,7 +12,7 @@ import {
   PiStar as LuStar,
   PiStarFill,
 } from "react-icons/pi";
-import { LuDownload, LuFileText, LuPlus } from "react-icons/lu";
+import { LuCheck, LuDownload, LuFileText, LuPlus, LuTrash2 } from "react-icons/lu";
 import { CollapsibleSidebar } from "../components/sidebar/CollapsibleSidebar";
 import type { SidebarPanelId } from "../components/sidebar/SidebarTileManager";
 import { DISCOVER_SIDEBAR_PARAM } from "../lib/discoverLinks";
@@ -47,12 +47,13 @@ import {
 import { parseExamCycle, type ExamCycleId, EXAM_CYCLES } from "../lib/examCycle";
 import SaveQuestionToCanvasModal from "../components/whiteboards/SaveQuestionToCanvasModal";
 import { buildImageAttachment } from "../lib/whiteboardAttachments";
-import type { AttachedQuestion } from "../data/whiteboards";
+import type { AttachedQuestion, WhiteboardPage } from "../data/whiteboards";
 import { PRACTICE_PAPER_COVERS } from "../data/generatedPracticePaperCovers";
 import { OFFICIAL_PRACTICE_PAPER_LINKS } from "../data/generatedOfficialPracticePaperLinks";
 import "../styles/practiceBrowser.css";
 import { useRequireSignIn } from "../hooks/useRequireSignIn";
 import PageDetailsModal from "../components/whiteboards/PageDetailsModal";
+import WhiteboardModal from "../components/whiteboards/WhiteboardModal";
 import { useWhiteboards } from "../hooks/useWhiteboards";
 import { setLastWhiteboardsSubject } from "../data/whiteboards";
 
@@ -317,6 +318,7 @@ function QuestionCard({
 
 function PracticeBrowserInner() {
   const requireSignIn = useRequireSignIn();
+  const location = useLocation();
   const navigate = useNavigate();
   const { options } = useContext(OptionsContext);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -334,13 +336,52 @@ function PracticeBrowserInner() {
   const selectedPaperNum =
     paperNumParam === "1" || paperNumParam === "2" ? Number(paperNumParam) : null;
   const storageSubject = subjectId ? getStorageFolderName(subjectId) : null;
-  const { pages, loading: pagesLoading, createPage, requestCreatePage, aceGateModal } = useWhiteboards(subjectId);
+  const { pages, loading: pagesLoading, createPage, deletePage, requestCreatePage, aceGateModal } = useWhiteboards(subjectId);
   const [showCreatePage, setShowCreatePage] = useState(false);
+  const [selectedPageIds, setSelectedPageIds] = useState<Set<string>>(new Set());
+  const [pagesToDelete, setPagesToDelete] = useState<WhiteboardPage[]>([]);
+  const [confirmingPageDelete, setConfirmingPageDelete] = useState(false);
+  const [deletingPages, setDeletingPages] = useState(false);
+  const [pageDeleteError, setPageDeleteError] = useState("");
   const [whiteboardOpening, setWhiteboardOpening] = useState(false);
   const [whiteboardOpenError, setWhiteboardOpenError] = useState("");
   const recentPages = useMemo(() => [...pages].sort((a, b) =>
     Math.max(b.lastOpenedAt, b.updatedAt, b.createdAt) - Math.max(a.lastOpenedAt, a.updatedAt, a.createdAt)
   ), [pages]);
+  const selectedPages = recentPages.filter((page) => selectedPageIds.has(page.id));
+
+  useEffect(() => {
+    setSelectedPageIds(new Set());
+    setPagesToDelete([]);
+    setConfirmingPageDelete(false);
+    setPageDeleteError("");
+  }, [subjectId]);
+
+  const togglePageSelection = (pageId: string) => {
+    setSelectedPageIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(pageId)) next.delete(pageId);
+      else next.add(pageId);
+      return next;
+    });
+  };
+
+  const deleteSelectedPages = async () => {
+    if (deletingPages || pagesToDelete.length === 0) return;
+    setDeletingPages(true);
+    setPageDeleteError("");
+    try {
+      for (const page of pagesToDelete) await deletePage(page);
+      setSelectedPageIds(new Set());
+      setPagesToDelete([]);
+      setConfirmingPageDelete(false);
+    } catch (error) {
+      console.error("[PracticeBrowser] Could not delete selected study pages:", error);
+      setPageDeleteError("Couldn’t delete all selected pages. Please try again.");
+    } finally {
+      setDeletingPages(false);
+    }
+  };
 
   const [search, setSearch] = useState("");
   const [openPaperPdfKey, setOpenPaperPdfKey] = useState<string | null>(null);
@@ -376,6 +417,7 @@ function PracticeBrowserInner() {
   );
   const {
     papers: paperGroups,
+    topicCounts,
     loading: papersLoading,
     error: papersError,
   } = useImagePapers(
@@ -1004,10 +1046,15 @@ function PracticeBrowserInner() {
         if (requestCreatePage()) setShowCreatePage(true);
       }}
     >
-      <LuPlus size={17} aria-hidden /> Create Page
+      <LuPlus size={16} aria-hidden /> New page
     </button>
   );
   const pageTitle = selectedSubject?.label ?? "Practice Questions";
+  const practiceReturnTo = `${location.pathname}${location.search}`;
+  const openStudyPage = (pageId: string) => {
+    setLastWhiteboardsSubject(subjectId);
+    navigate(`/whiteboards/page/${pageId}`, { state: { practiceReturnTo } });
+  };
   const openSubjectWhiteboard = async () => {
     if (!subjectId || pagesLoading || whiteboardOpening) return;
     setWhiteboardOpenError("");
@@ -1015,8 +1062,7 @@ function PracticeBrowserInner() {
 
     const existingWhiteboard = recentPages.find((page) => page.pageType === "whiteboard");
     if (existingWhiteboard) {
-      setLastWhiteboardsSubject(subjectId);
-      navigate(`/whiteboards/page/${existingWhiteboard.id}`);
+      openStudyPage(existingWhiteboard.id);
       return;
     }
     if (!requestCreatePage()) return;
@@ -1029,8 +1075,7 @@ function PracticeBrowserInner() {
         pageType: "whiteboard",
       });
       if (page) {
-        setLastWhiteboardsSubject(subjectId);
-        navigate(`/whiteboards/page/${page.id}`);
+        openStudyPage(page.id);
       }
     } catch (error) {
       console.error("[PracticeBrowser] Could not open practice whiteboard:", error);
@@ -1081,7 +1126,7 @@ function PracticeBrowserInner() {
               >
                 <span className="practice-browser__toggle-thumb" aria-hidden />
                 {EXAM_CYCLE_IDS.map((id) => (
-                  <button key={id} type="button" className={cycle === id ? "is-active" : ""} onClick={() => setSearchParams({ cycle: id })}>
+                  <button key={id} type="button" className={cycle === id ? "is-active" : ""} aria-pressed={cycle === id} onClick={() => setSearchParams({ cycle: id })}>
                     {EXAM_CYCLES[id].label}
                   </button>
                 ))}
@@ -1151,6 +1196,9 @@ function PracticeBrowserInner() {
           </section>
         ) : (
           <>
+            <div className="practice-browser__library-heading">
+              <h2>Practice questions</h2>
+            </div>
             <div className="practice-browser__browse-heading">
               <div className="practice-browser__browse-tabs" role="group" aria-label="Browse by">
                 <button type="button" className={browseMode === "paper" ? "is-active" : ""} aria-pressed={browseMode === "paper"} onClick={() => setBrowseMode("paper")}>Papers <span>({paperGroups.length})</span></button>
@@ -1171,25 +1219,30 @@ function PracticeBrowserInner() {
                 <div className="practice-browser__status">Couldn’t load the topics for this level.</div>
               ) : (
                 <section>
-                  <div className="practice-browser__card-grid">
-                    {filteredTopics.map((topic) => (
-                      <button
-                        key={topic.name}
-                        type="button"
-                        className="practice-browser__topic-card"
-                        onClick={() => updateLocation({ topic: topic.name, year: null, paper: null })}
-                      >
-                        <div className="practice-browser__topic-details">
-                          <h3>{topic.displayName}</h3>
-                          <span className="practice-browser__topic-count">
-                            {topic.questionCount > 0
-                              ? `${topic.questionCount} questions`
-                              : "Open topic"}
-                          </span>
-                        </div>
-                        <LuChevronRight className="practice-browser__topic-chevron" size={17} aria-hidden />
-                      </button>
-                    ))}
+                  <div className="practice-browser__card-grid practice-browser__topic-grid">
+                    {filteredTopics.map((topic) => {
+                      const questionCount = topicCounts
+                        ? (topicCounts[topic.name] ?? 0)
+                        : (topic.questionCount > 0 ? topic.questionCount : null);
+                      return (
+                        <button
+                          key={topic.name}
+                          type="button"
+                          className="practice-browser__topic-card"
+                          onClick={() => updateLocation({ topic: topic.name, year: null, paper: null })}
+                        >
+                          <div className="practice-browser__topic-details">
+                            <h3>{topic.displayName}</h3>
+                            {questionCount !== null && (
+                              <span className="practice-browser__topic-count">
+                                {questionCount} {questionCount === 1 ? "question" : "questions"}
+                              </span>
+                            )}
+                          </div>
+                          <LuChevronRight className="practice-browser__topic-chevron" size={17} aria-hidden />
+                        </button>
+                      );
+                    })}
                   </div>
                 </section>
               )
@@ -1269,29 +1322,53 @@ function PracticeBrowserInner() {
         {viewingBrowse && <aside className="practice-browser__pages" aria-label={`Your ${selectedSubject?.label ?? "subject"} pages`}>
           <div className="practice-browser__pages-heading">
             <div>
-              <h2>Your {selectedSubject?.label} pages</h2>
+              <h2>Study pages</h2>
             </div>
-            {(pagesLoading || recentPages.length > 0) && createPageButton}
+            <div className="practice-browser__pages-actions">
+              <button
+                type="button"
+                className="practice-browser__delete-pages"
+                disabled={selectedPages.length === 0 || deletingPages}
+                onClick={() => { setPagesToDelete(selectedPages); setPageDeleteError(""); setConfirmingPageDelete(true); }}
+                aria-label={`Delete selected study pages${selectedPages.length ? ` (${selectedPages.length})` : ""}`}
+                title={selectedPages.length ? `Delete ${selectedPages.length} selected ${selectedPages.length === 1 ? "page" : "pages"}` : "Select pages to delete"}
+              >
+                <LuTrash2 size={16} aria-hidden />
+              </button>
+              {createPageButton}
+            </div>
           </div>
           {selectedSubject && (pagesLoading ? (
             <div className="practice-browser__pages-empty">Loading pages…</div>
           ) : recentPages.length === 0 ? (
             <div className="practice-browser__pages-empty">
-              <span>You have no pages for this subject</span>
-              {createPageButton}
+              <strong>No study pages yet</strong>
+              <span>Create a page for notes and ideas in {selectedSubject.label}.</span>
             </div>
           ) : (
             <div className="practice-browser__pages-list">
               {recentPages.slice(0, 7).map((page) => (
-                <button key={page.id} type="button" className="practice-browser__page-row" onClick={() => { setLastWhiteboardsSubject(subjectId); navigate(`/whiteboards/page/${page.id}`); }}>
-                  <span className="practice-browser__page-icon" aria-hidden>
-                    {page.emoji || (page.pageType === "document" ? <LuFileText /> : <LuPencil />)}
-                  </span>
-                  <span className="practice-browser__page-copy">
-                    <strong>{page.name}</strong>
-                    <small>{page.pageType === "document" ? "Document" : "Whiteboard"}</small>
-                  </span>
-                </button>
+                <div key={page.id} className="practice-browser__page-row">
+                  <label className="practice-browser__page-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedPageIds.has(page.id)}
+                      onChange={() => togglePageSelection(page.id)}
+                      aria-label={`Select ${page.name}`}
+                    />
+                    <span aria-hidden="true"><LuCheck size={12} strokeWidth={3} /></span>
+                  </label>
+                  <button type="button" className="practice-browser__page-open" onClick={() => openStudyPage(page.id)}>
+                    <span className="practice-browser__page-icon" aria-hidden>
+                      {page.emoji || (page.pageType === "document" ? <LuFileText size={16} /> : <LuPencil size={16} />)}
+                    </span>
+                    <span className="practice-browser__page-copy">
+                      <strong>{page.name}</strong>
+                      <small>{page.pageType === "document" ? "Document" : "Whiteboard"}</small>
+                    </span>
+                    <LuChevronRight className="practice-browser__page-chevron" size={16} aria-hidden />
+                  </button>
+                </div>
               ))}
             </div>
           ))}
@@ -1310,12 +1387,35 @@ function PracticeBrowserInner() {
           onSave={async (result) => {
             const page = await createPage({ ...result, subject: subjectId });
             if (page) {
-              setLastWhiteboardsSubject(subjectId);
-              navigate(`/whiteboards/page/${page.id}`);
+              openStudyPage(page.id);
             }
           }}
           onClose={() => setShowCreatePage(false)}
         />
+      )}
+      {confirmingPageDelete && (
+        <WhiteboardModal
+          title={`Delete ${pagesToDelete.length} ${pagesToDelete.length === 1 ? "page" : "pages"}?`}
+          onClose={() => { if (!deletingPages) setConfirmingPageDelete(false); }}
+          initialPlacement="center"
+          footer={
+            <div className="flex gap-2">
+              <button type="button" className="flex-1 rounded-lg py-2 text-sm font-semibold color-bg-grey-10 color-txt-main cursor-pointer hover:opacity-80" onClick={() => setConfirmingPageDelete(false)} disabled={deletingPages}>
+                Keep pages
+              </button>
+              <button type="button" className="flex-1 rounded-lg py-2 text-sm font-semibold red-btn cursor-pointer disabled:opacity-50" onClick={() => void deleteSelectedPages()} disabled={deletingPages || pagesToDelete.length === 0}>
+                {deletingPages ? "Deleting…" : `Delete ${pagesToDelete.length === 1 ? "page" : "pages"}`}
+              </button>
+            </div>
+          }
+        >
+          <p className="text-sm color-txt-sub">
+            {pagesToDelete.length === 1
+              ? `“${pagesToDelete[0].name}” and all its saved content will be permanently deleted.`
+              : `${pagesToDelete.length} pages and all their saved content will be permanently deleted.`}
+          </p>
+          {pageDeleteError && <p className="mt-3 text-sm text-red-500" role="alert">{pageDeleteError}</p>}
+        </WhiteboardModal>
       )}
       {aceGateModal}
     </div>

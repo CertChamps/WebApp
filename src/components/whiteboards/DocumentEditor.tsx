@@ -301,7 +301,7 @@ function DocumentQuestionSheet({
           src={image.src}
           alt={image.alt}
           draggable={false}
-          className="block w-full h-auto select-none"
+          className={`block w-full h-auto select-none${attachment.source === "bank" ? " zoomable-question-page__img--dark-paper" : ""}`}
         />
       ))}
     </div>

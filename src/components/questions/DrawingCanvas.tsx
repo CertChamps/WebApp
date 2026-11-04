@@ -913,6 +913,8 @@ type DrawingCanvasProps = {
 	enableAttachments?: boolean;
 	/** Register a function that places a question image strip as a normal canvas attachment. */
 	registerAttachQuestionImages?: RegisterAttachQuestionImages;
+	/** Question paper objects to darken visually; saved images and grading captures stay original. */
+	darkPaperObjectIds?: ReadonlySet<string>;
 	/** Register a function that restores a pinned object back onto the canvas. */
 	registerRestoreCanvasObject?: RegisterRestoreCanvasObject;
 	/** Register the file-attach handler so a parent modal can feed files in. */
@@ -1086,6 +1088,7 @@ export default function DrawingCanvas({
 	showGradingOverlay = true,
 	enableAttachments = false,
 	registerAttachQuestionImages,
+	darkPaperObjectIds,
 	registerRestoreCanvasObject,
 	registerAttachFiles,
 	onPinObjectToSide,
@@ -1930,15 +1933,22 @@ export default function DrawingCanvas({
 			if (!obj.src || obj.width <= 0 || obj.height <= 0) continue;
 			const img = objectImageCacheRef.current.get(obj.src);
 			if (!img || !img.complete || img.naturalWidth <= 0) continue;
+			const darkenPaper = darkPaperObjectIds?.has(obj.id) ?? false;
+			if (darkenPaper) {
+				ctx.save();
+				ctx.filter = "invert(0.9) hue-rotate(180deg)";
+			}
 			try {
 				ctx.drawImage(img, obj.x, obj.y, obj.width, obj.height);
 			} catch (err) {
 				console.error("[DrawingCanvas] drawImage failed:", err);
+			} finally {
+				if (darkenPaper) ctx.restore();
 			}
 		}
 
 		ctx.restore();
-	}, [objects, objectImagesVersion, gridMode, gridColor, gridOpacity]);
+	}, [objects, objectImagesVersion, gridMode, gridColor, gridOpacity, darkPaperObjectIds]);
 
 	const drawRef = useRef(draw);
 	drawRef.current = draw;
