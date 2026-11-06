@@ -14,6 +14,7 @@ node_modules
 dist
 dist-ssr
 *.local
+*.deb
 capacitor-shell/.live-reload-last
 
 # Editor directories and files

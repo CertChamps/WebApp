@@ -150,7 +150,7 @@ export default function OnboardingProfileStep({
           <img
             src={displaySrc}
             alt="Profile preview"
-            className="h-28 w-28 rounded-full object-cover border-2 color-shadow"
+            className="h-28 w-28 rounded-full object-contain border-2 color-shadow bg-white"
           />
           <button
             type="button"
@@ -170,7 +170,7 @@ export default function OnboardingProfileStep({
         </div>
 
         <p className="txt-sub color-txt-sub text-center text-sm">
-          {croppedPreviewUrl ? "Looking good — you can change it anytime." : "Tap the pen to add a profile picture."}
+          {croppedPreviewUrl ? "Looking good — you can change it anytime." : "Profile picture optional — tap the pen to add one."}
         </p>
 
         <input

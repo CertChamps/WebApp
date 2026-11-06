@@ -65,12 +65,6 @@ export default function OnboardingFlow({
       return;
     }
 
-    // First-time onboarding requires a new profile picture; replay can keep the existing one.
-    if (!croppedBlob && !isReplay) {
-      setError("Please add a profile picture to continue.");
-      return;
-    }
-
     setSaving(true);
     setError("");
     try {
@@ -186,15 +180,14 @@ export default function OnboardingFlow({
 
   if (step === 2) {
     const usernameError = validateUsername(username);
-    const canContinue =
-      !saving && !usernameError && (Boolean(croppedBlob) || isReplay);
+    const canContinue = !saving && !usernameError;
 
     return (
       <OnboardingShell
         step={2}
         totalSteps={TOTAL_STEPS}
         title="Set up your profile"
-        subtitle="Choose a username and profile picture so friends can recognise you."
+        subtitle="Choose a username. You can add a profile picture now or keep the default crown."
         footer={
           <>
             {error && !usernameError ? (

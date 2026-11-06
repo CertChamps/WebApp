@@ -1,12 +1,13 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LuLogIn, LuLogOut, LuSearch, LuPencil, LuCrown, LuUserRound, LuSettings, LuPalette, LuGauge, LuCircleHelp, LuMessageCircle } from "react-icons/lu";
+import { LuLogIn, LuLogOut, LuSearch, LuPencil, LuCrown, LuUserRound, LuSettings, LuPalette, LuGauge, LuCircleHelp, LuMessageCircle, LuShieldCheck } from "react-icons/lu";
 import { auth } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { signInPath } from "../lib/signIn";
 import { hasAceAccess } from "../lib/contentAccess";
 import { signOutSession } from "../lib/authSession";
 import NotificationBell from "./social/NotificationBell";
+import { isAdminUid } from "../constants/adminUids";
 import "../styles/navbar.css";
 
 export default function Navbar() {
@@ -19,6 +20,7 @@ export default function Navbar() {
   const signedIn = authReady && !!auth.currentUser && user?.uid === auth.currentUser.uid;
   const backTo = location.pathname + location.search;
   const profilePath = signedIn ? `/viewProfile/${user.uid}` : signInPath("your account", backTo);
+  const isAdmin = isAdminUid(user?.uid, user?.email);
 
   useEffect(() => { setProfileOpen(false); }, [location.pathname, location.search]);
   useEffect(() => {
@@ -80,6 +82,7 @@ export default function Navbar() {
               <button type="button" onClick={() => { setProfileOpen(false); navigate(profilePath); }}><LuUserRound aria-hidden /> My profile</button>
               <button type="button" onClick={() => { setProfileOpen(false); navigate("/user/settings"); }}><LuSettings aria-hidden /> Settings</button>
               <button type="button" onClick={() => { setProfileOpen(false); navigate("/user/themes"); }}><LuPalette aria-hidden /> Themes</button>
+              {isAdmin && <button type="button" onClick={() => { setProfileOpen(false); navigate("/admin"); }}><LuShieldCheck aria-hidden /> Admin dashboard</button>}
               <div className="app-topnav__menu-divider" aria-hidden />
               <button type="button" disabled={signingOut} onClick={() => void logOut()}><LuLogOut aria-hidden /> {signingOut ? "Signing out…" : "Log out"}</button>
               <div className="app-topnav__menu-divider" aria-hidden />

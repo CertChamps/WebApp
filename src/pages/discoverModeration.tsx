@@ -4,7 +4,6 @@ import {
   collection,
   deleteDoc,
   doc,
-  limit,
   onSnapshot,
   query,
   updateDoc,
@@ -12,7 +11,6 @@ import {
 } from "firebase/firestore";
 import { deleteObject, ref as storageRef } from "firebase/storage";
 import {
-  LuArrowLeft,
   LuArrowRight,
   LuCheck,
   LuExternalLink,
@@ -47,6 +45,7 @@ import ModerationFiltersModal, {
   type ModerationLinkedFilter,
   type ModerationSourceFilter,
 } from "../components/discover/ModerationFiltersModal";
+import AdminShell from "../components/admin/AdminShell";
 
 const FILTER_LEVELS = [...RESOURCE_LEVELS, "Common", "Unspecified"] as const;
 const UNLEVELLED = "Unspecified";
@@ -189,8 +188,7 @@ export default function DiscoverModeration() {
     if (!isAdmin) return;
     const pendingQuery = query(
       collection(db, "discover-notes"),
-      where("moderationStatus", "==", "pending"),
-      limit(100)
+      where("moderationStatus", "==", "pending")
     );
 
     const unsub = onSnapshot(
@@ -376,26 +374,9 @@ export default function DiscoverModeration() {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-w-0 min-h-0 w-full h-full overflow-y-auto color-bg scrollbar-minimal">
-      <div className="w-full max-w-7xl mx-auto px-6 py-6 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="color-bg-grey-5 p-2.5 rounded-xl hover:color-bg-grey-10 transition-all"
-              aria-label="Go back"
-            >
-              <LuArrowLeft size={22} className="color-txt-accent" />
-            </button>
-            <div>
-              <h1 className="color-txt-main text-2xl font-bold">Discover Moderation</h1>
-              <p className="color-txt-sub text-sm">
-                Open a pending listing to compare it with the linked question, edit fields, then approve or reject.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+    <AdminShell title="Moderation">
+      <div className="space-y-5">
+          <div className="flex flex-wrap items-center gap-2 justify-end">
             <label className="relative min-w-[12rem] flex-1 max-w-xs">
               <LuSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 color-txt-sub" />
               <input
@@ -435,7 +416,6 @@ export default function DiscoverModeration() {
               {filteredItems.length}
               {filteredItems.length !== items.length ? ` of ${items.length}` : ""} pending
             </div>
-          </div>
         </div>
 
         {activeFilterCount > 0 && (
@@ -686,6 +666,6 @@ export default function DiscoverModeration() {
           if (rejecting) void reject(rejecting, reason);
         }}
       />
-    </div>
+    </AdminShell>
   );
 }

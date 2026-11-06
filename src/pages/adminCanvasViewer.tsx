@@ -1,961 +1,240 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  type DocumentData,
-  type QueryDocumentSnapshot,
-} from "firebase/firestore";
-import { getDownloadURL, ref } from "firebase/storage";
-import {
-  LuArrowLeft,
-  LuCalendarClock,
-  LuClock3,
-  LuDatabase,
-  LuFileJson,
-  LuImage,
-  LuLifeBuoy,
-  LuLoaderCircle,
-  LuSearch,
-  LuUser,
-  LuX,
-} from "react-icons/lu";
+import { collection, doc, getDocs, limit, orderBy, query, setDoc, updateDoc, type DocumentData } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { LuBan, LuCheck, LuClock3, LuCopyPlus, LuFileQuestion, LuLoaderCircle, LuSearch, LuUser, LuX } from "react-icons/lu";
 import { UserContext } from "../context/UserContext";
 import { isAdminUid } from "../constants/adminUids";
 import { db, storage } from "../../firebase";
-import AiLimitsEditor from "../components/admin/AiLimitsEditor";
+import AdminShell from "../components/admin/AdminShell";
+import { loadAdminUsers, loadUserLastActivity, valueToMillis, type AdminUserRecord } from "../lib/adminAnalytics";
+import { getLastWhiteboardsSubject } from "../data/whiteboardSubject";
+import { whiteboardCanvasId } from "../data/whiteboards";
+import { sessionDeviceLabel } from "../lib/sessionDevice";
 
-type Point = {
-  x: number;
-  y: number;
-  pressure?: number;
-};
+type Point = { x: number; y: number; pressure?: number };
+type Stroke = { points: Point[]; tool?: string; color?: string; brushRadius?: number };
+type CanvasObject = { id: string; src: string; x: number; y: number; width: number; height: number; pinnedToSide?: boolean };
+type CanvasText = { id: string; text: string; x: number; y: number; width: number; height: number; fontSize: number };
+type TrackedDoc = { id: string; data: Record<string, unknown> };
+type UserDetails = { sessions: TrackedDoc[]; questionLog: TrackedDoc[]; questionData: TrackedDoc[]; dailyLogins: TrackedDoc[]; paperProgress: TrackedDoc[]; completedQuestions: TrackedDoc[] };
+type UserListRecord = AdminUserRecord & { lastActivityMs: number | null; pictureUrl: string };
+const EMPTY_DETAILS: UserDetails = { sessions: [], questionLog: [], questionData: [], dailyLogins: [], paperProgress: [], completedQuestions: [] };
 
-type Stroke = {
-  points: Point[];
-  tool?: "pen" | "eraser" | string;
-  color?: string;
-  brushRadius?: number;
-};
+function docs(snapshot: { docs: Array<{ id: string; data: () => DocumentData }> }): TrackedDoc[] {
+  return snapshot.docs.map((entry) => ({ id: entry.id, data: entry.data() as Record<string, unknown> }));
+}
 
-type CanvasDrawLinePoint = {
-  x: number;
-  y: number;
-};
+async function loadDetails(uid: string): Promise<UserDetails> {
+  const [sessions, questionLog, questionData, dailyLogins, paperProgress, completedQuestions] = await Promise.all([
+    getDocs(query(collection(db, "user-data", uid, "sessions"), orderBy("endTime", "desc"), limit(200))),
+    getDocs(query(collection(db, "user-data", uid, "question-log"), orderBy("timestamp", "desc"), limit(200))),
+    getDocs(query(collection(db, "user-data", uid, "question-data"), orderBy("updatedAt", "desc"), limit(500))),
+    getDocs(query(collection(db, "user-data", uid, "daily-logins"), orderBy("timestamp", "desc"), limit(180))),
+    getDocs(collection(db, "user-data", uid, "paper-progress")),
+    getDocs(collection(db, "user-data", uid, "completed-questions")),
+  ]);
+  return { sessions: docs(sessions), questionLog: docs(questionLog), questionData: docs(questionData), dailyLogins: docs(dailyLogins), paperProgress: docs(paperProgress), completedQuestions: docs(completedQuestions) };
+}
 
-type CanvasDrawLine = {
-  points: CanvasDrawLinePoint[];
-  brushRadius?: number;
-  brushColor?: string;
-};
-
-type CanvasJsonPayload = Stroke[] | { strokes?: Stroke[]; lines?: CanvasDrawLine[] };
-
-type UserSummary = {
-  uid: string;
-  username: string;
-  email: string;
-  pictureUrl: string;
-  userDoc: Record<string, unknown>;
-  lastActivityMs: number | null;
-};
-
-type TrackedDoc = {
-  id: string;
-  data: Record<string, unknown>;
-};
-
-type UserDetails = {
-  sessions: TrackedDoc[];
-  questionLog: TrackedDoc[];
-  questionData: TrackedDoc[];
-  dailyLogins: TrackedDoc[];
-  dailyAnswers: TrackedDoc[];
-  paperProgress: TrackedDoc[];
-  completedQuestions: TrackedDoc[];
-};
-
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-function toPoint(value: unknown): Point | null {
-  if (Array.isArray(value) && value.length >= 2) {
-    const x = Number(value[0]);
-    const y = Number(value[1]);
-    const pressure = Number(value[2]);
-    if (Number.isFinite(x) && Number.isFinite(y)) {
-      return {
-        x,
-        y,
-        ...(Number.isFinite(pressure) ? { pressure } : {}),
-      };
-    }
-    return null;
+function point(value: unknown): Point | null {
+  if (Array.isArray(value)) {
+    const x = Number(value[0]); const y = Number(value[1]); const pressure = Number(value[2]);
+    return Number.isFinite(x) && Number.isFinite(y) ? { x, y, ...(Number.isFinite(pressure) ? { pressure } : {}) } : null;
   }
-
   if (!value || typeof value !== "object") return null;
-  const p = value as Record<string, unknown>;
-  const x = Number(p.x);
-  const y = Number(p.y);
-  const pressure = Number(p.pressure);
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-  return {
-    x,
-    y,
-    ...(Number.isFinite(pressure) ? { pressure } : {}),
-  };
+  const record = value as Record<string, unknown>;
+  const x = Number(record.x); const y = Number(record.y); const pressure = Number(record.pressure);
+  return Number.isFinite(x) && Number.isFinite(y) ? { x, y, ...(Number.isFinite(pressure) ? { pressure } : {}) } : null;
 }
 
-function normalizeStroke(value: unknown): Stroke | null {
-  if (!value || typeof value !== "object") return null;
-  const stroke = value as Record<string, unknown>;
-  const pointsRaw = Array.isArray(stroke.points) ? stroke.points : null;
-  if (!pointsRaw || pointsRaw.length === 0) return null;
-
-  const points = pointsRaw
-    .map((point) => toPoint(point))
-    .filter((point): point is Point => Boolean(point));
-
-  if (points.length === 0) return null;
-
-  return {
-    points,
-    tool: typeof stroke.tool === "string" ? stroke.tool : "pen",
-    color: typeof stroke.color === "string" ? stroke.color : undefined,
-    brushRadius: Number.isFinite(Number(stroke.brushRadius))
-      ? Number(stroke.brushRadius)
-      : undefined,
-  };
+function parseStrokes(raw: string): Stroke[] {
+  const first = JSON.parse(raw) as unknown;
+  const parsed = typeof first === "string" ? JSON.parse(first) as unknown : first;
+  const source = Array.isArray(parsed) ? parsed : parsed && typeof parsed === "object" && Array.isArray((parsed as { strokes?: unknown }).strokes) ? (parsed as { strokes: unknown[] }).strokes : [];
+  return source.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const entry = item as Record<string, unknown>;
+    const points = Array.isArray(entry.points) ? entry.points.map(point).filter((p): p is Point => Boolean(p)) : [];
+    if (!points.length) return [];
+    return [{ points, tool: typeof entry.tool === "string" ? entry.tool : "pen", color: typeof entry.color === "string" ? entry.color : undefined, brushRadius: Number.isFinite(Number(entry.brushRadius)) ? Number(entry.brushRadius) : undefined }];
+  });
 }
 
-function strokesFromObjectKeys(obj: Record<string, unknown>): Stroke[] {
-  const guessedStrokeArrays = Object.values(obj).filter((v) => Array.isArray(v));
-  for (const candidate of guessedStrokeArrays) {
-    const normalized = (candidate as unknown[])
-      .map((item) => normalizeStroke(item))
-      .filter((item): item is Stroke => Boolean(item));
-    if (normalized.length > 0) return normalized;
-  }
-  return [];
+function parseCanvasExtras(raw: string): { objects: CanvasObject[]; textBoxes: CanvasText[] } {
+  const first = JSON.parse(raw) as unknown;
+  const parsed = typeof first === "string" ? JSON.parse(first) as unknown : first;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { objects: [], textBoxes: [] };
+  const value = parsed as { objects?: unknown; textBoxes?: unknown };
+  const objects = Array.isArray(value.objects) ? value.objects.filter((item): item is CanvasObject => {
+    if (!item || typeof item !== "object") return false;
+    const object = item as Partial<CanvasObject>;
+    return typeof object.id === "string" && typeof object.src === "string" && [object.x, object.y, object.width, object.height].every((number) => typeof number === "number" && Number.isFinite(number));
+  }) : [];
+  const textBoxes = Array.isArray(value.textBoxes) ? value.textBoxes.filter((item): item is CanvasText => {
+    if (!item || typeof item !== "object") return false;
+    const box = item as Partial<CanvasText>;
+    return typeof box.id === "string" && typeof box.text === "string" && [box.x, box.y, box.width, box.height, box.fontSize].every((number) => typeof number === "number" && Number.isFinite(number));
+  }) : [];
+  return { objects, textBoxes };
 }
 
-function parseCanvasJson(raw: string): Stroke[] {
-  const firstPass = JSON.parse(raw) as unknown;
-  const parsed: unknown = typeof firstPass === "string" ? JSON.parse(firstPass) : firstPass;
-
-  if (Array.isArray(parsed)) {
-    const strokes = parsed
-      .map((item) => normalizeStroke(item))
-      .filter((item): item is Stroke => Boolean(item));
-
-    if (strokes.length === 0) {
-      throw new Error("No valid strokes found in uploaded JSON array.");
-    }
-
-    return strokes;
-  }
-
-  if (parsed && typeof parsed === "object") {
-    const payload = parsed as CanvasJsonPayload & Record<string, unknown>;
-
-    const strokesFromObject = Array.isArray(payload.strokes) ? payload.strokes : null;
-    if (strokesFromObject) {
-      const normalized = strokesFromObject
-        .map((s) => normalizeStroke(s))
-        .filter((s): s is Stroke => Boolean(s));
-      if (normalized.length > 0) {
-        return normalized;
-      }
-    }
-
-    const lines = Array.isArray(payload.lines) ? payload.lines : null;
-    if (lines && lines.length > 0) {
-      const converted: Stroke[] = lines
-        .filter((line) => Array.isArray(line.points))
-        .map((line) => ({
-          points: (line.points ?? [])
-            .map((point: unknown) => toPoint(point))
-            .filter((point: Point | null): point is Point => Boolean(point)),
-          tool: "pen",
-          color: line.brushColor,
-          brushRadius: line.brushRadius,
-        }))
-        .filter((line) => line.points.length > 0);
-
-      if (converted.length === 0) {
-        throw new Error("No drawable lines found in JSON lines payload.");
-      }
-
-      return converted;
-    }
-
-    const nestedJsonKeys = ["drawing", "canvas", "data", "payload", "value"];
-    for (const key of nestedJsonKeys) {
-      const maybe = payload[key];
-      if (typeof maybe === "string") {
-        try {
-          const nested = parseCanvasJson(maybe);
-          if (nested.length > 0) return nested;
-        } catch {
-          // Ignore and continue to other shapes.
-        }
-      }
-    }
-
-    const guessed = strokesFromObjectKeys(payload);
-    if (guessed.length > 0) return guessed;
-  }
-
-  throw new Error("Could not find drawable strokes in this JSON file.");
-}
-
-function buildPath(points: Point[]): string {
-  if (points.length === 0) return "";
-  if (points.length === 1) {
-    const p = points[0];
-    return `M ${p.x} ${p.y} l 0.01 0.01`;
-  }
-
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length; i += 1) {
-    const p = points[i];
-    d += ` L ${p.x} ${p.y}`;
-  }
-  return d;
-}
-
-function toMillis(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (value instanceof Date) return value.getTime();
-
-  if (value && typeof value === "object") {
-    const maybeTimestamp = value as { toMillis?: () => number; seconds?: number };
-    if (typeof maybeTimestamp.toMillis === "function") {
-      const ms = maybeTimestamp.toMillis();
-      return Number.isFinite(ms) ? ms : null;
-    }
-    if (typeof maybeTimestamp.seconds === "number") {
-      return maybeTimestamp.seconds * 1000;
-    }
-  }
-
-  return null;
-}
-
-function cleanDocData(data: DocumentData): Record<string, unknown> {
-  return Object.entries(data).reduce<Record<string, unknown>>((acc, [key, value]) => {
-    if (value === undefined) return acc;
-    acc[key] = value;
-    return acc;
-  }, {});
-}
-
-function extractDocs(snapshotDocs: QueryDocumentSnapshot<DocumentData, DocumentData>[]): TrackedDoc[] {
-  return snapshotDocs.map((snap) => ({
-    id: snap.id,
-    data: cleanDocData(snap.data()),
-  }));
-}
-
-async function resolveProfilePicture(pathOrUrl: string): Promise<string> {
-  if (!pathOrUrl) return "";
-  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
-    return pathOrUrl;
-  }
-
-  try {
-    const imageRef = ref(storage, pathOrUrl);
-    return await getDownloadURL(imageRef);
-  } catch {
-    return "";
-  }
-}
-
-async function fetchLatestActivity(uid: string): Promise<number | null> {
-  try {
-    const [sessionsSnap, questionLogSnap, questionDataSnap, dailyLoginSnap] = await Promise.all([
-      getDocs(query(collection(db, "user-data", uid, "sessions"), orderBy("endTime", "desc"), limit(1))),
-      getDocs(query(collection(db, "user-data", uid, "question-log"), orderBy("timestamp", "desc"), limit(1))),
-      getDocs(query(collection(db, "user-data", uid, "question-data"), orderBy("updatedAt", "desc"), limit(1))),
-      getDocs(query(collection(db, "user-data", uid, "daily-logins"), orderBy("timestamp", "desc"), limit(1))),
-    ]);
-
-    const candidates: Array<number | null> = [
-      toMillis(sessionsSnap.docs[0]?.data().endTime),
-      toMillis(questionLogSnap.docs[0]?.data().timestamp),
-      toMillis(questionDataSnap.docs[0]?.data().updatedAt),
-      toMillis(dailyLoginSnap.docs[0]?.data().timestamp),
-    ];
-
-    const valid = candidates.filter((value): value is number => typeof value === "number");
-    if (valid.length === 0) return null;
-    return Math.max(...valid);
-  } catch {
-    return null;
-  }
-}
-
-async function loadUserDetails(uid: string): Promise<UserDetails> {
-  const [sessionsSnap, questionLogSnap, questionDataSnap, dailyLoginsSnap, dailyAnswersSnap, paperProgressSnap, completedQuestionsSnap] =
-    await Promise.all([
-      getDocs(query(collection(db, "user-data", uid, "sessions"), orderBy("endTime", "desc"), limit(200))),
-      getDocs(query(collection(db, "user-data", uid, "question-log"), orderBy("timestamp", "desc"), limit(200))),
-      getDocs(query(collection(db, "user-data", uid, "question-data"), orderBy("updatedAt", "desc"), limit(500))),
-      getDocs(query(collection(db, "user-data", uid, "daily-logins"), orderBy("timestamp", "desc"), limit(60))),
-      getDocs(query(collection(db, "user-data", uid, "daily-answers"), orderBy("date", "desc"), limit(60))),
-      getDocs(collection(db, "user-data", uid, "paper-progress")),
-      getDocs(collection(db, "user-data", uid, "completed-questions")),
-    ]);
-
-  return {
-    sessions: extractDocs(sessionsSnap.docs),
-    questionLog: extractDocs(questionLogSnap.docs),
-    questionData: extractDocs(questionDataSnap.docs),
-    dailyLogins: extractDocs(dailyLoginsSnap.docs),
-    dailyAnswers: extractDocs(dailyAnswersSnap.docs),
-    paperProgress: extractDocs(paperProgressSnap.docs),
-    completedQuestions: extractDocs(completedQuestionsSnap.docs),
-  };
-}
-
-function formatRelativeTime(ms: number | null): string {
-  if (!ms) return "No tracked activity yet";
-  const diff = Date.now() - ms;
-  if (diff < 60_000) return "Active just now";
-  if (diff < 60 * 60_000) return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 24 * 60 * 60_000) return `${Math.floor(diff / (60 * 60_000))}h ago`;
-  return `${Math.floor(diff / (24 * 60 * 60_000))}d ago`;
-}
+function pathFor(points: Point[]): string { return points.reduce((path, current, index) => `${path}${index ? " L" : "M"} ${current.x} ${current.y}`, ""); }
+function duration(seconds: number): string { if (seconds < 60) return `${Math.round(seconds)}s`; if (seconds < 3600) return `${Math.round(seconds / 60)}m`; return `${(seconds / 3600).toFixed(seconds < 36_000 ? 1 : 0)}h`; }
+function relative(ms: number | null): string { if (!ms) return "No activity"; const diff = Date.now() - ms; if (diff < 60_000) return "Just now"; if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`; if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`; return `${Math.floor(diff / 86_400_000)}d ago`; }
 
 export default function AdminCanvasViewer() {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
-
-  const [users, setUsers] = useState<UserSummary[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [search, setSearch] = useState("");
-  const [selectedUid, setSelectedUid] = useState<string>("");
-  const [detailsByUid, setDetailsByUid] = useState<Record<string, UserDetails>>({});
-  const [loadingDetails, setLoadingDetails] = useState(false);
-  const [pageError, setPageError] = useState("");
-
-  const [selectedCanvasQuestionId, setSelectedCanvasQuestionId] = useState("");
-  const [selectedCanvasRaw, setSelectedCanvasRaw] = useState("");
-  const [selectedCanvasStrokes, setSelectedCanvasStrokes] = useState<Stroke[]>([]);
-  const [loadingCanvas, setLoadingCanvas] = useState(false);
-  const [canvasError, setCanvasError] = useState("");
-
   const isAdmin = isAdminUid(user?.uid, user?.email);
-  const selectedUser = users.find((entry) => entry.uid === selectedUid) ?? null;
-  const selectedDetails = selectedUid ? detailsByUid[selectedUid] : undefined;
+  const [users, setUsers] = useState<UserListRecord[]>([]);
+  const [search, setSearch] = useState("");
+  const [selectedUid, setSelectedUid] = useState("");
+  const [details, setDetails] = useState<Record<string, UserDetails>>({});
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [selectedCanvas, setSelectedCanvas] = useState("");
+  const [canvasRaw, setCanvasRaw] = useState("");
+  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [canvasObjects, setCanvasObjects] = useState<CanvasObject[]>([]);
+  const [canvasText, setCanvasText] = useState<CanvasText[]>([]);
+  const [canvasBusy, setCanvasBusy] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!isAdmin) return;
-
-    let cancelled = false;
-
-    const fetchUsers = async () => {
-      setLoadingUsers(true);
-      setPageError("");
-      try {
-        const usersSnap = await getDocs(collection(db, "user-data"));
-        const summaries = await Promise.all(
-          usersSnap.docs.map(async (userSnap): Promise<UserSummary> => {
-            const docData = cleanDocData(userSnap.data());
-            const uid = typeof docData.uid === "string" && docData.uid ? docData.uid : userSnap.id;
-            const username = typeof docData.username === "string" ? docData.username : "Unknown";
-            const email = typeof docData.email === "string" ? docData.email : "";
-            const picturePath = typeof docData.picture === "string" ? docData.picture : "";
-
-            const [pictureUrl, lastActivityMs] = await Promise.all([
-              resolveProfilePicture(picturePath),
-              fetchLatestActivity(uid),
-            ]);
-
-            return {
-              uid,
-              username,
-              email,
-              pictureUrl,
-              userDoc: docData,
-              lastActivityMs,
-            };
-          })
-        );
-
-        summaries.sort((a, b) => {
-          const aTime = a.lastActivityMs ?? 0;
-          const bTime = b.lastActivityMs ?? 0;
-          return bTime - aTime;
-        });
-
-        if (!cancelled) {
-          setUsers(summaries);
-          if (summaries.length > 0) {
-            setSelectedUid((prev) => prev || summaries[0].uid);
-          }
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setPageError(err instanceof Error ? err.message : "Failed to load users.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingUsers(false);
-        }
-      }
-    };
-
-    void fetchUsers();
-
-    return () => {
-      cancelled = true;
-    };
+    let active = true;
+    loadAdminUsers().then(async (records) => {
+      const enriched = await Promise.all(records.map(async (record): Promise<UserListRecord> => {
+        const pictureUrl = !record.picture
+          ? ""
+          : record.picture.startsWith("http://") || record.picture.startsWith("https://")
+            ? record.picture
+            : await getDownloadURL(ref(storage, record.picture)).catch(() => "");
+        const lastActivityMs = await loadUserLastActivity(record.uid).catch(() => null);
+        return { ...record, pictureUrl, lastActivityMs };
+      }));
+      enriched.sort((a, b) => (b.lastActivityMs ?? 0) - (a.lastActivityMs ?? 0));
+      if (!active) return;
+      setUsers(enriched);
+      setSelectedUid((current) => current || enriched[0]?.uid || "");
+    })
+      .catch((error) => setMessage(error instanceof Error ? error.message : "Could not load users."))
+      .finally(() => active && setLoadingUsers(false));
+    return () => { active = false; };
   }, [isAdmin]);
 
   useEffect(() => {
-    if (!selectedUid || detailsByUid[selectedUid]) return;
+    if (!selectedUid || details[selectedUid]) return;
+    let active = true; setLoadingDetails(true);
+    loadDetails(selectedUid).then((value) => { if (!active) return; setDetails((current) => ({ ...current, [selectedUid]: value })); setSelectedCanvas(value.questionData.find((entry) => typeof entry.data.storagePath === "string")?.id ?? ""); })
+      .catch(() => active && setDetails((current) => ({ ...current, [selectedUid]: EMPTY_DETAILS })))
+      .finally(() => active && setLoadingDetails(false));
+    return () => { active = false; };
+  }, [details, selectedUid]);
 
-    let cancelled = false;
-    const fetchDetails = async () => {
-      setLoadingDetails(true);
-      try {
-        const details = await loadUserDetails(selectedUid);
-        if (!cancelled) {
-          setDetailsByUid((prev) => ({ ...prev, [selectedUid]: details }));
-          const firstCanvasDoc = details.questionData.find((entry) => typeof entry.data.storagePath === "string");
-          setSelectedCanvasQuestionId(firstCanvasDoc?.id ?? "");
-        }
-      } catch {
-        if (!cancelled) {
-          setDetailsByUid((prev) => ({
-            ...prev,
-            [selectedUid]: {
-              sessions: [],
-              questionLog: [],
-              questionData: [],
-              dailyLogins: [],
-              dailyAnswers: [],
-              paperProgress: [],
-              completedQuestions: [],
-            },
-          }));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingDetails(false);
-        }
-      }
-    };
-
-    void fetchDetails();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedUid, detailsByUid]);
+  const currentDetails = details[selectedUid];
+  const selectedUser = users.find((entry) => entry.uid === selectedUid) ?? null;
 
   useEffect(() => {
-    if (!selectedUid || !selectedCanvasQuestionId) {
-      setSelectedCanvasRaw("");
-      setSelectedCanvasStrokes([]);
-      setCanvasError("");
-      return;
-    }
+    const entry = currentDetails?.questionData.find((item) => item.id === selectedCanvas);
+    const storagePath = entry?.data.storagePath;
+    if (typeof storagePath !== "string" || !storagePath) { setCanvasRaw(""); setStrokes([]); setCanvasObjects([]); setCanvasText([]); return; }
+    let active = true; setCanvasBusy(true); setMessage("");
+    getDownloadURL(ref(storage, storagePath)).then((url) => fetch(url, { cache: "no-store" })).then((response) => { if (!response.ok) throw new Error("Could not download this whiteboard."); return response.text(); })
+      .then((raw) => { if (!active) return; const extras = parseCanvasExtras(raw); setCanvasRaw(raw); setStrokes(parseStrokes(raw)); setCanvasObjects(extras.objects); setCanvasText(extras.textBoxes); })
+      .catch((error) => active && setMessage(error instanceof Error ? error.message : "Could not preview this whiteboard."))
+      .finally(() => active && setCanvasBusy(false));
+    return () => { active = false; };
+  }, [currentDetails, selectedCanvas]);
 
-    const details = detailsByUid[selectedUid];
-    if (!details) return;
-    const questionDoc = details.questionData.find((entry) => entry.id === selectedCanvasQuestionId);
-    const storagePath = questionDoc?.data.storagePath;
-    if (typeof storagePath !== "string" || !storagePath) {
-      setSelectedCanvasRaw("");
-      setSelectedCanvasStrokes([]);
-      setCanvasError("No canvas storage path found for this question.");
-      return;
-    }
-
-    let cancelled = false;
-    const fetchCanvas = async () => {
-      setLoadingCanvas(true);
-      setCanvasError("");
-      setSelectedCanvasRaw("");
-      setSelectedCanvasStrokes([]);
-      try {
-        const url = await getDownloadURL(ref(storage, storagePath));
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch canvas file (${response.status}).`);
-        }
-        const text = await response.text();
-        const parsed = parseCanvasJson(text);
-        if (!cancelled) {
-          setSelectedCanvasRaw(text);
-          setSelectedCanvasStrokes(parsed);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setSelectedCanvasRaw("");
-          setSelectedCanvasStrokes([]);
-          setCanvasError(err instanceof Error ? err.message : "Failed to load canvas data.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingCanvas(false);
-        }
-      }
-    };
-
-    void fetchCanvas();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedCanvasQuestionId, selectedUid, detailsByUid]);
-
-  const filteredUsers = useMemo(() => {
+  const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return users;
-    return users.filter((entry) => {
-      return (
-        entry.username.toLowerCase().includes(needle) ||
-        entry.email.toLowerCase().includes(needle) ||
-        entry.uid.toLowerCase().includes(needle)
-      );
-    });
-  }, [users, search]);
+    return users
+      .filter((entry) => !needle || [entry.username, entry.email, entry.uid].some((value) => value.toLowerCase().includes(needle)))
+      .sort((a, b) => (b.lastActivityMs ?? 0) - (a.lastActivityMs ?? 0));
+  }, [search, users]);
+  const lastActivity = useMemo(() => { if (!currentDetails) return null; const values = [...currentDetails.sessions.map((entry) => valueToMillis(entry.data.endTime)), ...currentDetails.questionLog.map((entry) => valueToMillis(entry.data.timestamp)), ...currentDetails.dailyLogins.map((entry) => valueToMillis(entry.data.timestamp))].filter((value): value is number => value != null); return values.length ? Math.max(...values) : null; }, [currentDetails]);
+  const totalSessionSeconds = useMemo(() => currentDetails?.sessions.reduce((sum, entry) => sum + (Number(entry.data.durationSeconds) || 0), 0) ?? 0, [currentDetails]);
+  const completedCount = currentDetails?.questionLog.filter((entry) => entry.data.completed === true).length ?? 0;
+  const activeWeeks = useMemo(() => {
+    if (!currentDetails) return 0;
+    const now = Date.now();
+    return new Set(currentDetails.dailyLogins.map((entry) => valueToMillis(entry.data.timestamp)).filter((value): value is number => value != null && value >= now - 28 * 86_400_000).map((value) => Math.min(3, Math.floor((now - value) / (7 * 86_400_000))))).size;
+  }, [currentDetails]);
+  const bounds = useMemo(() => {
+    const all = strokes.flatMap((stroke) => stroke.points);
+    const xs = [...all.map((p) => p.x), ...canvasObjects.flatMap((object) => [object.x, object.x + object.width]), ...canvasText.flatMap((box) => [box.x, box.x + box.width])];
+    const ys = [...all.map((p) => p.y), ...canvasObjects.flatMap((object) => [object.y, object.y + object.height]), ...canvasText.flatMap((box) => [box.y, box.y + box.height])];
+    if (!xs.length || !ys.length) return null;
+    const pad = 30; const minX = Math.min(...xs) - pad; const minY = Math.min(...ys) - pad;
+    return { minX, minY, width: Math.max(100, Math.max(...xs) - Math.min(...xs) + pad * 2), height: Math.max(100, Math.max(...ys) - Math.min(...ys) + pad * 2) };
+  }, [canvasObjects, canvasText, strokes]);
 
-  const canvasBounds = useMemo(() => {
-    const allPoints = selectedCanvasStrokes.flatMap((stroke) => stroke.points ?? []);
-    if (allPoints.length === 0) return null;
+  const toggleExcluded = async () => {
+    if (!selectedUser) return;
+    const next = !selectedUser.excluded;
+    setUsers((current) => current.map((entry) => entry.uid === selectedUser.uid ? { ...entry, excluded: next } : entry));
+    try { await updateDoc(doc(db, "user-data", selectedUser.uid), { excludeFromAdminAnalytics: next }); setMessage(next ? "User excluded from dashboard metrics." : "User included in dashboard metrics."); }
+    catch (error) { setUsers((current) => current.map((entry) => entry.uid === selectedUser.uid ? { ...entry, excluded: !next } : entry)); setMessage(error instanceof Error ? error.message : "Could not update analytics inclusion."); }
+  };
 
-    let minX = Number.POSITIVE_INFINITY;
-    let minY = Number.POSITIVE_INFINITY;
-    let maxX = Number.NEGATIVE_INFINITY;
-    let maxY = Number.NEGATIVE_INFINITY;
+  const copyToWhiteboards = async () => {
+    if (!user?.uid || !selectedUser || !canvasRaw || !selectedCanvas) return;
+    setCanvasBusy(true); setMessage("");
+    try {
+      const now = Date.now(); const pageId = `admin_import_${now.toString(36)}`; const storageId = whiteboardCanvasId(pageId);
+      const subject = getLastWhiteboardsSubject() || user.studyingSubjects?.[0] || "maths"; const path = `question-data/${user.uid}/${storageId}.json`;
+      await uploadBytes(ref(storage, path), new Blob([canvasRaw], { type: "application/json" }));
+      await Promise.all([
+        setDoc(doc(db, "user-data", user.uid, "whiteboards-pages", pageId), { name: `${selectedUser.username} · ${selectedCanvas}`, subject, folderId: null, emoji: "🔎", attachedQuestions: [], pageType: "whiteboard", documentContent: "", order: Number.MAX_SAFE_INTEGER, createdAt: now, updatedAt: now, lastOpenedAt: now }),
+        setDoc(doc(db, "user-data", user.uid, "question-data", storageId), { storagePath: path, strokeCount: strokes.length, updatedAt: new Date(now), importedFromUserId: selectedUser.uid }),
+      ]);
+      navigate(`/whiteboards/page/${pageId}`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Could not add this whiteboard."); setCanvasBusy(false); }
+  };
 
-    allPoints.forEach((point) => {
-      if (point.x < minX) minX = point.x;
-      if (point.y < minY) minY = point.y;
-      if (point.x > maxX) maxX = point.x;
-      if (point.y > maxY) maxY = point.y;
-    });
-
-    const pad = 24;
-    return {
-      minX: minX - pad,
-      minY: minY - pad,
-      width: Math.max(1, maxX - minX + pad * 2),
-      height: Math.max(1, maxY - minY + pad * 2),
-    };
-  }, [selectedCanvasStrokes]);
-
-  const canvasDocLabel = selectedCanvasQuestionId || "No question selected";
-
-  const canvasAspectRatio = useMemo(() => {
-    if (!canvasBounds) return 4 / 3;
-    return Math.max(0.25, Math.min(4, canvasBounds.width / canvasBounds.height));
-  }, [canvasBounds]);
-
-  if (!isAdmin) {
-    return (
-      <div className="flex flex-1 min-w-0 min-h-0 w-full h-full items-center justify-center color-bg">
-        <div className="color-bg-grey-5 p-8 rounded-xl text-center">
-          <LuX size={48} className="color-txt-accent mx-auto mb-4" />
-          <h2 className="txt-heading-colour text-2xl mb-2">Access Denied</h2>
-          <p className="color-txt-sub">You don&apos;t have permission to view this page.</p>
-        </div>
-      </div>
-    );
-  }
-
+  if (!isAdmin) return <div className="flex-1 color-bg grid place-items-center color-txt-sub"><LuX size={42} /></div>;
   return (
-    <div className="flex flex-col flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden color-bg">
-      <div className="shrink-0 w-full mx-auto px-6 pt-6 pb-4 max-w-[1800px]">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="color-bg-grey-5 p-2.5 rounded-xl hover:color-bg-grey-10 transition-all"
-            aria-label="Go back"
-          >
-            <LuArrowLeft size={22} className="color-txt-accent" />
-          </button>
-          <div>
-            <h1 className="color-txt-main text-2xl font-bold">Admin User Activity Tracker</h1>
-            <p className="color-txt-sub text-sm">
-              Full user stalking dashboard: activity, tracked documents, and per-question canvas playback.
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate("/admin/help-reports")}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-grey-5 color-txt-main text-sm font-semibold hover:opacity-90 transition-opacity"
-          >
-            <LuLifeBuoy size={16} />
-            Help reports
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/admin/discover-moderation")}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg-accent color-txt-accent text-sm font-semibold hover:opacity-90 transition-opacity"
-          >
-            <LuImage size={16} />
-            Discover moderation
-          </button>
-        </div>
-      </div>
-
-      {pageError && (
-        <div className="mt-4 px-4 py-3 rounded-xl color-bg-grey-5 color-txt-main border border-[var(--accent)]/30">
-          {pageError}
-        </div>
-      )}
-      <AiLimitsEditor />
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-hidden w-full mx-auto px-6 pb-6 max-w-[1800px]">
-      <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-5 h-full min-h-0">
-        <section className="rounded-2xl color-bg-grey-5 p-4 flex flex-col min-h-0 h-full overflow-hidden">
-          <div className="flex items-center gap-2 mb-3">
-            <LuSearch size={16} className="color-txt-sub" />
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search username, email, UID"
-              className="w-full rounded-lg px-3 py-2 text-sm color-bg-grey-10 color-txt-main outline-none border border-transparent focus:border-[var(--accent)]/50"
-            />
-          </div>
-
-          <div className="color-txt-sub text-xs mb-2">
-            {loadingUsers ? "Loading users..." : `${filteredUsers.length} users loaded`}
-          </div>
-
-          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-2 pr-1 scrollbar-minimal">
-            {loadingUsers && (
-              <div className="flex items-center gap-2 color-txt-sub text-sm px-2 py-3">
-                <LuLoaderCircle className="animate-spin" size={16} />
-                Fetching user list and activity...
-              </div>
-            )}
-
-            {!loadingUsers && filteredUsers.length === 0 && (
-              <div className="color-txt-sub text-sm px-2 py-3">No users match your search.</div>
-            )}
-
-            {filteredUsers.map((entry) => {
-              const isSelected = selectedUid === entry.uid;
-              const isRecent = Boolean(entry.lastActivityMs && Date.now() - entry.lastActivityMs <= WEEK_MS);
-              return (
-                <button
-                  key={entry.uid}
-                  type="button"
-                  onClick={() => {
-                    setSelectedUid(entry.uid);
-                    setSelectedCanvasQuestionId("");
-                  }}
-                  className={`w-full text-left p-3 rounded-xl border transition-all ${
-                    isSelected
-                      ? "border-[var(--accent)]/60 color-bg-grey-10"
-                      : isRecent
-                        ? "border-emerald-400/50 color-bg-grey-10/70"
-                        : "border-transparent color-bg-grey-10/40 hover:border-[var(--grey-20)]"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {entry.pictureUrl ? (
-                      <img
-                        src={entry.pictureUrl}
-                        alt={entry.username}
-                        className="w-10 h-10 rounded-full object-cover shrink-0 border border-[var(--grey-20)]"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full color-bg-grey-10 border border-[var(--grey-20)] flex items-center justify-center shrink-0">
-                        <LuUser size={16} className="color-txt-sub" />
-                      </div>
-                    )}
-
-                    <div className="min-w-0 w-full">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="color-txt-main text-sm font-semibold truncate">{entry.username || "Unknown"}</p>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full ${
-                            isRecent ? "bg-emerald-500/20 text-emerald-300" : "color-bg-grey-5 color-txt-sub"
-                          }`}
-                        >
-                          {isRecent ? "active (7d)" : "inactive"}
-                        </span>
-                      </div>
-                      <p className="color-txt-sub text-xs truncate">{entry.email || "No email"}</p>
-                      <p className="color-txt-sub text-[11px] truncate mt-1">UID: {entry.uid}</p>
-                      <p className="color-txt-sub text-[11px] mt-1">{formatRelativeTime(entry.lastActivityMs)}</p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+    <AdminShell title="Users">
+      {message && <div role="status" className="mb-4 rounded-xl color-bg-grey-5 px-4 py-3 text-sm color-txt-main">{message}</div>}
+      <div className="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-4 min-h-[680px]">
+        <section className="rounded-2xl color-bg-grey-5 border border-[color-mix(in_srgb,var(--theme-txt-sub)_12%,transparent)] p-3 flex flex-col max-h-[calc(100vh-150px)]">
+          <label className="relative block mb-3"><LuSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 color-txt-sub" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search users" className="w-full rounded-xl color-bg pl-9 pr-3 py-2.5 text-sm color-txt-main outline-none border border-transparent focus:border-[var(--accent)]" /></label>
+          <p className="px-1 mb-2 text-xs color-txt-sub">{loadingUsers ? "Loading…" : `${filtered.length} users`}</p>
+          <div className="min-h-0 overflow-y-auto space-y-1 scrollbar-minimal">
+            {filtered.map((entry) => <button key={entry.uid} type="button" onClick={() => { setSelectedUid(entry.uid); setSelectedCanvas(""); setMessage(""); }} className={`w-full text-left rounded-xl px-3 py-3 transition-[background-color,transform] duration-150 active:scale-[0.99] ${selectedUid === entry.uid ? "color-bg-accent color-txt-accent" : "hover:color-bg-grey-10 color-txt-main"}`}><div className="flex items-center gap-3">{entry.pictureUrl ? <img src={entry.pictureUrl} alt="" className="w-9 h-9 rounded-full object-cover shrink-0 border border-black/10" /> : <span className="w-9 h-9 rounded-full color-bg grid place-items-center shrink-0"><LuUser size={15} /></span>}<span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><span className="min-w-0 flex items-center gap-1.5"><span className="text-sm font-semibold truncate">{entry.username}</span>{entry.isAce && <span className="shrink-0 rounded-md bg-amber-400/20 px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide text-amber-600 dark:text-amber-300">ACE</span>}</span><span className="text-[11px] opacity-70 whitespace-nowrap">{relative(entry.lastActivityMs)}</span></span><span className="block text-xs opacity-70 truncate">{entry.email || entry.uid}</span></span>{entry.excluded && <LuBan size={14} className="shrink-0" aria-label="Excluded from metrics" />}</div></button>)}
           </div>
         </section>
 
-        <section className="rounded-2xl color-bg-grey-5 p-4 min-h-0 h-full overflow-hidden flex flex-col">
-          {!selectedUser ? (
-            <div className="flex-1 flex items-center justify-center color-txt-sub">Select a user to inspect tracked data.</div>
-          ) : (
-            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-5 pr-1 scrollbar-minimal">
-              <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)]">
-                <div className="flex flex-wrap items-center gap-4">
-                  {selectedUser.pictureUrl ? (
-                    <img
-                      src={selectedUser.pictureUrl}
-                      alt={selectedUser.username}
-                      className="w-16 h-16 rounded-full object-cover border border-[var(--grey-20)]"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full color-bg-grey-5 border border-[var(--grey-20)] flex items-center justify-center">
-                      <LuUser size={24} className="color-txt-sub" />
-                    </div>
-                  )}
-
-                  <div className="min-w-0">
-                    <h2 className="color-txt-main text-xl font-bold truncate">{selectedUser.username || "Unknown user"}</h2>
-                    <p className="color-txt-sub text-sm">{selectedUser.email || "No email"}</p>
-                    <p className="color-txt-sub text-xs mt-1">UID: {selectedUser.uid}</p>
-                  </div>
-
-                  <div className="ml-auto flex items-center gap-4 text-xs color-txt-sub">
-                    <span className="inline-flex items-center gap-1">
-                      <LuClock3 size={14} />
-                      {formatRelativeTime(selectedUser.lastActivityMs)}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <LuCalendarClock size={14} />
-                      {selectedUser.lastActivityMs ? new Date(selectedUser.lastActivityMs).toLocaleString() : "n/a"}
-                    </span>
-                  </div>
-                </div>
+        <section className="min-w-0 max-w-full overflow-hidden">
+          {!selectedUser ? <div className="h-full rounded-2xl color-bg-grey-5 grid place-items-center color-txt-sub">Select a user</div> : <div className="space-y-4">
+            <div className="rounded-2xl color-bg-grey-5 border border-[color-mix(in_srgb,var(--theme-txt-sub)_12%,transparent)] p-5"><div className="flex flex-wrap items-center gap-4">{selectedUser.pictureUrl ? <img src={selectedUser.pictureUrl} alt="" className="w-14 h-14 rounded-full object-cover border border-black/10" /> : <span className="w-14 h-14 rounded-full color-bg grid place-items-center"><LuUser size={22} className="color-txt-sub" /></span>}<div className="min-w-0"><h2 className="font-bold text-xl color-txt-main truncate">{selectedUser.username}</h2><p className="text-sm color-txt-sub truncate">{selectedUser.email || selectedUser.uid}</p></div><div className="ml-auto"><button type="button" onClick={() => void toggleExcluded()} className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold active:scale-[0.97] transition-transform ${selectedUser.excluded ? "color-bg-accent color-txt-accent" : "color-bg color-txt-main"}`}>{selectedUser.excluded ? <LuCheck /> : <LuBan />} {selectedUser.excluded ? "Include in metrics" : "Exclude from metrics"}</button></div></div></div>
+            {loadingDetails && !currentDetails ? <div className="p-10 text-center color-txt-sub"><LuLoaderCircle className="animate-spin inline mr-2" /> Loading activity…</div> : currentDetails && <>
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3"><Stat label="Last active" value={relative(lastActivity)} /><Stat label="Total study time" value={duration(selectedUser.totalStudySeconds || totalSessionSeconds)} /><Stat label="4-week retention" value={`${activeWeeks}/4 weeks`} /><Stat label="Recorded sessions" value={currentDetails.sessions.length.toLocaleString()} /><Stat label="Questions completed" value={completedCount.toLocaleString()} /></div>
+              <section className="rounded-2xl color-bg-grey-5 border border-[color-mix(in_srgb,var(--theme-txt-sub)_12%,transparent)] p-5 overflow-hidden"><div className="flex items-center justify-between gap-3 mb-4"><h3 className="font-bold color-txt-main">Session time</h3><span className="text-xs color-txt-sub">Latest {Math.min(20, currentDetails.sessions.length)}</span></div><div className="flex gap-2 overflow-x-auto pb-2 scrollbar-minimal">{currentDetails.sessions.slice(0, 20).map((entry) => <div key={entry.id} className="min-w-[230px] max-w-[270px] rounded-xl color-bg px-4 py-3 flex items-center gap-3"><span className="w-9 h-9 rounded-lg color-bg-grey-5 grid place-items-center shrink-0"><LuClock3 className="color-txt-sub" /></span><div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><p className="text-base font-bold color-txt-main">{duration(Number(entry.data.durationSeconds) || 0)}</p><span className="rounded-md color-bg-grey-5 px-1.5 py-0.5 text-[10px] font-semibold color-txt-sub whitespace-nowrap">{sessionDeviceLabel(entry.data.deviceCategory)}</span></div><p className="text-xs color-txt-sub truncate">{String(entry.data.subject ?? "General study")}</p><p className="text-[11px] color-txt-sub mt-0.5">{valueToMillis(entry.data.endTime) ? new Date(valueToMillis(entry.data.endTime)!).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</p></div></div>)}{!currentDetails.sessions.length && <p className="py-5 color-txt-sub text-sm">No sessions recorded.</p>}</div></section>
+              <div className="grid grid-cols-1 2xl:grid-cols-2 gap-4 items-start">
+                <section className="order-2 rounded-2xl color-bg-grey-5 border border-[color-mix(in_srgb,var(--theme-txt-sub)_12%,transparent)] p-5 overflow-hidden"><h3 className="font-bold color-txt-main mb-4">Question activity</h3><div className="max-h-[520px] overflow-y-auto pr-1 scrollbar-minimal"><table className="w-full table-fixed text-sm"><thead className="sticky top-0 color-bg-grey-5"><tr className="text-left color-txt-sub border-b border-[color-mix(in_srgb,var(--theme-txt-sub)_14%,transparent)]"><th className="w-[58%] font-semibold py-2 pr-4">Question</th><th className="w-[20%] font-semibold py-2 pr-4">Time</th><th className="w-[22%] font-semibold py-2">Result</th></tr></thead><tbody>{currentDetails.questionLog.map((entry) => <tr key={entry.id} className="border-b border-[color-mix(in_srgb,var(--theme-txt-sub)_8%,transparent)]"><td className="py-3 pr-4 color-txt-main"><span className="block font-medium truncate">{String(entry.data.questionName ?? "Question")}</span><span className="block text-xs color-txt-sub truncate">{String(entry.data.paperLabel ?? entry.data.subject ?? "")}</span></td><td className="py-3 pr-4 color-txt-sub">{duration(Number(entry.data.durationSeconds) || 0)}</td><td className="py-3"><span className={entry.data.completed === true ? "text-emerald-500" : "color-txt-sub"}>{entry.data.completed === true ? "Completed" : "Attempted"}</span></td></tr>)}</tbody></table>{!currentDetails.questionLog.length && <p className="py-8 text-center color-txt-sub">No question activity recorded.</p>}</div></section>
+                <section className="order-1 rounded-2xl color-bg-grey-5 border border-[color-mix(in_srgb,var(--theme-txt-sub)_12%,transparent)] p-5 overflow-hidden">
+<div className="flex items-center justify-between gap-3 mb-4">
+<h3 className="font-bold color-txt-main">Whiteboards</h3>
+<span className="text-xs color-txt-sub">{currentDetails.questionData.filter((entry) => typeof entry.data.storagePath === "string").length} saved</span>
+</div>
+<div className="space-y-1 max-h-40 overflow-y-auto pr-1 mb-3 scrollbar-minimal">{currentDetails.questionData.filter((entry) => typeof entry.data.storagePath === "string").map((entry) => <button key={entry.id} type="button" onClick={() => setSelectedCanvas(entry.id)} className={`w-full rounded-lg px-3 py-2 text-left text-xs font-semibold truncate ${selectedCanvas === entry.id ? "color-bg-accent color-txt-accent" : "color-bg color-txt-sub hover:color-txt-main"}`}>{entry.id}</button>)}</div>
+<div className="h-[300px] rounded-xl bg-white border border-black/10 overflow-hidden grid place-items-center">{canvasBusy ? <LuLoaderCircle className="animate-spin text-slate-400" /> : bounds ? <svg viewBox={`${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">{canvasObjects.filter((object) => !object.pinnedToSide).map((object) => <image key={object.id} href={object.src} x={object.x} y={object.y} width={object.width} height={object.height} preserveAspectRatio="none" />)}{strokes.map((stroke, index) => <path key={index} d={pathFor(stroke.points)} fill="none" stroke={stroke.tool === "eraser" ? "#fff" : stroke.color || "#111827"} strokeWidth={stroke.brushRadius ? stroke.brushRadius * 2 : 3} strokeLinecap="round" strokeLinejoin="round" />)}{canvasText.map((box) => <foreignObject key={box.id} x={box.x} y={box.y} width={box.width} height={box.height}>
+<div style={{ color: "#111827", fontSize: box.fontSize, whiteSpace: "pre-wrap", overflow: "hidden" }}>{box.text}</div>
+</foreignObject>)}</svg> : <div className="text-center text-slate-400 text-sm">
+<LuFileQuestion size={24} className="mx-auto mb-2" />Select a saved whiteboard</div>}</div>
+<button type="button" disabled={!canvasRaw || canvasBusy} onClick={() => void copyToWhiteboards()} className="mt-3 w-full inline-flex justify-center items-center gap-2 rounded-xl color-bg-accent color-txt-accent px-3 py-2.5 text-sm font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform">
+<LuCopyPlus /> Add to my whiteboards</button>
+</section>
               </div>
-
-              {loadingDetails && !selectedDetails && (
-                <div className="flex items-center gap-2 color-txt-sub text-sm px-2 py-3">
-                  <LuLoaderCircle className="animate-spin" size={16} />
-                  Loading tracked collections...
-                </div>
-              )}
-
-              {selectedDetails && (
-                <>
-                  <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
-                    <StatCard label="Sessions" value={selectedDetails.sessions.length} />
-                    <StatCard label="Question Logs" value={selectedDetails.questionLog.length} />
-                    <StatCard label="Question Data" value={selectedDetails.questionData.length} />
-                    <StatCard label="Daily Logins" value={selectedDetails.dailyLogins.length} />
-                    <StatCard label="Daily Answers" value={selectedDetails.dailyAnswers.length} />
-                    <StatCard label="Paper Progress" value={selectedDetails.paperProgress.length} />
-                    <StatCard label="Completed Topics" value={selectedDetails.completedQuestions.length} />
-                  </div>
-
-                  <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_1fr] gap-4">
-                    <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)]">
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <h3 className="color-txt-main font-semibold inline-flex items-center gap-2">
-                          <LuDatabase size={16} />
-                          Tracked User Doc
-                        </h3>
-                        <span className="text-xs color-txt-sub">root: user-data/{selectedUser.uid}</span>
-                      </div>
-                      <pre className="max-h-[300px] overflow-auto rounded-lg color-bg-grey-5 p-3 text-xs color-txt-main whitespace-pre-wrap break-words">
-                        {JSON.stringify(selectedUser.userDoc, null, 2)}
-                      </pre>
-                    </div>
-
-                    <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)]">
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <h3 className="color-txt-main font-semibold">Recent Question Log</h3>
-                        <span className="text-xs color-txt-sub">latest {Math.min(15, selectedDetails.questionLog.length)}</span>
-                      </div>
-                      <div className="space-y-2 max-h-[300px] overflow-auto pr-1">
-                        {selectedDetails.questionLog.slice(0, 15).map((entry) => (
-                          <div key={entry.id} className="rounded-lg color-bg-grey-5 p-2.5">
-                            <p className="color-txt-main text-xs font-medium">{String(entry.data.questionName ?? "Unknown question")}</p>
-                            <p className="color-txt-sub text-[11px]">questionId: {String(entry.data.questionId ?? entry.id)}</p>
-                            <p className="color-txt-sub text-[11px]">
-                              duration: {String(entry.data.durationSeconds ?? 0)}s | completed: {String(entry.data.completed ?? false)}
-                            </p>
-                          </div>
-                        ))}
-                        {selectedDetails.questionLog.length === 0 && (
-                          <p className="color-txt-sub text-sm">No question-log entries.</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 xl:grid-cols-[360px_1fr_1fr] gap-4">
-                    <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)]">
-                      <h3 className="color-txt-main font-semibold mb-3">Canvas By Question</h3>
-                      <div className="space-y-2 max-h-[360px] overflow-auto pr-1">
-                        {selectedDetails.questionData.map((entry) => {
-                          const storagePath = typeof entry.data.storagePath === "string" ? entry.data.storagePath : "";
-                          const selected = entry.id === selectedCanvasQuestionId;
-                          return (
-                            <button
-                              key={entry.id}
-                              type="button"
-                              onClick={() => setSelectedCanvasQuestionId(entry.id)}
-                              className={`w-full text-left rounded-lg p-2.5 border transition-all ${
-                                selected
-                                  ? "border-[var(--accent)]/60 color-bg-grey-5"
-                                  : "border-transparent color-bg-grey-5/60 hover:border-[var(--grey-20)]"
-                              }`}
-                            >
-                              <p className="color-txt-main text-xs font-medium truncate">{entry.id}</p>
-                              <p className="color-txt-sub text-[11px] truncate">{storagePath || "No storagePath"}</p>
-                              <p className="color-txt-sub text-[11px]">strokes: {String(entry.data.strokeCount ?? 0)}</p>
-                            </button>
-                          );
-                        })}
-                        {selectedDetails.questionData.length === 0 && (
-                          <p className="color-txt-sub text-sm">No canvas data stored for this user.</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)] flex flex-col">
-                      <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
-                        <h3 className="color-txt-main font-semibold">Canvas Viewer</h3>
-                        <span className="text-xs color-txt-sub truncate">{canvasDocLabel}</span>
-                      </div>
-
-                      {loadingCanvas && (
-                        <div className="h-48 flex items-center justify-center color-txt-sub text-sm gap-2">
-                          <LuLoaderCircle className="animate-spin" size={16} />
-                          Loading canvas JSON...
-                        </div>
-                      )}
-
-                      {!loadingCanvas && canvasError && (
-                        <div className="h-48 rounded-xl border border-[var(--accent)]/30 px-3 py-2 color-txt-main text-sm flex items-center">
-                          {canvasError}
-                        </div>
-                      )}
-
-                      {!loadingCanvas && !canvasError && !canvasBounds && (
-                        <div className="h-48 rounded-xl border border-dashed border-[var(--grey-20)] flex items-center justify-center color-txt-sub text-sm">
-                          Select a question canvas to preview.
-                        </div>
-                      )}
-
-                      {!loadingCanvas && !canvasError && canvasBounds && (
-                        <div
-                          className="w-full max-h-[min(360px,40vh)] overflow-hidden rounded-xl border border-[var(--grey-20)] bg-white"
-                          style={{ aspectRatio: canvasAspectRatio }}
-                        >
-                          <svg
-                            className="block w-full h-full"
-                            viewBox={`${canvasBounds.minX} ${canvasBounds.minY} ${canvasBounds.width} ${canvasBounds.height}`}
-                            preserveAspectRatio="xMidYMid meet"
-                          >
-                            <rect
-                              x={canvasBounds.minX}
-                              y={canvasBounds.minY}
-                              width={canvasBounds.width}
-                              height={canvasBounds.height}
-                              fill="#ffffff"
-                            />
-                            {selectedCanvasStrokes.map((stroke, index) => {
-                              const d = buildPath(stroke.points ?? []);
-                              if (!d) return null;
-                              const isEraser = stroke.tool === "eraser";
-                              return (
-                                <path
-                                  key={`${index}-${stroke.points.length}`}
-                                  d={d}
-                                  fill="none"
-                                  stroke={isEraser ? "#f3f4f6" : "#111827"}
-                                  strokeWidth={
-                                    stroke.brushRadius
-                                      ? Math.max(1, stroke.brushRadius * 2)
-                                      : isEraser
-                                        ? 20
-                                        : 3
-                                  }
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  vectorEffect="non-scaling-stroke"
-                                />
-                              );
-                            })}
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)] flex flex-col">
-                      <div className="flex items-center gap-2 mb-3 shrink-0">
-                        <LuFileJson size={16} className="color-txt-sub" />
-                        <h3 className="color-txt-main font-semibold">Canvas JSON</h3>
-                      </div>
-                      <pre className="max-h-[min(360px,40vh)] overflow-auto rounded-xl color-bg-grey-5 p-3 text-xs color-txt-main whitespace-pre-wrap break-words scrollbar-minimal">
-                        {selectedCanvasRaw || "No canvas JSON loaded yet."}
-                      </pre>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <CollectionPreview title="Sessions" docs={selectedDetails.sessions} />
-                    <CollectionPreview title="Daily Logins" docs={selectedDetails.dailyLogins} />
-                    <CollectionPreview title="Daily Answers" docs={selectedDetails.dailyAnswers} />
-                    <CollectionPreview title="Paper Progress" docs={selectedDetails.paperProgress} />
-                    <CollectionPreview title="Completed Questions" docs={selectedDetails.completedQuestions} />
-                  </div>
-
-                  <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)]">
-                    <h3 className="color-txt-main font-semibold mb-3">Selected User Full Snapshot</h3>
-                    <pre className="max-h-[460px] overflow-auto rounded-xl color-bg-grey-5 p-3 text-xs color-txt-main whitespace-pre-wrap break-words">
-                      {JSON.stringify(
-                        {
-                          user: selectedUser.userDoc,
-                          tracked: selectedDetails,
-                        },
-                        null,
-                        2
-                      )}
-                    </pre>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+            </>}
+          </div>}
         </section>
       </div>
-      </div>
-    </div>
+    </AdminShell>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl color-bg-grey-10 p-3 border border-[var(--grey-20)]">
-      <p className="color-txt-sub text-xs">{label}</p>
-      <p className="color-txt-main text-xl font-semibold mt-1">{value}</p>
-    </div>
-  );
-}
-
-function CollectionPreview({ title, docs }: { title: string; docs: TrackedDoc[] }) {
-  return (
-    <div className="rounded-xl color-bg-grey-10 p-4 border border-[var(--grey-20)]">
-      <h3 className="color-txt-main font-semibold mb-3">{title}</h3>
-      {docs.length === 0 ? (
-        <p className="color-txt-sub text-sm">No documents.</p>
-      ) : (
-        <pre className="max-h-[280px] overflow-auto rounded-lg color-bg-grey-5 p-3 text-xs color-txt-main whitespace-pre-wrap break-words">
-          {JSON.stringify(docs.slice(0, 30), null, 2)}
-        </pre>
-      )}
-    </div>
-  );
-}
+function Stat({ label, value }: { label: string; value: string }) { return <article className="rounded-2xl color-bg-grey-5 border border-[color-mix(in_srgb,var(--theme-txt-sub)_12%,transparent)] p-4"><p className="text-xs font-semibold color-txt-sub">{label}</p><p className="mt-2 text-xl font-bold color-txt-main truncate">{value}</p></article>; }

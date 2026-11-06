@@ -19,6 +19,8 @@ import ManageAccount from "./pages/manageAccount";
 import DeckViewer from "./pages/deckViewer";
 import AddQuestions from "./pages/addQuestions";
 import AdminCanvasViewer from "./pages/adminCanvasViewer";
+import AdminDashboard from "./pages/adminDashboard";
+import AdminUsageLimits from "./pages/adminUsageLimits";
 import DiscoverModeration from "./pages/discoverModeration";
 import DiscoverModerationReview from "./pages/discoverModerationReview";
 import HelpReports from "./pages/helpReports";
@@ -71,12 +73,6 @@ function SpotifyOAuthPathBridge() {
 function RootLayout() {
   useAuthentication({ observeSession: true });
 
-  // Phone browsers never mount sign-up. That route used to bounce through a
-  // protected /mobileRedirect page and reload the form in a loop.
-  if (isPhoneBrowser()) {
-    return <MobileRedirect />;
-  }
-
   // SpotifyProvider is mounted app-wide so playback and auth persist across
   // navigation (music keeps playing when switching pages) and both the sidebar
   // tab and the floating mini-player share one session.
@@ -91,6 +87,17 @@ function RootLayout() {
       <GoogleAnalytics />
       <FloatingDiscoverResource />
     </SpotifyProvider>
+  );
+}
+
+/** Phone browsers can use the full app except the canvas/document editor. */
+function WhiteboardPageRoute() {
+  if (isPhoneBrowser()) return <MobileRedirect />;
+  return (
+    <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+      <Navbar />
+      <WhiteboardPageView />
+    </div>
   );
 }
 
@@ -173,10 +180,7 @@ const router = createHashRouter([
     path: "/whiteboards/page/:pageId",
     element: (
       <ProtectedRoute>
-        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
-          <Navbar />
-          <WhiteboardPageView />
-        </div>
+        <WhiteboardPageRoute />
       </ProtectedRoute>
     ),
   },
@@ -256,12 +260,42 @@ const router = createHashRouter([
     ),
   },
   {
-    path: "/admin/canvas-viewer",
+    path: "/admin",
+    element: (
+      <ProtectedRoute>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+          <Navbar />
+          <AdminDashboard />
+        </div>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/users",
     element: (
       <ProtectedRoute>
         <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
           <Navbar />
           <AdminCanvasViewer />
+        </div>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/canvas-viewer",
+    element: (
+      <ProtectedRoute>
+        <Navigate to="/admin/users" replace />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/admin/usage-limits",
+    element: (
+      <ProtectedRoute>
+        <div className="page-with-sidebar flex flex-1 min-w-0 min-h-0 w-full h-full overflow-hidden">
+          <Navbar />
+          <AdminUsageLimits />
         </div>
       </ProtectedRoute>
     ),

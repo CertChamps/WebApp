@@ -36,6 +36,8 @@ import { deleteAccount as deleteAccountRequest } from "../lib/deleteAccount";
 import { prepareProfileImagePreview, revokeProfileImagePreview } from "../lib/profileImage";
 import { fetchAiUsage, type AiPurpose, type AiUsageSummary } from "../lib/aiApi";
 import { PRIVACY_URL, TERMS_URL } from "../lib/legal";
+import { isAdminUid } from "../constants/adminUids";
+import { getOnboardingReplayPath } from "../lib/onboarding";
 import "../styles/settings.css";
 
 type TabId = "home" | "payments" | "usage" | "help";
@@ -749,6 +751,7 @@ const ManageAccount = () => {
     const [activeTab, setActiveTab] = useState<TabId>(isUsagePage ? "usage" : isHelpPage ? "help" : "home");
     const displayedTab: TabId = isSettingsPage ? "home" : isUsagePage ? "usage" : isHelpPage ? "help" : activeTab;
     const isStandalonePage = isSettingsPage || displayedTab === "usage" || displayedTab === "help";
+    const isAdmin = isAdminUid(user?.uid, user?.email);
     const [newUsername, setNewUsername] = useState<string>("");
     const [editingUsername, setEditingUsername] = useState(false);
     const [userNameError, setUserNameError] = useState<string>("");
@@ -1021,6 +1024,28 @@ const ManageAccount = () => {
                                 </div>
                             </div>
                         </section>
+
+                        {isAdmin && isSettingsPage && (
+                            <section className="account-settings__section">
+                                <h2>Admin</h2>
+                                <div className="account-settings__group">
+                                    <div className="account-settings__row">
+                                        <div>
+                                            <strong>Redo introduction flow</strong>
+                                            <small>Replay the welcome and setup screens without resetting your account</small>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="account-settings__link inline-flex items-center gap-2"
+                                            onClick={() => navigate(getOnboardingReplayPath("/user/settings"))}
+                                        >
+                                            <LuRefreshCw size={16} aria-hidden />
+                                            Start
+                                        </button>
+                                    </div>
+                                </div>
+                            </section>
+                        )}
 
                         <section className="account-settings__section">
                             <h2>Account actions</h2>

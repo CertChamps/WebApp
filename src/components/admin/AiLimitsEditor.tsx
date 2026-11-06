@@ -56,13 +56,13 @@ export default function AiLimitsEditor() {
   };
 
   return (
-    <section className="mt-4 rounded-xl color-bg-grey-5 p-4">
+    <section className="rounded-2xl color-bg-grey-5 border border-[color-mix(in_srgb,var(--theme-txt-sub)_12%,transparent)] p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="font-bold color-txt-main">Monthly AI allowances</h2>
-          <p className="text-xs color-txt-sub">Server limits for Free and ACE accounts. Changes apply to new requests immediately.</p>
+          <p className="text-sm color-txt-sub mt-1">Changes apply to new requests immediately.</p>
         </div>
-        {limits && <button type="button" onClick={() => setEditing((value) => !value)} className="px-3 py-1.5 rounded-lg color-bg-grey-10 color-txt-main text-sm">{editing ? "Close" : "Edit limits"}</button>}
+        {limits && <button type="button" onClick={() => setEditing((value) => !value)} className="px-3 py-2 rounded-xl color-bg-grey-10 color-txt-main text-sm font-semibold active:scale-[0.97] transition-transform">{editing ? "Close" : "Edit limits"}</button>}
       </div>
       {editing && limits && (
         <div className="mt-4 overflow-x-auto">

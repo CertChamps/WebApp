@@ -1,5 +1,4 @@
 import { useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   collection,
   doc,
@@ -11,7 +10,6 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import {
-  LuArrowLeft,
   LuCircleCheck,
   LuExternalLink,
   LuLifeBuoy,
@@ -24,6 +22,7 @@ import {
 import { db } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { isAdminUid } from "../constants/adminUids";
+import AdminShell from "../components/admin/AdminShell";
 
 type SupportAttachment = {
   name: string;
@@ -68,7 +67,6 @@ function formatBytes(size: number): string {
 }
 
 export default function HelpReports() {
-  const navigate = useNavigate();
   const { user } = useContext(UserContext);
   const isAdmin = isAdminUid(user?.uid, user?.email);
   const [items, setItems] = useState<SupportReport[]>([]);
@@ -90,20 +88,22 @@ export default function HelpReports() {
         setItems(
           snap.docs
           .map((entry) => {
-            const data = entry.data() as any;
+            const data = entry.data() as Record<string, unknown>;
+            const timestamp = data.timestamp as { seconds?: number } | undefined;
+            const createdAt = data.createdAt as { seconds?: number } | undefined;
             return {
               id: entry.id,
-              userId: data.userId ?? "",
-              username: data.username ?? "Unknown",
-              contactEmail: data.contactEmail ?? "",
-              userEmail: data.userEmail ?? "",
-              subject: data.subject ?? "No subject",
-              description: data.description ?? data.message ?? "",
-              issueType: data.issueType ?? "Other",
+              userId: typeof data.userId === "string" ? data.userId : "",
+              username: typeof data.username === "string" ? data.username : "Unknown",
+              contactEmail: typeof data.contactEmail === "string" ? data.contactEmail : "",
+              userEmail: typeof data.userEmail === "string" ? data.userEmail : "",
+              subject: typeof data.subject === "string" ? data.subject : "No subject",
+              description: typeof data.description === "string" ? data.description : typeof data.message === "string" ? data.message : "",
+              issueType: typeof data.issueType === "string" ? data.issueType : "Other",
               status: data.status === "resolved" ? "resolved" as const : "open" as const,
-              attachments: Array.isArray(data.attachments) ? data.attachments : [],
-              createdAt: data.timestamp?.seconds ?? data.createdAt?.seconds ?? null,
-              source: data.source ?? "",
+              attachments: Array.isArray(data.attachments) ? data.attachments as SupportAttachment[] : [],
+              createdAt: timestamp?.seconds ?? createdAt?.seconds ?? null,
+              source: typeof data.source === "string" ? data.source : "",
             };
           })
           .filter((item) => item.source === "help")
@@ -129,8 +129,8 @@ export default function HelpReports() {
         reviewedBy: user?.uid ?? "",
         updatedAt: serverTimestamp(),
       });
-    } catch (err: any) {
-      setError(err?.message ?? "Could not update report.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not update report.");
     } finally {
       setBusyId(null);
     }
@@ -151,28 +151,8 @@ export default function HelpReports() {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-w-0 min-h-0 w-full h-full overflow-y-auto color-bg scrollbar-minimal">
-      <div className="w-full max-w-7xl mx-auto px-6 py-6 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="color-bg-grey-5 p-2.5 rounded-xl hover:color-bg-grey-10 transition-all"
-              aria-label="Go back"
-            >
-              <LuArrowLeft size={22} className="color-txt-accent" />
-            </button>
-            <div>
-              <h1 className="color-txt-main text-2xl font-bold">Help Reports</h1>
-              <p className="color-txt-sub text-sm">Review support requests sent from the account help form.</p>
-            </div>
-          </div>
-          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl color-bg-grey-5 color-txt-sub text-sm font-semibold">
-            <LuLifeBuoy size={16} />
-            {openCount} open
-          </div>
-        </div>
+    <AdminShell title="Help reports" actions={<div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl color-bg-grey-5 color-txt-sub text-sm font-semibold"><LuLifeBuoy size={16} />{openCount} open</div>}>
+      <div className="space-y-5">
 
         {error && (
           <div className="rounded-xl color-bg-grey-5 px-4 py-3 text-sm text-red-500">
@@ -286,6 +266,6 @@ export default function HelpReports() {
           </div>
         )}
       </div>
-    </div>
+    </AdminShell>
   );
 }

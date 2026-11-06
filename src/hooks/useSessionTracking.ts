@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { doc, addDoc, updateDoc, collection } from "firebase/firestore";
 import { increment } from "firebase/firestore";
 import { db } from "../../firebase";
+import { getSessionDevice } from "../lib/sessionDevice";
 
 /**
  * Tracks study sessions: records start time when user is active, and writes
@@ -22,6 +23,7 @@ export function useSessionTracking(uid: string | undefined, subject?: string | u
     if (!uid) return;
 
     const sessionSubject = normalizedSubject || null;
+    const sessionDevice = getSessionDevice();
 
     const recordSessionEnd = () => {
       if (!sessionStartRef.current || hasRecordedRef.current) return;
@@ -40,6 +42,8 @@ export function useSessionTracking(uid: string | undefined, subject?: string | u
         endTime: new Date(now),
         durationSeconds,
         subject: sessionSubject,
+        deviceCategory: sessionDevice.category,
+        devicePlatform: sessionDevice.platform,
       }).catch((err) => console.warn("Failed to write session:", err));
 
       const updates: Record<string, ReturnType<typeof increment>> = {
