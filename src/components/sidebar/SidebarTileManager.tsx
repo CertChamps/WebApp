@@ -1,10 +1,9 @@
-import { useState, useCallback, useContext, useEffect, type ReactNode } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useCallback, useContext, type ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { LuSparkles, LuMessageSquare, LuTimer, LuPanelRightClose, LuClipboardList, LuSearch } from "react-icons/lu";
+import { LuSparkles, LuTimer, LuPanelRightClose, LuClipboardList, LuSearch } from "react-icons/lu";
 import { AIChat } from "../ai";
 import type { InjectedExchange } from "../ai/useAI";
-import QThread from "../questions/q_thread";
 import QuestionDiscover from "../questions/QuestionDiscover";
 import Timer from "../timer";
 import SpotifyPanel from "../spotify/SpotifyPanel";
@@ -15,7 +14,6 @@ import type { ImageQuestion } from "../../hooks/useImageQuestions";
 import ProGate from "../ProGate";
 import { UserContext } from "../../context/UserContext";
 import { canUseAceFeature } from "../../lib/contentAccess";
-import { DISCOVER_RESOURCE_PARAM, DISCOVER_SIDEBAR_PARAM } from "../../lib/discoverLinks";
 import { auth } from "../../../firebase";
 import crownImg from "../../assets/images/Ranks/Rank6.png";
 import { signInPath } from "../../lib/signIn";
@@ -277,8 +275,6 @@ function TileContent({
 }) {
   const { authReady, user } = useContext(UserContext);
   const signedIn = authReady && !!auth.currentUser && user?.uid === auth.currentUser.uid;
-  const part = 0;
-  const questionId = question?.id ?? "";
 
   switch (panelId) {
     case "ai":
@@ -305,8 +301,7 @@ function TileContent({
         </div>
       );
     case "threads": {
-      const isPaperThread = !!question?._paperThread;
-      return <ThreadsPanel questionId={questionId} part={part} isPaperThread={isPaperThread} question={question} onClosePanel={_onClosePanel} />;
+      return <ThreadsPanel question={question} onClosePanel={_onClosePanel} />;
     }
     case "timer":
       return (
@@ -388,17 +383,8 @@ function TileContent({
   }
 }
 
-function ThreadsPanel({ questionId, part, isPaperThread, question, onClosePanel }: { questionId: string; part: number; isPaperThread: boolean; question?: any; onClosePanel?: () => void }) {
+function ThreadsPanel({ question, onClosePanel }: { question?: any; onClosePanel?: () => void }) {
   const { user } = useContext(UserContext);
-  const [searchParams] = useSearchParams();
-  const [threadView, setThreadView] = useState<"discover" | "discussion">("discover");
-
-  useEffect(() => {
-    const openDiscover =
-      searchParams.get(DISCOVER_SIDEBAR_PARAM) === "threads" ||
-      Boolean(searchParams.get(DISCOVER_RESOURCE_PARAM)?.trim());
-    if (openDiscover) setThreadView("discover");
-  }, [searchParams]);
 
   if (!canUseAceFeature(user, "threads")) {
     return (
@@ -422,62 +408,8 @@ function ThreadsPanel({ questionId, part, isPaperThread, question, onClosePanel 
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden color-bg">
-      <div className="shrink-0 p-2 pb-1">
-        <div className="grid grid-cols-2 gap-1 rounded-2xl color-bg-grey-5 p-1" role="tablist" aria-label="Question threads">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={threadView === "discover"}
-            onClick={() => setThreadView("discover")}
-            className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-colors cursor-pointer ${
-              threadView === "discover" ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-txt-main"
-            }`}
-          >
-            <LuSearch size={14} /> Discover
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={threadView === "discussion"}
-            onClick={() => setThreadView("discussion")}
-            className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-colors cursor-pointer ${
-              threadView === "discussion" ? "color-bg-accent color-txt-accent" : "color-txt-sub hover:color-txt-main"
-            }`}
-          >
-            <LuMessageSquare size={14} /> Discussion
-          </button>
-        </div>
-      </div>
-
       <div className="min-h-0 flex-1 overflow-hidden">
-        {threadView === "discover" ? (
-          <QuestionDiscover question={question} onPopOut={onClosePanel} />
-        ) : questionId ? (
-          <QThread
-            questionId={questionId}
-            part={part}
-            paperThread={isPaperThread}
-            paperId={isPaperThread ? question.paperId : undefined}
-            paperQuestionId={isPaperThread ? question.paperQuestionId : undefined}
-            paperLabel={isPaperThread ? question.paperLabel : undefined}
-            questionName={question?._discoverName ?? question?.questionName ?? question?.properties?.name}
-            subject={question?._discoverSubjectId ?? question?.subject}
-            subjectLabel={question?._discoverSubjectLabel}
-            level={question?._discoverLevel ?? question?.level}
-            topic={question?._discoverTopic}
-            discoverQuestionId={question?._discoverId ?? questionId}
-            practiceUrl={question?._practiceUrl}
-            sourceContext={question?._discoverSource}
-            indexInPaper={isPaperThread ? question.indexInPaper : undefined}
-            storagePath={isPaperThread ? question.storagePath : undefined}
-            pageRange={isPaperThread ? question.pageRange : undefined}
-            pageRegions={isPaperThread ? question.pageRegions : undefined}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center p-4 text-sm color-txt-sub">
-            Select a question to view threads.
-          </div>
-        )}
+        <QuestionDiscover question={question} onPopOut={onClosePanel} />
       </div>
     </div>
   );

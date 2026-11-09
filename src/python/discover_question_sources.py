@@ -155,7 +155,14 @@ LEVEL_QUERY = {
     "common": "Common Level",
 }
 
-RESOURCE_TYPES = ("Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other")
+RESOURCE_TYPES = ("Revision Notes", "Sample Answer", "Lesson", "Flashcards")
+LEGACY_RESOURCE_TYPES = {
+    "Notes": "Revision Notes",
+    "Videos": "Lesson",
+    "Sample Answers": "Sample Answer",
+    "Website": "Revision Notes",
+    "Other": "Revision Notes",
+}
 RESOURCE_LEVELS = ("Higher", "Ordinary", "Foundation")
 MAX_TITLE = 80
 MAX_DESCRIPTION = 240
@@ -1313,10 +1320,8 @@ def score_hit(hit: SearchHit, cycle: str, search_label: str, question: GroupedQu
 
 def resource_types_for(kind: str) -> list[str]:
     if kind == "youtube":
-        return ["Videos"]
-    if kind == "pdf":
-        return ["Notes"]
-    return ["Website"]
+        return ["Lesson"]
+    return ["Revision Notes"]
 
 
 def make_draft(
@@ -1512,7 +1517,11 @@ def load_drafts(path: Path) -> tuple[dict[str, Any], list[Draft]]:
                 title=str(item.get("title") or "").strip(),
                 description=str(item.get("description") or "").strip(),
                 website_url=canonical_url(str(item.get("website_url") or item.get("websiteUrl") or "")),
-                resource_types=[t for t in (item.get("resource_types") or item.get("resourceTypes") or ["Website"]) if t in RESOURCE_TYPES] or ["Website"],
+                resource_types=[
+                    LEGACY_RESOURCE_TYPES.get(t, t)
+                    for t in (item.get("resource_types") or item.get("resourceTypes") or ["Revision Notes"])
+                    if LEGACY_RESOURCE_TYPES.get(t, t) in RESOURCE_TYPES
+                ][:1] or ["Revision Notes"],
                 topics=[slugify_topic(t) for t in (item.get("topics") or []) if str(t).strip()][:MAX_TOPICS],
                 levels=[lv for lv in (item.get("levels") or []) if lv in RESOURCE_LEVELS],
                 subject_id=str(item.get("subject_id") or item.get("subjectId") or "").strip(),
@@ -1547,6 +1556,8 @@ def validate_draft(draft: Draft) -> Optional[str]:
         return "bad url"
     if not draft.subject_id or not draft.subject_label:
         return "missing subject"
+    if not draft.topics and not draft.linked_question_topic:
+        return "missing topic"
     return None
 
 
@@ -1576,6 +1587,15 @@ def post_drafts(
         if dry_run:
             print(f"DRY  {preview}")
             continue
+        topic_id = draft.topics[0] if draft.topics else slugify_topic(draft.linked_question_topic)
+        topic_level = (draft.linked_question_level or (draft.levels[0] if draft.levels else "higher")).lower()
+        topic_url = "/practice?" + urllib.parse.urlencode({
+            "subject": draft.subject_id,
+            "level": topic_level,
+            "cycle": "leaving",
+            "browse": "topic",
+            "topic": topic_id,
+        })
         payload = {
             "userId": uid,
             "username": username,
@@ -1584,6 +1604,7 @@ def post_drafts(
             "description": draft.description,
             "websiteUrl": draft.website_url,
             "resourceSource": "website",
+            "formatType": "Video" if draft.kind == "youtube" else "Website",
             "pdfPath": "",
             "pdfFileName": "",
             "thumbnailUrl": draft.thumbnail_url,
@@ -1599,7 +1620,11 @@ def post_drafts(
             "levels": draft.levels,
             "resourceTypes": draft.resource_types,
             "resourceType": draft.resource_types[0],
-            "topics": draft.topics,
+            "topicId": topic_id,
+            "topicLabel": prettify_name(topic_id),
+            "topicLevel": topic_level,
+            "topicUrl": topic_url,
+            "topics": [topic_id],
             "likeCount": 0,
             "commentCount": 0,
             "ratingAverage": 0,

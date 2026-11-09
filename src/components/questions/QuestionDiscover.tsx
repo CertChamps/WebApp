@@ -41,13 +41,12 @@ import {
   parseLinkedQuestions,
   type LinkedDiscoverQuestion,
 } from "../../lib/discoverLinks";
+import { resolveResourceType, resourceFormat, type ResourceType } from "../../lib/discoverClassification";
 
-type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
-type ResourceSource = "website" | "pdf" | "image";
+type ResourceSource = "website" | "pdf" | "document" | "image";
 
 const MAX_COMMENT = 500;
-const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
 const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
 
 function displayHostname(url: string): string {
@@ -68,6 +67,7 @@ type DiscoverNote = {
   websiteUrl: string;
   resourceSource?: ResourceSource;
   pdfPath?: string | null;
+  pdfFileName?: string | null;
   imagePath?: string | null;
   thumbnailUrl: string;
   faviconUrl?: string | null;
@@ -78,6 +78,10 @@ type DiscoverNote = {
   levels?: ResourceLevel[];
   resourceType?: ResourceType;
   resourceTypes?: ResourceType[];
+  topicId?: string;
+  topicLabel?: string;
+  topicLevel?: string;
+  topicUrl?: string;
   topics?: string[];
   likeCount?: number;
   commentCount?: number;
@@ -123,6 +127,7 @@ type DiscoverResource = {
   websiteUrl?: string;
   resourceSource?: ResourceSource;
   pdfPath?: string | null;
+  pdfFileName?: string | null;
   imagePath?: string | null;
   thumbnailUrl?: string;
   userId?: string;
@@ -145,20 +150,6 @@ function timeAgo(seconds: number | null): string {
   });
 }
 
-function normalizeResourceType(value: unknown): ResourceType | null {
-  if (typeof value !== "string") return null;
-  if (RESOURCE_TYPES.includes(value as ResourceType)) return value as ResourceType;
-  return null;
-}
-
-function normalizeResourceTypes(values: unknown, fallback?: unknown): ResourceType[] {
-  const fromArray = Array.isArray(values)
-    ? values.map(normalizeResourceType).filter((type): type is ResourceType => Boolean(type))
-    : [];
-  const fallbackType = normalizeResourceType(fallback);
-  return [...new Set([...fromArray, ...(fallbackType ? [fallbackType] : [])])];
-}
-
 function normalizeResourceLevels(values: unknown, fallback?: unknown): ResourceLevel[] {
   const isLevel = (value: unknown): value is ResourceLevel =>
     typeof value === "string" && RESOURCE_LEVELS.includes(value as ResourceLevel);
@@ -166,18 +157,17 @@ function normalizeResourceLevels(values: unknown, fallback?: unknown): ResourceL
   return [...new Set([...fromArray, ...(isLevel(fallback) ? [fallback] : [])])];
 }
 
-function inferResourceType(note: DiscoverNote): ResourceType {
-  const text = `${note.title} ${note.description}`.toLowerCase();
-  if (text.includes("video") || text.includes("youtube")) return "Videos";
-  if (text.includes("sample") || text.includes("answer") || text.includes("essay")) return "Sample Answers";
-  if (text.includes("flashcard") || text.includes("quizlet")) return "Flashcards";
-  if (text.includes("website") || text.includes("site")) return "Website";
-  return "Notes";
+function normalizeTopic(value: string | undefined): string {
+  return (value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 function noteToResource(note: DiscoverNote): DiscoverResource {
-  const types = normalizeResourceTypes(note.resourceTypes, note.resourceType);
-  const type = types[0] ?? inferResourceType(note);
+  const type = resolveResourceType(note.resourceType, note.resourceTypes);
+  const types = [type];
   const levels = normalizeResourceLevels(note.levels, note.level);
   const subject = note.subjectLabel ?? "General";
   return {
@@ -187,7 +177,9 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
     type,
     description: note.description,
     sourceName: note.siteName || (note.websiteUrl ? displayHostname(note.websiteUrl) : "Resource"),
-    tags: [subject, ...levels, ...(note.topics ?? [])].filter(Boolean),
+    tags: [subject, ...levels, ...(note.topics?.length ? note.topics : [note.topicLabel || note.topicId])].filter(
+      (tag): tag is string => Boolean(tag)
+    ),
     comments: note.commentCount ?? 0,
     saves: note.likeCount ?? 0,
     levels,
@@ -198,6 +190,7 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
     websiteUrl: note.websiteUrl,
     resourceSource: note.resourceSource ?? (note.pdfPath ? "pdf" : "website"),
     pdfPath: note.pdfPath,
+    pdfFileName: note.pdfFileName,
     imagePath: note.imagePath,
     thumbnailUrl: note.thumbnailUrl,
     userId: note.userId,
@@ -256,8 +249,9 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
               title: data.title ?? "Untitled resource",
               description: data.description ?? "",
               websiteUrl: data.websiteUrl ?? "",
-              resourceSource: data.resourceSource === "pdf" ? "pdf" : data.resourceSource === "image" ? "image" : "website",
+              resourceSource: data.resourceSource === "pdf" ? "pdf" : data.resourceSource === "document" ? "document" : data.resourceSource === "image" ? "image" : "website",
               pdfPath: data.pdfPath ?? null,
+              pdfFileName: data.pdfFileName ?? null,
               imagePath: data.imagePath ?? null,
               thumbnailUrl: data.thumbnailUrl ?? "",
               faviconUrl: data.faviconUrl ?? null,
@@ -268,6 +262,10 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
               levels: Array.isArray(data.levels) ? data.levels : [],
               resourceType: data.resourceType,
               resourceTypes: Array.isArray(data.resourceTypes) ? data.resourceTypes : [],
+              topicId: data.topicId,
+              topicLabel: data.topicLabel,
+              topicLevel: data.topicLevel,
+              topicUrl: data.topicUrl,
               topics: Array.isArray(data.topics) ? data.topics : [],
               likeCount: typeof data.likeCount === "number" ? data.likeCount : 0,
               commentCount: typeof data.commentCount === "number" ? data.commentCount : 0,
@@ -356,9 +354,9 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
     [notes]
   );
 
-  const { questionResources, subjectResources } = useMemo(() => {
+  const { questionResources, topicResources } = useMemo(() => {
     if (!context) {
-      return { questionResources: [] as DiscoverResource[], subjectResources: approved.slice(0, 12) };
+      return { questionResources: [] as DiscoverResource[], topicResources: [] as DiscoverResource[] };
     }
 
     const questionItems = approved.filter((resource) =>
@@ -367,18 +365,28 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
     const questionIds = new Set(questionItems.map((resource) => resource.id));
     const subjectId = context.subjectId?.toLowerCase();
     const subjectLabel = context.subjectLabel?.toLowerCase();
-    const subjectItems = approved.filter((resource) => {
+    const topic = normalizeTopic(context.topic);
+    const topicItems = approved.filter((resource) => {
       if (questionIds.has(resource.id)) return false;
-      if (isAllSubjectsResource(resource.note?.subjectId, resource.subject)) return true;
-      return (
+      const resourceLinks = parseLinkedQuestions(resource.note as Record<string, unknown> | undefined);
+      if (resourceLinks.length > 0) return false;
+      const matchesSubject = isAllSubjectsResource(resource.note?.subjectId, resource.subject) || (
         (subjectId && resource.note?.subjectId?.toLowerCase() === subjectId) ||
         (subjectLabel && resource.subject.toLowerCase() === subjectLabel)
       );
+      if (!matchesSubject || !topic) return false;
+
+      const resourceTopics = [
+        resource.note?.topicId,
+        resource.note?.topicLabel,
+        ...(resource.note?.topics ?? []),
+      ].map(normalizeTopic);
+      return resourceTopics.includes(topic);
     });
 
     return {
       questionResources: questionItems.slice(0, 12),
-      subjectResources: subjectItems.slice(0, 12),
+      topicResources: topicItems.slice(0, 12),
     };
   }, [approved, context]);
 
@@ -579,7 +587,7 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
           <div className="relative aspect-[16/10] rounded-lg color-bg-grey-10 overflow-hidden">
             <DiscoverMediaPreview resource={resource} variant="thumb" />
             <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full color-bg color-txt-main text-xs font-bold">
-              {resource.resourceSource === "pdf" ? "PDF" : resource.type}
+              {resourceFormat(resource.resourceSource, resource.websiteUrl)}
             </span>
           </div>
 
@@ -968,23 +976,10 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
     <div className="flex h-full min-h-0 flex-col color-bg">
       {selectedResource ? renderResourceDetail(selectedResource) : (
         <>
-          <div className="shrink-0 px-3 pt-2 pb-1">
-            <button
-              type="button"
-              onClick={async () => { if (await requireSignIn("Share resource")) setShowShareForm(true); }}
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl color-bg-accent color-txt-accent px-3 py-2 text-xs font-bold hover:opacity-90 cursor-pointer"
-            >
-              <LuPlus size={14} /> Add resource
-            </button>
-          </div>
-
-          <div ref={listScrollRef} className="min-h-0 flex-1 overflow-y-auto scrollbar-minimal px-1 pb-3 space-y-5">
-            <section>
-              <div className="px-3 pt-3 pb-1">
-                <h4 className="text-sm font-bold color-txt-main">Question Related Content</h4>
-              </div>
-              {loading ? (
-                <div className="space-y-1" aria-label="Loading question resources">
+          <div ref={listScrollRef} className="min-h-0 flex-1 overflow-y-auto scrollbar-minimal px-1 pb-3">
+            {loading ? (
+              <section className="pt-3">
+                <div className="space-y-1" aria-label="Loading resources">
                   {[0, 1].map((item) => (
                     <div key={item} className="p-2">
                       <div className="overflow-hidden rounded-xl color-bg-grey-5 animate-pulse">
@@ -997,49 +992,64 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
                     </div>
                   ))}
                 </div>
-              ) : questionResources.length ? (
-                <div className="grid grid-cols-1 gap-1">
-                  {questionResources.map(renderResourceCard)}
-                </div>
-              ) : (
-                <div className="flex items-center justify-center px-4 py-10">
-                  <p className="text-sm color-txt-sub text-center">
-                    No content related to this question
-                  </p>
-                </div>
-              )}
-            </section>
-
-            <section>
-              <div className="px-3 pt-1 pb-1">
-                <h4 className="text-sm font-bold color-txt-main">Subject Related Content</h4>
-              </div>
-              {loading ? (
-                <div className="space-y-1" aria-label="Loading subject resources">
-                  {[0, 1].map((item) => (
-                    <div key={item} className="p-2">
-                      <div className="overflow-hidden rounded-xl color-bg-grey-5 animate-pulse">
-                        <div className="aspect-[16/10] color-bg-grey-10" />
-                        <div className="space-y-1.5 px-2.5 py-2">
-                          <div className="h-3.5 w-3/4 rounded color-bg-grey-10" />
-                          <div className="h-3 w-1/2 rounded color-bg-grey-10" />
-                        </div>
-                      </div>
+              </section>
+            ) : (
+              <div className="space-y-5 pt-3">
+                {questionResources.length > 0 && (
+                  <section>
+                    <div className="mx-2 mb-2 rounded-xl color-bg-accent color-txt-main px-3 py-2.5">
+                      <h4 className="text-sm font-bold">
+                        Sample answer to “{context?.name ?? "this question"}”
+                      </h4>
                     </div>
-                  ))}
-                </div>
-              ) : subjectResources.length ? (
-                <div className="grid grid-cols-1 gap-1">
-                  {subjectResources.map(renderResourceCard)}
-                </div>
-              ) : (
-                <div className="flex items-center justify-center px-4 py-10">
-                  <p className="text-sm color-txt-sub text-center">
-                    No subject related content yet
-                  </p>
-                </div>
-              )}
-            </section>
+                    <div className="grid grid-cols-1 gap-1">
+                      {questionResources.map((resource) => renderResourceCard(resource))}
+                    </div>
+                  </section>
+                )}
+
+                <section>
+                  <div className="px-3 pb-1">
+                    <h4 className="text-sm font-bold color-txt-main">
+                      Resources related to “{context?.topic ?? "this topic"}”
+                    </h4>
+                  </div>
+                  {topicResources.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-1">
+                      {topicResources.map((resource) => renderResourceCard(resource))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3 px-3 py-5 text-center">
+                      <p className="max-w-56 text-xs leading-relaxed color-txt-sub">
+                        Be the first to upload a resource for {context?.topic ?? "this topic"}.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={async () => { if (await requireSignIn("Share resource")) setShowShareForm(true); }}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--theme-txt-accent)] color-txt-main px-3 py-2 text-xs font-bold hover:opacity-90 active:scale-[0.97] transition-[opacity,transform] duration-150 cursor-pointer"
+                      >
+                        <LuPlus size={13} /> Add resource
+                      </button>
+                    </div>
+                  )}
+                </section>
+
+                {topicResources.length > 0 && (
+                  <div className="flex flex-col items-center gap-3 px-2 pb-2 text-center">
+                    <p className="max-w-56 text-xs leading-relaxed color-txt-sub">
+                      Know another useful resource for {context?.topic ?? "this topic"}?
+                    </p>
+                    <button
+                      type="button"
+                      onClick={async () => { if (await requireSignIn("Share resource")) setShowShareForm(true); }}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--theme-txt-accent)] color-txt-main px-3 py-2 text-xs font-bold hover:opacity-90 active:scale-[0.97] transition-[opacity,transform] duration-150 cursor-pointer"
+                    >
+                      <LuPlus size={13} /> Add resource
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}
@@ -1062,4 +1072,3 @@ export default function QuestionDiscover({ question, onPopOut }: { question?: un
     </div>
   );
 }
-

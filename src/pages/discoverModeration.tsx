@@ -130,8 +130,8 @@ function parseTypesParam(value: string | null): ResourceType[] {
 
 function parseSourcesParam(value: string | null): ModerationSourceFilter[] {
   return parseCsvParam(value).filter(
-    (item): item is ModerationSourceFilter => item === "website" || item === "pdf" || item === "image"
-  );
+    (item): item is ModerationSourceFilter => item === "website" || item === "pdf" || item === "document" || item === "image"
+  ).map((item) => item === "pdf" ? "document" : item);
 }
 
 export default function DiscoverModeration() {
@@ -151,6 +151,7 @@ export default function DiscoverModeration() {
   const selectedTypes = parseTypesParam(searchParams.get("type"));
   const selectedSources = parseSourcesParam(searchParams.get("source"));
   const selectedLinked = parseLinkedParam(searchParams.get("linked"));
+  const topicReview = searchParams.get("topicReview") === "1";
   const searchQuery = searchParams.get("q") ?? "";
   const filterQuery = searchParams.toString();
   const listSearch = filterQuery ? `?${filterQuery}` : "";
@@ -186,10 +187,15 @@ export default function DiscoverModeration() {
 
   useEffect(() => {
     if (!isAdmin) return;
-    const pendingQuery = query(
-      collection(db, "discover-notes"),
-      where("moderationStatus", "==", "pending")
-    );
+    const pendingQuery = topicReview
+      ? query(
+          collection(db, "discover-notes"),
+          where("topicMigrationStatus", "in", ["no-match", "ambiguous"])
+        )
+      : query(
+          collection(db, "discover-notes"),
+          where("moderationStatus", "==", "pending")
+        );
 
     const unsub = onSnapshot(
       pendingQuery,
@@ -208,7 +214,7 @@ export default function DiscoverModeration() {
     );
 
     return () => unsub();
-  }, [isAdmin]);
+  }, [isAdmin, topicReview]);
 
   const subjectOptions = useMemo(() => {
     const byId = new Map<string, string>(
@@ -244,7 +250,7 @@ export default function DiscoverModeration() {
         return false;
       }
 
-      if (selectedSources.length > 0 && !selectedSources.includes(item.resourceSource)) {
+      if (selectedSources.length > 0 && !selectedSources.includes(item.resourceSource === "pdf" ? "document" : item.resourceSource)) {
         return false;
       }
 
@@ -374,9 +380,21 @@ export default function DiscoverModeration() {
   }
 
   return (
-    <AdminShell title="Moderation">
+    <AdminShell title={topicReview ? "Topic migration" : "Moderation"}>
       <div className="space-y-5">
           <div className="flex flex-wrap items-center gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                if (topicReview) next.delete("topicReview");
+                else next.set("topicReview", "1");
+                setSearchParams(next, { replace: true });
+              }}
+              className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold color-bg-grey-5 color-txt-main cursor-pointer hover:opacity-90"
+            >
+              {topicReview ? "Pending uploads" : "Review old topics"}
+            </button>
             <label className="relative min-w-[12rem] flex-1 max-w-xs">
               <LuSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 color-txt-sub" />
               <input
@@ -414,7 +432,8 @@ export default function DiscoverModeration() {
             <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl color-bg-grey-5 color-txt-sub text-sm font-semibold">
               <LuShieldCheck size={16} />
               {filteredItems.length}
-              {filteredItems.length !== items.length ? ` of ${items.length}` : ""} pending
+              {filteredItems.length !== items.length ? ` of ${items.length}` : ""}{" "}
+              {topicReview ? "need topics" : "pending"}
             </div>
         </div>
 
@@ -521,15 +540,15 @@ export default function DiscoverModeration() {
         {loading ? (
           <div className="flex items-center gap-2 color-txt-sub">
             <LuLoaderCircle className="animate-spin" size={18} />
-            Loading pending resources...
+            {topicReview ? "Loading resources needing a topic..." : "Loading pending resources..."}
           </div>
         ) : items.length === 0 ? (
           <div className="rounded-2xl color-bg-grey-5 p-10 text-center color-txt-sub">
-            No pending Discover resources.
+            {topicReview ? "Every migrated resource has a topic." : "No pending Discover resources."}
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="rounded-2xl color-bg-grey-5 p-10 text-center color-txt-sub">
-            No pending resources match these filters.
+            No {topicReview ? "topic-review" : "pending"} resources match these filters.
           </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
@@ -554,6 +573,7 @@ export default function DiscoverModeration() {
                       websiteUrl: item.websiteUrl,
                       resourceSource: item.resourceSource,
                       pdfPath: item.pdfPath,
+                      pdfFileName: item.pdfFileName,
                       imagePath: item.imagePath,
                       thumbnailUrl: item.uploadedThumbnailUrl || item.thumbnailUrl,
                       faviconUrl: item.faviconUrl,
@@ -578,7 +598,7 @@ export default function DiscoverModeration() {
                           ? ` · ${item.linkedQuestions.length} linked questions`
                           : ` · ${item.linkedQuestionName}`
                         : ""}
-                      {` · ${item.resourceSource === "pdf" ? item.pdfFileName || "PDF" : item.resourceSource === "image" ? item.imageFileName || "Image" : item.siteName || "Website"}`}
+                      {` · ${item.resourceSource === "pdf" || item.resourceSource === "document" ? item.pdfFileName || "Document" : item.resourceSource === "image" ? item.imageFileName || "Image" : item.siteName || "Website"}`}
                       {` · ${item.username}`}
                       {item.timestamp ? ` · ${timeAgo(item.timestamp)}` : ""}
                     </p>
@@ -596,31 +616,35 @@ export default function DiscoverModeration() {
                       Review
                       <LuArrowRight size={15} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void approve(item);
-                      }}
-                      disabled={busyId === item.id}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg color-txt-main text-sm font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
-                    >
-                      <LuCheck size={15} />
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setRejecting(item);
-                        setError(null);
-                      }}
-                      disabled={busyId === item.id}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg color-txt-main text-sm font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
-                    >
-                      <LuX size={15} />
-                      Reject
-                    </button>
+                    {!topicReview && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void approve(item);
+                          }}
+                          disabled={busyId === item.id}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg color-txt-main text-sm font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
+                        >
+                          <LuCheck size={15} />
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setRejecting(item);
+                            setError(null);
+                          }}
+                          disabled={busyId === item.id}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg color-txt-main text-sm font-semibold hover:opacity-90 cursor-pointer disabled:opacity-50"
+                        >
+                          <LuX size={15} />
+                          Reject
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
                       onClick={(event) => {
@@ -630,8 +654,8 @@ export default function DiscoverModeration() {
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-xl color-bg color-txt-main text-sm font-semibold hover:opacity-90 cursor-pointer"
                     >
                       <LuExternalLink size={15} />
-                      {item.resourceSource === "pdf"
-                        ? "Open PDF"
+                      {item.resourceSource === "pdf" || item.resourceSource === "document"
+                        ? "Open document"
                         : item.resourceSource === "image"
                           ? "Open image"
                           : "Open link"}

@@ -9,14 +9,16 @@ import { db } from '../../firebase'
 import { UserContext } from '../context/UserContext'
 import ActivityHeatmap from '../components/profile/ActivityHeatmap'
 import { isIPad } from '../utils/isIPad'
+import { resourceFormat } from '../lib/discoverClassification'
 
 type ProfileDiscoverPost = {
     id: string
     title: string
     description: string
     websiteUrl: string
-    resourceSource: 'website' | 'pdf'
+    resourceSource: 'website' | 'pdf' | 'document' | 'image'
     pdfPath?: string | null
+    pdfFileName?: string | null
     thumbnailUrl: string
     faviconUrl?: string | null
     siteName?: string
@@ -24,6 +26,7 @@ type ProfileDiscoverPost = {
     resourceType?: string
     resourceTypes?: string[]
     levels?: string[]
+    topicLabel?: string
     topics?: string[]
     likeCount: number
     commentCount: number
@@ -139,8 +142,9 @@ export default function ProfileViewer() {
                     title: data.title ?? '',
                     description: data.description ?? '',
                     websiteUrl: data.websiteUrl ?? '',
-                    resourceSource: data.resourceSource === 'pdf' ? 'pdf' as const : 'website' as const,
+                    resourceSource: data.resourceSource === 'pdf' ? 'pdf' as const : data.resourceSource === 'document' ? 'document' as const : data.resourceSource === 'image' ? 'image' as const : 'website' as const,
                     pdfPath: data.pdfPath ?? null,
+                    pdfFileName: data.pdfFileName ?? null,
                     thumbnailUrl: data.thumbnailUrl ?? '',
                     faviconUrl: data.faviconUrl ?? null,
                     siteName: data.siteName ?? '',
@@ -148,6 +152,7 @@ export default function ProfileViewer() {
                     resourceType: data.resourceType ?? undefined,
                     resourceTypes: Array.isArray(data.resourceTypes) ? data.resourceTypes : [],
                     levels: Array.isArray(data.levels) ? data.levels : [],
+                    topicLabel: typeof data.topicLabel === 'string' ? data.topicLabel : '',
                     topics: Array.isArray(data.topics) ? data.topics : [],
                     likeCount: typeof data.likeCount === 'number' ? data.likeCount : 0,
                     commentCount: typeof data.commentCount === 'number' ? data.commentCount : 0,
@@ -301,7 +306,6 @@ export default function ProfileViewer() {
                         discoverPosts.length > 0 ? (
                             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                                 {discoverPosts.map((post) => {
-                                    const resourceType = post.resourceTypes?.[0] ?? post.resourceType ?? "Resource"
                                     const tags = [post.subjectLabel, ...(post.levels ?? []), ...(post.topics ?? [])].filter(Boolean).slice(0, 3)
                                     const rating = post.ratingAverage && post.ratingAverage > 0 ? post.ratingAverage : null
 
@@ -332,13 +336,14 @@ export default function ProfileViewer() {
                                                             websiteUrl: post.websiteUrl,
                                                             resourceSource: post.resourceSource,
                                                             pdfPath: post.pdfPath,
+                                                            pdfFileName: post.pdfFileName,
                                                             thumbnailUrl: post.thumbnailUrl,
                                                             faviconUrl: post.faviconUrl,
                                                         }}
                                                         variant="thumb"
                                                     />
                                                     <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full color-bg color-txt-main text-xs font-bold">
-                                                        {post.resourceSource === "pdf" ? "PDF" : resourceType}
+                                                        {resourceFormat(post.resourceSource, post.websiteUrl)}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-2 min-w-0 px-0.5 pt-2">

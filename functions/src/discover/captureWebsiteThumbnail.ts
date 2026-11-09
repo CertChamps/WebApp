@@ -110,17 +110,85 @@ async function screenshotPage(url: string): Promise<Buffer | null> {
 
     try {
         const page = await browser.newPage();
-        await page.setUserAgent(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-        );
-        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
-        await new Promise((resolve) => setTimeout(resolve, 900));
-        const shot = await page.screenshot({
-            type: "jpeg",
-            quality: 72,
-            captureBeyondViewport: false,
+        try {
+            await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+        } catch (error) {
+            // A slow page may still have navigated and be rendering. Give the
+            // readiness loop a chance to inspect it before falling back.
+            if (page.url() === "about:blank") throw error;
+        }
+
+        const inspectPage = () => page.evaluate(() => {
+            const title = document.title.toLowerCase();
+            const body = document.body;
+            const text = body?.innerText?.replace(/\s+/g, " ").trim().toLowerCase() ?? "";
+            const challengeTitle = /just a moment|one more step|attention required|access denied/.test(title);
+            const challengeText = /one more step|checking your browser|verify you are human|checking if the site connection is secure|enable javascript and cookies to continue|performing security verification|security system for this website has been triggered/.test(text);
+            const challengeElement = Boolean(document.querySelector(
+                "#challenge-stage, #cf-challenge-running, #challenge-form, .cf-browser-verification"
+            ));
+            if (challengeTitle || challengeText || challengeElement) return "challenge" as const;
+
+            const hasVisibleImage = Array.from(document.images).some((image) => {
+                const bounds = image.getBoundingClientRect();
+                return image.complete && image.naturalWidth > 0 &&
+                    bounds.width > 80 && bounds.height > 60 &&
+                    bounds.top < window.innerHeight && bounds.bottom > 0;
+            });
+            if (document.readyState === "loading" || !body ||
+                (text.length < 25 && !hasVisibleImage)) return "loading" as const;
+            return "ready" as const;
         });
-        return Buffer.isBuffer(shot) ? shot : Buffer.from(shot);
+
+        const deadline = Date.now() + 18000;
+        let readyChecks = 0;
+        let lastReadyUrl = "";
+        let lastState: "challenge" | "loading" | "ready" = "loading";
+
+        while (Date.now() < deadline) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+
+            // The challenge can navigate to the real page between checks. A
+            // navigation destroys the old execution context, so inspect again.
+            let state: "challenge" | "loading" | "ready";
+            try {
+                state = await inspectPage();
+            } catch {
+                readyChecks = 0;
+                continue;
+            }
+
+            lastState = state;
+            const currentUrl = page.url();
+            if (state !== "ready" || currentUrl !== lastReadyUrl) {
+                readyChecks = 0;
+                lastReadyUrl = currentUrl;
+            }
+            if (state !== "ready") continue;
+            readyChecks += 1;
+            if (readyChecks < 2) continue;
+
+            try {
+                const shot = await page.screenshot({
+                    type: "jpeg",
+                    quality: 72,
+                    captureBeyondViewport: false,
+                });
+                // A late redirect or challenge must not become a thumbnail.
+                if (page.url() === currentUrl && await inspectPage() === "ready") {
+                    return Buffer.isBuffer(shot) ? shot : Buffer.from(shot);
+                }
+            } catch {
+                // The page may have navigated during the screenshot.
+            }
+            readyChecks = 0;
+        }
+
+        console.warn("Website thumbnail capture timed out before page was ready", {
+            url,
+            lastState,
+        });
+        return null;
     } finally {
         await browser.close().catch(() => undefined);
     }

@@ -41,6 +41,8 @@ import DiscoverRejectModal from "../components/discover/DiscoverRejectModal";
 import ZoomableQuestionImage from "../components/questions/ZoomableQuestionImage";
 import { linkedQuestionsPayload, withDiscoverSidebar, type LinkedDiscoverQuestion } from "../lib/discoverLinks";
 import { lookupDiscoverAuthor } from "../lib/discoverAuthor";
+import { discoverTopicUrl, useDiscoverTopics } from "../hooks/useDiscoverTopics";
+import { resourceFormat } from "../lib/discoverClassification";
 
 type FormState = {
   title: string;
@@ -52,6 +54,10 @@ type FormState = {
   subjectLabel: string;
   levels: ResourceLevel[];
   resourceTypes: ResourceType[];
+  topicId: string;
+  topicLabel: string;
+  topicLevel: string;
+  topicUrl: string;
   topics: string[];
   thumbnailUrl: string;
   userId: string;
@@ -123,7 +129,11 @@ function noteToForm(note: DiscoverModerationNote): FormState {
     subjectLabel: note.subjectLabel,
     levels: note.levels,
     resourceTypes: note.resourceTypes.length > 0 ? note.resourceTypes : [note.resourceType],
-    topics: note.topics,
+    topicId: note.topicId || note.topics[0] || note.linkedQuestionTopic,
+    topicLabel: note.topicLabel,
+    topicLevel: note.topicLevel,
+    topicUrl: note.topicUrl,
+    topics: note.topics.length > 0 ? note.topics : note.topicId ? [note.topicId] : [],
     thumbnailUrl: note.thumbnailUrl,
     userId: note.userId,
     username: note.username,
@@ -160,7 +170,6 @@ export default function DiscoverModerationReview() {
 
   const [note, setNote] = useState<DiscoverModerationNote | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
-  const [topicDraft, setTopicDraft] = useState("");
   const [authorHandle, setAuthorHandle] = useState("");
   const [lookingUpAuthor, setLookingUpAuthor] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -172,6 +181,10 @@ export default function DiscoverModerationReview() {
   const [questionPreview, setQuestionPreview] = useState<LinkedQuestionPreview | null>(null);
   const [questionLoading, setQuestionLoading] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const { topics: availableTopics, loading: topicsLoading, error: topicsError } = useDiscoverTopics(
+    form?.subjectId || null,
+    form?.levels ?? []
+  );
 
   useEffect(() => {
     if (!form?.username && !form?.userId) return;
@@ -282,6 +295,7 @@ export default function DiscoverModerationReview() {
       websiteUrl: form.websiteUrl,
       resourceSource: form.resourceSource,
       pdfPath: note?.pdfPath ?? "",
+      pdfFileName: note?.pdfFileName ?? "",
       imagePath: note?.imagePath ?? "",
       thumbnailUrl: form.thumbnailUrl,
       faviconUrl: note?.faviconUrl ?? "",
@@ -301,26 +315,7 @@ export default function DiscoverModerationReview() {
     });
   };
 
-  const toggleType = (type: ResourceType) => {
-    if (!form) return;
-    const next = form.resourceTypes.includes(type)
-      ? form.resourceTypes.filter((item) => item !== type)
-      : [...form.resourceTypes, type];
-    patchForm({
-      resourceTypes: next.length > 0 ? next : form.resourceTypes,
-    });
-  };
-
-  const addTopics = () => {
-    if (!form) return;
-    const next = topicDraft
-      .split(/[,\s]+/)
-      .map((topic) => topic.trim().replace(/^#/, "").replace(/\s+/g, "-"))
-      .filter(Boolean);
-    if (next.length === 0) return;
-    patchForm({ topics: [...new Set([...form.topics, ...next])].slice(0, 8) });
-    setTopicDraft("");
-  };
+  const toggleType = (type: ResourceType) => patchForm({ resourceTypes: [type] });
 
   const buildPayload = () => {
     if (!form) return null;
@@ -334,7 +329,14 @@ export default function DiscoverModerationReview() {
       setError("Description is too long.");
       return null;
     }
-    const types = form.resourceTypes.length > 0 ? form.resourceTypes : (["Notes"] as ResourceType[]);
+    const topics = availableTopics.filter((item) => form.topics.includes(item.id));
+    if (!form.subjectId) {
+      setError("Choose a subject before saving.");
+      return null;
+    }
+    const topic = topics[0];
+    const topicLevel = topic?.levels[0] ?? "";
+    const types = form.resourceTypes.length > 0 ? [form.resourceTypes[0]] : (["Revision Notes"] as ResourceType[]);
     const links = form.linkedQuestions.filter(
       (item) => item.id.trim() || item.name.trim() || Boolean(item.practiceUrl?.trim())
     );
@@ -344,13 +346,20 @@ export default function DiscoverModerationReview() {
       description,
       websiteUrl: form.websiteUrl.trim(),
       resourceSource: form.resourceSource,
+      formatType: resourceFormat(form.resourceSource, form.websiteUrl),
       siteName: form.siteName.trim(),
       subjectId: form.subjectId,
       subjectLabel: form.subjectLabel,
       levels: form.levels,
       resourceTypes: types,
       resourceType: types[0],
-      topics: form.topics,
+      topicId: topic?.id ?? "",
+      topicLabel: topic?.label ?? "",
+      topicLevel,
+      topicUrl: topic ? discoverTopicUrl(form.subjectId, topic.id, topicLevel) : "",
+      topics: topics.map((item) => item.id),
+      topicMigrationStatus: topics.length > 0 ? "mapped" : "general",
+      topicMigrationReason: "manual-review",
       thumbnailUrl: form.thumbnailUrl.trim(),
       userId: form.userId,
       username: form.username,
@@ -789,18 +798,18 @@ export default function DiscoverModerationReview() {
               </div>
               <Field label="Source type">
                 <div className="grid grid-cols-3 gap-1 rounded-xl color-bg-grey-10 p-1">
-                  {(["website", "pdf", "image"] as ResourceSource[]).map((source) => (
+                  {(["website", "document", "image"] as ResourceSource[]).map((source) => (
                     <button
                       key={source}
                       type="button"
                       onClick={() => patchForm({ resourceSource: source })}
                       className={`rounded-lg px-3 py-2.5 text-sm font-semibold cursor-pointer ${
-                        form.resourceSource === source
+                        (source === "document" ? form.resourceSource === "document" || form.resourceSource === "pdf" : form.resourceSource === source)
                           ? "color-bg color-txt-main"
                           : "color-txt-sub hover:color-txt-main"
                       }`}
                     >
-                      {source === "website" ? "Website / video" : source === "image" ? "Image" : "PDF"}
+                      {source === "website" ? "Website / video" : source === "image" ? "Image" : "Document"}
                     </button>
                   ))}
                 </div>
@@ -811,13 +820,18 @@ export default function DiscoverModerationReview() {
                   value={form.subjectId || null}
                   onChange={(subjectId) => {
                     if (!subjectId) {
-                      patchForm({ subjectId: "", subjectLabel: "" });
+                      patchForm({ subjectId: "", subjectLabel: "", topicId: "", topicLabel: "", topicLevel: "", topicUrl: "", topics: [] });
                       return;
                     }
                     const id = getPracticeSubjectId(subjectId);
                     patchForm({
                       subjectId: id,
                       subjectLabel: getSubjectLabel(id),
+                      topicId: "",
+                      topicLabel: "",
+                      topicLevel: "",
+                      topicUrl: "",
+                      topics: [],
                     });
                   }}
                   aria-label="Choose resource subject"
@@ -834,7 +848,7 @@ export default function DiscoverModerationReview() {
                       type="button"
                       onClick={() => toggleType(type)}
                       className={`px-3 py-1.5 rounded-full text-sm font-semibold cursor-pointer ${
-                        form.resourceTypes.includes(type)
+                        form.resourceTypes[0] === type
                           ? "color-bg-accent color-txt-accent"
                           : "color-bg-grey-10 color-txt-sub"
                       }`}
@@ -865,32 +879,21 @@ export default function DiscoverModerationReview() {
               </div>
               <div className="lg:col-span-2 space-y-2">
                 <p className="text-xs font-semibold color-txt-sub uppercase tracking-wide">Topics</p>
-                <div className="flex flex-wrap gap-2">
-                  {form.topics.map((topic) => (
-                    <button
-                      key={topic}
-                      type="button"
-                      onClick={() => patchForm({ topics: form.topics.filter((item) => item !== topic) })}
-                      className="px-3 py-1.5 rounded-full text-sm font-semibold color-bg-grey-10 color-txt-main cursor-pointer"
-                    >
-                      #{topic} ×
-                    </button>
+                <p className="text-xs color-txt-sub">Optional for a general subject resource.</p>
+                <div className="max-h-44 overflow-y-auto rounded-xl color-bg-grey-5 p-2">
+                  {availableTopics.map((topic) => (
+                    <label key={topic.id} className="flex items-center gap-2 px-2 py-1.5 text-sm color-txt-main cursor-pointer">
+                      <input type="checkbox" checked={form.topics.includes(topic.id)} onChange={() => patchForm({
+                        topics: form.topics.includes(topic.id)
+                          ? form.topics.filter((id) => id !== topic.id)
+                          : [...form.topics, topic.id],
+                      })} />
+                      {topic.label}
+                    </label>
                   ))}
+                  {topicsLoading && <p className="px-2 py-2 text-sm color-txt-sub">Loading topics…</p>}
                 </div>
-                <input
-                  type="text"
-                  value={topicDraft}
-                  onChange={(e) => setTopicDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addTopics();
-                    }
-                  }}
-                  onBlur={addTopics}
-                  placeholder="Add topic and press Enter"
-                  className={inputClass}
-                />
+                {topicsError && <p className="text-xs color-txt-danger">Couldn’t load topics.</p>}
               </div>
             </div>
           </section>

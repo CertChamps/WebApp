@@ -1,14 +1,16 @@
 import { fetchStorageBlob } from "../utils/fetchStorageBlob";
 import { getDocumentCached } from "../utils/pdfDocumentCache";
 import { getDiscoverVideoEmbed, getDiscoverVideoPoster } from "./discoverMedia";
+import { isPdfDocument } from "./discoverClassification";
 
-export type DiscoverPreviewKind = "video" | "pdf" | "image" | "website" | "none";
+export type DiscoverPreviewKind = "video" | "pdf" | "document" | "image" | "website" | "none";
 
 export type DiscoverPreviewSource = {
   title?: string;
   websiteUrl?: string | null;
-  resourceSource?: "website" | "pdf" | "image" | null;
+  resourceSource?: "website" | "pdf" | "document" | "image" | null;
   pdfPath?: string | null;
+  pdfFileName?: string | null;
   imagePath?: string | null;
   thumbnailUrl?: string | null;
   faviconUrl?: string | null;
@@ -27,7 +29,9 @@ function safeUrl(input: string | undefined | null): URL | null {
 }
 
 export function isPdfDiscoverResource(resource: DiscoverPreviewSource): boolean {
-  if (resource.resourceSource === "pdf" || Boolean(resource.pdfPath)) return true;
+  if (resource.resourceSource === "document") return isPdfDocument(resource.pdfFileName || resource.websiteUrl);
+  if (resource.resourceSource === "pdf") return true;
+  if (resource.pdfPath) return isPdfDocument(resource.pdfFileName || resource.websiteUrl);
   const parsed = safeUrl(resource.websiteUrl);
   if (!parsed) return false;
   return /\.pdf$/i.test(parsed.pathname);
@@ -36,6 +40,7 @@ export function isPdfDiscoverResource(resource: DiscoverPreviewSource): boolean 
 export function getDiscoverPreviewKind(resource: DiscoverPreviewSource): DiscoverPreviewKind {
   if (getDiscoverVideoEmbed(resource.websiteUrl)) return "video";
   if (isPdfDiscoverResource(resource)) return "pdf";
+  if (resource.resourceSource === "document") return "document";
   if (resource.resourceSource === "image" || resource.imagePath) return "image";
   if (resource.websiteUrl?.trim()) return "website";
   return "none";

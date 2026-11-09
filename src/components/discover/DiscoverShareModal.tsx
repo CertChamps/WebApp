@@ -1,22 +1,22 @@
 import { useContext, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
 import {
   LuBookOpen,
+  LuChevronDown,
   LuFileText,
   LuImage,
   LuLink,
   LuLoader,
   LuPlus,
+  LuSearch,
 } from "react-icons/lu";
 import { db, storage } from "../../../firebase";
 import { UserContext } from "../../context/UserContext";
-import { isAdminUid } from "../../constants/adminUids";
-import { lookupDiscoverAuthor, type DiscoverAuthor } from "../../lib/discoverAuthor";
 import { SubjectDropdown } from "../practiceHub";
 import {
   PRACTICE_HUB_SUBJECTS,
-  ALL_SUBJECTS_OPTION,
   FAVOURITES_CHANGED_EVENT,
   getFavouriteSubjectIds,
   useSyncedFavouriteSubjectIds,
@@ -27,11 +27,12 @@ import { captureWebsiteThumbnailBlob } from "../../lib/discoverCapture";
 import type { QuestionDiscoveryContext } from "../../lib/questionDiscovery";
 import { incomingShareDisplayName, incomingShareFile, type NativeIncomingShare } from "../../lib/nativeShareIntake";
 import { linkedQuestionsPayload } from "../../lib/discoverLinks";
+import { discoverTopicUrl, useDiscoverTopics } from "../../hooks/useDiscoverTopics";
+import { documentContentType, isPdfDocument, resourceFormat, RESOURCE_TYPES, type ResourceType } from "../../lib/discoverClassification";
 import Modal from "../modals/Modal";
 
-type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
-type ResourceSource = "website" | "pdf";
+type ResourceSource = "website" | "document";
 
 type LinkPreview = {
   url: string;
@@ -47,7 +48,6 @@ const MAX_DESCRIPTION = 240;
 const MAX_THUMBNAIL_BYTES = 2 * 1024 * 1024;
 const MAX_PDF_BYTES = 25 * 1024 * 1024;
 const LINK_PREVIEW_URL = "https://us-central1-certchamps-a7527.cloudfunctions.net/fetchLinkPreview";
-const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
 const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
 const PLACEHOLDER_TITLES = [
   "My free LC Maths notes",
@@ -108,20 +108,23 @@ export default function DiscoverShareModal({
   initialShare = null,
 }: DiscoverShareModalProps) {
   const { user } = useContext(UserContext);
-  const isAdmin = isAdminUid(user?.uid, user?.email);
   const [title, setTitle] = useState("");
-  const [postAsHandle, setPostAsHandle] = useState("");
-  const [postAsAuthor, setPostAsAuthor] = useState<DiscoverAuthor | null>(null);
-  const [lookingUpAuthor, setLookingUpAuthor] = useState(false);
   const [description, setDescription] = useState("");
   const [resourceSource, setResourceSource] = useState<ResourceSource>("website");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [shareSubjectId, setShareSubjectId] = useState<string | null>(null);
-  const [shareTypes, setShareTypes] = useState<ResourceType[]>(["Notes"]);
+  const [shareType, setShareType] = useState<ResourceType>("Revision Notes");
   const [shareLevels, setShareLevels] = useState<ResourceLevel[]>([]);
-  const [topicDraft, setTopicDraft] = useState("");
-  const [shareTopics, setShareTopics] = useState<string[]>([]);
+  const [levelChosen, setLevelChosen] = useState(false);
+  const [openSelection, setOpenSelection] = useState<"level" | "topics" | null>(null);
+  const selectionRef = useRef<HTMLDivElement | null>(null);
+  const selectionPopupRef = useRef<HTMLDivElement | null>(null);
+  const levelTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const topicTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const [selectionPosition, setSelectionPosition] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
+  const [topicSearch, setTopicSearch] = useState("");
+  const [shareTopicIds, setShareTopicIds] = useState<string[]>([]);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null);
@@ -141,6 +144,57 @@ export default function DiscoverShareModal({
   const [placeholderTitle] = useState(
     () => PLACEHOLDER_TITLES[Math.floor(Math.random() * PLACEHOLDER_TITLES.length)]
   );
+  const { topics: availableTopics, loading: topicsLoading, error: topicsError } = useDiscoverTopics(
+    shareSubjectId,
+    shareLevels
+  );
+  const selectedTopics = availableTopics.filter((topic) => shareTopicIds.includes(topic.id));
+  const visibleTopics = availableTopics.filter((topic) => topic.label.toLowerCase().includes(topicSearch.trim().toLowerCase()));
+
+  useEffect(() => {
+    if (!openSelection) return;
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!selectionRef.current?.contains(event.target as Node)
+        && !selectionPopupRef.current?.contains(event.target as Node)) setOpenSelection(null);
+    };
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+  }, [openSelection]);
+
+  useEffect(() => {
+    if (!openSelection) {
+      setSelectionPosition(null);
+      setTopicSearch("");
+      return;
+    }
+    const updatePosition = () => {
+      const trigger = (openSelection === "level" ? levelTriggerRef : topicTriggerRef).current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const panel = trigger.closest(".app-modal-panel");
+      const panelRect = panel?.getBoundingClientRect();
+      const topEdge = Math.max(8, (panelRect?.top ?? 0) + 12);
+      const bottomEdge = Math.min(window.innerHeight - 8, (panelRect?.bottom ?? window.innerHeight) - 12);
+      const desiredHeight = openSelection === "topics" ? 280 : 220;
+      const below = Math.max(0, bottomEdge - rect.bottom - 4);
+      const above = Math.max(0, rect.top - topEdge - 4);
+      const placeAbove = below < Math.min(desiredHeight, 180) && above > below;
+      const maxHeight = Math.min(desiredHeight, placeAbove ? above : below);
+      setSelectionPosition({
+        top: placeAbove ? rect.top - maxHeight - 4 : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        maxHeight,
+      });
+    };
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [openSelection]);
 
   useEffect(() => {
     const updateFavourites = () => setFavouriteSubjectIds(getFavouriteSubjectIds());
@@ -161,19 +215,17 @@ export default function DiscoverShareModal({
     setDescription("");
     setResourceSource("website");
     setWebsiteUrl("");
-    setPostAsHandle("");
-    setPostAsAuthor(null);
-    setLookingUpAuthor(false);
     setPdfFile(null);
     setShareSubjectId(linkedQuestion?.subjectId ?? null);
-    setShareTypes(["Notes"]);
+    setShareType("Revision Notes");
     setShareLevels(
       linkedQuestion?.level && RESOURCE_LEVELS.includes(linkedQuestion.level as ResourceLevel)
         ? [linkedQuestion.level as ResourceLevel]
         : []
     );
-    setTopicDraft("");
-    setShareTopics(linkedQuestion?.topic ? [linkedQuestion.topic.replace(/^#/, "")] : []);
+    setLevelChosen(Boolean(linkedQuestion?.level));
+    setOpenSelection(null);
+    setShareTopicIds(linkedQuestion?.topic ? [linkedQuestion.topic.replace(/^#/, "")] : []);
     setThumbnailFile(null);
     setThumbnailPreview((current) => {
       if (current) URL.revokeObjectURL(current);
@@ -219,7 +271,7 @@ export default function DiscoverShareModal({
           if (cancelled) return;
           setTitle(incomingShareDisplayName(initialShare, file).slice(0, MAX_TITLE));
           setDescription(initialShare.description?.slice(0, MAX_DESCRIPTION) ?? "");
-          setResourceSource("pdf");
+          setResourceSource("document");
           setPdfFile(file);
         })
         .catch((error) => {
@@ -344,7 +396,7 @@ export default function DiscoverShareModal({
   }, [open, resourceSource, linkPreview?.url]);
 
   useEffect(() => {
-    if (!open || resourceSource !== "pdf" || !pdfFile) {
+    if (!open || resourceSource !== "document" || !pdfFile || !isPdfDocument(pdfFile.name)) {
       pdfShotRef.current = null;
       setPdfPreviewLoading(false);
       setPdfPreview((current) => {
@@ -385,25 +437,6 @@ export default function DiscoverShareModal({
     onClose();
   };
 
-  const resolvePostAsAuthor = async (): Promise<DiscoverAuthor | null> => {
-    const handle = postAsHandle.trim();
-    if (!handle) {
-      setPostAsAuthor(null);
-      return null;
-    }
-    if (postAsAuthor && (postAsAuthor.username === handle || postAsAuthor.uid === handle)) {
-      return postAsAuthor;
-    }
-    setLookingUpAuthor(true);
-    try {
-      const match = await lookupDiscoverAuthor(handle);
-      setPostAsAuthor(match);
-      return match;
-    } finally {
-      setLookingUpAuthor(false);
-    }
-  };
-
   const handleSubmit = async () => {
     if (!user?.uid) {
       setFormError("You must be logged in to share notes.");
@@ -412,11 +445,9 @@ export default function DiscoverShareModal({
     const trimmedTitle = title.trim();
     const trimmedDescription = description.trim();
     const validUrl = resourceSource === "website" ? normaliseUrl(websiteUrl) ?? "" : "";
-    const topics = shareTopics.slice(0, 8);
+    const topics = selectedTopics;
     const shareSubject = shareSubjectId
-      ? shareSubjectId === ALL_SUBJECTS_OPTION.id
-        ? ALL_SUBJECTS_OPTION
-        : PRACTICE_HUB_SUBJECTS.find((subject) => subject.id === shareSubjectId)
+      ? PRACTICE_HUB_SUBJECTS.find((subject) => subject.id === shareSubjectId)
       : null;
 
     if (!trimmedTitle) {
@@ -435,27 +466,25 @@ export default function DiscoverShareModal({
       setFormError("Add a valid link (https://...) for people to visit.");
       return;
     }
-    if (resourceSource === "pdf" && !pdfFile) {
-      setFormError("Choose a PDF to upload.");
+    if (resourceSource === "document" && !pdfFile) {
+      setFormError("Choose a document to upload.");
+      return;
+    }
+    if (pdfFile && !documentContentType(pdfFile)) {
+      setFormError("Choose a PDF, DOCX or PowerPoint file.");
       return;
     }
     if (!shareSubject) {
       setFormError("Choose the subject this resource is for.");
       return;
     }
-    let authorUid = user.uid;
-    let authorUsername = user.username ?? "";
-    let authorPicture: string | null = user.picture ?? null;
-    if (isAdmin && postAsHandle.trim()) {
-      const match = await resolvePostAsAuthor();
-      if (!match) {
-        setFormError("Could not find that account. Use their username or uid.");
-        return;
-      }
-      authorUid = match.uid;
-      authorUsername = match.username;
-      authorPicture = match.picture;
+    if (!levelChosen) {
+      setFormError("Choose a level, or select All levels.");
+      return;
     }
+    const authorUid = user.uid;
+    const authorUsername = user.username ?? "";
+    const authorPicture: string | null = user.picture ?? null;
 
     setSubmitting(true);
     setFormError(null);
@@ -467,11 +496,11 @@ export default function DiscoverShareModal({
         ? (linkPreview?.url === validUrl ? linkPreview : await fetchLinkPreview(validUrl))
         : null;
       let resourceUrl = preview?.url || validUrl;
-      if (resourceSource === "pdf" && pdfFile) {
+      if (resourceSource === "document" && pdfFile) {
         const safePdfName = pdfFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
         uploadedPdfPath = `discover-pdf-uploads/${authorUid}/${Date.now()}-${safePdfName}`;
         const pdfRef = storageRef(storage, uploadedPdfPath);
-        await uploadBytes(pdfRef, pdfFile, { contentType: "application/pdf" });
+        await uploadBytes(pdfRef, pdfFile, { contentType: documentContentType(pdfFile) ?? "application/octet-stream" });
         resourceUrl = await getDownloadURL(pdfRef);
       }
       let uploadedThumbnailUrl = "";
@@ -502,7 +531,7 @@ export default function DiscoverShareModal({
           console.warn("Failed to capture website preview thumbnail:", err);
         }
       }
-      if (resourceSource === "pdf" && pdfFile) {
+      if (resourceSource === "document" && pdfFile && isPdfDocument(pdfFile.name)) {
         try {
           const pageJpeg = pdfShotRef.current ?? await renderPdfFirstPageJpeg(pdfFile);
           if (pageJpeg) {
@@ -526,7 +555,8 @@ export default function DiscoverShareModal({
         websiteUrl: resourceUrl,
         resourceSource,
         pdfPath: uploadedPdfPath,
-        pdfFileName: resourceSource === "pdf" ? pdfFile?.name ?? "" : "",
+        pdfFileName: resourceSource === "document" ? pdfFile?.name ?? "" : "",
+        formatType: resourceFormat(resourceSource, validUrl),
         imagePath: null,
         imageFileName: "",
         thumbnailUrl: listingThumbnailUrl,
@@ -536,15 +566,19 @@ export default function DiscoverShareModal({
         thumbnailStatus: thumbnailFile ? "pending" : "none",
         moderationStatus: "pending",
         faviconUrl: preview?.faviconUrl ?? "",
-        siteName: resourceSource === "pdf"
-          ? pdfFile?.name ?? "PDF"
+        siteName: resourceSource === "document"
+          ? pdfFile?.name ?? "Document"
           : preview?.siteName ?? displayHostname(validUrl),
         subjectId: shareSubject.id,
         subjectLabel: shareSubject.label,
         levels: shareLevels,
-        resourceTypes: shareTypes,
-        resourceType: shareTypes[0] ?? "Notes",
-        topics,
+        resourceTypes: [shareType],
+        resourceType: shareType,
+        topicId: topics[0]?.id ?? "",
+        topicLabel: topics[0]?.label ?? "",
+        topicLevel: topics[0]?.levels[0] ?? "",
+        topicUrl: topics[0] ? discoverTopicUrl(shareSubject.id, topics[0].id, topics[0].levels[0] ?? "higher") : "",
+        topics: topics.map((topic) => topic.id),
         likeCount: 0,
         commentCount: 0,
         ratingAverage: 0,
@@ -609,40 +643,6 @@ export default function DiscoverShareModal({
     }
   };
 
-  const toggleShareType = (type: ResourceType) => {
-    setShareTypes((current) => {
-      if (current.includes(type)) {
-        const next = current.filter((item) => item !== type);
-        return next.length > 0 ? next : current;
-      }
-      return [...current, type];
-    });
-  };
-
-  const toggleShareLevel = (level: ResourceLevel) => {
-    setShareLevels((current) =>
-      current.includes(level)
-        ? current.filter((item) => item !== level)
-        : [...current, level]
-    );
-  };
-
-  const addTopicsFromDraft = () => {
-    const nextTopics = topicDraft
-      .split(/[,\s]+/)
-      .map((topic) => topic.trim().replace(/^#/, ""))
-      .filter(Boolean)
-      .map((topic) => topic.replace(/\s+/g, "-"))
-      .slice(0, 8);
-    if (nextTopics.length === 0) return;
-    setShareTopics((current) => [...new Set([...current, ...nextTopics])].slice(0, 8));
-    setTopicDraft("");
-  };
-
-  const removeShareTopic = (topic: string) => {
-    setShareTopics((current) => current.filter((item) => item !== topic));
-  };
-
   const chooseResourceSource = (source: ResourceSource) => {
     setResourceSource(source);
     setFormError(null);
@@ -657,22 +657,21 @@ export default function DiscoverShareModal({
 
   const handlePickPdf = (file: File | undefined | null) => {
     if (!file) return;
-    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-    if (!isPdf) {
+    if (!documentContentType(file)) {
       setPdfFile(null);
-      setFormError("Choose a PDF file.");
+      setFormError("Choose a PDF, DOCX or PowerPoint file.");
       if (pdfInputRef.current) pdfInputRef.current.value = "";
       return;
     }
     if (file.size > MAX_PDF_BYTES) {
       setPdfFile(null);
-      setFormError("PDF must be under 25 MB.");
+      setFormError("Document must be under 25 MB.");
       if (pdfInputRef.current) pdfInputRef.current.value = "";
       return;
     }
     setPdfFile(file);
     setFormError(null);
-    setTitle((current) => current.trim() ? current : file.name.replace(/\.pdf$/i, "").slice(0, MAX_TITLE));
+    setTitle((current) => current.trim() ? current : file.name.replace(/\.(pdf|docx|pptx|ppt)$/i, "").slice(0, MAX_TITLE));
   };
 
   const handlePickThumbnail = (file: File | undefined | null) => {
@@ -706,7 +705,7 @@ export default function DiscoverShareModal({
   const matchingLinkPreview = shareWebsiteUrl && linkPreview?.url === shareWebsiteUrl ? linkPreview : null;
   const formPreviewReady = resourceSource === "website" ? Boolean(shareWebsiteUrl) : Boolean(pdfFile);
   const generatedFormPreview =
-    (resourceSource === "pdf" ? pdfPreview : null)
+    (resourceSource === "document" ? pdfPreview : null)
     || (shareWebsiteUrl && websiteShotRef.current?.url === shareWebsiteUrl ? websiteShotPreview : null)
     || (shareWebsiteUrl ? getDiscoverVideoPoster(shareWebsiteUrl) : null)
     || matchingLinkPreview?.imageUrl
@@ -718,6 +717,7 @@ export default function DiscoverShareModal({
     && (resourceSource === "website" ? previewLoading || websiteShotLoading : pdfPreviewLoading);
 
   if (!open) return null;
+  const selectionPortalTarget = selectionRef.current?.closest(".app-modal-panel");
 
   return (
     <Modal
@@ -726,36 +726,32 @@ export default function DiscoverShareModal({
       maxWidthClass="max-w-6xl"
       className="discover-share-modal__panel"
       footer={
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {formError && (
-            <p className="mr-auto text-sm text-red-500">{formError}</p>
-          )}
-          <button
-            type="button"
-            onClick={closeForm}
-            disabled={submitting}
-            className="discover-modal-action--secondary px-4 py-2 rounded-xl text-sm transition-colors cursor-pointer disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSubmit()}
-            disabled={submitting}
-            className="discover-modal-action--primary inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {submitting ? (
-              <>
-                <LuLoader size={16} className="animate-spin" />
-                Publishing...
-              </>
-            ) : (
-              <>
-                <LuPlus size={16} />
-                Publish
-              </>
-            )}
-          </button>
+        <div className="space-y-2">
+          <p aria-live="polite" className="h-10 overflow-hidden text-sm leading-5 text-red-500 line-clamp-2">
+            {formError || "\u00a0"}
+          </p>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={closeForm}
+              disabled={submitting}
+              className="discover-modal-action--secondary px-4 py-2 rounded-xl text-sm transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSubmit()}
+              disabled={submitting}
+              className="discover-modal-action--primary inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? (
+                <><LuLoader size={16} className="animate-spin" /> Publishing...</>
+              ) : (
+                <><LuPlus size={16} /> Publish</>
+              )}
+            </button>
+          </div>
         </div>
       }
     >
@@ -769,65 +765,14 @@ export default function DiscoverShareModal({
           )}
 
           <div className="space-y-5 pb-6">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
-                Title
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value.slice(0, MAX_TITLE))}
-                placeholder={placeholderTitle}
-                className="themed-standalone-field w-full rounded-xl color-bg-grey-5 color-txt-main px-4 py-3 text-sm outline-none placeholder:color-txt-sub"
-              />
-              <p className="text-[11px] color-txt-sub text-right">
-                {title.length}/{MAX_TITLE}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
-                Description
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESCRIPTION))}
-                placeholder="What's in the resource? Which subjects and topics does it cover?"
-                rows={4}
-                className="themed-standalone-field w-full rounded-xl color-bg-grey-5 color-txt-main px-4 py-3 text-sm outline-none resize-none placeholder:color-txt-sub"
-              />
-              <p className="text-[11px] color-txt-sub text-right">
-                {description.length}/{MAX_DESCRIPTION}
-              </p>
-            </div>
-
-            <div className="relative z-20 space-y-2">
-              <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
-                Subject
-              </label>
-              <SubjectDropdown
-                id="discover-share-subject"
-                value={shareSubjectId}
-                onChange={setShareSubjectId}
-                onFavouritesChange={setFavouriteSubjectIds}
-                aria-label="Choose resource subject"
-                variant="list"
-                dropdownAlign="start"
-                includeAllOption
-              />
-            </div>
-
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-8">
               <div className="space-y-5">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
-                    Source
-                  </label>
-                  <div className="grid grid-cols-2 gap-1 rounded-xl color-bg-grey-5 p-1">
+                  <div className="grid grid-cols-2 gap-1 rounded-lg color-bg-grey-5 p-1">
                     <button
                       type="button"
                       onClick={() => chooseResourceSource("website")}
-                      className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
+                      className={`inline-flex items-center justify-center gap-2 rounded-lg border-0 px-3 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
                         resourceSource === "website"
                           ? "discover-modal-action--primary"
                           : "color-txt-sub hover:color-txt-main"
@@ -838,75 +783,93 @@ export default function DiscoverShareModal({
                     </button>
                     <button
                       type="button"
-                      onClick={() => chooseResourceSource("pdf")}
-                      className={`inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
-                        resourceSource === "pdf"
+                      onClick={() => chooseResourceSource("document")}
+                      className={`inline-flex items-center justify-center gap-2 rounded-lg border-0 px-3 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
+                        resourceSource === "document"
                           ? "discover-modal-action--primary"
                           : "color-txt-sub hover:color-txt-main"
                       }`}
                     >
                       <LuFileText size={16} />
-                      PDF
+                      Document
                     </button>
                   </div>
                 </div>
 
                 {resourceSource === "website" ? (
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
+                    <label className="text-xs font-semibold color-txt-sub">
                       Paste the link
                     </label>
-                    <div className="themed-input-shell flex items-center gap-2 rounded-xl color-bg-grey-5 px-4 py-3">
+                    <div className="discover-share-link-field practice-hub__subject-trigger--compact flex items-center gap-2">
                       <LuLink size={16} className="color-txt-sub shrink-0" />
                       <input
                         type="url"
                         value={websiteUrl}
                         onChange={(e) => setWebsiteUrl(e.target.value)}
                         placeholder="https://free-notes-site.com"
-                        className="flex-1 bg-transparent color-txt-main text-sm outline-none placeholder:color-txt-sub"
+                        className="discover-share-link-input flex-1 bg-transparent color-txt-main font-medium outline-none placeholder:color-txt-sub"
                       />
                       {previewLoading && <LuLoader size={16} className="animate-spin color-txt-sub" />}
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
-                      Upload a PDF
+                    <label className="text-xs font-semibold color-txt-sub">
+                      Upload a document
                     </label>
-                    <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-color-border color-bg-grey-5 px-4 py-5 text-center hover:opacity-90">
-                      <LuFileText size={26} className="color-txt-sub" />
-                      <span className="max-w-full truncate text-sm font-semibold color-txt-main">
-                        {pdfFile?.name ?? "Choose a PDF"}
+                    <label className="practice-hub__subject-trigger--compact flex cursor-pointer items-center gap-2 hover:opacity-90" title="PDF, DOCX or PowerPoint, up to 25 MB">
+                      <LuFileText size={16} className="color-txt-sub shrink-0" />
+                      <span className="min-w-0 truncate text-sm font-medium color-txt-main">
+                        {pdfFile?.name ?? "Choose PDF, DOCX or PowerPoint"}
                       </span>
-                      <span className="text-xs color-txt-sub">PDF only, up to 25 MB</span>
                       <input
                         ref={pdfInputRef}
                         type="file"
-                        accept="application/pdf,.pdf"
+                        accept=".pdf,.docx,.pptx,.ppt"
                         className="hidden"
                         onChange={(e) => handlePickPdf(e.target.files?.[0])}
                       />
                     </label>
                   </div>
                 )}
+                <div className="space-y-2">
+                  <label htmlFor="discover-share-title" className="text-xs font-semibold color-txt-main">Title</label>
+                  <input
+                    id="discover-share-title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value.slice(0, MAX_TITLE))}
+                    placeholder={placeholderTitle}
+                    className="practice-hub__subject-trigger--compact discover-share-copy-field w-full color-txt-main outline-none placeholder:color-txt-sub"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="discover-share-description" className="text-xs font-semibold color-txt-main">Description</label>
+                  <input
+                    id="discover-share-description"
+                    type="text"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESCRIPTION))}
+                    placeholder="What does this resource cover?"
+                    className="practice-hub__subject-trigger--compact discover-share-copy-field w-full color-txt-main outline-none placeholder:color-txt-sub"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2 lg:min-h-[420px]">
-                <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
-                  Thumbnail
-                </label>
-                <div className="group relative flex h-full min-h-[240px] overflow-hidden rounded-2xl color-bg-grey-5 lg:min-h-[420px]">
+              <div className="h-56 lg:h-[320px]">
+                <div className="group relative flex h-full overflow-hidden rounded-2xl color-bg-grey-5">
                   {formPreviewSrc ? (
                     <img
                       src={formPreviewSrc}
                       alt=""
-                      className="h-full w-full object-cover object-top"
+                      className="absolute inset-0 h-full w-full object-cover object-top"
                     />
                   ) : (
-                    <div className="flex h-full min-h-[240px] w-full flex-col items-center justify-center gap-2 px-6 text-center color-txt-sub lg:min-h-[420px]">
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-6 text-center color-txt-sub">
                       {formPreviewLoading ? (
                         <LuLoader size={28} className="animate-spin" />
-                      ) : resourceSource === "pdf" ? (
+                      ) : resourceSource === "document" ? (
                         <LuFileText size={36} />
                       ) : (
                         <LuBookOpen size={36} />
@@ -959,135 +922,97 @@ export default function DiscoverShareModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 pb-6 md:grid-cols-3">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
-                  Type
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {RESOURCE_TYPES.map((type) => (
-                    <button
-                      type="button"
-                      key={type}
-                      onClick={() => toggleShareType(type)}
-                      className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
-                        shareTypes.includes(type)
-                          ? "discover-modal-action--primary"
-                          : "color-bg-grey-5 color-txt-main hover:opacity-90"
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
+            <div ref={selectionRef} className="relative z-20 grid gap-4 sm:grid-cols-[minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,1.3fr)]">
+              <div className="min-w-0 space-y-2">
+                <SubjectDropdown
+                  id="discover-share-subject"
+                  value={shareSubjectId}
+                  onChange={(subjectId) => {
+                    setShareSubjectId(subjectId);
+                    setShareLevels([]);
+                    setLevelChosen(false);
+                    setShareTopicIds([]);
+                    setOpenSelection(null);
+                  }}
+                  onFavouritesChange={setFavouriteSubjectIds}
+                  aria-label="Choose resource subject"
+                  variant="list"
+                  dropdownAlign="start"
+                  fitWithinModal
+                />
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
-                  Level
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShareLevels([])}
-                    className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
-                      shareLevels.length === 0
-                        ? "discover-modal-action--primary"
-                        : "color-bg-grey-5 color-txt-main hover:opacity-90"
-                    }`}
-                  >
-                    All levels
-                  </button>
-                  {RESOURCE_LEVELS.map((level) => (
-                    <button
-                      type="button"
-                      key={level}
-                      onClick={() => toggleShareLevel(level)}
-                      className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer ${
-                        shareLevels.includes(level)
-                          ? "discover-modal-action--primary"
-                          : "color-bg-grey-5 color-txt-main hover:opacity-90"
-                      }`}
-                    >
-                      {level}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
-                  Topics
-                </label>
-                <div className="themed-input-shell flex items-center gap-2 rounded-xl color-bg-grey-5 px-3 py-2">
-                  <span className="text-sm color-txt-sub">#</span>
-                  <input
-                    type="text"
-                    value={topicDraft}
-                    onChange={(e) => setTopicDraft(e.target.value)}
-                    onBlur={addTopicsFromDraft}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === "," || e.key === " ") {
-                        e.preventDefault();
-                        addTopicsFromDraft();
-                      }
-                    }}
-                    placeholder="macbeth"
-                    className="flex-1 bg-transparent color-txt-main text-sm outline-none placeholder:color-txt-sub"
-                  />
-                </div>
-                {shareTopics.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {shareTopics.map((topic) => (
-                      <button
-                        type="button"
-                        key={topic}
-                        onClick={() => removeShareTopic(topic)}
-                        className="px-2.5 py-1 rounded-full color-bg-grey-5 color-txt-sub text-xs font-semibold hover:color-txt-main cursor-pointer"
-                      >
-                        #{topic}
-                      </button>
-                    ))}
+              <div className="relative min-w-0 space-y-2">
+                <button
+                  ref={levelTriggerRef}
+                  type="button"
+                  disabled={!shareSubjectId}
+                  aria-label="Choose resource level"
+                  aria-expanded={openSelection === "level"}
+                  onClick={() => { setSelectionPosition(null); setOpenSelection((current) => current === "level" ? null : "level"); }}
+                  className="practice-hub__subject-trigger practice-hub__subject-trigger--compact w-full disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <span className="practice-hub__subject-trigger-label truncate">{!levelChosen ? "Choose level" : shareLevels.length ? shareLevels.join(", ") : "All levels"}</span>
+                  <span className="practice-hub__subject-arrow"><LuChevronDown size={16} className={`practice-hub__subject-chevron ${openSelection === "level" ? "rotate-180" : ""}`} /></span>
+                </button>
+                {openSelection === "level" && shareSubjectId && selectionPosition && selectionPortalTarget && createPortal(
+                  <div style={{ position: "fixed", inset: 0, zIndex: 100, pointerEvents: "none", contain: "layout" }}>
+                  <div ref={selectionPopupRef} className="practice-hub__subject-dropdown practice-hub__subject-dropdown--list" role="listbox" aria-label="Levels" style={{ position: "absolute", top: selectionPosition.top, left: selectionPosition.left, right: "auto", width: selectionPosition.width, maxHeight: selectionPosition.maxHeight, marginTop: 0, pointerEvents: "auto" }}>
+                    <div className="practice-hub__subject-scroll">
+                      <button type="button" role="option" aria-selected={levelChosen && shareLevels.length === 0} onClick={() => { setShareLevels([]); setLevelChosen(true); setShareTopicIds([]); setOpenSelection(null); }} className="practice-hub__subject-option">All levels</button>
+                      {RESOURCE_LEVELS.map((level) => (
+                        <button key={level} type="button" role="option" aria-selected={shareLevels.includes(level)} onClick={() => { setShareLevels([level]); setLevelChosen(true); setShareTopicIds([]); setOpenSelection(null); }} className="practice-hub__subject-option">{level}</button>
+                      ))}
+                    </div>
                   </div>
+                  </div>, selectionPortalTarget
+                )}
+              </div>
+              <div className="relative min-w-0 space-y-2">
+                <button
+                  ref={topicTriggerRef}
+                  type="button"
+                  disabled={!shareSubjectId || !levelChosen}
+                  aria-label="Choose resource topics"
+                  aria-expanded={openSelection === "topics"}
+                  onClick={() => { setSelectionPosition(null); setOpenSelection((current) => current === "topics" ? null : "topics"); }}
+                  className="practice-hub__subject-trigger practice-hub__subject-trigger--compact w-full disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <span className="practice-hub__subject-trigger-label truncate">{selectedTopics.length ? `${selectedTopics.length} ${selectedTopics.length === 1 ? "topic" : "topics"} selected` : "All topics / general"}</span>
+                  <span className="practice-hub__subject-arrow"><LuChevronDown size={16} className={`practice-hub__subject-chevron ${openSelection === "topics" ? "rotate-180" : ""}`} /></span>
+                </button>
+                {openSelection === "topics" && levelChosen && selectionPosition && selectionPortalTarget && createPortal(
+                  <div style={{ position: "fixed", inset: 0, zIndex: 100, pointerEvents: "none", contain: "layout" }}>
+                  <div ref={selectionPopupRef} className="practice-hub__subject-dropdown practice-hub__subject-dropdown--list" aria-label="Topics" style={{ position: "absolute", top: selectionPosition.top, left: selectionPosition.left, right: "auto", width: selectionPosition.width, maxHeight: selectionPosition.maxHeight, marginTop: 0, pointerEvents: "auto" }}>
+                    <div className="practice-hub__subject-search-wrap">
+                      <LuSearch size={15} className="practice-hub__subject-search-icon" aria-hidden />
+                      <input type="search" className="practice-hub__subject-search" value={topicSearch} onChange={(event) => setTopicSearch(event.target.value)} placeholder="Search topics…" aria-label="Search topics" />
+                    </div>
+                    <div className="practice-hub__subject-scroll">
+                      <p className="px-3 py-2 text-xs color-txt-sub">Leave unchecked for a general resource.</p>
+                      {visibleTopics.map((topic) => (
+                        <label key={topic.id} className="practice-hub__subject-option">
+                          <input type="checkbox" className="discover-share-topic-checkbox" checked={shareTopicIds.includes(topic.id)} onChange={() => setShareTopicIds((current) => current.includes(topic.id) ? current.filter((id) => id !== topic.id) : [...current, topic.id])} />
+                          <span className="truncate">{topic.label}</span>
+                        </label>
+                      ))}
+                      {topicsLoading && <p className="px-3 py-2 text-sm color-txt-sub">Loading topics…</p>}
+                      {!topicsLoading && visibleTopics.length === 0 && <p className="px-3 py-2 text-sm color-txt-sub">{topicSearch ? "No topics match" : "No topics available"}</p>}
+                      {topicsError && <p className="px-3 py-2 text-sm color-txt-danger">Couldn’t load topics. Try again.</p>}
+                    </div>
+                  </div>
+                  </div>, selectionPortalTarget
                 )}
               </div>
             </div>
-            {isAdmin && (
-              <div className="space-y-2">
-                <label className="text-xs font-semibold color-txt-sub uppercase tracking-wide">
-                  Post as another account
-                </label>
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    type="text"
-                    value={postAsHandle}
-                    onChange={(e) => {
-                      setPostAsHandle(e.target.value);
-                      setPostAsAuthor(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        void resolvePostAsAuthor();
-                      }
-                    }}
-                    placeholder="Username or uid (leave blank for yourself)"
-                    className="themed-standalone-field flex-1 min-w-[16rem] rounded-xl color-bg-grey-5 color-txt-main px-4 py-3 text-sm outline-none placeholder:color-txt-sub"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => void resolvePostAsAuthor()}
-                    disabled={lookingUpAuthor || !postAsHandle.trim()}
-                    className="discover-modal-action--secondary px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer disabled:opacity-50"
-                  >
-                    {lookingUpAuthor ? "Looking up…" : "Look up"}
-                  </button>
-                </div>
-                <p className="text-xs color-txt-sub">
-                  {postAsAuthor
-                    ? `Will publish as ${postAsAuthor.username}`
-                    : "Admins can attribute this listing to someone else when it goes to moderation."}
-                </p>
+
+            <div className="space-y-2 pb-6">
+              <label className="text-xs font-semibold color-txt-sub">Type</label>
+              <div className="flex flex-wrap gap-2">
+                {RESOURCE_TYPES.map((type) => (
+                  <button type="button" key={type} onClick={() => setShareType(type)} className={`rounded-lg border color-shadow px-3 py-2 text-sm font-semibold cursor-pointer ${shareType === type ? "discover-modal-action--primary" : "color-bg color-txt-main hover:opacity-90"}`}>{type}</button>
+                ))}
               </div>
-            )}
+            </div>
           </div>
     </Modal>
   );

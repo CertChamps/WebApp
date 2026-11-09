@@ -39,7 +39,7 @@ function PreviewFallback({
           alt=""
           className={`${compact ? "w-8 h-8 rounded-md" : "w-16 h-16 rounded-2xl color-bg p-2"} object-contain`}
         />
-      ) : resource.resourceSource === "pdf" ? (
+      ) : resource.resourceSource === "pdf" || resource.resourceSource === "document" ? (
         <LuFileText size={compact ? 22 : 40} />
       ) : (
         <LuBookOpen size={compact ? 22 : 40} />
@@ -571,6 +571,16 @@ export default function DiscoverMediaPreview({
     return (
       <div className={`w-full h-full ${className}`}>
         <PdfHero resource={resource} onOpenResource={onOpenResource} resourceActionLabel={resourceActionLabel} />
+      </div>
+    );
+  }
+
+  if (kind === "document") {
+    return (
+      <div className={`relative w-full h-full flex flex-col items-center justify-center gap-3 color-bg-grey-10 color-txt-sub ${className}`}>
+        <LuFileText size={42} />
+        <span className="text-sm font-semibold color-txt-main">{resource.pdfFileName || resource.title || "Document"}</span>
+        <OpenResourceCorner onOpenResource={onOpenResource} resourceActionLabel={resourceActionLabel || "Open document"} />
       </div>
     );
   }

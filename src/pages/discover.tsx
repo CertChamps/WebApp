@@ -26,7 +26,6 @@ import { db, storage } from "../../firebase";
 import { UserContext } from "../context/UserContext";
 import { useRequireSignIn } from "../hooks/useRequireSignIn";
 import { isAdminUid } from "../constants/adminUids";
-import NotificationBell from "../components/social/NotificationBell";
 import DiscoverFiltersModal, { type DiscoverFilterType, type DiscoverSortBy } from "../components/discover/DiscoverFiltersModal";
 import DiscoverShareModal from "../components/discover/DiscoverShareModal";
 import {
@@ -52,9 +51,7 @@ import {
     LuSearch,
     LuStar,
     LuTrash,
-    LuUsers,
     LuX,
-    LuChevronDown,
 } from "react-icons/lu";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import VideoEmbedModal from "../components/discover/VideoEmbedModal";
@@ -66,6 +63,7 @@ import {
     parseLinkedQuestions,
     type LinkedDiscoverQuestion,
 } from "../lib/discoverLinks";
+import { resolveResourceType, resourceFormat, RESOURCE_TYPES, type ResourceType } from "../lib/discoverClassification";
 
 type DiscoverNote = {
     id: string;
@@ -94,6 +92,11 @@ type DiscoverNote = {
     levels?: ResourceLevel[];
     resourceType?: ResourceType;
     resourceTypes?: ResourceType[];
+    formatType?: string;
+    topicId?: string;
+    topicLabel?: string;
+    topicLevel?: string;
+    topicUrl?: string;
     topics?: string[];
     likeCount?: number;
     commentCount?: number;
@@ -125,9 +128,8 @@ type DiscoverQuestionPost = {
     timestamp: number | null;
 };
 
-type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
 type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
-type ResourceSource = "website" | "pdf" | "image";
+type ResourceSource = "website" | "pdf" | "document" | "image";
 
 type DiscoverComment = {
     id: string;
@@ -143,6 +145,7 @@ type DiscoverResource = {
     title: string;
     subject: string;
     type: ResourceType;
+    formatType: string;
     description: string;
     sourceName: string;
     tags: string[];
@@ -156,6 +159,7 @@ type DiscoverResource = {
     websiteUrl?: string;
     resourceSource?: ResourceSource;
     pdfPath?: string | null;
+    pdfFileName?: string | null;
     imagePath?: string | null;
     thumbnailUrl?: string;
     userId?: string;
@@ -182,7 +186,6 @@ function resourceMatchesTypes(resource: DiscoverResource, selectedTypes: Discove
 }
 
 const MAX_COMMENT = 500;
-const RESOURCE_TYPES: ResourceType[] = ["Notes", "Videos", "Sample Answers", "Flashcards", "Website", "Other"];
 const FILTER_TYPES: DiscoverFilterType[] = [...RESOURCE_TYPES, "Saved"];
 const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
 
@@ -206,21 +209,6 @@ function displayHostname(url: string): string {
     }
 }
 
-function normalizeResourceType(value: unknown): ResourceType | null {
-    if (typeof value !== "string") return null;
-    if (RESOURCE_TYPES.includes(value as ResourceType)) return value as ResourceType;
-    return null;
-}
-
-function normalizeResourceTypes(values: unknown, fallback?: unknown): ResourceType[] {
-    const fromArray = Array.isArray(values)
-        ? values.map(normalizeResourceType).filter((type): type is ResourceType => Boolean(type))
-        : [];
-    const fallbackType = normalizeResourceType(fallback);
-    const merged = [...fromArray, ...(fallbackType ? [fallbackType] : [])];
-    return [...new Set(merged)];
-}
-
 function normalizeResourceLevels(values: unknown, fallback?: unknown): ResourceLevel[] {
     const isLevel = (value: unknown): value is ResourceLevel =>
         typeof value === "string" && RESOURCE_LEVELS.includes(value as ResourceLevel);
@@ -229,15 +217,6 @@ function normalizeResourceLevels(values: unknown, fallback?: unknown): ResourceL
         : [];
     const merged = [...fromArray, ...(isLevel(fallback) ? [fallback] : [])];
     return [...new Set(merged)];
-}
-
-function inferResourceType(note: DiscoverNote): ResourceType {
-    const text = `${note.title} ${note.description}`.toLowerCase();
-    if (text.includes("video") || text.includes("youtube")) return "Videos";
-    if (text.includes("sample") || text.includes("answer") || text.includes("essay")) return "Sample Answers";
-    if (text.includes("flashcard") || text.includes("quizlet")) return "Flashcards";
-    if (text.includes("website") || text.includes("site")) return "Website";
-    return "Notes";
 }
 
 function inferSubject(note: DiscoverNote): string {
@@ -411,6 +390,8 @@ function firestoreToDiscoverNote(id: string, data: Record<string, any>): Discove
         resourceSource:
             data.resourceSource === "pdf"
                 ? "pdf"
+                : data.resourceSource === "document"
+                    ? "document"
                 : data.resourceSource === "image"
                     ? "image"
                     : "website",
@@ -432,6 +413,11 @@ function firestoreToDiscoverNote(id: string, data: Record<string, any>): Discove
         levels: Array.isArray(data.levels) ? data.levels : [],
         resourceType: data.resourceType ?? undefined,
         resourceTypes: Array.isArray(data.resourceTypes) ? data.resourceTypes : [],
+        formatType: data.formatType ?? undefined,
+        topicId: data.topicId ?? undefined,
+        topicLabel: data.topicLabel ?? undefined,
+        topicLevel: data.topicLevel ?? undefined,
+        topicUrl: data.topicUrl ?? undefined,
         topics: Array.isArray(data.topics) ? data.topics : [],
         likeCount: typeof data.likeCount === "number" ? data.likeCount : 0,
         commentCount: typeof data.commentCount === "number" ? data.commentCount : 0,
@@ -454,8 +440,8 @@ const DISCOVER_NOTES_PAGE_SIZE = 100;
 const DISCOVER_FEED_BATCH_SIZE = 20;
 
 function noteToResource(note: DiscoverNote): DiscoverResource {
-    const types = normalizeResourceTypes(note.resourceTypes, note.resourceType);
-    const type = types[0] ?? inferResourceType(note);
+    const type = resolveResourceType(note.resourceType, note.resourceTypes);
+    const types = [type];
     const levels = normalizeResourceLevels(note.levels, note.level);
     const subject = note.subjectLabel ?? inferSubject(note);
     return {
@@ -463,9 +449,11 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
         title: note.title,
         subject,
         type,
+        formatType: note.formatType ?? resourceFormat(note.resourceSource, note.websiteUrl),
         description: note.description,
         sourceName: note.siteName ?? displayHostname(note.websiteUrl),
-        tags: [subject, ...levels, ...(note.topics ?? [])].filter(Boolean),
+        tags: [subject, ...levels, ...(note.topics?.length ? note.topics : [note.topicLabel || note.topicId])]
+            .filter((tag): tag is string => typeof tag === "string" && tag.length > 0),
         comments: note.commentCount ?? 0,
         saves: note.likeCount ?? 0,
         levels,
@@ -475,6 +463,7 @@ function noteToResource(note: DiscoverNote): DiscoverResource {
         ratingCount: note.ratingCount ?? 0,
         websiteUrl: note.websiteUrl,
         resourceSource: note.resourceSource ?? (note.pdfPath ? "pdf" : note.imagePath ? "image" : "website"),
+        pdfFileName: note.pdfFileName,
         pdfPath: note.pdfPath,
         imagePath: note.imagePath,
         thumbnailUrl: note.thumbnailUrl,
@@ -566,7 +555,6 @@ export default function Discover() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const commentInputRef = useRef<HTMLInputElement | null>(null);
-    const pageMenuRef = useRef<HTMLDivElement | null>(null);
     const pageScrollRef = useRef<HTMLElement | null>(null);
     const liveCursorRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
     const olderCursorRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
@@ -576,7 +564,6 @@ export default function Discover() {
     const [hasMoreNotes, setHasMoreNotes] = useState(true);
     const [loadingMoreNotes, setLoadingMoreNotes] = useState(false);
     const [feedVisibleCount, setFeedVisibleCount] = useState(DISCOVER_FEED_BATCH_SIZE);
-    const [pageMenuOpen, setPageMenuOpen] = useState(false);
 
     useEffect(() => {
         const updateFavourites = () => setFavouriteSubjectIds(getFavouriteSubjectIds());
@@ -586,16 +573,6 @@ export default function Discover() {
             window.removeEventListener(FAVOURITES_CHANGED_EVENT, updateFavourites);
             window.removeEventListener("storage", updateFavourites);
         };
-    }, []);
-
-    useEffect(() => {
-        function handleOutside(e: MouseEvent) {
-            if (pageMenuRef.current && !pageMenuRef.current.contains(e.target as Node)) {
-                setPageMenuOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleOutside);
-        return () => document.removeEventListener("mousedown", handleOutside);
     }, []);
 
     useEffect(() => {
@@ -1183,6 +1160,12 @@ export default function Discover() {
                     resource.note?.subjectId?.toLowerCase() === linkedQuestion.subjectId.toLowerCase()
                 )
             );
+        }).sort((a, b) => {
+            const linkedTopic = linkedQuestion.topic?.trim().toLowerCase();
+            if (!linkedTopic) return 0;
+            const matchesTopic = (resource: DiscoverResource) => (resource.note?.topics ?? []).some((topic) => topic.toLowerCase() === linkedTopic)
+                || (resource.note?.topicId || resource.note?.topicLabel || "").trim().toLowerCase() === linkedTopic;
+            return Number(matchesTopic(b)) - Number(matchesTopic(a));
         });
         return { exact: exact.slice(0, 12), fallback: fallback.slice(0, 12) };
     }, [filteredResources, linkedQuestion]);
@@ -1451,11 +1434,7 @@ export default function Discover() {
                     <div className="relative aspect-[16/10] rounded-lg color-bg-grey-10 overflow-hidden">
                         <DiscoverMediaPreview resource={resource} variant="thumb" />
                         <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full color-bg color-txt-main text-xs font-bold">
-                            {resource.resourceSource === "pdf"
-                                ? "PDF"
-                                : resource.resourceSource === "image"
-                                    ? "Image"
-                                    : resource.type}
+                            {resource.formatType}
                         </span>
                     </div>
 
@@ -1508,6 +1487,7 @@ export default function Discover() {
 
                     {resource.tags.length > 0 && (
                         <div className="discover-resource-tags flex gap-1 px-0.5 pt-1.5">
+                            <span className="px-2 py-0.5 rounded-full color-bg text-[11px] font-semibold color-txt-sub">{resource.type}</span>
                             {resource.tags.slice(0, 3).map((tag) => (
                                 <span
                                     key={`${resource.id}-${tag}`}
@@ -1544,11 +1524,7 @@ export default function Discover() {
                 <div className="discover-resource-list-item__preview">
                     <DiscoverMediaPreview resource={resource} variant="thumb" />
                     <span className="discover-resource-list-item__type">
-                        {resource.resourceSource === "pdf"
-                            ? "PDF"
-                            : resource.resourceSource === "image"
-                                ? "Image"
-                                : resource.type}
+                        {resource.formatType}
                     </span>
                 </div>
                 <div className="discover-resource-list-item__body">
@@ -1560,6 +1536,7 @@ export default function Discover() {
                         <p className="text-sm color-txt-sub line-clamp-2">{resource.description}</p>
                     )}
                     <div className="discover-resource-tags flex items-center gap-1.5 pt-0.5">
+                        <span className="px-2 py-0.5 rounded-full color-bg-grey-5 text-[11px] font-semibold color-txt-sub">{resource.type}</span>
                         {resource.tags.slice(0, 4).map((tag) => (
                             <span key={`${resource.id}-${tag}`} className="px-2 py-0.5 rounded-full color-bg-grey-5 text-[11px] font-semibold color-txt-sub">
                                 {tag}
@@ -1818,6 +1795,18 @@ export default function Discover() {
                             </div>
                         )}
 
+                        {resource.note?.topics?.map((topicId) => (
+                            <button key={topicId} type="button"
+                                onClick={() => navigate(`/practice?${new URLSearchParams({ subject: resource.note?.subjectId ?? "", level: resource.note?.topicLevel || "higher", cycle: "leaving", browse: "topic", topic: topicId })}`)}
+                                className="w-fit text-sm font-semibold color-txt-accent hover:underline cursor-pointer"
+                            >Practice {topicId.replace(/-/g, " ")} questions</button>
+                        ))}
+                        {!resource.note?.topics?.length && resource.note?.topicUrl && resource.note.topicLabel && (
+                            <button type="button" onClick={() => navigate(resource.note!.topicUrl!)} className="w-fit text-sm font-semibold color-txt-accent hover:underline cursor-pointer">
+                                Practice {resource.note.topicLabel} questions
+                            </button>
+                        )}
+
                         {resource.description && (
                             <p className="text-sm color-txt-main whitespace-pre-wrap">{resource.description}</p>
                         )}
@@ -2003,56 +1992,11 @@ export default function Discover() {
             <div className="w-full px-6 pt-4 pb-6 space-y-4">
                 <div className="space-y-5">
                 <div className="relative flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-                    <div ref={pageMenuRef} className="relative z-10 min-w-0 pointer-events-none">
-                        <h1 className="text-3xl sm:text-4xl font-black leading-none color-txt-main">
-                            <button
-                                type="button"
-                                onClick={() => setPageMenuOpen((open) => !open)}
-                                aria-expanded={pageMenuOpen}
-                                aria-haspopup="listbox"
-                                aria-label="Switch community page"
-                                className="inline-flex items-center gap-2 cursor-pointer pointer-events-auto"
-                            >
-                                Discover
-                                <LuChevronDown
-                                    size={22}
-                                    className={`color-txt-sub transition-transform duration-200 ${pageMenuOpen ? "rotate-180" : ""}`}
-                                />
-                            </button>
-                        </h1>
-                        {pageMenuOpen && (
-                            <div
-                                role="listbox"
-                                className="absolute left-0 top-full mt-2 z-20 min-w-[12rem] rounded-xl color-bg shadow-md border border-color-border p-1.5 flex flex-col gap-1 pointer-events-auto"
-                            >
-                                <button
-                                    type="button"
-                                    role="option"
-                                    aria-selected
-                                    className="discover-action--primary inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer"
-                                    onClick={() => setPageMenuOpen(false)}
-                                >
-                                    <LuSearch size={15} />
-                                    Discover
-                                </button>
-                                <button
-                                    type="button"
-                                    role="option"
-                                    aria-selected={false}
-                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg color-txt-sub hover:color-txt-main hover:color-bg-grey-5 text-sm font-semibold cursor-pointer"
-                                    onClick={() => {
-                                        setPageMenuOpen(false);
-                                        navigate("/social/social", { state: backState });
-                                    }}
-                                >
-                                    <LuUsers size={15} />
-                                    Discussion
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    <h1 className="relative z-10 min-w-0 text-3xl sm:text-4xl font-black leading-none color-txt-main">
+                        Discover
+                    </h1>
                     <div
-                        className={`relative z-20 w-full max-w-xl order-last md:order-none md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[min(32rem,calc(100%-28rem))] flex items-center gap-1.5 rounded-full px-3.5 py-1.5 border-2 ${
+                        className={`relative z-20 w-full max-w-xl order-last md:order-none md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[min(32rem,calc(100%-28rem))] flex items-center gap-1.5 rounded-full px-3.5 py-1.5 border ${
                             searchFocused ? "color-shadow-accent" : "color-shadow"
                         }`}
                     >
@@ -2161,9 +2105,6 @@ export default function Discover() {
                             <LuPlus size={16} />
                             Share resource
                         </button>
-                        <div className="pointer-events-auto">
-                            {user?.uid && <NotificationBell />}
-                        </div>
                     </div>
                 </div>
 

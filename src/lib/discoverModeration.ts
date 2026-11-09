@@ -12,19 +12,13 @@ import {
   parseLinkedQuestions,
   type LinkedDiscoverQuestion,
 } from "./discoverLinks";
+import { resolveResourceType, resourceFormat, type ResourceType, type ResourceFormat } from "./discoverClassification";
 
-export type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
+export type { ResourceType } from "./discoverClassification";
 export type ResourceLevel = "Higher" | "Ordinary" | "Foundation";
-export type ResourceSource = "website" | "pdf" | "image";
+export type ResourceSource = "website" | "pdf" | "document" | "image";
 
-export const RESOURCE_TYPES: ResourceType[] = [
-  "Notes",
-  "Videos",
-  "Sample Answers",
-  "Flashcards",
-  "Website",
-  "Other",
-];
+export { RESOURCE_TYPES } from "./discoverClassification";
 export const RESOURCE_LEVELS: ResourceLevel[] = ["Higher", "Ordinary", "Foundation"];
 export const MAX_TITLE = 80;
 export const MAX_DESCRIPTION = 240;
@@ -55,6 +49,11 @@ export type DiscoverModerationNote = {
   levels: ResourceLevel[];
   resourceType: ResourceType;
   resourceTypes: ResourceType[];
+  formatType: ResourceFormat;
+  topicId: string;
+  topicLabel: string;
+  topicLevel: string;
+  topicUrl: string;
   topics: string[];
   linkedQuestionId: string;
   linkedQuestionName: string;
@@ -89,12 +88,6 @@ function asLevel(value: unknown): ResourceLevel | null {
     : null;
 }
 
-function asType(value: unknown): ResourceType | null {
-  return typeof value === "string" && RESOURCE_TYPES.includes(value as ResourceType)
-    ? (value as ResourceType)
-    : null;
-}
-
 export function parseDiscoverModerationNote(
   id: string,
   data: Record<string, unknown>
@@ -103,10 +96,6 @@ export function parseDiscoverModerationNote(
     ? data.levels.map(asLevel).filter((level): level is ResourceLevel => Boolean(level))
     : [];
   const fallbackLevel = asLevel(data.level);
-  const types = Array.isArray(data.resourceTypes)
-    ? data.resourceTypes.map(asType).filter((type): type is ResourceType => Boolean(type))
-    : [];
-  const fallbackType = asType(data.resourceType);
   const timestamp = data.timestamp as { seconds?: number } | null | undefined;
 
   return {
@@ -117,7 +106,7 @@ export function parseDiscoverModerationNote(
     title: asString(data.title) || "Untitled",
     description: asString(data.description),
     websiteUrl: asString(data.websiteUrl),
-    resourceSource: data.resourceSource === "pdf" ? "pdf" : data.resourceSource === "image" ? "image" : "website",
+    resourceSource: data.resourceSource === "pdf" ? "pdf" : data.resourceSource === "document" ? "document" : data.resourceSource === "image" ? "image" : "website",
     pdfPath: asString(data.pdfPath),
     pdfFileName: asString(data.pdfFileName),
     imagePath: asString(data.imagePath),
@@ -133,8 +122,13 @@ export function parseDiscoverModerationNote(
     subjectId: asString(data.subjectId),
     subjectLabel: asString(data.subjectLabel) || "General",
     levels: [...new Set([...levels, ...(fallbackLevel ? [fallbackLevel] : [])])],
-    resourceType: fallbackType ?? types[0] ?? "Notes",
-    resourceTypes: [...new Set([...types, ...(fallbackType ? [fallbackType] : [])])],
+    resourceType: resolveResourceType(data.resourceType, data.resourceTypes),
+    resourceTypes: [resolveResourceType(data.resourceType, data.resourceTypes)],
+    formatType: resourceFormat(asString(data.resourceSource), asString(data.websiteUrl)),
+    topicId: asString(data.topicId),
+    topicLabel: asString(data.topicLabel),
+    topicLevel: asString(data.topicLevel),
+    topicUrl: asString(data.topicUrl),
     topics: Array.isArray(data.topics)
       ? data.topics.filter((topic): topic is string => typeof topic === "string" && topic.trim().length > 0)
       : [],

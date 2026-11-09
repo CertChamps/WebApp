@@ -35,7 +35,19 @@ service cloud.firestore {
     }
   	function isDiscoverEngagementUpdate() {
   		return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'likeCount', 'ratingAverage', 'ratingCount']);
-		}
+	}
+    function hasDirectDiscoverTopic() {
+      return request.resource.data.keys().hasAll([
+          'subjectId', 'subjectLabel', 'topics', 'resourceType', 'formatType'
+        ])
+        && request.resource.data.subjectId is string
+        && request.resource.data.subjectId.size() > 0
+        && request.resource.data.subjectLabel is string
+        && request.resource.data.subjectLabel.size() > 0
+        && request.resource.data.topics is list
+        && request.resource.data.resourceType in ['Revision Notes', 'Sample Answer', 'Lesson', 'Flashcards']
+        && request.resource.data.formatType in ['Document', 'Image', 'Website', 'Video'];
+    }
 
     /** ==================== COLLECTION RULES ==================== **/
     match /user-data/{userId} {
@@ -108,7 +120,8 @@ service cloud.firestore {
       || resource.data.moderationStatus == 'approved';
 
     allow create: if request.auth != null
-      && request.resource.data.userId == request.auth.uid;
+      && request.resource.data.userId == request.auth.uid
+      && hasDirectDiscoverTopic();
 
     allow update: if request.auth != null && (
       isAdmin()

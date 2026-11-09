@@ -3,7 +3,8 @@ import { createPortal } from "react-dom";
 import { LuX } from "react-icons/lu";
 import { getThemedPortalTarget } from "../../utils/themedPortal";
 
-export type ResourceType = "Notes" | "Videos" | "Sample Answers" | "Flashcards" | "Website" | "Other";
+import type { ResourceType } from "../../lib/discoverClassification";
+export type { ResourceType } from "../../lib/discoverClassification";
 export type DiscoverFilterType = ResourceType | "Saved";
 export type DiscoverSortBy = "rating" | "date";
 

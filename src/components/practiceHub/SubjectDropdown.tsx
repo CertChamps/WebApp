@@ -45,6 +45,8 @@ type Props = {
 
   /** Prepend an "All subjects" choice (e.g. Discover resource upload). */
   includeAllOption?: boolean;
+  /** Keep the list menu within the nearest modal panel. */
+  fitWithinModal?: boolean;
 };
 
 type ContextMenuState = {
@@ -238,6 +240,7 @@ export default function SubjectDropdown({
   renderTrigger,
   dropdownAlign = "center",
   includeAllOption = false,
+  fitWithinModal = false,
   examCycle = DEFAULT_EXAM_CYCLE,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -246,6 +249,7 @@ export default function SubjectDropdown({
   const syncedFavourites = useSyncedFavouriteSubjectIds(examCycle);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [gridAlign, setGridAlign] = useState<"center" | "start" | "end">(dropdownAlign);
+  const [listPlacement, setListPlacement] = useState<{ above: boolean; maxHeight: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const gridDropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -317,6 +321,34 @@ export default function SubjectDropdown({
     window.addEventListener("resize", updateAlign);
     return () => window.removeEventListener("resize", updateAlign);
   }, [open, isList, dropdownAlign, search, favourites]);
+
+  useLayoutEffect(() => {
+    if (!open || !isList || !fitWithinModal) {
+      setListPlacement(null);
+      return;
+    }
+    const updatePlacement = () => {
+      const trigger = containerRef.current?.querySelector(".practice-hub__subject-trigger");
+      const panel = containerRef.current?.closest(".app-modal-panel");
+      if (!trigger || !panel) return;
+      const rect = trigger.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const topEdge = Math.max(8, panelRect.top + 12);
+      const bottomEdge = Math.min(window.innerHeight - 8, panelRect.bottom - 12);
+      const below = Math.max(0, bottomEdge - rect.bottom - 4);
+      const above = Math.max(0, rect.top - topEdge - 4);
+      const desiredHeight = Math.min(352, window.innerHeight * 0.6);
+      const placeAbove = below < Math.min(desiredHeight, 180) && above > below;
+      setListPlacement({ above: placeAbove, maxHeight: Math.min(desiredHeight, placeAbove ? above : below) });
+    };
+    updatePlacement();
+    window.addEventListener("resize", updatePlacement);
+    window.addEventListener("scroll", updatePlacement, true);
+    return () => {
+      window.removeEventListener("resize", updatePlacement);
+      window.removeEventListener("scroll", updatePlacement, true);
+    };
+  }, [open, isList, fitWithinModal]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -472,7 +504,16 @@ export default function SubjectDropdown({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.99 }}
             transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-            style={{ transformOrigin: "top center" }}
+            style={{
+              transformOrigin: listPlacement?.above ? "bottom center" : "top center",
+              ...(listPlacement ? {
+                top: listPlacement.above ? "auto" : "100%",
+                bottom: listPlacement.above ? "100%" : "auto",
+                maxHeight: listPlacement.maxHeight,
+                marginTop: listPlacement.above ? 0 : undefined,
+                marginBottom: listPlacement.above ? 4 : undefined,
+              } : {}),
+            }}
           >
             <div
               className="practice-hub__subject-search-wrap"
