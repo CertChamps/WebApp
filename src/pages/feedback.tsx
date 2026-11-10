@@ -21,6 +21,8 @@ type AdminTag = "working_on_it" | "love_it" | "looking_into_it" | null;
 
 type FeedbackItem = {
     id: string;
+    userId: string;
+    username: string;
     type: FeedbackType;
     message: string;
     timestamp: number | null;
@@ -97,6 +99,8 @@ export default function Feedback() {
                             const data = d.data();
                             return {
                                 id: d.id,
+                                userId: typeof data.userId === "string" ? data.userId : "",
+                                username: typeof data.username === "string" ? data.username : "",
                                 type: (data.type as FeedbackType) ?? "general",
                                 message: data.message ?? "",
                                 timestamp: data.timestamp?.seconds ?? null,
@@ -276,6 +280,10 @@ export default function Feedback() {
                                     {/* Admin controls */}
                                     {isAdmin && (
                                         <div className="mt-3 relative">
+                                            <p className="color-txt-sub text-xs break-all mb-2">
+                                                Posted by <span className="font-semibold color-txt-main">{item.username || "Unknown user"}</span>
+                                                {item.userId && <span> · {item.userId}</span>}
+                                            </p>
                                             <div className="flex items-center gap-3">
                                                 <button
                                                     type="button"
