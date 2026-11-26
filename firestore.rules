@@ -6,7 +6,8 @@ service cloud.firestore {
       return request.auth != null &&
         (request.auth.uid == "NkN9UBqoPEYpE21MC89fipLn0SP2"
          || request.auth.uid == "gJIqKYlc1OdXUQGZQkR4IzfCIoL2"
-         || request.auth.uid == "AN3cIuQxmXfXb5kEmXuHcM5vWyH3");
+         || request.auth.uid == "AN3cIuQxmXfXb5kEmXuHcM5vWyH3"
+         || request.auth.uid == "gJR2DP95jkgTYiAxCn3stPmBw4q1");
     }
     function isVerified() {
       return request.auth != null && request.auth.token.email_verified == true;

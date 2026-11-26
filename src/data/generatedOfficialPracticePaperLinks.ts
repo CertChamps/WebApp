@@ -4,510 +4,1480 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2010|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2010/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2010|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2012|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2014|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2015|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2017|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2019|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2021|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2022|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2024|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2011|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2013|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2016|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2022|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2010|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2012|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2014|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2016|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2018|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2020|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2023|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2019|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2011|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2021|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2015|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2025|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2018|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2024|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2020|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2013|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2025|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2017|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC032ALP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|higher|2023|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC032ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC032ALP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2013|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2015|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2018|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2022|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2024|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2020|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2011|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2012|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2013|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2015|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2014|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2016|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2017|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2018|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2019|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2020|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2021|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2022|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2023|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2024|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2025|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2012|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2016|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2025|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2020|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2011|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2014|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2023|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2017|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2021|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC032GLP000IV.pdf"
+    }
+  ],
+  "leaving|accounting|ordinary|2019|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC032GLP000IV.pdf"
     }
   ],
   "leaving|accounting|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC032GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC032GLP000IV.pdf"
     }
   ],
   "leaving|agricultural-science|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC024ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC024ALP000IV.pdf"
     }
   ],
   "leaving|agricultural-science|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC024ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC024ALP000IV.pdf"
     }
   ],
   "leaving|agricultural-science|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC024ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC024ALP000IV.pdf"
     }
   ],
   "leaving|agricultural-science|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC024ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC024ALP000IV.pdf"
     }
   ],
   "leaving|agricultural-science|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC024ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC024ALP000IV.pdf"
     }
   ],
   "leaving|agricultural-science|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC024GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC024GLP000IV.pdf"
     }
   ],
   "leaving|agricultural-science|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC024GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC024GLP000IV.pdf"
     }
   ],
   "leaving|agricultural-science|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC024GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC024GLP000IV.pdf"
     }
   ],
   "leaving|agricultural-science|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC024GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC024GLP000IV.pdf"
     }
   ],
   "leaving|agricultural-science|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC024GLP000EV.pdf"
-    }
-  ],
-  "leaving|ancient-greek|higher|2011|0|": [
+    },
     {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2011/LC007ALP000EV.pdf"
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC024GLP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC007ALP000EV.pdf"
-    }
-  ],
-  "leaving|ancient-greek|ordinary|2011|0|": [
+    },
     {
-      "label": "Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2011/LC007GLP000EV.pdf"
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC007ALP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC007GLP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC007GLP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC007GLP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC007GLP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC007GLP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC007GLP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC007GLP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC007GLP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC007GLP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC007GLP000IV.pdf"
     }
   ],
   "leaving|ancient-greek|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC007GLP000IV.pdf"
+    }
+  ],
+  "leaving|applied-maths|higher|2002|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC020ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC020ALPO00IV.pdf"
+    }
+  ],
+  "leaving|applied-maths|higher|2003|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC020ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC020ALPO00IV.pdf"
+    }
+  ],
+  "leaving|applied-maths|higher|2005|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC020ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC020ALPO00IV.pdf"
+    }
+  ],
+  "leaving|applied-maths|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC020ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC020ALPO00IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2007|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2007/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2008|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2008/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2009|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2009/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2010|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2010/LC020ALP000EV.pdf"
-    }
-  ],
-  "leaving|applied-maths|higher|2012|0|": [
+    },
     {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2012/LC020ALP000EV.pdf"
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC020ALP000IV.pdf"
     }
   ],
   "leaving|applied-maths|higher|2004|0|": [
@@ -520,18 +1490,30 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC020GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC020GLP000IV.pdf"
     }
   ],
   "leaving|applied-maths|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC020GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC020GLP000IV.pdf"
     }
   ],
   "leaving|applied-maths|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC020GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC020GLP000IV.pdf"
     }
   ],
   "leaving|arabic|higher|2011|0|": [
@@ -624,6 +1606,186 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC059ALP000EV.pdf"
     }
   ],
+  "leaving|arabic|higher|2011|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2012|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2013|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2014|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2016|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2015|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2017|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2018|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2019|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2020|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2021|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2022|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2023|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2024|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2025|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2011|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2012|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2013|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2014|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2015|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2016|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2017|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2018|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2019|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2020|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2021|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2022|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2023|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2024|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC059ALP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|higher|2025|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC059ALP000EV.pdf"
+    }
+  ],
   "leaving|arabic|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
@@ -708,106 +1870,396 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC059GLP000EV.pdf"
     }
   ],
+  "leaving|arabic|ordinary|2011|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2012|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2013|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2014|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2015|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2016|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2017|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2018|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2019|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2021|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2022|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2023|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2024|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2025|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2011|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2012|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2013|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2014|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2015|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2016|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2017|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2018|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2019|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2021|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2022|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2023|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2024|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC059GLP000EV.pdf"
+    }
+  ],
+  "leaving|arabic|ordinary|2025|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC059GLP000EV.pdf"
+    }
+  ],
   "leaving|art|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC014ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC014ALP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC014ALP004BV.pdf"
     }
   ],
   "leaving|art|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC014ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC014ALP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC014ALP004BV.pdf"
     }
   ],
   "leaving|art|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC014ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC014ALP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC014ALP004BV.pdf"
     }
   ],
   "leaving|art|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC014GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC014GLP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC014GLP004BV.pdf"
     }
   ],
   "leaving|art|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC014GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC014GLP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC014GLP004BV.pdf"
     }
   ],
   "leaving|art|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC014GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC014GLP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC014GLP004BV.pdf"
+    }
+  ],
+  "leaving|biology|higher|2004|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC025ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC025ALPO00IV.pdf"
+    }
+  ],
+  "leaving|biology|higher|2005|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC025ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC025ALPO00IV.pdf"
+    }
+  ],
+  "leaving|biology|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC025ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC025ALPO00IV.pdf"
     }
   ],
   "leaving|biology|higher|2007|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2007/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2008|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2008/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2009|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2009/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2010|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2010/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2019|0|": [
@@ -816,14 +2268,26 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC025ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC025ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC025ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC025ALP040IV.pdf"
     }
   ],
   "leaving|biology|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC025ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC025ALP000IV.pdf"
     }
   ],
   "leaving|biology|higher|2020|0|": [
@@ -832,8 +2296,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC025ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC025ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC025ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC025ALP040IV.pdf"
     }
   ],
   "leaving|biology|higher|2021|0|": [
@@ -842,8 +2314,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC025ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC025ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC025ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC025ALP040IV.pdf"
     }
   ],
   "leaving|biology|higher|2022|0|": [
@@ -852,8 +2332,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC025ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC025ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC025ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC025ALP040IV.pdf"
     }
   ],
   "leaving|biology|higher|2023|0|": [
@@ -862,8 +2350,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC025ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC025ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC025ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC025ALP040IV.pdf"
     }
   ],
   "leaving|biology|higher|2024|0|": [
@@ -872,8 +2368,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC025ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC025ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC025ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC025ALP040IV.pdf"
     }
   ],
   "leaving|biology|higher|2025|0|": [
@@ -882,80 +2386,166 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC025ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC025ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC025ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC025ALP040IV.pdf"
+    }
+  ],
+  "leaving|biology|ordinary|2004|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC025GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC025GLPO00IV.pdf"
+    }
+  ],
+  "leaving|biology|ordinary|2005|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC025GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC025GLPO00IV.pdf"
+    }
+  ],
+  "leaving|biology|ordinary|2006|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC025GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC025GLPO00IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2007|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2007/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2008|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2008/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2009|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2009/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2010|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2010/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC025GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC025GLP000IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2020|0|": [
@@ -964,8 +2554,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC025GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC025GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC025GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC025GLP040IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2019|0|": [
@@ -974,8 +2572,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC025GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC025GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC025GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC025GLP040IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2021|0|": [
@@ -984,8 +2590,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC025GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC025GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC025GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC025GLP040IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2022|0|": [
@@ -994,8 +2608,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC025GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC025GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC025GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC025GLP040IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2023|0|": [
@@ -1004,8 +2626,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC025GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC025GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC025GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC025GLP040IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2024|0|": [
@@ -1014,8 +2644,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC025GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC025GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC025GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC025GLP040IV.pdf"
     }
   ],
   "leaving|biology|ordinary|2025|0|": [
@@ -1024,8 +2662,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC025GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC025GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC025GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC025GLP040IV.pdf"
     }
   ],
   "leaving|bulgarian|higher|2007|0|": [
@@ -1038,12 +2684,6 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2008/LC559ALP000EV.pdf"
-    }
-  ],
-  "leaving|bulgarian|higher|2010|0|": [
-    {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2010/LC559ALP000EV.pdf"
     }
   ],
   "leaving|bulgarian|higher|2009|0|": [
@@ -1142,64 +2782,212 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC559ALP000EV.pdf"
     }
   ],
+  "leaving|business|higher|2001|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2004|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2004|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2005|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2006|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC033ALPO00IV.pdf"
+    }
+  ],
   "leaving|business|higher|2007|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2007/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2008|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2008/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2010|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2010/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2012|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2013|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2018|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2019|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2020|1|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP041IV.pdf"
     }
   ],
   "leaving|business|higher|2020|0|": [
@@ -1208,18 +2996,34 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP032EV.pdf"
     },
     {
-      "label": "Section 2 & 3 / Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP041EV.pdf"
-    }
-  ],
-  "leaving|business|higher|2021|0|": [
-    {
-      "label": "Section 1 / Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP032EV.pdf"
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP032IV.pdf"
     },
     {
       "label": "Section 2 & 3 / Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP041EV.pdf"
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2022|1|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP041IV.pdf"
     }
   ],
   "leaving|business|higher|2024|0|": [
@@ -1228,8 +3032,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP032EV.pdf"
     },
     {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP032IV.pdf"
+    },
+    {
       "label": "Section 2 & 3 / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP041IV.pdf"
     }
   ],
   "leaving|business|higher|2023|0|": [
@@ -1238,8 +3050,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP032EV.pdf"
     },
     {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP032IV.pdf"
+    },
+    {
       "label": "Section 2 & 3 / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP041IV.pdf"
     }
   ],
   "leaving|business|higher|2025|0|": [
@@ -1248,26 +3068,146 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP032EV.pdf"
     },
     {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP032IV.pdf"
+    },
+    {
       "label": "Section 2 & 3 / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2002|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2003|0|": [
+    {
+      "label": "Paper One / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC033ALP1EV.pdf"
+    },
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC033ALP1IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2007|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2009|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2009|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2009/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2010|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2011|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2014|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2015|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2016|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC033ALP000IV.pdf"
     }
   ],
   "leaving|business|higher|2022|0|": [
@@ -1276,284 +3216,1494 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP032EV.pdf"
     },
     {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP032IV.pdf"
+    },
+    {
       "label": "Section 2 & 3 / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2024|1|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2002|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2004|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2005|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2008|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2009|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2014|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2017|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2019|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2024|2|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2005|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2010|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2015|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2020|2|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2023|1|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2025|2|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2001|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2001|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC033ALPO00IV.pdf"
     }
   ],
   "leaving|business|higher|2003|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2003/LC033ALP1EV.pdf"
+    },
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC033ALP1IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2006|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2011|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2025|1|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2016|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2017|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2007|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2022|2|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2002|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC033ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC033ALPO00IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2012|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2023|2|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2013|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2018|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2008|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC033ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC033ALP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2002|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC033GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC033GLPO00IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2004|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC033GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC033GLPO00IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2005|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC033GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC033GLPO00IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2006|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC033GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC033GLPO00IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2007|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2008|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2010|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2011|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2012|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2013|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2014|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2014|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2015|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2016|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2017|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2018|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2019|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2020|2|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2022|2|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2023|2|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2024|2|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2025|1|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2025|2|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2009|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2001|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC033GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC033GLPO00IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2011|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2012|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2017|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2016|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2018|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2023|1|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2001|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC033GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC033GLPO00IV.pdf"
     }
   ],
   "leaving|business|ordinary|2003|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2003/LC033GLP1EV.pdf"
+    },
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC033GLP1IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2004|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC033GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC033GLPO00IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2005|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC033GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC033GLPO00IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2006|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC033GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC033GLPO00IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2008|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2009|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2010|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2013|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2015|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2019|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2022|1|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2020|1|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2024|1|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2002|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC033GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC033GLPO00IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2007|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC033GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC033GLP000IV.pdf"
+    }
+  ],
+  "leaving|chemistry|higher|2003|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC022ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC022ALPO00IV.pdf"
+    }
+  ],
+  "leaving|chemistry|higher|2004|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC022ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC022ALPO00IV.pdf"
+    }
+  ],
+  "leaving|chemistry|higher|2005|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC022ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC022ALPO00IV.pdf"
+    }
+  ],
+  "leaving|chemistry|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC022ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC022ALPO00IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2007|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2007/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2009|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2009/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2010|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2010/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC022ALP000EV.pdf"
-    }
-  ],
-  "leaving|chemistry|higher|2017|0|": [
+    },
     {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2017/LC022ALP000EV.pdf"
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC022ALP000IV.pdf"
     }
   ],
   "leaving|chemistry|higher|2008|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2008/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC022ALP000IV.pdf"
+    }
+  ],
+  "leaving|chemistry|higher|2002|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC022ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC022ALPO00IV.pdf"
+    }
+  ],
+  "leaving|chemistry|ordinary|2002|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC022GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC022GLPO00IV.pdf"
+    }
+  ],
+  "leaving|chemistry|ordinary|2003|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC022GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC022GLPO00IV.pdf"
+    }
+  ],
+  "leaving|chemistry|ordinary|2005|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC022GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC022GLPO00IV.pdf"
+    }
+  ],
+  "leaving|chemistry|ordinary|2004|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC022GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC022GLPO00IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2008|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2008/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC022GLP000IV.pdf"
+    }
+  ],
+  "leaving|chemistry|ordinary|2006|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC022GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC022GLPO00IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2009|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2009/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2010|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2010/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC022GLP000EV.pdf"
-    }
-  ],
-  "leaving|chemistry|ordinary|2017|0|": [
+    },
     {
-      "label": "Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2017/LC022GLP000EV.pdf"
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2020|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2007|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2007/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC022GLP000IV.pdf"
     }
   ],
   "leaving|chemistry|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC022GLP000IV.pdf"
     }
   ],
   "leaving|classical-studies|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC008ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC008ALP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC008ALP004BV.pdf"
     }
   ],
   "leaving|classical-studies|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC008ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC008ALP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC008ALP004BV.pdf"
     }
   ],
   "leaving|classical-studies|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC008ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC008ALP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC008ALP004BV.pdf"
     }
   ],
   "leaving|classical-studies|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC008GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC008GLP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC008GLP004BV.pdf"
     }
   ],
   "leaving|classical-studies|ordinary|2024|0|": [
     {
+      "label": "/ Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC008GLP0004BV.pdf"
+    },
+    {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC008GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC008GLP000IV.pdf"
     }
   ],
   "leaving|classical-studies|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC008GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC008GLP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC008GLP004BV.pdf"
     }
   ],
   "leaving|computer-science|higher|2020|0|": [
@@ -1562,8 +4712,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC219ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC219ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC219ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC219ALP040IV.pdf"
     }
   ],
   "leaving|computer-science|higher|2021|0|": [
@@ -1572,8 +4730,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC219ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC219ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC219ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC219ALP040IV.pdf"
     }
   ],
   "leaving|computer-science|higher|2022|0|": [
@@ -1582,8 +4748,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC219ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC219ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC219ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC219ALP040IV.pdf"
     }
   ],
   "leaving|computer-science|higher|2023|0|": [
@@ -1592,8 +4766,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC219ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC219ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC219ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC219ALP040IV.pdf"
     }
   ],
   "leaving|computer-science|higher|2024|0|": [
@@ -1602,8 +4784,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC219ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC219ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC219ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC219ALP040IV.pdf"
     }
   ],
   "leaving|computer-science|higher|2025|0|": [
@@ -1612,8 +4802,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC219ALP038EV.pdf"
     },
     {
+      "label": "Section A&B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC219ALP038IV.pdf"
+    },
+    {
       "label": "Section C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC219ALP040EV.pdf"
+    },
+    {
+      "label": "Section C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC219ALP040IV.pdf"
     }
   ],
   "leaving|computer-science|ordinary|2021|0|": [
@@ -1622,8 +4820,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC219GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC219GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC219GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC219GLP040IV.pdf"
     }
   ],
   "leaving|computer-science|ordinary|2022|0|": [
@@ -1632,8 +4838,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC219GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC219GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC219GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC219GLP040IV.pdf"
     }
   ],
   "leaving|computer-science|ordinary|2023|0|": [
@@ -1642,8 +4856,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC219GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC219GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC219GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC219GLP040IV.pdf"
     }
   ],
   "leaving|computer-science|ordinary|2024|0|": [
@@ -1652,8 +4874,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC219GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC219GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC219GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC219GLP040IV.pdf"
     }
   ],
   "leaving|computer-science|ordinary|2025|0|": [
@@ -1662,188 +4892,296 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC219GLP038EV.pdf"
     },
     {
+      "label": "Section A&B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC219GLP038IV.pdf"
+    },
+    {
       "label": "Section C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC219GLP040EV.pdf"
+    },
+    {
+      "label": "Section C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC219GLP040IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC029ALP000EV.pdf"
-    }
-  ],
-  "leaving|construction-studies|higher|2025|0|": [
+    },
     {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2025/LC029ALP000EV.pdf"
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC029ALP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC029GLP000EV.pdf"
-    }
-  ],
-  "leaving|construction-studies|ordinary|2025|0|": [
+    },
     {
-      "label": "Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2025/LC029GLP000EV.pdf"
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2020|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC029GLP000IV.pdf"
     }
   ],
   "leaving|construction-studies|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC029GLP000IV.pdf"
     }
   ],
   "leaving|croatian|higher|2014|0|": [
@@ -1906,16 +5244,22 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC567ALP000EV.pdf"
     }
   ],
-  "leaving|croatian|higher|2024|0|": [
-    {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2024/LC567ALP000EV.pdf"
-    }
-  ],
   "leaving|croatian|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC567ALP000EV.pdf"
+    }
+  ],
+  "leaving|czech|higher|2005|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC547ALPO00EV.pdf"
+    }
+  ],
+  "leaving|czech|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC547ALPO00EV.pdf"
     }
   ],
   "leaving|czech|higher|2007|0|": [
@@ -2032,6 +5376,18 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC547ALP000EV.pdf"
     }
   ],
+  "leaving|danish|higher|2004|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC038ALPO00EV.pdf"
+    }
+  ],
+  "leaving|danish|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC038ALPO00EV.pdf"
+    }
+  ],
   "leaving|danish|higher|2007|0|": [
     {
       "label": "Higher Level (EV)",
@@ -2128,8 +5484,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC562ALP000EV.pdf"
     },
     {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC562ALP000IV.pdf"
+    },
+    {
       "label": "Section A / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC562ALP014EV.pdf"
+    },
+    {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC562ALP014IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2012|0|": [
@@ -2138,8 +5502,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC562ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC562ALP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2013|0|": [
@@ -2148,8 +5520,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC562ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC562ALP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2014|0|": [
@@ -2158,8 +5538,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC562ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC562ALP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2015|0|": [
@@ -2168,8 +5556,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC562ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC562ALP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2016|0|": [
@@ -2178,8 +5574,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC562ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC562ALP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2017|0|": [
@@ -2188,8 +5592,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC562ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC562ALP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2018|0|": [
@@ -2198,8 +5610,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC562ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC562ALP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2019|0|": [
@@ -2208,8 +5628,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC562ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC562ALP039IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2020|0|": [
@@ -2218,8 +5646,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC562ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC562ALP039IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2021|0|": [
@@ -2228,8 +5664,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC562ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC562ALP039IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2022|0|": [
@@ -2238,8 +5682,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC562ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC562ALP039iV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2023|0|": [
@@ -2248,8 +5700,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC562ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC562ALP039IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2025|0|": [
@@ -2258,8 +5718,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC562ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC562ALP039IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|higher|2024|0|": [
@@ -2268,8 +5736,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC562ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC562ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC562ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC562ALP039IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2011|0|": [
@@ -2278,8 +5754,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC562GLP000EV.pdf"
     },
     {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC562GLP000IV.pdf"
+    },
+    {
       "label": "Section A / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC562GLP014EV.pdf"
+    },
+    {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC562GLP014IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2012|0|": [
@@ -2288,8 +5772,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC562GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC562GLP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2013|0|": [
@@ -2298,8 +5790,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC562GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC562GLP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2014|0|": [
@@ -2308,8 +5808,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC562GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC562GLP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2015|0|": [
@@ -2318,8 +5826,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC562GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC562GLP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2016|0|": [
@@ -2328,8 +5844,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC562GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC562GLP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2018|0|": [
@@ -2338,8 +5862,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC562GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC562GLP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2017|0|": [
@@ -2348,8 +5880,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC562GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC562GLP015IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2021|0|": [
@@ -2358,8 +5898,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC562GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC562GLP039IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2019|0|": [
@@ -2368,8 +5916,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC562GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC562GLP039IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2022|0|": [
@@ -2378,8 +5934,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC562GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC562GLP039IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2023|0|": [
@@ -2388,8 +5952,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC562GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC562GLP039IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2024|0|": [
@@ -2398,8 +5970,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC562GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC562GLP039IV.pdf"
     }
   ],
   "leaving|design-and-communication-graphics|ordinary|2025|0|": [
@@ -2408,8 +5988,28 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC562GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC562GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC562GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC562GLP039IV.pdf"
+    }
+  ],
+  "leaving|dutch|higher|2005|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC017ALPO00EV.pdf"
+    }
+  ],
+  "leaving|dutch|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC017ALPO00EV.pdf"
     }
   ],
   "leaving|dutch|higher|2007|0|": [
@@ -2490,12 +6090,6 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC017ALP000EV.pdf"
     }
   ],
-  "leaving|dutch|higher|2020|0|": [
-    {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2020/LC017ALP000EV.pdf"
-    }
-  ],
   "leaving|dutch|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
@@ -2530,234 +6124,350 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC034ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC034ALP000IV.pdf"
     }
   ],
   "leaving|economics|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC034ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC034ALP000IV.pdf"
     }
   ],
   "leaving|economics|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC034ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC034ALP000IV.pdf"
     }
   ],
   "leaving|economics|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC034ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC034ALP000IV.pdf"
     }
   ],
   "leaving|economics|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC034ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC034ALP000IV.pdf"
     }
   ],
   "leaving|economics|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC034GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC034GLP000IV.pdf"
     }
   ],
   "leaving|economics|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC034GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC034GLP000IV.pdf"
     }
   ],
   "leaving|economics|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC034GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC034GLP000IV.pdf"
     }
   ],
   "leaving|economics|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC034GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC034GLP000IV.pdf"
     }
   ],
   "leaving|economics|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC034GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC034GLP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC027ALP000EV.pdf"
-    }
-  ],
-  "leaving|engineering|higher|2013|0|": [
+    },
     {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2013/LC027ALP000EV.pdf"
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC027ALP000EV.pdf"
-    }
-  ],
-  "leaving|engineering|higher|2019|0|": [
+    },
     {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2019/LC027ALP000EV.pdf"
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC027ALP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC027GLP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC027GLP000EV.pdf"
-    }
-  ],
-  "leaving|engineering|ordinary|2013|0|": [
+    },
     {
-      "label": "Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2013/LC027GLP000EV.pdf"
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC027GLP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC027GLP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC027GLP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC027GLP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC027GLP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC027GLP000EV.pdf"
-    }
-  ],
-  "leaving|engineering|ordinary|2019|0|": [
+    },
     {
-      "label": "Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2019/LC027GLP000EV.pdf"
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC027GLP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC027GLP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC027GLP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC027GLP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC027GLP000IV.pdf"
     }
   ],
   "leaving|engineering|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC027GLP000IV.pdf"
     }
   ],
   "leaving|english|higher|2002|2|": [
@@ -2830,12 +6540,6 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Paper Two / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC002ALP200EV.pdf"
-    }
-  ],
-  "leaving|english|higher|2022|2|": [
-    {
-      "label": "Paper Two / Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2022/LC002ALP200EV.pdf"
     }
   ],
   "leaving|english|higher|2024|2|": [
@@ -3018,12 +6722,6 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC002ALP100EV.pdf"
     }
   ],
-  "leaving|english|higher|2022|1|": [
-    {
-      "label": "Paper One / Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2022/LC002ALP100EV.pdf"
-    }
-  ],
   "leaving|english|higher|2023|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
@@ -3130,12 +6828,6 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Paper Two / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC002GLP200EV.pdf"
-    }
-  ],
-  "leaving|english|ordinary|2022|2|": [
-    {
-      "label": "Paper Two / Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2022/LC002GLP200EV.pdf"
     }
   ],
   "leaving|english|ordinary|2023|2|": [
@@ -3324,12 +7016,6 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC002GLP100EV.pdf"
     }
   ],
-  "leaving|english|ordinary|2022|1|": [
-    {
-      "label": "Paper One / Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2022/LC002GLP100EV.pdf"
-    }
-  ],
   "leaving|english|ordinary|2024|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
@@ -3360,6 +7046,12 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2007/LC002GLP100EV.pdf"
     }
   ],
+  "leaving|estonian|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC552ALPO00EV.pdf"
+    }
+  ],
   "leaving|estonian|higher|2007|0|": [
     {
       "label": "Higher Level (EV)",
@@ -3376,12 +7068,6 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2009/LC552ALP000ev.pdf"
-    }
-  ],
-  "leaving|estonian|higher|2010|0|": [
-    {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2010/LC552ALP000EV.pdf"
     }
   ],
   "leaving|estonian|higher|2011|0|": [
@@ -3468,6 +7154,18 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC552ALP000EV.pdf"
     }
   ],
+  "leaving|finnish|higher|2005|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC049ALPO00EV.pdf"
+    }
+  ],
+  "leaving|finnish|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC049ALPO00EV.pdf"
+    }
+  ],
   "leaving|finnish|higher|2007|0|": [
     {
       "label": "Higher Level (EV)",
@@ -3490,12 +7188,6 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2010/LC049ALP000EV.pdf"
-    }
-  ],
-  "leaving|finnish|higher|2011|0|": [
-    {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2011/LC049ALP000EV.pdf"
     }
   ],
   "leaving|finnish|higher|2012|0|": [
@@ -3568,24 +7260,40 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC010ALP000IV.pdf"
     }
   ],
   "leaving|french|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC010ALP000IV.pdf"
     }
   ],
   "leaving|french|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC010ALP000IV.pdf"
     }
   ],
   "leaving|french|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC010ALP000IV.pdf"
     }
   ],
   "leaving|french|higher|2015|0|": [
@@ -3598,36 +7306,442 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC010ALP000IV.pdf"
     }
   ],
   "leaving|french|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC010ALP000IV.pdf"
     }
   ],
   "leaving|french|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2019|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC010ALP000BV.pdf"
+    }
+  ],
+  "leaving|french|higher|2020|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC010ALP000BV.pdf"
+    }
+  ],
+  "leaving|french|higher|2021|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC010ALP000BV.pdf"
+    }
+  ],
+  "leaving|french|higher|2022|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC010ALP000BV.pdf"
+    }
+  ],
+  "leaving|french|higher|2023|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC010ALP000BV.pdf"
+    }
+  ],
+  "leaving|french|higher|2024|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC010ALP000BV.pdf"
+    }
+  ],
+  "leaving|french|higher|2025|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC010ALP000BV.pdf"
+    }
+  ],
+  "leaving|french|higher|2001|2|": [
+    {
+      "label": "Aural Paper / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010ALPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010ALPA00IV.pdf"
+    },
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010ALPO00IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2002|2|": [
+    {
+      "label": "Aural Paper / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010ALPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010ALPA00IV.pdf"
+    },
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010ALPO00IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2003|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC010ALPO00EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2004|2|": [
+    {
+      "label": "Aural Paper / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010ALPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010ALPA00IV.pdf"
+    },
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010ALPO00IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2007|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC010ALP000EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2008|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC010ALP000EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2009|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC010ALP000EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2016|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2018|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2010|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2012|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2011|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2013|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2014|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2015|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC010ALP000EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2017|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2005|2|": [
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2001|1|": [
+    {
+      "label": "Aural Paper / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010ALPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010ALPA00IV.pdf"
+    },
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010ALPO00IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2003|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC010ALPO00EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2002|1|": [
+    {
+      "label": "Aural Paper / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010ALPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010ALPA00IV.pdf"
+    },
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010ALPO00IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2004|1|": [
+    {
+      "label": "Aural Paper / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010ALPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010ALPA00IV.pdf"
+    },
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010ALPO00IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2005|1|": [
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2007|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC010ALP000EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2008|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC010ALP000EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2009|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC010ALP000EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2010|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2011|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2012|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2013|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2015|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC010ALP000EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2014|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2017|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2016|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC010ALP000IV.pdf"
+    }
+  ],
+  "leaving|french|higher|2018|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC010ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC010ALP000IV.pdf"
     }
   ],
   "leaving|french|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC010GLP000IV.pdf"
     }
   ],
   "leaving|french|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC010GLP000IV.pdf"
     }
   ],
   "leaving|french|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC010GLP000IV.pdf"
     }
   ],
   "leaving|french|ordinary|2015|0|": [
@@ -3640,24 +7754,234 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC010GLP000IV.pdf"
     }
   ],
   "leaving|french|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC010GLP000IV.pdf"
     }
   ],
   "leaving|french|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC010GLP000IV.pdf"
     }
   ],
   "leaving|french|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC010GLP000IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2019|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC010GLP000BV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2020|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC010GLP000BV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2021|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC010GLP000BV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2022|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC010GLP000BV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2023|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC010GLP000BV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2024|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC010GLP000BV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2025|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC010GLP000BV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2001|1|": [
+    {
+      "label": "Aural Paper / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010GLPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010GLPA00IV.pdf"
+    },
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010GLPO00IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2008|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC010GLP000EV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2013|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC010GLP000IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2014|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC010GLP000IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2015|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC010GLP000EV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2016|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC010GLP000IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2017|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC010GLP000IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2018|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC010GLP000IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2019|1|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC010GLP000BV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2001|0|": [
+    {
+      "label": "Aural Paper / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010GLPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010GLPA00IV.pdf"
+    },
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC010GLPO00IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2002|0|": [
+    {
+      "label": "Aural Paper / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010GLPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010GLPA00IV.pdf"
+    },
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010GLPO00IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2003|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC010GLPO00EV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2004|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010GLPO00IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2005|0|": [
+    {
+      "label": "Aural Paper / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC010GLPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC010GLPA00IV.pdf"
+    },
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC010GLPO00EV.pdf"
     }
   ],
   "leaving|french|ordinary|2008|0|": [
@@ -3682,42 +8006,1294 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2010/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC010GLP000IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2002|1|": [
+    {
+      "label": "Aural Paper / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010GLPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010GLPA00IV.pdf"
+    },
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC010GLPO00IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2003|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2003/LC010GLPO00EV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2004|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010GLPO00EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2004/LC010GLPO00IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2005|1|": [
+    {
+      "label": "Aural Paper / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC010GLPA00EV.pdf"
+    },
+    {
+      "label": "Aural Paper / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC010GLPA00IV.pdf"
+    },
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC010GLPO00EV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2007|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC010GLP000EV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2009|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC010GLP000EV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2010|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC010GLP000IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2011|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC010GLP000IV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2012|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC010GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC010GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2007|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2006|2|": [
+    {
+      "label": "Case Study / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC005ALPO16EV.pdf"
+    },
+    {
+      "label": "Case Study / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC005ALPO16IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2008|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC005ALP000IV.pdf"
+    },
+    {
+      "label": "Map / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC005ALP003EV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2009|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005ALP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005ALP004EV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2010|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2011|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2012|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2013|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2015|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2014|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2016|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2017|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2018|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2019|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2019|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2020|2|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2022|2|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2023|2|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2024|2|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2025|2|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2011|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2014|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2021|2|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2015|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2016|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2010|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2018|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2021|1|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2006|1|": [
+    {
+      "label": "Case Study / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC005ALPO16EV.pdf"
+    },
+    {
+      "label": "Case Study / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC005ALPO16IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2007|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2008|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC005ALP000IV.pdf"
+    },
+    {
+      "label": "Map / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC005ALP003EV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2009|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005ALP000IV.pdf"
+    },
+    {
+      "label": "Picture/Illustration / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005ALP004EV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2012|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2013|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2017|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC005ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC005ALP000IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2020|1|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2022|1|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2023|1|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2024|1|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2006|2|": [
+    {
+      "label": "Case Study / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC005GLPO16EV.pdf"
+    },
+    {
+      "label": "Case Study / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC005GLPO16IV.pdf"
+    }
+  ],
+  "leaving|geography|higher|2025|1|": [
+    {
+      "label": "Part 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005ALP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005ALP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005ALP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005ALP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2008|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2007|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2009|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005GLP000IV.pdf"
+    },
+    {
+      "label": "Map / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005GLP003EV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2010|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2011|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2012|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2013|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2013|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2014|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2014|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2015|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2015|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2016|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2017|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2018|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2017|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2019|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2020|2|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2021|2|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2022|2|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2023|2|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2024|2|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2025|2|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2024|1|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2011|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2020|1|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2006|1|": [
+    {
+      "label": "Case Study / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC005GLPO16EV.pdf"
+    },
+    {
+      "label": "Case Study / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC005GLPO16IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2007|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2007/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2009|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005GLP000IV.pdf"
+    },
+    {
+      "label": "Map / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2009/LC005GLP003EV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2008|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2008/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2012|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2010|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2016|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2018|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2019|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC005GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC005GLP000IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2021|1|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2022|1|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2023|1|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|geography|ordinary|2025|1|": [
+    {
+      "label": "Part 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005GLP042EV.pdf"
+    },
+    {
+      "label": "Part 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005GLP042IV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005GLP043EV.pdf"
+    },
+    {
+      "label": "Part 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC005GLP043IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2011|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2012|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2013|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2014|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2015|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2016|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2017|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC011ALP000EV.pdf"
+    }
+  ],
+  "leaving|german|higher|2019|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2018|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2020|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2021|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2022|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2024|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2023|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2025|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC011ALP000BV.pdf"
     }
   ],
   "leaving|german|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC011ALP000IV.pdf"
     }
   ],
   "leaving|german|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC011ALP000IV.pdf"
     }
   ],
   "leaving|german|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC011ALP000IV.pdf"
     }
   ],
   "leaving|german|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC011ALP000IV.pdf"
     }
   ],
   "leaving|german|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC011ALP000IV.pdf"
     }
   ],
   "leaving|german|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC011ALP000IV.pdf"
     }
   ],
   "leaving|german|higher|2017|0|": [
@@ -3730,42 +9306,348 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2019|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2020|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2021|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2022|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2023|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2025|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2024|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2011|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2012|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2013|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2014|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2016|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2015|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2018|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC011ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC011ALP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2017|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC011ALP000EV.pdf"
+    }
+  ],
+  "leaving|german|higher|2019|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2020|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2022|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2021|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2023|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|higher|2024|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2011|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|higher|2025|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC011ALP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2012|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2013|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2014|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2015|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2016|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2017|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC011GLP000EV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2018|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2019|1|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2020|1|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2021|1|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2022|1|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2023|1|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2024|1|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2025|1|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC011GLP000BV.pdf"
     }
   ],
   "leaving|german|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC011GLP000IV.pdf"
     }
   ],
   "leaving|german|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC011GLP000IV.pdf"
     }
   ],
   "leaving|german|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC011GLP000IV.pdf"
     }
   ],
   "leaving|german|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC011GLP000IV.pdf"
     }
   ],
   "leaving|german|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC011GLP000IV.pdf"
     }
   ],
   "leaving|german|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC011GLP000IV.pdf"
     }
   ],
   "leaving|german|ordinary|2017|0|": [
@@ -3778,6 +9660,176 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2019|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2020|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2021|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2023|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2022|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2024|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2025|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2011|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2012|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2013|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2014|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2015|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2016|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2017|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC011GLP000EV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2018|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC011GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC011GLP000IV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2019|2|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2020|2|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2021|2|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2023|2|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2022|2|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2025|2|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|german|ordinary|2024|2|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC011GLP000BV.pdf"
+    }
+  ],
+  "leaving|hebrew-studies|higher|2002|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC009ALPO00EV.pdf"
     }
   ],
   "leaving|hebrew-studies|higher|2007|0|": [
@@ -3826,6 +9878,12 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC009ALP000EV.pdf"
+    }
+  ],
+  "leaving|hebrew-studies|ordinary|2002|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2002/LC009GLPO00EV.pdf"
     }
   ],
   "leaving|hebrew-studies|ordinary|2007|0|": [
@@ -3880,54 +9938,110 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC096ALP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC096ALP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC096ALP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC096ALP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2016|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2017|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC096ALP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC096ALP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC096ALP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC096ALP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC096ALP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|higher|2023|0|": [
@@ -3936,16 +10050,70 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC096ALP000EV.pdf"
     }
   ],
+  "leaving|history-early-modern|higher|2024|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC096ALP000EV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2025|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2012|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2013|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC096ALP000IV.pdf"
+    }
+  ],
   "leaving|history-early-modern|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC096ALP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2021|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC096ALP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|higher|2024|0|": [
@@ -3958,60 +10126,318 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2011|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2012|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2014|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2013|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2015|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2016|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2017|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2018|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2021|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2019|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2022|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2023|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC096ALP000EV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2025|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2024|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC096ALP000EV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2011|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2014|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2015|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2018|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2019|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2022|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC096ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC096ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|higher|2023|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC096ALP000EV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC096GLP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC096GLP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC096GLP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC096GLP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2016|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2017|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC096GLP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC096GLP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC096GLP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC096GLP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC096GLP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2023|0|": [
@@ -4020,16 +10446,70 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC096GLP000EV.pdf"
     }
   ],
+  "leaving|history-early-modern|ordinary|2024|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC096GLP000EV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2012|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2025|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2013|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC096GLP000IV.pdf"
+    }
+  ],
   "leaving|history-early-modern|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC096GLP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2021|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC096GLP000IV.pdf"
     }
   ],
   "leaving|history-early-modern|ordinary|2024|0|": [
@@ -4042,246 +10522,1178 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2011|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2012|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2013|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2014|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2015|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2016|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2017|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2018|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2019|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2021|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2022|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2023|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC096GLP000EV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2024|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC096GLP000EV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2025|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2011|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2014|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2015|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2018|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2019|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2022|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC096GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC096GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-early-modern|ordinary|2023|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC096GLP000EV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2010|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2011|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2012|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2013|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2015|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2014|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2016|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2017|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2018|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2019|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2020|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2022|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2023|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2024|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2025|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2010|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2010/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC004ALP000EV.pdf"
-    }
-  ],
-  "leaving|history-later-modern|higher|2021|0|": [
+    },
     {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004ALP000EV.pdf"
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC004ALP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2010|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2011|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2012|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2013|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2014|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2015|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2016|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2017|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2018|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2019|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2020|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2022|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2023|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2024|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2025|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2010|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2011|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2012|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2013|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2014|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2015|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2016|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2017|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2018|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2019|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2020|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2022|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2023|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2024|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2025|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2020|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC004GLP000EV.pdf"
-    }
-  ],
-  "leaving|history-later-modern|ordinary|2021|0|": [
+    },
     {
-      "label": "Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004GLP000EV.pdf"
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC004GLP000IV.pdf"
     }
   ],
   "leaving|history-later-modern|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2011|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2013|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2012|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2014|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2015|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2016|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2017|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2018|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2019|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2020|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2022|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2023|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2024|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC004GLP000IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC098ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC098ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2025|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC004GLP000IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC098ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC098ALP000IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC098ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC098ALP000IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC098ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC098ALP000IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC098ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC098ALP000IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC098ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC098ALP000IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC098ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC098ALP000IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC098ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC098ALP000IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC098ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC098ALP000IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2020|0|": [
@@ -4290,8 +11702,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC098ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC098ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC098ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC098ALP039IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2021|0|": [
@@ -4300,8 +11720,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC098ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC098ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC098ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC098ALP039IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2022|0|": [
@@ -4310,8 +11738,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC098ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC098ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC098ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC098ALP039IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2023|0|": [
@@ -4320,8 +11756,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC098ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC098ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC098ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC098ALP039IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2024|0|": [
@@ -4330,8 +11774,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC098ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC098ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC098ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC098ALP039IV.pdf"
     }
   ],
   "leaving|home-economics|higher|2025|0|": [
@@ -4340,62 +11792,106 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC098ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC098ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC098ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC098ALP039IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC098GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC098GLP000IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC098GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC098GLP000IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC098GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC098GLP000IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC098GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC098GLP000IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC098GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC098GLP000IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC098GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC098GLP000IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC098GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC098GLP000IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC098GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC098GLP000IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC098GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC098GLP000IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2020|0|": [
@@ -4404,8 +11900,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC098GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC098GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC098GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC098GLP039IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2022|0|": [
@@ -4414,8 +11918,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC098GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC098GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC098GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC098GLP039IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2023|0|": [
@@ -4424,8 +11936,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC098GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC098GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC098GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC098GLP039IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2024|0|": [
@@ -4434,8 +11954,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC098GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC098GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC098GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC098GLP039IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2025|0|": [
@@ -4444,8 +11972,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC098GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC098GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC098GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC098GLP039IV.pdf"
     }
   ],
   "leaving|home-economics|ordinary|2021|0|": [
@@ -4454,8 +11990,22 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC098GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC098GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC098GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC098GLP039IV.pdf"
+    }
+  ],
+  "leaving|hungarian|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC551ALPO00EV.pdf"
     }
   ],
   "leaving|hungarian|higher|2007|0|": [
@@ -4572,262 +12122,1058 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC551ALP000EV.pdf"
     }
   ],
+  "leaving|irish|foundation|2012|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2014|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2015|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2016|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2017|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2018|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2019|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2020|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2021|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2022|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2023|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2024|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2025|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2012|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2014|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2015|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2016|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2017|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2018|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2019|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2020|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2021|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2022|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2023|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2024|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2025|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2012|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2014|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2015|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2016|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2017|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2018|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2019|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2020|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2021|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2022|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2023|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2025|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2024|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2012|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2018|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2023|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2016|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2022|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2025|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2019|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2015|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2017|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2021|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2014|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2020|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2024|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2012|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2014|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2015|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2016|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2017|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2018|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2019|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2020|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2021|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2022|1|": [
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC001GLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2023|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2024|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2025|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2016|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2019|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2021|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2022|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2024|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2012|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2015|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2017|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2020|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2023|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2025|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2014|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2018|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC001GLP200IV.pdf"
+    }
+  ],
   "leaving|italian|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC013ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC013ALP000IV.pdf"
     }
   ],
   "leaving|italian|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC013ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC013ALP000IV.pdf"
     }
   ],
   "leaving|italian|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC013ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC013ALP000IV.pdf"
     }
   ],
   "leaving|italian|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC013ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC013ALP000IV.pdf"
     }
   ],
   "leaving|italian|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC013ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC013ALP000IV.pdf"
     }
   ],
   "leaving|italian|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC013ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC013ALP000IV.pdf"
     }
   ],
   "leaving|italian|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC013ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC013ALP000IV.pdf"
     }
   ],
   "leaving|italian|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC013ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC013ALP000IV.pdf"
+    }
+  ],
+  "leaving|italian|higher|2019|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC013ALP000BV.pdf"
+    }
+  ],
+  "leaving|italian|higher|2020|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC013ALP000BV.pdf"
+    }
+  ],
+  "leaving|italian|higher|2021|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC013ALP000BV.pdf"
+    }
+  ],
+  "leaving|italian|higher|2022|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC013ALP000BV.pdf"
+    }
+  ],
+  "leaving|italian|higher|2023|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC013ALP000BV.pdf"
+    }
+  ],
+  "leaving|italian|higher|2024|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC013ALP000BV.pdf"
+    }
+  ],
+  "leaving|italian|higher|2025|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC013ALP000BV.pdf"
     }
   ],
   "leaving|italian|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC013GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC013GLP000IV.pdf"
     }
   ],
   "leaving|italian|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC013GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC013GLP000IV.pdf"
     }
   ],
   "leaving|italian|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC013GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC013GLP000IV.pdf"
     }
   ],
   "leaving|italian|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC013GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC013GLP000IV.pdf"
     }
   ],
   "leaving|italian|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC013GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC013GLP000IV.pdf"
     }
   ],
   "leaving|italian|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC013GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC013GLP000IV.pdf"
     }
   ],
   "leaving|italian|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC013GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC013GLP000IV.pdf"
     }
   ],
   "leaving|italian|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC013GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC013GLP000IV.pdf"
+    }
+  ],
+  "leaving|italian|ordinary|2019|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC013GLP000BV.pdf"
+    }
+  ],
+  "leaving|italian|ordinary|2021|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC013GLP000BV.pdf"
+    }
+  ],
+  "leaving|italian|ordinary|2022|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC013GLP000BV.pdf"
+    }
+  ],
+  "leaving|italian|ordinary|2023|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC013GLP000BV.pdf"
+    }
+  ],
+  "leaving|italian|ordinary|2024|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC013GLP000BV.pdf"
+    }
+  ],
+  "leaving|italian|ordinary|2025|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC013GLP000BV.pdf"
     }
   ],
   "leaving|japanese|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC058ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC058ALP000IV.pdf"
     }
   ],
   "leaving|japanese|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC058ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC058ALP000IV.pdf"
     }
   ],
   "leaving|japanese|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC058ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC058ALP000IV.pdf"
     }
   ],
   "leaving|japanese|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC058ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC058ALP000IV.pdf"
     }
   ],
   "leaving|japanese|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC058ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC058ALP000IV.pdf"
     }
   ],
   "leaving|japanese|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC058ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC058ALP000IV.pdf"
     }
   ],
   "leaving|japanese|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC058ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC058ALP000IV.pdf"
+    }
+  ],
+  "leaving|japanese|higher|2019|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC058ALP000BV.pdf"
     }
   ],
   "leaving|japanese|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC058ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC058ALP000IV.pdf"
+    }
+  ],
+  "leaving|japanese|higher|2020|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC058ALP000BV.pdf"
+    }
+  ],
+  "leaving|japanese|higher|2021|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC058ALP000BV.pdf"
+    }
+  ],
+  "leaving|japanese|higher|2022|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC058ALP000BV.pdf"
+    }
+  ],
+  "leaving|japanese|higher|2023|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC058ALP000BV.pdf"
+    }
+  ],
+  "leaving|japanese|higher|2024|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC058ALP000BV.pdf"
+    }
+  ],
+  "leaving|japanese|higher|2025|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC058ALP000BV.pdf"
     }
   ],
   "leaving|japanese|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC058GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC058GLP000IV.pdf"
     }
   ],
   "leaving|japanese|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC058GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC058GLP000IV.pdf"
     }
   ],
   "leaving|japanese|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC058GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC058GLP000IV.pdf"
     }
   ],
   "leaving|japanese|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC058GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC058GLP000IV.pdf"
     }
   ],
   "leaving|japanese|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC058GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC058GLP000IV.pdf"
     }
   ],
   "leaving|japanese|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC058GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC058GLP000IV.pdf"
     }
   ],
   "leaving|japanese|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC058GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC058GLP000IV.pdf"
     }
   ],
   "leaving|japanese|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC058GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC058GLP000IV.pdf"
+    }
+  ],
+  "leaving|japanese|ordinary|2019|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC058GLP000BV.pdf"
+    }
+  ],
+  "leaving|japanese|ordinary|2022|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC058GLP000BV.pdf"
+    }
+  ],
+  "leaving|japanese|ordinary|2021|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC058GLP000BV.pdf"
+    }
+  ],
+  "leaving|japanese|ordinary|2024|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC058GLP000BV.pdf"
+    }
+  ],
+  "leaving|japanese|ordinary|2023|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC058GLP000BV.pdf"
+    }
+  ],
+  "leaving|japanese|ordinary|2025|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC058GLP000BV.pdf"
     }
   ],
   "leaving|latin|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC006ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC006ALP000IV.pdf"
     }
   ],
   "leaving|latin|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC006ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC006ALP000IV.pdf"
     }
   ],
   "leaving|latin|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC006ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC006ALP000IV.pdf"
     }
   ],
   "leaving|latin|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC006ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC006ALP000IV.pdf"
     }
   ],
   "leaving|latin|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC006ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC006ALP000IV.pdf"
     }
   ],
   "leaving|latin|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC006ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC006ALP000IV.pdf"
     }
   ],
   "leaving|latin|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC006ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC006ALP000IV.pdf"
     }
   ],
   "leaving|latin|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC006ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC006ALP000IV.pdf"
     }
   ],
   "leaving|latin|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC006ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC006ALP000IV.pdf"
     }
   ],
   "leaving|latin|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC006ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC006ALP000IV.pdf"
     }
   ],
   "leaving|latin|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC006ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC006ALP000IV.pdf"
     }
   ],
   "leaving|latin|higher|2022|0|": [
@@ -4848,70 +13194,104 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC006ALP000EV.pdf"
     }
   ],
-  "leaving|latin|higher|2025|0|": [
-    {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2025/LC006ALP000EV.pdf"
-    }
-  ],
   "leaving|latin|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC006GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC006GLP000IV.pdf"
     }
   ],
   "leaving|latin|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC006GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC006GLP000IV.pdf"
     }
   ],
   "leaving|latin|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC006GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC006GLP000IV.pdf"
     }
   ],
   "leaving|latin|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC006GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC006GLP000IV.pdf"
     }
   ],
   "leaving|latin|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC006GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC006GLP000IV.pdf"
     }
   ],
   "leaving|latin|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC006GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC006GLP000IV.pdf"
     }
   ],
   "leaving|latin|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC006GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC006GLP000IV.pdf"
     }
   ],
   "leaving|latin|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC006GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC006GLP000IV.pdf"
     }
   ],
   "leaving|latin|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC006GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC006GLP000IV.pdf"
     }
   ],
   "leaving|latin|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC006GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC006GLP000IV.pdf"
     }
   ],
   "leaving|latin|ordinary|2022|0|": [
@@ -4924,6 +13304,12 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC006GLP000EV.pdf"
+    }
+  ],
+  "leaving|latvian|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC549ALPO00EV.pdf"
     }
   ],
   "leaving|latvian|higher|2007|0|": [
@@ -4948,6 +13334,12 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2010/LC549ALP000EV.pdf"
+    }
+  ],
+  "leaving|latvian|higher|2011|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC549ALP000EV.pdf"
     }
   ],
   "leaving|latvian|higher|2012|0|": [
@@ -5040,8 +13432,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC462CLP000EV.pdf"
     },
     {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC462CLP000IV.pdf"
+    },
+    {
       "label": "Case Study / Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC462CLP016EV.pdf"
+    },
+    {
+      "label": "Case Study / Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC462CLP016IV.pdf"
     }
   ],
   "leaving|link-modules|common|2012|0|": [
@@ -5050,8 +13450,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC462CLP000EV.pdf"
     },
     {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC462CLP000IV.pdf"
+    },
+    {
       "label": "Case Study / Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC462CLP016EV.pdf"
+    },
+    {
+      "label": "Case Study / Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC462CLP016IV.pdf"
     }
   ],
   "leaving|link-modules|common|2013|0|": [
@@ -5060,8 +13468,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC462CLP000EV.pdf"
     },
     {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC462CLP000IV.pdf"
+    },
+    {
       "label": "Case Study / Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC462CLP016EV.pdf"
+    },
+    {
+      "label": "Case Study / Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC462CLP016IV.pdf"
     }
   ],
   "leaving|link-modules|common|2014|0|": [
@@ -5070,8 +13486,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC462CLP000EV.pdf"
     },
     {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC462CLP000IV.pdf"
+    },
+    {
       "label": "Case Study / Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC462CLP016EV.pdf"
+    },
+    {
+      "label": "Case Study / Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC462CLP016IV.pdf"
     }
   ],
   "leaving|link-modules|common|2015|0|": [
@@ -5080,104 +13504,180 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC462CLP000EV.pdf"
     },
     {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC462CLP000IV.pdf"
+    },
+    {
       "label": "Case Study / Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC462CLP016EV.pdf"
+    },
+    {
+      "label": "Case Study / Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC462CLP016IV.pdf"
     }
   ],
   "leaving|link-modules|common|2018|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC462CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC462CLP000IV.pdf"
     }
   ],
   "leaving|link-modules|common|2019|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC462CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC462CLP000IV.pdf"
     }
   ],
   "leaving|link-modules|common|2022|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC462CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC462CLP000IV.pdf"
     }
   ],
   "leaving|link-modules|common|2023|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC462CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC462CLP000IV.pdf"
     }
   ],
   "leaving|link-modules|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC462CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC462CLP000IV.pdf"
+    }
+  ],
+  "leaving|link-modules|common|2016|0|": [
+    {
+      "label": "Common Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC462CLPO00EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC462CLPO00IV.pdf"
+    },
+    {
+      "label": "Case Study / Common Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC462CLPO16EV.pdf"
+    },
+    {
+      "label": "Case Study / Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC462CLPO16IV.pdf"
+    }
+  ],
+  "leaving|link-modules|common|2017|0|": [
+    {
+      "label": "Common Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC462CLPO00EV.pdf"
     }
   ],
   "leaving|link-modules|common|2020|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC462CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC462CLP000IV.pdf"
     }
   ],
   "leaving|link-modules|common|2021|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC462CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC462CLP000IV.pdf"
     }
   ],
   "leaving|link-modules|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC462CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC462CLP000IV.pdf"
     }
   ],
   "leaving|lithuanian|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC550ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC550ALP000IV.pdf"
     }
   ],
   "leaving|lithuanian|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC550ALP000EV.pdf"
-    }
-  ],
-  "leaving|lithuanian|higher|2024|0|": [
+    },
     {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2024/LC550ALP000EV.pdf"
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC550ALP000IV.pdf"
     }
   ],
   "leaving|lithuanian|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC550ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC550ALP000IV.pdf"
     }
   ],
   "leaving|lithuanian|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC550GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC550GLP000IV.pdf"
     }
   ],
   "leaving|lithuanian|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC550GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC550GLP000IV.pdf"
     }
   ],
   "leaving|lithuanian|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC550GLP000EV.pdf"
-    }
-  ],
-  "leaving|lithuanian|ordinary|2024|0|": [
+    },
     {
-      "label": "Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2024/LC550GLP000EV.pdf"
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC550GLP000IV.pdf"
     }
   ],
   "leaving|maltese|higher|2019|0|": [
@@ -5220,354 +13720,592 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC566ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC566ALP000IV.pdf"
     }
   ],
   "leaving|mandarin-chinese|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC566ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC566ALP000IV.pdf"
     }
   ],
   "leaving|mandarin-chinese|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC566ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC566ALP000IV.pdf"
     }
   ],
   "leaving|mandarin-chinese|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC566ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC566ALP000IV.pdf"
     }
   ],
   "leaving|mandarin-chinese|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC566GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC566GLP000iV.pdf"
     }
   ],
   "leaving|mandarin-chinese|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC566GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC566GLP000IV.pdf"
     }
   ],
   "leaving|mandarin-chinese|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC566GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC566GLP000IV.pdf"
     }
   ],
   "leaving|mandarin-chinese|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC566GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC566GLP000IV.pdf"
     }
   ],
   "leaving|mathematics|foundation|2023|0|": [
     {
       "label": "Foundation Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC003BLP000EV.pdf"
+    },
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC003BLP000IV.pdf"
     }
   ],
   "leaving|mathematics|foundation|2024|0|": [
     {
       "label": "Foundation Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC003BLP000EV.pdf"
+    },
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC003BLP000IV.pdf"
     }
   ],
   "leaving|mathematics|foundation|2025|0|": [
     {
       "label": "Foundation Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC003BLP000EV.pdf"
+    },
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC003BLP000IV.pdf"
     }
   ],
   "leaving|mathematics|foundation|2022|0|": [
     {
       "label": "Foundation Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC003BLP000EV.pdf"
+    },
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC003BLP000IV.pdf"
+    }
+  ],
+  "leaving|mathematics|foundation|2015|0|": [
+    {
+      "label": "Paper One / Foundation Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC003BLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC003BLP100IV.pdf"
     }
   ],
   "leaving|mathematics|foundation|2021|0|": [
     {
       "label": "Foundation Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC003BLP000EV.pdf"
+    },
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC003BLP000IV.pdf"
+    }
+  ],
+  "leaving|mathematics|foundation|2017|0|": [
+    {
+      "label": "Paper One / Foundation Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC003BLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC003BLP100IV.pdf"
+    }
+  ],
+  "leaving|mathematics|foundation|2018|0|": [
+    {
+      "label": "Paper One / Foundation Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC003BLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC003BLP100IV.pdf"
     }
   ],
   "leaving|mathematics|foundation|2019|0|": [
     {
       "label": "Foundation Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC003BLP000EV.pdf"
+    },
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC003BLP000IV.pdf"
     }
   ],
   "leaving|mathematics|foundation|2020|0|": [
     {
       "label": "Foundation Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC003BLP000EV.pdf"
+    },
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC003BLP000IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2015|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC003ALP100EV.pdf"
-    }
-  ],
-  "leaving|mathematics|higher|2016|1|": [
+    },
     {
-      "label": "Paper One / Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003ALP100EV.pdf"
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC003ALP100IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2017|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC003ALP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC003ALP100IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2018|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC003ALP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC003ALP100IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2019|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC003ALP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC003ALP100IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2020|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC003ALP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC003ALP100IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2021|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC003ALP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC003ALP100IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2022|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC003ALP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC003ALP100IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2023|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC003ALP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC003ALP100IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2024|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC003ALP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC003ALP100IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2025|1|": [
     {
       "label": "Paper One / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC003ALP100EV.pdf"
-    }
-  ],
-  "leaving|mathematics|higher|2016|2|": [
+    },
     {
-      "label": "Paper Two / Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003ALP200EV.pdf"
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC003ALP100IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2018|2|": [
     {
       "label": "Paper Two / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC003ALP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC003ALP200IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2020|2|": [
     {
       "label": "Paper Two / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC003ALP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC003ALP200IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2021|2|": [
     {
       "label": "Paper Two / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC003ALP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC003ALP200IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2023|2|": [
     {
       "label": "Paper Two / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC003ALP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC003ALP200IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2015|2|": [
     {
       "label": "Paper Two / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC003ALP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC003ALP200IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2017|2|": [
     {
       "label": "Paper Two / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC003ALP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC003ALP200IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2019|2|": [
     {
       "label": "Paper Two / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC003ALP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC003ALP200IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2022|2|": [
     {
       "label": "Paper Two / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC003ALP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC003ALP200IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2024|2|": [
     {
       "label": "Paper Two / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC003ALP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC003ALP200IV.pdf"
     }
   ],
   "leaving|mathematics|higher|2025|2|": [
     {
       "label": "Paper Two / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC003ALP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC003ALP200IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2015|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC003GLP100EV.pdf"
-    }
-  ],
-  "leaving|mathematics|ordinary|2016|1|": [
+    },
     {
-      "label": "Paper One / Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003GLP100EV.pdf"
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC003GLP100IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2017|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC003GLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC003GLP100IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2018|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC003GLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC003GLP100IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2019|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC003GLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC003GLP100IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2021|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC003GLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC003GLP100IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2020|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC003GLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC003GLP100IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2022|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC003GLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC003GLP100IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2023|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC003GLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC003GLP100IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2024|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC003GLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC003GLP100IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2025|1|": [
     {
       "label": "Paper One / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC003GLP100EV.pdf"
-    }
-  ],
-  "leaving|mathematics|ordinary|2016|2|": [
+    },
     {
-      "label": "Paper Two / Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003GLP200EV.pdf"
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC003GLP100IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2015|2|": [
     {
       "label": "Paper Two / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC003GLP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC003GLP200IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2024|2|": [
     {
       "label": "Paper Two / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC003GLP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC003GLP200IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2017|2|": [
     {
       "label": "Paper Two / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC003GLP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC003GLP200IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2018|2|": [
     {
       "label": "Paper Two / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC003GLP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC003GLP200IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2019|2|": [
     {
       "label": "Paper Two / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC003GLP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC003GLP200IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2020|2|": [
     {
       "label": "Paper Two / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC003GLP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC003GLP200IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2021|2|": [
     {
       "label": "Paper Two / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC003GLP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC003GLP200IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2022|2|": [
     {
       "label": "Paper Two / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC003GLP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC003GLP200IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2023|2|": [
     {
       "label": "Paper Two / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC003GLP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC003GLP200IV.pdf"
     }
   ],
   "leaving|mathematics|ordinary|2025|2|": [
     {
       "label": "Paper Two / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC003GLP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC003GLP200IV.pdf"
+    }
+  ],
+  "leaving|modern-greek|higher|2005|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC019ALPO00EV.pdf"
+    }
+  ],
+  "leaving|modern-greek|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC019ALPO00EV.pdf"
     }
   ],
   "leaving|modern-greek|higher|2007|0|": [
@@ -5616,12 +14354,6 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC019ALP000EV.pdf"
-    }
-  ],
-  "leaving|modern-greek|higher|2015|0|": [
-    {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2015/LC019ALP000EV.pdf"
     }
   ],
   "leaving|modern-greek|higher|2016|0|": [
@@ -5684,12 +14416,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2012|0|": [
@@ -5698,12 +14442,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2013|0|": [
@@ -5712,12 +14468,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2014|0|": [
@@ -5726,12 +14494,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2016|0|": [
@@ -5740,26 +14520,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC067ALP008EV.pdf"
-    }
-  ],
-  "leaving|music|higher|2017|0|": [
-    {
-      "label": "Composing / Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067ALP006EV.pdf"
     },
     {
-      "label": "Elective / Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067ALP007EV.pdf"
-    },
-    {
-      "label": "Listening / Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067ALP008EV.pdf"
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2018|0|": [
@@ -5768,12 +14546,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2019|0|": [
@@ -5782,12 +14572,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2020|0|": [
@@ -5796,8 +14598,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2021|0|": [
@@ -5806,12 +14616,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2022|0|": [
@@ -5820,12 +14642,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2015|0|": [
@@ -5834,12 +14668,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2023|0|": [
@@ -5848,12 +14694,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2024|0|": [
@@ -5862,12 +14720,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|higher|2025|0|": [
@@ -5876,12 +14746,24 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC067ALP006EV.pdf"
     },
     {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC067ALP006IV.pdf"
+    },
+    {
       "label": "Elective / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC067ALP007EV.pdf"
     },
     {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC067ALP007IV.pdf"
+    },
+    {
       "label": "Listening / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC067ALP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2011|0|": [
@@ -5890,8 +14772,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC067GLP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2012|0|": [
@@ -5900,8 +14790,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC067GLP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2013|0|": [
@@ -5910,8 +14808,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC067GLP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2014|0|": [
@@ -5920,8 +14826,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC067GLP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2016|0|": [
@@ -5930,18 +14844,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC067GLP006EV.pdf"
     },
     {
-      "label": "Listening / Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2016/LC067GLP008EV.pdf"
-    }
-  ],
-  "leaving|music|ordinary|2017|0|": [
-    {
-      "label": "Composing / Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067GLP006EV.pdf"
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC067GLP006IV.pdf"
     },
     {
       "label": "Listening / Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067GLP008EV.pdf"
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC067GLP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2018|0|": [
@@ -5950,8 +14862,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC067GLP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2019|0|": [
@@ -5960,8 +14880,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC067GLP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2021|0|": [
@@ -5970,8 +14898,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC067GLP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2022|0|": [
@@ -5980,8 +14916,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC067GLP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2023|0|": [
@@ -5990,8 +14934,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC067GLP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2024|0|": [
@@ -6000,8 +14952,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC067GLP008IV.pdf"
     }
   ],
   "leaving|music|ordinary|2025|0|": [
@@ -6010,254 +14970,406 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC067GLP008IV.pdf"
     }
   ],
   "leaving|physical-education|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC225ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC225ALP000IV.pdf"
     }
   ],
   "leaving|physical-education|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC225ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC225ALP000IV.pdf"
     }
   ],
   "leaving|physical-education|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC225ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC225ALP000IV.pdf"
     }
   ],
   "leaving|physical-education|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC225ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC225ALP000IV.pdf"
     }
   ],
   "leaving|physical-education|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC225ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC225ALP000IV.pdf"
     }
   ],
   "leaving|physical-education|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC225ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC225ALP000IV.pdf"
     }
   ],
   "leaving|physical-education|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC225GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC225GLP000IV.pdf"
     }
   ],
   "leaving|physical-education|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC225GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC225GLP000IV.pdf"
     }
   ],
   "leaving|physical-education|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC225GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC225GLP000IV.pdf"
     }
   ],
   "leaving|physical-education|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC225GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC225GLP000IV.pdf"
     }
   ],
   "leaving|physical-education|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC225GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC225GLP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2011|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC021ALP000EV.pdf"
-    }
-  ],
-  "leaving|physics|higher|2021|0|": [
+    },
     {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2021/LC021ALP000EV.pdf"
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2013|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC021ALP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2020|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC021GLP000EV.pdf"
-    }
-  ],
-  "leaving|physics|ordinary|2021|0|": [
+    },
     {
-      "label": "Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2021/LC021GLP000EV.pdf"
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2011|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC021GLP000IV.pdf"
     }
   ],
   "leaving|physics|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC021GLP000IV.pdf"
     }
   ],
   "leaving|music|ordinary|2015|0|": [
@@ -6266,8 +15378,566 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC067GLP006EV.pdf"
     },
     {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC067GLP006IV.pdf"
+    },
+    {
       "label": "Listening / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC067GLP008IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2011|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2012|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2013|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2014|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2016|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2017|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2018|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2019|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2021|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2015|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2022|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2023|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2024|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2025|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2011|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2012|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2016|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2017|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2019|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2021|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2022|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2023|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2024|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2025|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2014|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2018|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2013|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|higher|2015|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC023ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC023ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2011|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2012|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2013|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2014|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2016|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2017|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2018|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2019|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2021|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2022|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2023|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2024|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2025|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2015|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2012|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2013|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2016|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2017|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2019|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2021|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2022|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2023|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2025|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2015|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2011|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2024|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC023GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2018|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC023GLP000IV.pdf"
     }
   ],
   "leaving|polish|higher|2022|0|": [
@@ -6280,228 +15950,390 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC548ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC548ALP000IV.pdf"
     }
   ],
   "leaving|polish|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC548ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC548ALP000IV.pdf"
     }
   ],
   "leaving|polish|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC548ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC548ALP000IV.pdf"
     }
   ],
   "leaving|polish|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC548GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC548GLP000IV.pdf"
     }
   ],
   "leaving|polish|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC548GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC548GLP000IV.pdf"
     }
   ],
   "leaving|polish|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC548GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC548GLP000IV.pdf"
     }
   ],
   "leaving|polish|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC548GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC548GLP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC568ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC568ALP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC568ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC568ALP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC568ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC568ALP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC568ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC568ALP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC568ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC568ALP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC568ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC568ALP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC568ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC568ALP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC568ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC568ALP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC568GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC568GLP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC568GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC568GLP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC568GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC568GLP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC568GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC568GLP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC568GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC568GLP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC568GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC568GLP000IV.pdf"
     }
   ],
   "leaving|politics-and-society|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC568GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC568GLP000IV.pdf"
     }
   ],
   "leaving|portuguese|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC018ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC018ALP000IV.pdf"
     }
   ],
   "leaving|portuguese|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC018ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC018ALP000IV.pdf"
     }
   ],
   "leaving|portuguese|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC018ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC018ALP000IV.pdf"
     }
   ],
   "leaving|portuguese|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC018ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC018ALP000IV.pdf"
     }
   ],
   "leaving|portuguese|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC018GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC018GLP000IV.pdf"
     }
   ],
   "leaving|portuguese|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC018GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC018GLP000IV.pdf"
     }
   ],
   "leaving|portuguese|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC018GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC018GLP000IV.pdf"
     }
   ],
   "leaving|portuguese|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC018GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC018GLP000IV.pdf"
+    }
+  ],
+  "leaving|physics-and-chemistry|ordinary|2014|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC023GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC023GLP000IV.pdf"
     }
   ],
   "leaving|religious-education|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC223ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC223ALP000IV.pdf"
     }
   ],
   "leaving|religious-education|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC223ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC223ALP000IV.pdf"
     }
   ],
   "leaving|religious-education|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC223ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC223ALP000IV.pdf"
     }
   ],
   "leaving|religious-education|higher|2019|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC223ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC223ALP000IV.pdf"
     }
   ],
   "leaving|religious-education|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC223ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC223ALP000IV.pdf"
     }
   ],
   "leaving|religious-education|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC223ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC223ALP000IV.pdf"
     }
   ],
   "leaving|religious-education|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC223ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC223ALP000IV.pdf"
     }
   ],
   "leaving|religious-education|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC223ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC223ALP000IV.pdf"
     }
   ],
   "leaving|religious-education|higher|2024|0|": [
@@ -6514,48 +16346,80 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC223ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC223ALP000IV.pdf"
     }
   ],
   "leaving|religious-education|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC223GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC223GLP000IV.pdf"
     }
   ],
   "leaving|religious-education|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC223GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC223GLP000IV.pdf"
     }
   ],
   "leaving|religious-education|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC223GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC223GLP000IV.pdf"
     }
   ],
   "leaving|religious-education|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC223GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC223GLP000IV.pdf"
     }
   ],
   "leaving|religious-education|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC223GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC223GLP000IV.pdf"
     }
   ],
   "leaving|religious-education|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC223GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC223GLP000IV.pdf"
     }
   ],
   "leaving|religious-education|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC223GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC223GLP000IV.pdf"
     }
   ],
   "leaving|religious-education|ordinary|2024|0|": [
@@ -6568,6 +16432,10 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC223GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC223GLP000IV.pdf"
     }
   ],
   "leaving|romanian|higher|2007|0|": [
@@ -6700,36 +16568,330 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC099ALP000IV.pdf"
     }
   ],
   "leaving|russian|higher|2014|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC099ALP000IV.pdf"
     }
   ],
   "leaving|russian|higher|2015|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC099ALP000IV.pdf"
     }
   ],
   "leaving|russian|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC099ALP000IV.pdf"
     }
   ],
   "leaving|russian|higher|2017|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC099ALP000IV.pdf"
     }
   ],
   "leaving|russian|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2019|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2020|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2021|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2022|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2023|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2024|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2025|0|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2011|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC099ALP000EV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2012|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC099ALP000EV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2013|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2014|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2015|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2016|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2017|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2018|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2019|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2020|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2021|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2022|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2023|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2024|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2025|2|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2011|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC099ALP000EV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2012|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC099ALP000EV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2013|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2014|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2015|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2016|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2017|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2018|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC099ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC099ALP000IV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2019|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2020|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2021|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2022|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2023|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2024|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC099ALP000BV.pdf"
+    }
+  ],
+  "leaving|russian|higher|2025|1|": [
+    {
+      "label": "Higher Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC099ALP000BV.pdf"
     }
   ],
   "leaving|russian|ordinary|2013|0|": [
@@ -6742,36 +16904,98 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC099GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC099GLP000IV.pdf"
     }
   ],
   "leaving|russian|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC099GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC099GLP000IV.pdf"
     }
   ],
   "leaving|russian|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC099GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC099GLP000IV.pdf"
     }
   ],
   "leaving|russian|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC099GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC099GLP000IV.pdf"
     }
   ],
   "leaving|russian|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC099GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC099GLP000IV.pdf"
+    }
+  ],
+  "leaving|russian|ordinary|2019|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC099GLP000BV.pdf"
+    }
+  ],
+  "leaving|russian|ordinary|2021|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC099GLP000BV.pdf"
+    }
+  ],
+  "leaving|russian|ordinary|2022|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC099GLP000BV.pdf"
+    }
+  ],
+  "leaving|russian|ordinary|2023|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC099GLP000BV.pdf"
+    }
+  ],
+  "leaving|russian|ordinary|2024|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC099GLP000BV.pdf"
+    }
+  ],
+  "leaving|russian|ordinary|2025|0|": [
+    {
+      "label": "Ordinary Level (BV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC099GLP000BV.pdf"
     }
   ],
   "leaving|russian|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC099GLP000EV.pdf"
+    }
+  ],
+  "leaving|slovakian|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC554ALPO00EV.pdf"
     }
   ],
   "leaving|slovakian|higher|2007|0|": [
@@ -6832,12 +17056,6 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC554ALP000EV.pdf"
-    }
-  ],
-  "leaving|slovakian|higher|2017|0|": [
-    {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2017/LC554ALP000EV.pdf"
     }
   ],
   "leaving|slovakian|higher|2018|0|": [
@@ -6912,24 +17130,22 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC558ALP000EV.pdf"
     }
   ],
-  "leaving|spanish|higher|2011|0|": [
-    {
-      "label": "Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2011/LC012ALP000EV.pdf"
-    },
-    {
-      "label": "Section B / Higher Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2011/LC012ALP015EV.pdf"
-    }
-  ],
   "leaving|spanish|higher|2012|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC012ALP000EV.pdf"
     },
     {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC012ALP000IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC012ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC012ALP015IV.pdf"
     }
   ],
   "leaving|spanish|higher|2013|0|": [
@@ -6938,8 +17154,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC012ALP000EV.pdf"
     },
     {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC012ALP000IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC012ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC012ALP015IV.pdf"
     }
   ],
   "leaving|spanish|higher|2014|0|": [
@@ -6948,8 +17172,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC012ALP000EV.pdf"
     },
     {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC012ALP000IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC012ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC012ALP015IV.pdf"
     }
   ],
   "leaving|spanish|higher|2015|0|": [
@@ -6958,14 +17190,26 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC012ALP000EV.pdf"
     },
     {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC012ALP000IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC012ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC012ALP015IV.pdf"
     }
   ],
   "leaving|spanish|higher|2016|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC012ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC012ALP000IV.pdf"
     }
   ],
   "leaving|spanish|higher|2017|0|": [
@@ -6974,14 +17218,26 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC012ALP000EV.pdf"
     },
     {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC012ALP000IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC012ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC012ALP015IV.pdf"
     }
   ],
   "leaving|spanish|higher|2018|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC012ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC012ALP000IV.pdf"
     },
     {
       "label": "Section B / Higher Level (EV)",
@@ -6994,20 +17250,40 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC012ALP000EV.pdf"
     },
     {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC012ALP000IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC012ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC012ALP015IV.pdf"
     }
   ],
   "leaving|spanish|higher|2020|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC012ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC012ALP000IV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC012ALP015IV.pdf"
     }
   ],
   "leaving|spanish|higher|2021|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC012ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC012ALP000IV.pdf"
     },
     {
       "label": "Section B / Higher Level (EV)",
@@ -7020,6 +17296,10 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC012ALP000EV.pdf"
     },
     {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC012ALP000IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC012ALP015EV.pdf"
     }
@@ -7028,6 +17308,10 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC012ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC012ALP000IV.pdf"
     },
     {
       "label": "Section B / Higher Level (EV)",
@@ -7040,6 +17324,10 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC012ALP000EV.pdf"
     },
     {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC012ALP000IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC012ALP015EV.pdf"
     }
@@ -7050,98 +17338,158 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC012ALP000EV.pdf"
     },
     {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC012ALP000IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC012ALP015EV.pdf"
-    }
-  ],
-  "leaving|spanish|ordinary|2011|0|": [
-    {
-      "label": "Ordinary Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2011/LC012GLP000EV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2012|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2013|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2014|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2015|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2016|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2017|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2018|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2019|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2020|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2021|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC012GLP000IV.pdf"
     }
   ],
   "leaving|spanish|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC012GLP000IV.pdf"
+    }
+  ],
+  "leaving|swedish|higher|2005|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2005/LC039ALPO00EV.pdf"
     }
   ],
   "leaving|swedish|higher|2007|0|": [
@@ -7258,8 +17606,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC065ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC065ALP015IV.pdf"
     }
   ],
   "leaving|technology|higher|2012|0|": [
@@ -7268,8 +17624,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC065ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC065ALP015IV.pdf"
     }
   ],
   "leaving|technology|higher|2013|0|": [
@@ -7278,8 +17642,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC065ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC065ALP015IV.pdf"
     }
   ],
   "leaving|technology|higher|2014|0|": [
@@ -7288,8 +17660,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC065ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC065ALP015IV.pdf"
     }
   ],
   "leaving|technology|higher|2016|0|": [
@@ -7298,8 +17678,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC065ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC065ALP015IV.pdf"
     }
   ],
   "leaving|technology|higher|2017|0|": [
@@ -7308,8 +17696,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC065ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC065ALP015IV.pdf"
     }
   ],
   "leaving|technology|higher|2018|0|": [
@@ -7318,8 +17714,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC065ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC065ALP015IV.pdf"
     }
   ],
   "leaving|technology|higher|2019|0|": [
@@ -7328,8 +17732,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC065ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC065ALP039IV.pdf"
     }
   ],
   "leaving|technology|higher|2020|0|": [
@@ -7338,8 +17750,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2020/LC065ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC065ALP039IV.pdf"
     }
   ],
   "leaving|technology|higher|2021|0|": [
@@ -7348,8 +17768,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC065ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC065ALP039IV.pdf"
     }
   ],
   "leaving|technology|higher|2022|0|": [
@@ -7358,8 +17786,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC065ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC065ALP039IV.pdf"
     }
   ],
   "leaving|technology|higher|2023|0|": [
@@ -7368,8 +17804,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC065ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC065ALP039IV.pdf"
     }
   ],
   "leaving|technology|higher|2024|0|": [
@@ -7378,8 +17822,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC065ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC065ALP039IV.pdf"
     }
   ],
   "leaving|technology|higher|2025|0|": [
@@ -7388,8 +17840,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC065ALP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC065ALP039IV.pdf"
     }
   ],
   "leaving|technology|higher|2015|0|": [
@@ -7398,8 +17858,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC065ALP014EV.pdf"
     },
     {
+      "label": "Section A / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC065ALP014IV.pdf"
+    },
+    {
       "label": "Section B / Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC065ALP015EV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC065ALP015IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2011|0|": [
@@ -7408,8 +17876,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2011/LC065GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC065GLP015IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2012|0|": [
@@ -7418,8 +17894,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2012/LC065GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC065GLP015IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2016|0|": [
@@ -7428,8 +17912,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2016/LC065GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC065GLP015IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2017|0|": [
@@ -7438,8 +17930,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2017/LC065GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC065GLP015IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2018|0|": [
@@ -7448,8 +17948,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2018/LC065GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2018/LC065GLP015IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2019|0|": [
@@ -7458,8 +17966,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/LC065GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC065GLP039IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2021|0|": [
@@ -7468,8 +17984,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2021/LC065GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC065GLP039IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2022|0|": [
@@ -7478,8 +18002,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/LC065GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC065GLP039IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2023|0|": [
@@ -7488,8 +18020,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/LC065GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/LC065GLP039IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2024|0|": [
@@ -7498,8 +18038,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/LC065GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC065GLP039IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2025|0|": [
@@ -7508,8 +18056,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B&C / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/LC065GLP039EV.pdf"
+    },
+    {
+      "label": "Section B&C / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC065GLP039IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2013|0|": [
@@ -7518,8 +18074,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2013/LC065GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC065GLP015IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2014|0|": [
@@ -7528,8 +18092,16 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2014/LC065GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2014/LC065GLP015IV.pdf"
     }
   ],
   "leaving|ukrainian|higher|2025|0|": [
@@ -7542,90 +18114,140 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC125CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC125CLP000IV.pdf"
     }
   ],
   "junior|applied-technology|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC125CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC125CLP000IV.pdf"
     }
   ],
   "junior|applied-technology|common|2023|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC125CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC125CLP000IV.pdf"
     }
   ],
   "junior|business-studies|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC042CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC042CLP000IV.pdf"
     }
   ],
   "junior|business-studies|common|2019|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/JC042CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/JC042CLP000IV.pdf"
     }
   ],
   "junior|business-studies|common|2022|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC042CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC042CLP000IV.pdf"
     }
   ],
   "junior|business-studies|common|2023|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC042CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC042CLP000IV.pdf"
     }
   ],
   "junior|business-studies|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC042CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC042CLP000IV.pdf"
     }
   ],
   "junior|classics|common|2022|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC106CLP000EV.pdf"
-    }
-  ],
-  "junior|classics|common|2023|0|": [
+    },
     {
-      "label": "Common Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2023/JC106CLP000EV.pdf"
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC106CLP000IV.pdf"
     }
   ],
   "junior|classics|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC106CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC106CLP000IV.pdf"
     }
   ],
   "junior|classics|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC106CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC106CLP000IV.pdf"
     }
   ],
   "junior|engineering|common|2023|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC027CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC027CLP000IV.pdf"
     }
   ],
   "junior|engineering|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC027CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC027CLP000IV.pdf"
     }
   ],
   "junior|engineering|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC027CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC027CLP000IV.pdf"
     }
   ],
   "junior|english|higher|2022|0|": [
@@ -7716,30 +18338,50 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC010CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC010CLP000IV.pdf"
     }
   ],
   "junior|french|common|2023|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC010CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC010CLP000IV.pdf"
     }
   ],
   "junior|french|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC010CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC010CLP000IV.pdf"
     }
   ],
   "junior|french|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC010CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC010CLP000IV.pdf"
     }
   ],
   "junior|geography|common|2022|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC005CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC005CLP000IV.pdf"
     },
     {
       "label": "Map / Common Level (EV)",
@@ -7750,12 +18392,20 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC005CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC005CLP000IV.pdf"
     }
   ],
   "junior|geography|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC005CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC005CLP000IV.pdf"
     },
     {
       "label": "Map / Common Level (EV)",
@@ -7768,6 +18418,10 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC005CLP000EV.pdf"
     },
     {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC005CLP000IV.pdf"
+    },
+    {
       "label": "Map / Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC005CLP003EV.pdf"
     }
@@ -7776,69 +18430,153 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC011CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC011CLP000IV.pdf"
     }
   ],
   "junior|german|common|2023|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC011CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC011CLP000IV.pdf"
     }
   ],
   "junior|german|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC011CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC011CLP000IV.pdf"
     }
   ],
   "junior|german|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC011CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC011CLP000IV.pdf"
     }
   ],
   "junior|graphics|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC137CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC137CLP000IV.pdf"
     }
   ],
   "junior|graphics|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC137CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC137CLP000IV.pdf"
     }
   ],
   "junior|graphics|common|2023|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC137CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC137CLP000IV.pdf"
     }
   ],
-  "junior|history|common|2025|0|": [
+  "junior|home-economics|common|2022|0|": [
     {
       "label": "Common Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2025/JC004CLP000EV.pdf"
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC052CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC052CLP000IV.pdf"
     }
   ],
-  "junior|history|common|2022|0|": [
+  "junior|home-economics|common|2023|0|": [
     {
       "label": "Common Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2022/JC004CLP000EV.pdf"
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC052CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC052CLP000IV.pdf"
     }
   ],
-  "junior|history|common|2023|0|": [
+  "junior|home-economics|common|2024|0|": [
     {
       "label": "Common Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2023/JC004CLP000EV.pdf"
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC052CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC052CLP000IV.pdf"
     }
   ],
-  "junior|history|common|2024|0|": [
+  "junior|home-economics|common|2025|0|": [
     {
       "label": "Common Level (EV)",
-      "url": "https://www.examinations.ie/archive/exampapers/2024/JC004CLP000EV.pdf"
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC052CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC052CLP000IV.pdf"
+    }
+  ],
+  "junior|irish|higher|2023|0|": [
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC001ALP000IV.pdf"
+    }
+  ],
+  "junior|irish|higher|2024|0|": [
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC001ALP000IV.pdf"
+    }
+  ],
+  "junior|irish|higher|2025|0|": [
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC001ALP000IV.pdf"
+    }
+  ],
+  "junior|irish|ordinary|2023|0|": [
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC001GLP000IV.pdf"
+    }
+  ],
+  "junior|irish|ordinary|2024|0|": [
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC001GLP000IV.pdf"
+    }
+  ],
+  "junior|irish|ordinary|2025|0|": [
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC001GLP000IV.pdf"
     }
   ],
   "junior|italian|common|2022|0|": [
+    {
+      "label": "/ Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC013CLP000EIV.pdf"
+    },
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC013CLP000EV.pdf"
@@ -7848,93 +18586,157 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC013CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC013CLP000IV.pdf"
     }
   ],
   "junior|italian|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC013CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC013CLP000IV.pdf"
     }
   ],
   "junior|italian|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC013CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC013CLP000IV.pdf"
     }
   ],
   "junior|mathematics|higher|2022|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC003ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC003ALP000IV.pdf"
     }
   ],
   "junior|mathematics|higher|2023|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC003ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC003ALP000IV.pdf"
     }
   ],
   "junior|mathematics|higher|2024|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC003ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC003ALP000IV.pdf"
     }
   ],
   "junior|mathematics|higher|2025|0|": [
     {
       "label": "Higher Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC003ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC003ALP000IV.pdf"
     }
   ],
   "junior|mathematics|ordinary|2022|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC003GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC003GLP000IV.pdf"
     }
   ],
   "junior|mathematics|ordinary|2023|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC003GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC003GLP000IV.pdf"
     }
   ],
   "junior|mathematics|ordinary|2024|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC003GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC003GLP000IV.pdf"
     }
   ],
   "junior|mathematics|ordinary|2025|0|": [
     {
       "label": "Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC003GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC003GLP000IV.pdf"
     }
   ],
   "junior|music|common|2022|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC046CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC046CLP000IV.pdf"
     }
   ],
   "junior|music|common|2023|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC046CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC046CLP000IV.pdf"
     }
   ],
   "junior|music|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC046CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC046CLP000IV.pdf"
     }
   ],
   "junior|music|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC046CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC046CLP000IV.pdf"
     }
   ],
   "junior|religious-education|common|2022|0|": [
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC223CLP000IV.pdf"
+    },
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC223CLP000EV.pdf"
@@ -7944,90 +18746,150 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC223CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC223CLP000IV.pdf"
     }
   ],
   "junior|religious-education|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC223CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC223CLP000IV.pdf"
     }
   ],
   "junior|religious-education|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC223CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC223CLP000IV.pdf"
     }
   ],
   "junior|science|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC057CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC057CLP000IV.pdf"
     }
   ],
   "junior|science|common|2023|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC057CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC057CLP000IV.pdf"
     }
   ],
   "junior|science|common|2019|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2019/JC057CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/JC057CLP000IV.pdf"
     }
   ],
   "junior|science|common|2022|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC057CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC057CLP000IV.pdf"
     }
   ],
   "junior|science|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC057CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC057CLP000IV.pdf"
     }
   ],
   "junior|spanish|common|2022|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2022/JC012CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC012CLP000IV.pdf"
     }
   ],
   "junior|spanish|common|2023|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC012CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC012CLP000IV.pdf"
     }
   ],
   "junior|spanish|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC012CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC012CLP000IV.pdf"
     }
   ],
   "junior|spanish|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC012CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC012CLP000IV.pdf"
     }
   ],
   "junior|wood-technology|common|2025|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2025/JC126CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC126CLP000IV.pdf"
     }
   ],
   "junior|wood-technology|common|2023|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2023/JC126CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC126CLP000IV.pdf"
     }
   ],
   "junior|wood-technology|common|2024|0|": [
     {
       "label": "Common Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2024/JC126CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC126CLP000IV.pdf"
     }
   ],
   "leaving|technology|ordinary|2015|0|": [
@@ -8036,8 +18898,672 @@ export const OFFICIAL_PRACTICE_PAPER_LINKS: Record<string, { label: string; url:
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC065GLP014EV.pdf"
     },
     {
+      "label": "Section A / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC065GLP014IV.pdf"
+    },
+    {
       "label": "Section B / Ordinary Level (EV)",
       "url": "https://www.examinations.ie/archive/exampapers/2015/LC065GLP015EV.pdf"
+    },
+    {
+      "label": "Section B / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC065GLP015IV.pdf"
+    }
+  ],
+  "leaving|ancient-greek|higher|2011|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC007ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC007ALP000IV.pdf"
+    }
+  ],
+  "leaving|ancient-greek|ordinary|2011|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC007GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC007GLP000IV.pdf"
+    }
+  ],
+  "leaving|applied-maths|higher|2001|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC020ALPO00EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC020ALPO00IV.pdf"
+    }
+  ],
+  "leaving|applied-maths|higher|2012|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC020ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2012/LC020ALP000IV.pdf"
+    }
+  ],
+  "leaving|bulgarian|higher|2010|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC559ALP000EV.pdf"
+    }
+  ],
+  "leaving|business|higher|2021|0|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2021|1|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|higher|2021|2|": [
+    {
+      "label": "Section 1 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP032IV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP041EV.pdf"
+    },
+    {
+      "label": "Section 2 & 3 / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033ALP041IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2021|2|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|business|ordinary|2021|1|": [
+    {
+      "label": "Section 1 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033GLP032EV.pdf"
+    },
+    {
+      "label": "Section 1 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033GLP032IV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033GLP033EV.pdf"
+    },
+    {
+      "label": "Section 2 / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC033GLP033IV.pdf"
+    }
+  ],
+  "leaving|chemistry|higher|2017|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC022ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC022ALP000IV.pdf"
+    }
+  ],
+  "leaving|chemistry|ordinary|2017|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC022GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC022GLP000IV.pdf"
+    }
+  ],
+  "leaving|croatian|higher|2024|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC567ALP000EV.pdf"
+    }
+  ],
+  "leaving|dutch|higher|2020|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2020/LC017ALP000EV.pdf"
+    }
+  ],
+  "leaving|engineering|higher|2013|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC027ALP000IV.pdf"
+    }
+  ],
+  "leaving|engineering|higher|2019|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC027ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC027ALP000IV.pdf"
+    }
+  ],
+  "leaving|engineering|ordinary|2013|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC027GLP000IV.pdf"
+    }
+  ],
+  "leaving|engineering|ordinary|2019|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC027GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2019/LC027GLP000IV.pdf"
+    }
+  ],
+  "leaving|estonian|higher|2010|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2010/LC552ALP000EV.pdf"
+    }
+  ],
+  "leaving|finnish|higher|2011|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC049ALP000EV.pdf"
+    }
+  ],
+  "leaving|hebrew-studies|higher|2001|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC009ALPO00EV.pdf"
+    }
+  ],
+  "leaving|hebrew-studies|ordinary|2001|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2001/LC009GLPO00EV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2021|1|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2021|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|higher|2021|2|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004ALP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2021|1|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2021|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|history-later-modern|ordinary|2021|2|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC004GLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2013|2|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|foundation|2013|1|": [
+    {
+      "label": "Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC001BLP000IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2013|1|": [
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC001ALP100IV.pdf"
+    }
+  ],
+  "leaving|irish|higher|2013|2|": [
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC001ALP200IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2013|1|": [
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC001GLP100IV.pdf"
+    }
+  ],
+  "leaving|irish|ordinary|2013|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2013/LC001GLP200IV.pdf"
+    }
+  ],
+  "leaving|latin|higher|2025|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC006ALP000EV.pdf"
+    }
+  ],
+  "leaving|lithuanian|higher|2024|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC550ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC550ALP000IV.pdf"
+    }
+  ],
+  "leaving|lithuanian|ordinary|2024|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC550GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/LC550GLP000IV.pdf"
+    }
+  ],
+  "leaving|mathematics|foundation|2016|0|": [
+    {
+      "label": "Paper One / Foundation Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003BLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Foundation Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003BLP100IV.pdf"
+    }
+  ],
+  "leaving|mathematics|higher|2016|1|": [
+    {
+      "label": "Paper One / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003ALP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003ALP100IV.pdf"
+    }
+  ],
+  "leaving|mathematics|higher|2016|2|": [
+    {
+      "label": "Paper Two / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003ALP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003ALP200IV.pdf"
+    }
+  ],
+  "leaving|mathematics|ordinary|2016|1|": [
+    {
+      "label": "Paper One / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003GLP100EV.pdf"
+    },
+    {
+      "label": "Paper One / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003GLP100IV.pdf"
+    }
+  ],
+  "leaving|mathematics|ordinary|2016|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003GLP200EV.pdf"
+    },
+    {
+      "label": "Paper Two / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2016/LC003GLP200IV.pdf"
+    }
+  ],
+  "leaving|modern-greek|higher|2015|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2015/LC019ALP000EV.pdf"
+    }
+  ],
+  "leaving|music|higher|2017|0|": [
+    {
+      "label": "Composing / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067ALP006EV.pdf"
+    },
+    {
+      "label": "Composing / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067ALP006IV.pdf"
+    },
+    {
+      "label": "Elective / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067ALP007EV.pdf"
+    },
+    {
+      "label": "Elective / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067ALP007IV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067ALP008EV.pdf"
+    },
+    {
+      "label": "Listening / Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067ALP008IV.pdf"
+    }
+  ],
+  "leaving|music|ordinary|2017|0|": [
+    {
+      "label": "Composing / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067GLP006EV.pdf"
+    },
+    {
+      "label": "Composing / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067GLP006IV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067GLP008EV.pdf"
+    },
+    {
+      "label": "Listening / Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC067GLP008IV.pdf"
+    }
+  ],
+  "leaving|physics|higher|2021|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC021ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC021ALP000IV.pdf"
+    }
+  ],
+  "leaving|physics|ordinary|2021|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC021GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2021/LC021GLP000IV.pdf"
+    }
+  ],
+  "leaving|slovakian|higher|2017|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2017/LC554ALP000EV.pdf"
+    }
+  ],
+  "leaving|spanish|higher|2011|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC012ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC012ALP000IV.pdf"
+    },
+    {
+      "label": "Section B / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC012ALP015EV.pdf"
+    }
+  ],
+  "leaving|spanish|ordinary|2011|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC012GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2011/LC012GLP000IV.pdf"
+    }
+  ],
+  "leaving|swedish|higher|2006|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC039ALPO00EV.pdf"
+    }
+  ],
+  "junior|classics|common|2023|0|": [
+    {
+      "label": "Common Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC106CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC106CLP000IV.pdf"
+    }
+  ],
+  "junior|irish|higher|2022|0|": [
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC001ALP000IV.pdf"
+    }
+  ],
+  "junior|irish|ordinary|2022|0|": [
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC001GLP000IV.pdf"
+    }
+  ],
+  "leaving|construction-studies|higher|2025|0|": [
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC029ALP000EV.pdf"
+    },
+    {
+      "label": "Higher Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC029ALP000IV.pdf"
+    }
+  ],
+  "leaving|construction-studies|ordinary|2025|0|": [
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC029GLP000EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/LC029GLP000IV.pdf"
+    }
+  ],
+  "leaving|english|higher|2022|2|": [
+    {
+      "label": "Paper Two / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC002ALP200EV.pdf"
+    }
+  ],
+  "leaving|english|higher|2022|1|": [
+    {
+      "label": "Paper One / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC002ALP100EV.pdf"
+    }
+  ],
+  "leaving|english|ordinary|2022|2|": [
+    {
+      "label": "Paper Two / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC002GLP200EV.pdf"
+    }
+  ],
+  "leaving|english|ordinary|2022|1|": [
+    {
+      "label": "Paper One / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/LC002GLP100EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2006|2|": [
+    {
+      "label": "Aural Paper: Listening / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC010ALPA08EV.pdf"
+    },
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC010ALPO00EV.pdf"
+    }
+  ],
+  "leaving|french|higher|2006|1|": [
+    {
+      "label": "Aural Paper: Listening / Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC010ALPA08EV.pdf"
+    },
+    {
+      "label": "Higher Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC010ALPO00EV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2006|0|": [
+    {
+      "label": "Aural Paper: Listening / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC010GLPA08EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC010GLPO00EV.pdf"
+    }
+  ],
+  "leaving|french|ordinary|2006|1|": [
+    {
+      "label": "Aural Paper: Listening / Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC010GLPA08EV.pdf"
+    },
+    {
+      "label": "Ordinary Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2006/LC010GLPO00EV.pdf"
+    }
+  ],
+  "junior|history|common|2025|0|": [
+    {
+      "label": "Common Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC004CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2025/JC004CLP000IV.pdf"
+    }
+  ],
+  "junior|history|common|2022|0|": [
+    {
+      "label": "Common Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC004CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2022/JC004CLP000IV.pdf"
+    }
+  ],
+  "junior|history|common|2023|0|": [
+    {
+      "label": "Common Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC004CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2023/JC004CLP000IV.pdf"
+    }
+  ],
+  "junior|history|common|2024|0|": [
+    {
+      "label": "Common Level (EV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC004CLP000EV.pdf"
+    },
+    {
+      "label": "Common Level (IV)",
+      "url": "https://www.examinations.ie/archive/exampapers/2024/JC004CLP000IV.pdf"
     }
   ]
 };

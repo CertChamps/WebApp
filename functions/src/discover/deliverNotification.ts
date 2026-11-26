@@ -5,6 +5,7 @@ const ADMIN_UIDS = new Set([
     "NkN9UBqoPEYpE21MC89fipLn0SP2",
     "gJIqKYlc1OdXUQGZQkR4IzfCIoL2",
     "AN3cIuQxmXfXb5kEmXuHcM5vWyH3",
+    "gJR2DP95jkgTYiAxCn3stPmBw4q1",
 ]);
 const ADMIN_EMAILS = new Set([
     "cian.brady@certchamps.ie",

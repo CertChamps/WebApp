@@ -67,7 +67,8 @@ match /discover-notes/{noteId} {
         || request.auth.uid in [
              'NkN9UBqoPEYpE21MC89fipLn0SP2',
              'gJIqKYlc1OdXUQGZQkR4IzfCIoL2',
-             'AN3cIuQxmXfXb5kEmXuHcM5vWyH3'
+             'AN3cIuQxmXfXb5kEmXuHcM5vWyH3',
+             'gJR2DP95jkgTYiAxCn3stPmBw4q1'
            ]
         || request.auth.token.email == 'cian.brady@certchamps.ie'
         || request.auth.token.admin == true);
@@ -97,7 +98,8 @@ match /posts/{postId} {
         || request.auth.uid in [
              'NkN9UBqoPEYpE21MC89fipLn0SP2',
              'gJIqKYlc1OdXUQGZQkR4IzfCIoL2',
-             'AN3cIuQxmXfXb5kEmXuHcM5vWyH3'
+             'AN3cIuQxmXfXb5kEmXuHcM5vWyH3',
+             'gJR2DP95jkgTYiAxCn3stPmBw4q1'
            ]
         || request.auth.token.email == 'cian.brady@certchamps.ie'
         || request.auth.token.admin == true);

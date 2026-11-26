@@ -2,6 +2,7 @@ export const ADMIN_UIDS = [
   "NkN9UBqoPEYpE21MC89fipLn0SP2",
   "gJIqKYlc1OdXUQGZQkR4IzfCIoL2",
   "AN3cIuQxmXfXb5kEmXuHcM5vWyH3",
+  "gJR2DP95jkgTYiAxCn3stPmBw4q1",
 ];
 
 export const ADMIN_EMAILS = [
